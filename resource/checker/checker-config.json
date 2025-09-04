@@ -1,0 +1,91 @@
+[
+  {
+    "checkerId": "callgraph",
+    "checkerPath": "src/checker/callgraph/callgraph-checker.js",
+    "description": "CallGraph采集checker"
+  },
+  {
+    "checkerId": "sanitizer",
+    "checkerPath": "src/checker/sanitizer/sanitizer-checker.js",
+    "description": "Sanitizer checker",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "cobra.Command-builtIn",
+    "checkerPath": "src/checker/taint/go/cobra-command-checker.js",
+    "description": "为第三方库方法cobra.command做建模，添加entryPoints"
+  },
+  {
+    "checkerId": "taint_flow_gin_input",
+    "checkerPath": "src/checker/taint/go/gin-default-taint-checker.js",
+    "description": "Gin taint_flow checker，不使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_go_input_for_gin",
+    "checkerPath": "src/checker/taint/go/gin-taint-checker.js",
+    "description": "Gin taint_flow checker，不使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_go_input",
+    "checkerPath": "src/checker/taint/go/go-default-taint-checker.js",
+    "description": "Go framework checker，使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "gorilla-mux-entrypoint-collect-checker",
+    "checkerPath": "src/checker/taint/go/gorilla-mux-entrypoint-collect-checker.js",
+    "description": "Mux entryPoint采集以及框架source添加"
+  },
+  {
+    "checkerId": "gRpc-entryPoint-collect-checker",
+    "checkerPath": "src/checker/taint/go/gRpc-entrypoint-collect-checker.js",
+    "description": "gRpc entrypoint采集以及框架source添加"
+  },
+  {
+    "checkerId": "go-main-entryPoints-collection",
+    "checkerPath": "src/checker/taint/go/main-entrypoint-collect-checker.js",
+    "description": "go-main-entryPoints-collection"
+  },
+  {
+    "checkerId": "sync.Once.Do-builtIn",
+    "checkerPath": "src/checker/taint/go/sync-once-do-checker.js",
+    "description": "为Go内置库方法sync.Once.Do做建模，执行且只执行一次传给Do方法的funcDef"
+  },
+  {
+    "checkerId": "urfave-cli-builtIn",
+    "checkerPath": "src/checker/taint/go/urfave-cli-checker.js",
+    "description": "为第三方库方法urfave.cli做建模，添加entryPoints"
+  },
+  {
+    "checkerId": "taint_flow_egg_input",
+    "checkerPath": "src/checker/taint/js/egg-taint-checker.js",
+    "description": "JavaScript Egg框架污点分析checker，不使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_js_input",
+    "checkerPath": "src/checker/taint/js/js-taint-checker.js",
+    "description": "JavaScript原生污点分析checker，使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "default_taint_flow_python_input",
+    "checkerPath": "src/checker/taint/python/python-default-taint-checker.js",
+    "description": "Python污点分析checker，使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_python_input",
+    "checkerPath": "src/checker/taint/python/python-taint-checker.js",
+    "description": "Python污点分析checker，不使用CallGraph",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_test",
+    "checkerPath": "src/checker/taint/test-taint-checker.js",
+    "description": "taint_flow_test",
+    "demoRuleConfigPath": ""
+  }
+]

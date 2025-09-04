@@ -1,0 +1,34 @@
+{
+  "Rules": [
+    {
+      "type": "taint_flow_test",
+      "desc": "Test for taint flow.",
+      "advice": "Avoid flowing the source to the taint sink",
+      "severity": 5
+    }
+  ],
+  "TaintSource": [
+    {
+      "path": "taint_src",
+      "kind": "TEST",
+      "scopeFunc": "all",
+      "scopeFile": "all"
+    }
+  ],
+  "FuncCallTaintSink": [
+    {
+      "fsig": "taint_sink",
+      "args": [
+        0
+      ],
+      "kind": "TEST"
+    }
+  ],
+  "RouterPath": [
+    {
+      "routerAttribute": "HTTP",
+      "routerFile": "/app.py",
+      "routerFunc": "frontend_review"
+    }
+  ]
+}
