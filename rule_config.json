@@ -1,0 +1,39 @@
+{
+  "checkerId":"xast-taint-checker",
+  "ScanMode": "sound",
+    "Rules": [
+        {
+            "type": "taint_flow_test",
+            "desc": "Test for taint flow.",
+            "advice": "Avoid flowing the source to the taint sink",
+            "severity": 5
+        }
+    ],
+    "TaintSource": [
+        {
+            "path": "__taint_src",
+            "kind": "TEST",
+            "introPoint": 1
+        }
+    ],
+    "FuncCallTaintSource": [
+        {
+            "fsig": "__taint_source",
+            "args": [
+                "*"
+            ],
+            "kind": "TEST"
+        }
+    ],
+    "FuncCallTaintSink": [
+        {
+            "fsig": "__taint_sink",
+            "args": [
+                0
+            ],
+            "kind": "TEST",
+            "attribute":"SSRF"
+        }
+    ],
+  "AppName": "xastbenchmark"
+}

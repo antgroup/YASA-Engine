@@ -1,0 +1,64 @@
+[
+  {
+    "checkerPackId": "taint-flow-golang-default",
+    "checkerIds": [
+      "taint_flow_gin_input",
+      "taint_flow_go_input",
+      "cobra.Command-builtIn",
+      "gorilla-mux-entrypoint-collect-checker",
+      "gRpc-entryPoint-collect-checker",
+      "go-main-entryPoints-collection",
+      "sync.Once.Do-builtIn",
+      "urfave-cli-builtIn",
+      "callgraph",
+      "sanitizer"
+    ]
+  },
+  {
+    "checkerPackId": "taint-flow-golang-inner",
+    "checkerIds": [
+      "taint_flow_go_input_for_gin",
+      "cobra.Command-builtIn",
+      "gorilla-mux-entrypoint-collect-checker",
+      "gRpc-entryPoint-collect-checker",
+      "go-main-entryPoints-collection",
+      "sync.Once.Do-builtIn",
+      "urfave-cli-builtIn",
+      "callgraph",
+      "sanitizer"
+    ]
+  },
+  {
+    "checkerPackId": "taint-flow-javascript-default",
+    "checkerIds": [
+      "taint_flow_js_input",
+      "taint_flow_egg_input",
+      "callgraph",
+      "sanitizer"
+    ]
+  },
+  {
+    "checkerPackId": "taint-flow-javascript-inner",
+    "checkerIds": [
+      "taint_flow_egg_input",
+      "callgraph",
+      "sanitizer"
+    ]
+  },
+  {
+    "checkerPackId": "taint-flow-python-default",
+    "checkerIds": [
+      "default_taint_flow_python_input",
+      "callgraph",
+      "sanitizer"
+    ]
+  },
+  {
+    "checkerPackId": "taint-flow-python-inner",
+    "checkerIds": [
+      "taint_flow_python_input",
+      "callgraph",
+      "sanitizer"
+    ]
+  }
+]
