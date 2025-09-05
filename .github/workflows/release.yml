@@ -1,0 +1,440 @@
+name: Release YASA-Engine with UAST Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'  # 支持 v1.0.0 和 v1.0.0-beta.1
+
+jobs:
+  # 1. 提取版本号，并校验 YASA-UAST 是否已发布该版本
+  get_version_and_validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fix_version.outputs.version }}
+      npm_tag: ${{ steps.fix_version.outputs.npm_tag }}
+    steps:
+      - name: 🔧 Extract version from tag
+        id: fix_version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "✅ Extracted version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if [[ "$VERSION" == *"-beta."* ]]; then
+            echo "npm_tag=beta" >> $GITHUB_OUTPUT
+          else
+            echo "npm_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # - name: Validate YASA-UAST version exists
+      #   run: |
+      #     VERSION=${{ steps.fix_version.outputs.version }}
+      #     echo "🔍 Validating @ant-yasa/uast-parser-java-js@$VERSION exists..."
+      #     if ! npm view @ant-yasa/uast-parser-java-js@$VERSION version > /dev/null 2>&1; then
+      #       echo "❌ ERROR: @ant-yasa/uast-parser-java-js@$VERSION not found on npm!"
+      #       exit 1
+      #     fi
+      #     echo "✅ @ant-yasa/uast-parser-java-js@$VERSION verified."
+
+  # 2. 构建 YASA-Engine 多平台二进制（使用 pkg）
+  build_engine:
+    needs: get_version_and_validate
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: node18-linux-x64
+            goarch: amd64
+            out_name: yasa-engine-linux-x64
+          - os: macos-latest
+            target: node18-macos-x64
+            goarch: amd64
+            out_name: yasa-engine-macos-x64
+          - os: macos-latest
+            target: node18-macos-arm64
+            goarch: arm64
+            out_name: yasa-engine-macos-arm64
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: Update UAST dependencies
+      #   run: |
+      #     VERSION="${{ needs.get_version_and_validate.outputs.version }}"
+      #     echo "🔄 Updating dependencies to $VERSION"
+      #     npm pkg set "dependencies.@ant-yasa/uast-spec=$VERSION"
+      #     npm pkg set "dependencies.@ant-yasa/uast-parser-java-js=$VERSION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing production dependencies with npm ci..."
+          npm i
+          echo "🔍 Resolved UAST versions:"
+          echo "--------------------------------------------------"
+          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+          echo "--------------------------------------------------"
+              # 记录版本用于追溯
+          # echo "Built with:" > uast-versions.txt
+          # echo "  @ant-yasa/uast-spec: $(npm ls @ant-yasa/uast-spec --parseable --depth=0 2>/dev/null || echo 'unknown')" >> uast-versions.txt
+          # echo "  @ant-yasa/uast-parser-java-js: $(npm ls @ant-yasa/uast-parser-java-js --parseable --depth=0 2>/dev/null || echo 'unknown')" >> uast-versions.txt
+          # cat uast-versions.txt
+
+
+      - name: Build with pkg
+        run: |
+          echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
+          npx pkg . --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
+          echo "✅ Built: ${{ matrix.platform.out_name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-${{ matrix.platform.target }}
+          path: |
+            dist/
+            node_modules/
+
+  # 3. 下载 YASA-UAST 的 Go 和 Python 二进制（可选）
+  download_uast_binaries:
+    needs: get_version_and_validate
+    runs-on: ubuntu-latest
+    outputs:
+      downloaded: ${{ steps.check.outputs.downloaded }}
+      uast_version: ${{ steps.get_latest_release.outputs.tag_name }}
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update && sudo apt-get install -y gh
+
+      - name: Get Latest Stable UAST Release Tag
+        id: get_latest_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 获取 antgroup/YASA-UAST 的最新非预发布版本
+          TAG=$(gh api repos/antgroup/YASA-UAST/releases/latest \
+               --jq '.tag_name' || echo "")
+
+          if [ -z "$TAG" ]; then
+            echo "❌ Failed to fetch latest release tag from antgroup/YASA-UAST"
+            exit 1
+          fi
+
+          echo "✅ Found latest stable UAST release: $TAG"
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Download UAST Release Assets
+        env:
+          TAG: ${{ steps.get_latest_release.outputs.tag_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="antgroup/YASA-UAST"
+          mkdir -p uast_binaries
+          gh release download "$TAG" \
+            --repo "$REPO" \
+            --pattern "uast4go-*" \
+            --pattern "uast4py-*" \
+            --dir uast_binaries/
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to download UAST binaries"
+            exit 1
+          fi
+          ls -lh uast_binaries/
+
+      - name: Check if downloaded
+        id: check
+        run: |
+          if ls uast_binaries/uast4go-* &> /dev/null; then
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload UAST binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: uast-binaries
+          path: uast_binaries/
+
+  # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
+  package_release:
+    needs: [build_engine,download_uast_binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Engine Binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: engine-node18-*
+          path: engine_binaries/
+
+      - name: Download UAST Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: uast-binaries
+          path: uast_binaries/
+          merge-multiple: false
+
+      - name: Debug-List all downloaded binaries
+        run: |
+          # echo "📁 Contents of engine_binaries/:"
+          # find engine_binaries -type f | sort
+          echo ""
+          echo "🔍 Searching for yasa-engine binaries:"
+          find engine_binaries -type f -name "yasa-engine*" | xargs ls -lh
+
+          echo "🔍 Searching for uast_binaries binaries:"
+          find uast_binaries -type f -name "uast*" | xargs ls -lh
+
+      - name: Create platform-specific zips with sha256sum
+        run: |
+          VERSION="${{ needs.get_version_and_validate.outputs.version }}"
+          OUTPUT_DIR="./releases"
+          mkdir -p "$OUTPUT_DIR"
+          echo "📁 Output directory: $OUTPUT_DIR"
+
+
+          # ✅ 声明关联数组
+          declare -A PLATFORMS
+          declare -A ARTIFACT_KEYS
+
+          PLATFORMS["linux-x64"]="yasa-engine-linux-x64"
+          PLATFORMS["macos-x64"]="yasa-engine-macos-x64"
+          PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64"
+
+          ARTIFACT_KEYS["linux-x64"]="engine-node18-linux-x64"
+          ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
+          ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
+
+
+          PLATFORMS["linux-x64"]+=" uast4go-linux-amd64 uast4py-linux-amd64"
+          PLATFORMS["macos-x64"]+=" uast4go-mac-amd64 uast4py-mac-amd64"
+          PLATFORMS["macos-arm64"]+=" uast4go-mac-arm64 uast4py-mac-arm64"
+
+          for platform in "${!PLATFORMS[@]}"; do
+            echo "📦 Building package for $platform"
+            eval "files=(${PLATFORMS[$platform]})"
+            engine_bin="${files[0]}"
+
+            artifact_subdir="${ARTIFACT_KEYS[$platform]}"
+            engine_path="engine_binaries/${artifact_subdir}/dist/$engine_bin"
+
+            if [[ ! -f "$engine_path" ]]; then
+              echo "❌ Engine binary missing: $engine_path"
+
+              # 🔍 调试信息：打印真实结构
+              echo "📁 Available files in engine_binaries:"
+              find engine_binaries -type f | sort
+
+              echo "🔍 Searching for any yasa-engine binary..."
+              find engine_binaries -type f -name "yasa-engine*" | while read f; do
+                size=$(du -h "$f" | awk '{print $1}')
+                echo "  💡 Found: $f (size: $size)"
+              done
+
+              echo "💡 Possible fix:"
+              echo "   Check ARTIFACT_KEYS['$platform'] = '$artifact_subdir'"
+              echo "   Or verify build_engine generated this platform."
+
+              exit 1
+            fi
+
+            tmpdir=$(mktemp -d || echo "/tmp/yasa-build-$$")
+            mkdir -p "$tmpdir"
+            echo "📁 Using temp directory: $tmpdir"
+
+            cp "$engine_path" "$tmpdir/" || { echo "❌ Failed to copy engine binary"; exit 1; }
+
+            NODE_MODULES_PATH="engine_binaries/${artifact_subdir}/node_modules"
+            if [[ ! -d "$NODE_MODULES_PATH" ]]; then
+              echo "❌ node_modules not found at $NODE_MODULES_PATH"
+              exit 1
+            fi
+            echo "📦 Copying node_modules..."
+            if ! cp -r "$NODE_MODULES_PATH" "$tmpdir/"; then
+              echo "❌ Failed to copy node_modules!"
+              exit 1
+            fi
+
+            # PACKAGE_JSON_PATH="engine_binaries/${artifact_subdir}/package.json"
+            # if [[ -f "$PACKAGE_JSON_PATH" ]]; then
+            #   cp "$PACKAGE_JSON_PATH" "$tmpdir/"
+            # fi
+
+            if [ -d "uast_binaries" ]; then
+              for bin in "${files[@]:1}"; do
+                src="uast_binaries/$bin"
+                if [[ ! -f "$src" ]]; then
+                  echo "❌ UAST binary not found: $src"
+                  exit 1
+                fi
+                cp "$src" "$tmpdir/" || { echo "❌ Failed to copy $bin"; exit 1; }
+              done
+            fi
+
+            (
+              cd "$tmpdir"
+              > sha256sum.txt
+              find . -maxdepth 1 -type f -exec sha256sum {} \; >> sha256sum.txt
+              # if [ -d "node_modules" ]; then
+              #   file_count=$(find node_modules -type f | wc -l)
+              #   total_size=$(du -sb node_modules 2>/dev/null | awk '{print $1}' || echo "unknown")
+              #   echo "node_modules/ (directory, $file_count files, $total_size bytes)" >> sha256sum.txt
+              # fi
+              echo "🛡️ Generated sha256sum:"
+              # cat sha256sum.txt
+            )
+
+            zip_name="yasa-$platform.zip"
+            TEMP_ZIP="/tmp/$zip_name"
+            echo "📦 Creating ZIP: $TEMP_ZIP"
+            if ! (cd "$tmpdir" && zip -Xqr --symlinks "$TEMP_ZIP" ./*); then
+              echo "❌ ZIP command failed!"
+              ls -la "$tmpdir"
+              exit 1
+            fi
+
+            mv "$TEMP_ZIP" "$OUTPUT_DIR/$zip_name"
+            echo "✅ Created: $OUTPUT_DIR/$zip_name"
+            ls -lh "$OUTPUT_DIR/$zip_name"
+
+            rm -rf "$tmpdir"
+          done
+
+          echo "🎉 All packages created!"
+          ls -lh "$OUTPUT_DIR/"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yasa-engine-releases
+          path: releases/*.zip
+
+  # 5. 集成测试：验证每个平台的 bundle 是否真实可用
+  integration_test:
+    needs: package_release
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            zip: yasa-linux-x64.zip
+            engine: yasa-engine-linux-x64
+            uast_go: uast4go-linux-amd64
+            uast_py: uast4py-linux-amd64
+          - os: macos-latest
+            zip: yasa-macos-x64.zip
+            engine: yasa-engine-macos-x64
+            uast_go: uast4go-mac-amd64
+            uast_py: uast4py-mac-amd64
+          - os: macos-latest
+            zip: yasa-macos-arm64.zip
+            engine: yasa-engine-macos-arm64
+            uast_go: uast4go-mac-arm64
+            uast_py: uast4py-mac-arm64
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: 📥 Download Release Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: yasa-engine-releases
+          path: ./releases
+
+      - name: 📦 Extract Bundle
+        run: |
+          unzip "releases/${{ matrix.platform.zip }}" -d bundle
+          chmod +x "bundle/${{ matrix.platform.engine }}"
+          if [ -f "bundle/${{ matrix.platform.uast_go }}" ]; then
+            chmod +x "bundle/${{ matrix.platform.uast_go }}"
+          fi
+          if [ -f "bundle/${{ matrix.platform.uast_py }}" ]; then
+            chmod +x "bundle/${{ matrix.platform.uast_py }}"
+          fi
+
+      - name: 🌐 Clone Test Data Repository
+        run: |
+          git clone https://github.com/curryooo/ant-application-security-testing-benchmark.git test-data
+
+      - name: ✅ Test JavaScript
+        working-directory: test-data
+        run: |
+          ../bundle/${{ matrix.platform.engine }} \
+            sast-js \
+            --analyzer JavaScriptAnalyzer \
+            --checkerPackIds taint-flow-javascript-default \
+            --ruleConfigFile sast-js/rule_config.json
+
+      - name: ✅ Test Go
+        working-directory: test-data
+        run: |
+          ../bundle/${{ matrix.platform.engine }} \
+            sast-go \
+            --analyzer GoAnalyzer \
+            --checkerPackIds taint-flow-golang-default \
+            --ruleConfigFile sast-go/rule_config.json \
+            --uastSDKPath ../bundle/${{ matrix.platform.uast_go }}
+
+      - name: ✅ Test Python
+        working-directory: test-data
+        run: |
+          ../bundle/${{ matrix.platform.engine }} \
+            sast-python3 \
+            --analyzer PythonAnalyzer \
+            --checkerPackIds taint-flow-python-default \
+            --ruleConfigFile sast-python3/rule_config_python.json \
+            --uastSDKPath ../bundle/${{ matrix.platform.uast_py }}
+
+  # 6. 创建 GitHub Release
+  create_release:
+    needs: integration_test
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download Release Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: yasa-engine-releases
+          path: ./
+
+      - name: Move zip files to releases/
+        run: |
+          mkdir -p releases
+          if ls *.zip 1> /dev/null 2>&1; then
+            mv *.zip releases/
+          else
+            echo "❌ No .zip files found!"
+            exit 1
+          fi
+          ls -lh releases/
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref }}
+          name: Release ${{ github.ref }}
+          body: |
+            This release includes:
+
+            - `yasa-linux-x64.zip`
+            - `yasa-macos-x64.zip`
+            - `yasa-macos-arm64.zip`
+
+            Each contains:
+            - YASA-Engine executable
+            - UAST Go/Python parser
+            - Required node_modules
+            - `sha256sum.txt`
+
+            All bundles have passed integration tests.
+          artifacts: "releases/*.zip"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          replacesArtifacts: true
+
