@@ -387,7 +387,7 @@ jobs:
             sast-python3 \
             --analyzer PythonAnalyzer \
             --checkerPackIds taint-flow-python-default \
-            --ruleConfigFile sast-python3/rule_config_python.json \
+            --ruleConfigFile sast-python3/rule_config.json \
             --uastSDKPath ../bundle/${{ matrix.platform.uast_py }}
 
   # 6. 创建 GitHub Release
