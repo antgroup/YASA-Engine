@@ -5,8 +5,8 @@
   "main": "./src/main.js",
   "bin": "./src/main.js",
   "dependencies": {
-    "@ant-yasa/uast-spec": "^0.1.21-beta.2",
-    "@ant-yasa/uast-parser-java-js": "^0.1.21-beta.2",
+    "@ant-yasa/uast-spec": "^0.1.16-beta.2",
+    "@ant-yasa/uast-parser-java-js": "^0.1.16-beta.2",
     "@babel/core": "^7.14.6",
     "@babel/parser": "^7.16.4",
     "@babel/plugin-proposal-decorators": "^7.14.5",
