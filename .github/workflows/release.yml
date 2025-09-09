@@ -380,6 +380,7 @@ jobs:
           else
             echo "❌ JavaScript test FAILED: Did not meet finding criteria"
             echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: ✅ Test Go
@@ -402,6 +403,7 @@ jobs:
           else
             echo "❌ Go test FAILED: Did not meet finding criteria"
             echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: ✅ Test Python
@@ -424,6 +426,7 @@ jobs:
           else
             echo "❌ Python test FAILED: Did not meet finding criteria"
             echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
       # --- Optional: Upload result summary ---
       - name: 📊 Summarize Test Results
