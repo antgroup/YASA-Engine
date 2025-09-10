@@ -200,7 +200,6 @@ jobs:
           mkdir -p "$OUTPUT_DIR"
           echo "📁 Output directory: $OUTPUT_DIR"
 
-
           # ✅ 声明关联数组
           declare -A PLATFORMS
           declare -A ARTIFACT_KEYS
@@ -213,10 +212,17 @@ jobs:
           ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
 
-
+          # 添加 UAST 二进制
           PLATFORMS["linux-x64"]+=" uast4go-linux-amd64 uast4py-linux-amd64"
           PLATFORMS["macos-x64"]+=" uast4go-mac-amd64 uast4py-mac-amd64"
           PLATFORMS["macos-arm64"]+=" uast4go-mac-arm64 uast4py-mac-arm64"
+
+          # ✅ 新增：example-rule-config 资源路径
+          EXAMPLE_CONFIG_SRC="resource/example-rule-config"
+          if [[ ! -d "$EXAMPLE_CONFIG_SRC" ]]; then
+            echo "❌ Error: example-rule-config directory not found at $EXAMPLE_CONFIG_SRC"
+            exit 1
+          fi
 
           for platform in "${!PLATFORMS[@]}"; do
             echo "📦 Building package for $platform"
@@ -228,21 +234,7 @@ jobs:
 
             if [[ ! -f "$engine_path" ]]; then
               echo "❌ Engine binary missing: $engine_path"
-
-              # 🔍 调试信息：打印真实结构
-              echo "📁 Available files in engine_binaries:"
               find engine_binaries -type f | sort
-
-              echo "🔍 Searching for any yasa-engine binary..."
-              find engine_binaries -type f -name "yasa-engine*" | while read f; do
-                size=$(du -h "$f" | awk '{print $1}')
-                echo "  💡 Found: $f (size: $size)"
-              done
-
-              echo "💡 Possible fix:"
-              echo "   Check ARTIFACT_KEYS['$platform'] = '$artifact_subdir'"
-              echo "   Or verify build_engine generated this platform."
-
               exit 1
             fi
 
@@ -258,16 +250,18 @@ jobs:
               exit 1
             fi
             echo "📦 Copying node_modules..."
-            if ! cp -r "$NODE_MODULES_PATH" "$tmpdir/"; then
-              echo "❌ Failed to copy node_modules!"
+            cp -r "$NODE_MODULES_PATH" "$tmpdir/" || { echo "❌ Failed to copy node_modules!"; exit 1; }
+
+            # ✅ 新增：拷贝 example-rule-config 到 bundle 中
+            echo "📎 Copying example rule configurations..."
+            cp -r "$EXAMPLE_CONFIG_SRC" "$tmpdir/example-rule-config"
+            if [[ $? -ne 0 ]]; then
+              echo "❌ Failed to copy example-rule-config!"
               exit 1
             fi
+            echo "✅ Copied example-rule-config/"
 
-            # PACKAGE_JSON_PATH="engine_binaries/${artifact_subdir}/package.json"
-            # if [[ -f "$PACKAGE_JSON_PATH" ]]; then
-            #   cp "$PACKAGE_JSON_PATH" "$tmpdir/"
-            # fi
-
+            # ✅ 拷贝 UAST 二进制（如果存在）
             if [ -d "uast_binaries" ]; then
               for bin in "${files[@]:1}"; do
                 src="uast_binaries/$bin"
@@ -283,13 +277,7 @@ jobs:
               cd "$tmpdir"
               > sha256sum.txt
               find . -maxdepth 1 -type f -exec sha256sum {} \; >> sha256sum.txt
-              # if [ -d "node_modules" ]; then
-              #   file_count=$(find node_modules -type f | wc -l)
-              #   total_size=$(du -sb node_modules 2>/dev/null | awk '{print $1}' || echo "unknown")
-              #   echo "node_modules/ (directory, $file_count files, $total_size bytes)" >> sha256sum.txt
-              # fi
               echo "🛡️ Generated sha256sum:"
-              # cat sha256sum.txt
             )
 
             zip_name="yasa-$platform.zip"
@@ -310,6 +298,7 @@ jobs:
 
           echo "🎉 All packages created!"
           ls -lh "$OUTPUT_DIR/"
+
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
