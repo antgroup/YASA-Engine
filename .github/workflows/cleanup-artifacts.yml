@@ -1,17 +1,25 @@
-name: Cleanup Artifacts
+name: Cleanup Old Artifacts
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:     # 支持手动触发
   schedule:
-    - cron: '0 0 * * 0'  # 每周日午夜自动运行
+    - cron: '0 0 * * 0'  # 每周日 00:00 UTC 自动运行
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Remove old artifacts
-        uses: c-hive/gha-remove-artifacts@v2
+      - name: Delete old artifacts
+        uses: dawidd6/action-delete-old-artifacts@v3
         with:
-          age: '3d'           # 删除 7 天前的
-          skip-recent: 3      # 每个名称保留最近 3 个
+          # 删除超过 7 天的 artifacts
+          days: 3
+
+          # 可选：保留每个名称最近 N 个（防误删）
+          keep_latest: 2
+
+          # 只删除非预发布 tag 对应的 artifacts（可选）
+          # exclude_pre_releases: true
+
+          # 使用默认 token
           token: ${{ secrets.GITHUB_TOKEN }}
