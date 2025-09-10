@@ -1,0 +1,17 @@
+name: Cleanup Artifacts
+
+on:
+  workflow_dispatch:  # 手动触发
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日午夜自动运行
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v2
+        with:
+          age: '3d'           # 删除 7 天前的
+          skip-recent: 3      # 每个名称保留最近 3 个
+          token: ${{ secrets.GITHUB_TOKEN }}
