@@ -1,6 +1,5 @@
 const { findFlaskEntryPointAndSource } = require('../../flask/entrypoint-collector/flask-default-entrypoint')
 const {
-  findInferenceAiStudioTplEntryPointAndSource,
   findInferenceTritonEntryPointAndSource,
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
@@ -28,15 +27,6 @@ function findPythonFcEntryPointAndSource(dir, fileManager) {
   }
   if (flaskEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...flaskEntryPointSourceArray)
-  }
-
-  const { inferenceAiStudioTplEntryPointArray, inferenceAiStudioTplEntryPointSourceArray } =
-    findInferenceAiStudioTplEntryPointAndSource(filenameAstObj, dir)
-  if (inferenceAiStudioTplEntryPointArray) {
-    pyFcEntryPointArray.push(...inferenceAiStudioTplEntryPointArray)
-  }
-  if (inferenceAiStudioTplEntryPointSourceArray) {
-    pyFcEntryPointSourceArray.push(...inferenceAiStudioTplEntryPointSourceArray)
   }
 
   const { inferenceTritonEntryPointArray, inferenceTritonEntryPointSourceArray } =

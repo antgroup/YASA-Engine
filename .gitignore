@@ -4,3 +4,4 @@
 /logs/
 /report/
 /node_modules/
+/test/python/benchmarks/sast-python3/
