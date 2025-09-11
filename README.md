@@ -1,7 +1,7 @@
 <img src="folder-img/logo.png"  />
 
 ## [ Official Website ](https://cybersec.antgroup.com/)
-#### [简体中文](README.md) / [English](README_ch.md)
+#### [简体中文](README_ch.md) / [English](README.md)
 
 ## What is YASA
 Hello! This is the open unified multi-language program analysis product YASA (Yet Another Static Analyzer)!
