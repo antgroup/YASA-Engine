@@ -15,7 +15,7 @@ YASA provides unified multi-language program analysis capabilities, including fo
 
 Currently, YASA-UAST and YASA-Engine are open-sourced, while YASA-UQL and YASA-MCP will be open-sourced later.
 
-YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for Js/Python/Go languages has been open-sourced, while Java language support is not yet open-sourced.
+YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for Js/TS、Python、Go languages has been open-sourced, while Java language support is not open-sourced yet.
 
 ## Components
 <img src="folder-img/Structure.png"  />
@@ -24,13 +24,13 @@ YASA-Engine currently offers default capabilities such as unified AST parsing fo
 [UAST](https://github.com/antgroup/YASA-UAST)（Unified Abstract Syntax Tree）is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
 
 ### YASA-Engine: Unified multi-language Analysis Engine
-The unified multi-language analysis engine is the core component of a modern program analysis platform. It aims to achieve efficient and precise analysis of multiple programming languages through a unified analysis framework and methodology. Also, with the help of AI capabilities, it addresses issues such as broken chains in traditional program analysis and high adaptation costs for new scenarios. (The AI part is not yet open-sourced.)
+The unified multi-language analysis engine is the core component of a modern program analysis platform. It aims to achieve efficient and precise analysis of multiple programming languages through a unified analysis framework and methodology. Also, with the help of AI capabilities, it addresses issues such as broken chains in traditional program analysis and high adaptation costs for new scenarios. (The AI part is not open-sourced yet.)
 
 
-### YASA-UQL: Unified Declarative Rule Query Language (Not yet open-sourced)
+### YASA-UQL: Unified Declarative Rule Query Language (not open-sourced yet)
 Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
-### YASA-MCP: Unified multi-language Program Analysis MCP (Not yet open-sourced)
+### YASA-MCP: Unified multi-language Program Analysis MCP (not open-sourced yet)
 Provides atomic analysis APIs for large models, offering program analysis services that are large-model-friendly.
 
 ## YASA Technical Advantages
