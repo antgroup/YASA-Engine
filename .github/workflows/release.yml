@@ -475,6 +475,7 @@ jobs:
             - YASA-Engine executable
             - UAST Go/Python parser
             - Required node_modules
+            - Required example-rule-config
             - `sha256sum.txt`
 
             All bundles have passed integration tests.
