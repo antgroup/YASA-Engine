@@ -13,38 +13,23 @@ const { matchSinkAtFuncCall } = require('../common-kit/sink-util')
 const config = require('../../../config')
 const FileUtil = require('../../../util/file-util')
 const { extractRelativePath } = require('../../../util/file-util')
-const varUtil = require('../../../util/variable-util')
-const { initRules } = require('../../common/rules-basic-handler')
+const TaintChecker = require('../taint-checker')
+const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
 const logger = require('../../../util/logger')(__filename)
 
-const CheckerId = 'default_taint_flow_python_input'
-const TARGET_RULES_KIND = 'PYTHON_INPUT'
 const TAINT_TAG_NAME = 'PYTHON_INPUT'
 
 /**
  *
  */
-class PythonTaintChecker {
+class PythonTaintChecker extends TaintChecker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
+    super(resultManager, 'taint_flow_python_input')
     this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    initRules()
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   * get checkerId
-   */
-  static GetCheckerId() {
-    return CheckerId
   }
 
   /**
@@ -59,6 +44,8 @@ class PythonTaintChecker {
     const { moduleManager, fileManager } = analyzer
     this.prepareEntryPoints(analyzer, config.maindir, moduleManager, fileManager)
     analyzer.entryPoints.push(...this.entryPoints)
+    this.addSourceTagForSourceScope(TAINT_TAG_NAME, this.sourceScope.value)
+    this.addSourceTagForcheckerRuleConfigContent(TAINT_TAG_NAME, this.checkerRuleConfigContent)
   }
 
   /**
@@ -70,33 +57,51 @@ class PythonTaintChecker {
    */
   prepareEntryPoints(analyzer, dir, moduleManager, fileManager) {
     const funCallEntryPoints = []
-    const { RouterPath: routers } = Rules.getRules() || {}
+    const fileEntryPoints = []
+    const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
 
     if (config.entryPointMode !== 'ONLY_CUSTOM') {
       const pythonDefaultRule = this.loadPythonDefaultRule()
-      if (pythonDefaultRule?.TaintSource) {
-        Rules.getRules().TaintSource = Rules.getRules().TaintSource || []
-        Rules.getRules().TaintSource.push(...pythonDefaultRule.TaintSource)
+      if (pythonDefaultRule[0].checkerIds.includes(this.getCheckerId())) {
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...pythonDefaultRule[0].sources.TaintSource)
       }
       const { pyFcEntryPointArray, pyFcEntryPointSourceArray } = findPythonFcEntryPointAndSource(dir, fileManager)
       if (pyFcEntryPointArray) {
         funCallEntryPoints.push(...pyFcEntryPointArray)
       }
       if (pyFcEntryPointSourceArray) {
-        if (Array.isArray(Rules.getRules().TaintSource)) {
-          Rules.getRules().TaintSource.push(...pyFcEntryPointSourceArray)
-        } else {
-          Rules.getRules().TaintSource = pyFcEntryPointSourceArray
-        }
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...pyFcEntryPointSourceArray)
       }
     }
-    if (config.entryPointMode !== 'SELF_COLLECT' && !_.isEmpty(routers)) {
-      for (const router of routers) {
-        const routerEntryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
-        routerEntryPoint.filePath = router.routerFile
-        routerEntryPoint.functionName = router.routerFunc
-        routerEntryPoint.attribute = router.routerAttribute
-        funCallEntryPoints.push(routerEntryPoint)
+
+    if (config.entryPointMode !== 'SELF_COLLECT' && !_.isEmpty(ruleConfigEntryPoints)) {
+      for (const entrypoint of ruleConfigEntryPoints) {
+        if (entrypoint.functionName) {
+          const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
+          entryPoint.filePath = entrypoint.filePath
+          entryPoint.functionName = entrypoint.functionName
+          entryPoint.attribute = entrypoint.attribute
+          funCallEntryPoints.push(entryPoint)
+        } else {
+          const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
+          entryPoint.filePath = entrypoint.filePath
+          entryPoint.attribute = entrypoint.attribute
+          fileEntryPoints.push(entryPoint)
+        }
       }
     }
 
@@ -106,7 +111,7 @@ class PythonTaintChecker {
         (n) =>
           n.vtype === 'fclos' &&
           extractRelativePath(n?.ast?.loc?.sourcefile, dir) === funCallEntryPoint.filePath &&
-          n?.ast?.id.name === funCallEntryPoint.functionName,
+          n?.ast?.id?.name === funCallEntryPoint.functionName,
         (node, prop) => prop === 'field',
         null,
         true
@@ -132,6 +137,22 @@ class PythonTaintChecker {
       }
     }
 
+    for (const fileEntryPoint of fileEntryPoints) {
+      const fullFilePath = `${config.maindir}${fileEntryPoint.filePath}`.replace('//', '/')
+      const file = fileManager[fullFilePath]
+      if (file?.ast?.type === 'CompileUnit') {
+        const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
+        entryPoint.scopeVal = file
+        entryPoint.argValues = undefined
+        entryPoint.functionName = undefined
+        entryPoint.filePath = file?.ast?.sourcefile || file?.ast?.loc?.sourcefile
+        entryPoint.attribute = fileEntryPoint.attribute
+        entryPoint.packageName = undefined
+        entryPoint.entryPointSymVal = file
+        this.entryPoints.push(entryPoint)
+      }
+    }
+
     // 使用callgraph边界+file作为entrypoint
     const fullCallGraphFileEntryPoint = require('../../common/full-callgraph-file-entrypoint')
     if (config.entryPointMode !== 'ONLY_CUSTOM') {
@@ -144,7 +165,7 @@ class PythonTaintChecker {
       this.entryPoints.push(...fullFileEntrypoint)
     }
 
-    commonUtil.initSourceScopeByTaintSourceWithLoc(this.sourceScope)
+    commonUtil.initSourceScopeByTaintSourceWithLoc(this.sourceScope, this.checkerRuleConfigContent.sources?.TaintSource)
   }
 
   /**
@@ -169,7 +190,8 @@ class PythonTaintChecker {
    */
   triggerAtFunctionCallBefore(analyzer, scope, node, state, info) {
     const { fclos, argvalues } = info
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues)
+    const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
 
     this.checkByNameMatch(node, fclos, argvalues)
   }
@@ -184,7 +206,9 @@ class PythonTaintChecker {
    */
   triggerAtFunctionCallAfter(analyzer, scope, node, state, info) {
     const { fclos, ret } = info
-    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret)
+    const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
+
+    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
   }
 
   /**
@@ -195,9 +219,12 @@ class PythonTaintChecker {
    * @returns {boolean}
    */
   checkByNameMatch(node, fclos, argvalues) {
-    const rules = this.loadFuncCallTaintSinkRules()
-    if (!rules) return
-    const rule = matchSinkAtFuncCall(node, fclos, rules).find((v) => v.kind === TARGET_RULES_KIND)
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
+    if (_.isEmpty(rules)) {
+      return
+    }
+    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
       const args = Rules.prepareArgs(argvalues, fclos, rule)
@@ -219,26 +246,22 @@ class PythonTaintChecker {
           if (typeof rule.attribute !== 'undefined') {
             ruleName += `\nSINK Attribute: ${rule.attribute}`
           }
-          const finding = Rules.getRule(CheckerId, node)
-          this.resultManager.addNewFinding(nd, node, fclos, TAINT_TAG_NAME, finding, ruleName, matchedSanitizerTags)
+          const taintFlowFinding = this.buildTaintFinding(
+            this.getCheckerId(),
+            this.desc,
+            node,
+            nd,
+            fclos,
+            TAINT_TAG_NAME,
+            ruleName,
+            matchedSanitizerTags
+          )
+          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
         return true
       }
     }
-  }
-
-  /**
-   * load sink
-   * @returns {*}
-   */
-  loadFuncCallTaintSinkRules() {
-    let rules = Rules.getRules()?.FuncCallTaintSink
-    if (_.isEmpty(rules)) {
-      return
-    }
-    rules = _.clone(rules)
-    rules = rules.filter((v) => v.kind === TARGET_RULES_KIND)
-    return rules
   }
 
   /**

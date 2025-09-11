@@ -1,14 +1,10 @@
 const _ = require('lodash')
-const stat = require('../../../util/statistics')
 const AstUtil = require('../../../util/ast-util')
-const { prepareArgs, matchField, getRules } = require('../../common/rules-basic-handler')
+const { prepareArgs, matchField } = require('../../common/rules-basic-handler')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const { Scope } = require('../../../engine/analyzer/common')
 const ValueUtil = require('../../../engine/analyzer/common/value/valueUtil')
-const Rules = require('../../common/rules-basic-handler')
 const varUtil = require('../../../util/variable-util')
-
-const RuleHandler = BasicRuleHandler.getRules
 
 /**
  *
@@ -17,7 +13,13 @@ const RuleHandler = BasicRuleHandler.getRules
  */
 function setTaint(res, tagType) {
   res._tags = res._tags || new Set()
-  res._tags.add(tagType)
+  if (Array.isArray(tagType)) {
+    for (const item of tagType) {
+      res._tags.add(item)
+    }
+  } else if (tagType) {
+    res._tags.add(tagType)
+  }
   res.hasTagRec = true
 }
 
@@ -57,13 +59,14 @@ function markTaintSource(unit, { path, kind }) {
  * @param scope
  * @param node
  * @param res
+ * @param funcCallReturnValueTaintSource
  */
-function introduceTaintAtFuncCallReturnValue(scope, node, res) {
+function introduceTaintAtFuncCallReturnValue(scope, node, res, funcCallReturnValueTaintSource) {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
-  const rules = RuleHandler().FuncCallReturnValueTaintSource
-  if (!rules || rules.length === 0) {
+  const rules = funcCallReturnValueTaintSource
+  if (!rules || !Array.isArray(rules) || rules.length === 0) {
     return
   }
   const call = node
@@ -90,16 +93,17 @@ function introduceTaintAtFuncCallReturnValue(scope, node, res) {
  * @param scope
  * @param node
  * @param res
+ * @param funcCallArgTaintSource
  */
-function introduceFuncArgTaintByRuleConfig(scope, node, res) {
+function introduceFuncArgTaintByRuleConfig(scope, node, res, funcCallArgTaintSource) {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
   if (node?.callee?.type !== 'MemberAccess') {
     return
   }
-  const rules = RuleHandler().FuncCallArgTaintSource
-  if (rules && rules.length > 0) {
+  const rules = funcCallArgTaintSource
+  if (rules && Array.isArray(rules) && rules.length > 0) {
     const call = node
     for (const tspec of rules) {
       if (tspec.fsig) {
@@ -167,13 +171,14 @@ function introduceTaintAtIdentifier(node, res, sourceScopeVal) {
  * @param res
  * @param scope
  * @param node
+ * @param taintSource
  */
-function introduceTaintAtMemberAccess(res, node, scope) {
+function introduceTaintAtMemberAccess(res, node, scope, taintSource) {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
-  const sources = RuleHandler().TaintSource
-  if (sources === null || sources === undefined) {
+  const sources = taintSource
+  if (sources === null || sources === undefined || !Array.isArray(sources) || sources.length === 0) {
     return
   }
   for (const tspec of sources) {
@@ -253,14 +258,11 @@ function introduceTaintAtIdentifierDirect(node, res, sourceScopeVal) {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
-  const { TaintSource: sourceRules } = getRules() || {}
-  if (sourceRules) {
-    for (const rule of sourceRules) {
+  if (sourceScopeVal) {
+    for (const rule of sourceScopeVal) {
       const paths = rule.path
       if (res._sid === paths) {
-        for (const val of sourceScopeVal) {
-          markTaintSource(res, { path: node, kind: val.kind })
-        }
+        markTaintSource(res, { path: node, kind: rule.kind })
       }
     }
   }

@@ -10,6 +10,7 @@ const FileUtil = require('../util/file-util')
 const { ErrorCode, Errors } = require('../util/error-code')
 const FrameworkUtil = require('../util/framework-util')
 const { handleException } = require('../engine/analyzer/common/exception-handler')
+const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-strategy-auto-register')
 
 /**
  * the main entry point of the usual scan
@@ -29,9 +30,37 @@ async function execute(dir, args = [], printf, isSync) {
       isSuccess = executeAnalyzer(analyzer, processingDir)
     }
     if (isSuccess) {
-      generateAnalyzerResult(analyzer, printf)
+      return outputAnalyzerResult(analyzer, printf)
     }
   }
+}
+
+/**
+ * output all the findings of all registered checker
+ * @param analyzer
+ * @param printf
+ */
+function outputAnalyzerResult(analyzer, printf) {
+  if (!printf || typeof printf !== 'function') {
+    printf = logger.info.bind(logger)
+  }
+  let allFindings = null
+  const { resultManager } = analyzer.getCheckerManager()
+  if (resultManager && Config.reportDir) {
+    const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+    outputStrategyAutoRegister.autoRegisterAllStrategies()
+    allFindings = resultManager.getFindings()
+    logger.info('\n=================  outputFindings  =======================')
+    for (const outputStrategyId in allFindings) {
+      const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
+      if (strategy && typeof strategy.outputFindings === 'function') {
+        strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
+      }
+    }
+    logger.info('\n================  outputFindings done  ===================')
+  }
+  logger.info('analyze done')
+  return allFindings
 }
 
 /**
@@ -52,7 +81,7 @@ function initAnalyzer(dir, args = [], printf) {
   let reportPath = ''
   // 定义命令行选项
   program
-    .option('--source-path <dir>', '指定源代码目录（支持文件或目录）', (d) => {
+    .option('--sourcePath <dir>', '指定源代码目录（支持文件或目录）', (d) => {
       try {
         if (!fs.existsSync(d)) {
           handleException(null, `Error !! no such file or directory: ${d}`, `Error !! no such file or directory: ${d}`)
@@ -119,18 +148,6 @@ function initAnalyzer(dir, args = [], printf) {
       const checkerPackIds = list.split(',')
       Config.checkerPackIds = _.assign(Config.checkerPackIds, checkerPackIds)
       logger.info('Specific checkerPackIds:', checkerPackIds)
-    })
-    .option('--format <format>', '指定输出格式（sarif/json/plaintext）', (format) => {
-      const supported = ['sarif', 'json', 'plaintext']
-      if (!supported.includes(format)) {
-        handleException(
-          null,
-          `format:${format} is not supported, choose one in ${supported.join(',')}`,
-          `format:${format} is not supported, choose one in ${supported.join(',')}`
-        )
-        process.exit(1)
-      }
-      Config.format = format
     })
     .option('--dumpAST', 'dump单文件AST', () => {
       Config.dumpAST = true
@@ -223,6 +240,8 @@ function initAnalyzer(dir, args = [], printf) {
   program.on('--help', () => {
     printHelp()
   })
+
+  program.version('0.2.1')
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
@@ -438,71 +457,6 @@ function executeAnalyzer(analyzer, processingDir) {
     handleException(e, 'Error in executeAnalyzerAsync occurred!!!!', 'Error in executeAnalyzerAsync occurred!!!!')
   }
   return false
-}
-
-/**
- *
- * @param printf
- * @param resultManager
- */
-function outputFindings(printf, resultManager) {
-  // results printing for target analyzing
-  if (printf && typeof printf === 'function') {
-    resultManager.printFindings(printf)
-  } else {
-    resultManager.printFindings(logger.info.bind(logger))
-  }
-}
-
-/**
- *
- * @param analyzer
- * @param printf
- */
-function generateAnalyzerResult(analyzer, printf) {
-  const { resultManager } = analyzer.checkerManager
-  outputFindings(printf, resultManager)
-
-  // results saving
-  if (Config.reportDir) {
-    const format = 'sarif' // Config.format
-    const reportData = resultManager.getResult(format)
-    // sarif report
-    const reportFilePath = pathMod.join(Config.reportDir, `report.${format}`)
-    logger.info(`report is write to ${reportFilePath}`)
-    FileUtil.writeJSONfile(reportFilePath, reportData)
-
-    // dump Call Graph to dot file
-    if (Config.dumpCG || Config.dumpAllCG) {
-      const callgraph = analyzer.checkerManager?.resultManager?.printings?.callgraph
-      if (callgraph) {
-        const cgContent = callgraph.dumpGraph()
-
-        if (cgContent) {
-          const cgFilePath = pathMod.join(Config.reportDir, 'callgraph.json')
-          logger.info(`start dump CG to ${cgFilePath}`)
-          const filteredRecords = JSON.stringify(cgContent, (key, value) => {
-            // 如果属性名是 'parent'，则返回 undefined 表示排除
-            if (key === 'parent') {
-              return undefined
-            }
-            if (value === undefined) {
-              return ''
-            }
-            return value
-          })
-          fs.writeFileSync(cgFilePath, filteredRecords)
-          logger.info(`CG info is write to ${cgFilePath}`)
-        }
-      } else {
-        logger.warn('dumpCG is not available for callgraph is not found in checker printings')
-      }
-    }
-  } else {
-    logger.warn('There is no report directory specified for reporting results')
-  }
-
-  logger.info('analyze done')
 }
 
 // 递归函数，用于删除对象及其子对象中的 'parent' 属性

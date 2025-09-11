@@ -10,8 +10,8 @@ const { satisfy } = require('../../util/ast-util')
 const config = require('../../config')
 const { shortenSourceFile } = require('../../util/file-util')
 const NdResultWithMatchedSanitizerTag = require('../common/value/nd-result-with-matched-sanitizer-tag')
+const Checker = require('../common/checker')
 
-const CheckerId = 'sanitizer'
 const SANITIZER = {
   SANITIZER_TYPE: {
     FUNCTION_CALL_SANITIZER: 'FunctionCallSanitizer',
@@ -31,12 +31,13 @@ const callstackSanitizers = new Set()
 /**
  *
  */
-class SanitizerChecker {
+class SanitizerChecker extends Checker {
   /**
-   * get checkerId
+   *
+   * @param mng
    */
-  static GetCheckerId() {
-    return CheckerId
+  constructor(mng) {
+    super(mng, 'sanitizer')
   }
 
   /**
@@ -285,7 +286,15 @@ class SanitizerChecker {
    * @returns {*}
    */
   static findAllSanitizers() {
-    return Rules.getRules()?.Sanitizers
+    const sanitizers = []
+    if (Array.isArray(Rules.getRules()) && Rules.getRules().length > 0) {
+      for (const rule of Rules.getRules()) {
+        if (Array.isArray(rule.sanitizers)) {
+          sanitizers.push(...rule.sanitizers)
+        }
+      }
+    }
+    return sanitizers
   }
 
   /**
@@ -298,10 +307,15 @@ class SanitizerChecker {
     if (!sanitizerIds || sanitizerIds.length === 0) {
       return result
     }
-    if (Rules.getRules()?.Sanitizers && Rules.getRules()?.Sanitizers.length > 0) {
-      for (const sanitizer of Rules.getRules().Sanitizers) {
-        if (sanitizerIds.includes(sanitizer.id)) {
-          result.push(sanitizer)
+
+    if (Array.isArray(Rules.getRules()) && Rules.getRules().length > 0) {
+      for (const rule of Rules.getRules()) {
+        if (Array.isArray(rule.sanitizers)) {
+          for (const sanitizer of rule.sanitizers) {
+            if (sanitizerIds.includes(sanitizer.id)) {
+              result.push(sanitizer)
+            }
+          }
         }
       }
     }

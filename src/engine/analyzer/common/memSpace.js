@@ -158,7 +158,7 @@ class MemSpace extends Scope {
 
     let defscope = scope
     if (scope.vtype === 'union') {
-      if (!limit) limit = 200
+      if (!limit) limit = 30
       const res = UnionValue()
       for (const scp of scope.value) {
         if (scp && limit > 0) {

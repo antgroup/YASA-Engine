@@ -1,67 +1,40 @@
-{
-  "checkerId": "taintChecker",
-  "Rules": [
-    {
-      "type": "taint_flow_test",
-      "desc": "Test for taint flow.",
-      "advice": "Avoid flowing the source to the taint sink",
-      "severity": 5
+[
+  {
+    "checkerIds": [
+      "taint_flow_test"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "__taint_src"
+        }
+      ]
     },
-    {
-      "type": "taint_flow_js",
-      "desc": "taint flow for javascript",
-      "advice": "Avoid flowing the source to the taint sink",
-      "severity": 1
-    }
-  ],
-  "TaintSource": [
-    {
-      "path": "__taint_src",
-      "kind": "TEST",
-      "introPoint": 1
+    "sanitizers": {
+      "FunctionCallSanitizer": [
+        {
+          "fsig": "validateTaint",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R",
+            "P0"
+          ],
+          "isContinue": true
+        }
+      ]
     },
-    {
-      "path": "__taint_src",
-      "kind": "JS_INPUT",
-      "introPoint": 1
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "fsig": "__taint_sink",
+          "args": [
+            0
+          ]
+        }
+      ]
     }
-  ],
-  "FuncCallTaintSource": [
-    {
-      "fsig": "__taint_sink",
-      "args": [
-        "*"
-      ],
-      "kind": "TEST"
-    }
-  ],
-  "FunctionCallSanitizer": [
-    {
-      "fsig": "validateTaint",
-      "args": [
-        "*"
-      ],
-      "from": "P0",
-      "to": ["R","P0"],
-      "kind": "TEST",
-      "isContinue": true
-    }
-  ],
-  "FuncCallTaintSink": [
-    {
-      "fsig": "__taint_sink",
-      "args": [
-        0
-      ],
-      "kind": "TEST"
-    },
-    {
-      "fsig": "__taint_sink",
-      "args": [
-        0
-      ],
-      "kind": "JS_INPUT"
-    }
-  ],
-  "AppName": "jsxastbenchmark"
-}
+  }
+]

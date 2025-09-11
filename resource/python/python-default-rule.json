@@ -1,29 +1,27 @@
-{
-  "Rules": [
-    {
-      "type": "taint_flow_test",
-      "desc": "Test for taint flow.",
-      "advice": "Avoid flowing the source to the taint sink",
-      "severity": 5
+[
+  {
+    "checkerIds": [
+      "taint_flow_python_input",
+      "taint_flow_python_input_inner"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "flask.request",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        }
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "fsig": "os.system",
+          "args": [
+            0
+          ]
+        }
+      ]
     }
-  ],
-  "TaintSource": [
-    {
-      "path": "flask.request",
-      "kind": "PYTHON_INPUT",
-      "introPoint": 4,
-      "scopeFile": "all",
-      "scopeFunc": "all"
-    }
-  ],
-  "EntryMode": "custom",
-  "FuncCallTaintSink": [
-    {
-      "fsig": "os.system",
-      "args": [
-        0
-      ],
-      "kind": "PYTHON_INPUT"
-    }
-  ]
-}
+  }
+]

@@ -5,36 +5,21 @@ const commonUtil = require('../../../util/common-util')
 const RouteRegistryProperty = ['HandleFunc', 'Handle', 'Handler']
 const RouteRegistryObject = ['github.com/gorilla/mux.NewRouter()']
 const IntroduceTaint = require('../common-kit/source-util')
+const Checker = require('../../common/checker')
 
 const processedRouteRegistry = new Set()
-
-const CheckerId = 'gorilla-mux-entrypoint-collect-checker'
 
 /**
  * Mux entryPoint采集以及框架source添加
  * checker
  */
-class MuxEntryPointCollectChecker {
+class MuxEntryPointCollectChecker extends Checker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   *
-   * @returns {string}
-   * @constructor
-   */
-  static GetCheckerId() {
-    return CheckerId
+    super(resultManager, 'gorilla-mux-entrypoint-collect-checker')
   }
 
   /**
@@ -73,7 +58,7 @@ class MuxEntryPointCollectChecker {
    */
   collectRouteRegistry(callExpNode, calleeFClos, argValues, scope, info) {
     const { analyzer, state } = info
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!(calleeFClos && calleeFClos.object && calleeFClos.property)) return
     const { object, property } = calleeFClos
     if (!object._qid || !property.name) return
