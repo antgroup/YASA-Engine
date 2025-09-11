@@ -1,35 +1,5 @@
 [
   {
-    "checkerId": "antql_getbaseclass",
-    "checkerPath": "src/checker/antql/rules/antql-getbaseclass.js",
-    "description": "antql_getbaseclass"
-  },
-  {
-    "checkerId": "antql_getdefinition",
-    "checkerPath": "src/checker/antql/rules/antql-getdefinition.js",
-    "description": "antql_getdefinition"
-  },
-  {
-    "checkerId": "antql_getsubclass",
-    "checkerPath": "src/checker/antql/rules/antql-getsubclass.js",
-    "description": "antql_getsubclass"
-  },
-  {
-    "checkerId": "antql_hasflow",
-    "checkerPath": "src/checker/antql/rules/antql-hasflow.js",
-    "description": "antql_hasflow"
-  },
-  {
-    "checkerId": "antql_hasfunctioncall",
-    "checkerPath": "src/checker/antql/rules/antql-hasfunctioncall.js",
-    "description": "antql_hasfunctioncall"
-  },
-  {
-    "checkerId": "antql_hasproperty",
-    "checkerPath": "src/checker/antql/rules/antql-hasproperty.js",
-    "description": "antql_hasproperty"
-  },
-  {
     "checkerId": "callgraph",
     "checkerPath": "src/checker/callgraph/callgraph-checker.js",
     "description": "CallGraph采集checker"
