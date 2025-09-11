@@ -20,7 +20,7 @@ YASA提供多语言统一程序分析能力，包含YASA-UAST、YASA-Engine、YA
 
 目前开源YASA-UAST与YASA-Engine两个组件，YASA-UQL与YASA-MCP后续进行开源。
 
-YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析、CG生成等能力。另外，YASA提供自定义checker能力，用户可根据具体业务需求进行灵活扩展和定制化检查器开发，欢迎广大开发者和企业用户体验使用。目前已开源Js/Python/Go语言的支持，Java语言暂未开源，敬请期待。
+YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析、CG生成等能力。另外，YASA提供自定义checker能力，用户可根据具体业务需求进行灵活扩展和定制化检查器开发，欢迎广大开发者和企业用户体验使用。目前已开源Js/TS、Python、Go语言的支持，Java语言暂未开源，敬请期待。
 
 ## 核心组件介绍
 <img src="folder-img/Structure.png"  />
