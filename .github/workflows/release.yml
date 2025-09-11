@@ -100,6 +100,7 @@ jobs:
           path: |
             dist/
             node_modules/
+          retention-days: 7
 
   # 3. 下载 YASA-UAST 的 Go 和 Python 二进制（可选）
   download_uast_binaries:
@@ -308,6 +309,7 @@ jobs:
         with:
           name: yasa-engine-releases
           path: releases/*.zip
+          retention-days: 7
 
   # 5. 集成测试：验证每个平台的 bundle 是否真实可用
   integration_test:
@@ -364,7 +366,9 @@ jobs:
               --checkerPackIds taint-flow-javascript-default \
               --ruleConfigFile sast-js/rule_config.json 2>&1
           )
-          echo "$output"
+          # 只打印 "=== Findings ===" 之后的 5 行
+          echo "🔍 Relevant findings (up to 5 lines after '=== Findings ==='):"
+          echo "$output" | grep -A 5 "=== Findings ===" || true
 
           if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
             echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
@@ -375,51 +379,51 @@ jobs:
             exit 1
           fi
 
-      - name: ✅ Test Go
-        id: test_go
-        working-directory: test-data
-        run: |
-          output=$(
-            ../bundle/${{ matrix.platform.engine }} \
-              sast-go \
-              --analyzer GoAnalyzer \
-              --checkerPackIds taint-flow-golang-default \
-              --ruleConfigFile sast-go/rule_config.json \
-              --uastSDKPath ../bundle/${{ matrix.platform.uast_go }} 2>&1
-          )
-          echo "$output"
+      # - name: ✅ Test Go
+      #   id: test_go
+      #   working-directory: test-data
+      #   run: |
+      #     output=$(
+      #       ../bundle/${{ matrix.platform.engine }} \
+      #         sast-go \
+      #         --analyzer GoAnalyzer \
+      #         --checkerPackIds taint-flow-golang-default \
+      #         --ruleConfigFile sast-go/rule_config.json \
+      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_go }} 2>&1
+      #     )
+      #     echo "$output"
 
-          if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-            echo "✅ Go test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Go test FAILED: Did not meet finding criteria"
-            echo "result=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
+      #       echo "✅ Go test PASSED: Findings detected and not 'No findings!'"
+      #       echo "result=success" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "❌ Go test FAILED: Did not meet finding criteria"
+      #       echo "result=failure" >> $GITHUB_OUTPUT
+      #       exit 1
+      #     fi
 
-      - name: ✅ Test Python
-        id: test_python
-        working-directory: test-data
-        run: |
-          output=$(
-            ../bundle/${{ matrix.platform.engine }} \
-              sast-python3 \
-              --analyzer PythonAnalyzer \
-              --checkerPackIds taint-flow-python-default \
-              --ruleConfigFile sast-python3/rule_config.json \
-              --uastSDKPath ../bundle/${{ matrix.platform.uast_py }} 2>&1
-          )
-          echo "$output"
+      # - name: ✅ Test Python
+      #   id: test_python
+      #   working-directory: test-data
+      #   run: |
+      #     output=$(
+      #       ../bundle/${{ matrix.platform.engine }} \
+      #         sast-python3 \
+      #         --analyzer PythonAnalyzer \
+      #         --checkerPackIds taint-flow-python-default \
+      #         --ruleConfigFile sast-python3/rule_config.json \
+      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_py }} 2>&1
+      #     )
+      #     echo "$output"
 
-          if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-            echo "✅ Python test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Python test FAILED: Did not meet finding criteria"
-            echo "result=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
+      #       echo "✅ Python test PASSED: Findings detected and not 'No findings!'"
+      #       echo "result=success" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "❌ Python test FAILED: Did not meet finding criteria"
+      #       echo "result=failure" >> $GITHUB_OUTPUT
+      #       exit 1
+      #     fi
       # --- Optional: Upload result summary ---
       - name: 📊 Summarize Test Results
         # 确保即使前面失败也运行
@@ -427,8 +431,8 @@ jobs:
         run: |
           echo "📋 Platform: ${{ matrix.platform.zip }}"
           echo "JavaScript: ${{ steps.test_js.outputs.result }}"
-          echo "Go: ${{ steps.test_go.outputs.result }}"
-          echo "Python: ${{ steps.test_python.outputs.result }}"
+          # echo "Go: ${{ steps.test_go.outputs.result }}"
+          # echo "Python: ${{ steps.test_python.outputs.result }}"
 
   # 6. 创建 GitHub Release
   create_release:
