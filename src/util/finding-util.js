@@ -1,98 +1,11 @@
 const _ = require('lodash')
+const uuid = require('node-uuid')
 const Stat = require('./statistics')
 const AstUtil = require('./ast-util')
 const SourceLine = require('../engine/analyzer/common/source-line')
 const config = require('../config')
 const CONSTANT = require('./constant')
 const { formatSanitizerTags } = require('../checker/sanitizer/sanitizer-checker')
-
-/**
- *
- * @param printf
- * @param findings
- * @param categories
- */
-function outputFindings(printf, categories) {
-  printf('\n======================== Findings ======================== ')
-  if (_.isEmpty(categories)) {
-    printf('No findings!')
-  } else {
-    let i = 1
-    for (const type in categories) {
-      const findings = categories[type]
-      for (const finding of findings) {
-        if (!finding.format) finding.format = formatFinding(finding)
-        const { format } = finding
-        const { entrypoint } = finding
-        const type_str = finding.issue
-          ? finding.issue
-          : !finding.subtype
-            ? finding.type
-            : `${finding.type} (${finding.subtype})`
-        printf('\n------------- ', i++, ': ', type_str, '------------- ')
-        // description
-        printf('Description:', finding.desc)
-        // source file information
-        const { sourcefile } = format
-        if (sourcefile && !sourcefile.startsWith('_f_')) printf('File:', sourcefile)
-        // the line of the issue
-        printf(format.line)
-        if (typeof finding.sinkRule !== 'undefined' && finding.sinkRule !== 'Default') {
-          printf('SINK RULE:', finding.sinkRule)
-        }
-        if (finding.sinkAttribute) {
-          printf('SINK Attribute:', finding.sinkAttribute)
-        }
-        // the entrypoint of this source
-        if (entrypoint && entrypoint.filepath !== CONSTANT.YASA_DEFAULT) {
-          printf('entrypoint: ')
-          printf({
-            filePath: entrypoint.filePath.startsWith(config.maindirPrefix)
-              ? entrypoint.filePath.substring(config.maindirPrefix.length)
-              : entrypoint.filePath,
-            functionName: entrypoint.functionName,
-            attribute: entrypoint.attribute,
-            type: entrypoint.type,
-            packageName: entrypoint.packageName,
-            funcReceiverType: entrypoint.funcReceiverType,
-          })
-        }
-
-        // the trace of the origin of the issue
-        if (format.trace) {
-          printf('Trace: ')
-          printf(format.trace)
-        }
-        // matched sanitizer of issue
-        if (format.matchedSanitizers) {
-          printf('Matched Sanitizers: ')
-          printf(format.matchedSanitizers)
-        }
-        // the trace of an example attack
-        if (format.attackTrace) {
-          printf('Attack example:')
-          printf(format.attackTrace)
-        }
-        // the advice
-        if (format.advice) {
-          printf('Advice: ')
-          printf('\t', format.advice)
-        }
-      }
-    }
-    // print statistics
-    printf('==========================================================')
-    for (const type in categories) {
-      if (categories[type].length === 0) {
-        continue
-      }
-
-      // printf('  #', categories[type][0].issue, ':', categories[type].length);
-      printf('  #', type, ':', categories[type].length)
-    }
-  }
-  printf('========================================================== \n')
-}
 
 /**
  * convert the finding to the string format
@@ -272,12 +185,33 @@ function getTrace(node, tagName) {
   return res.reverse()
 }
 
+/**
+ *
+ * @param findings
+ * @param finding
+ * @param outputStrategyId
+ * @param info
+ */
+function addFinding(findings, finding, outputStrategyId, info) {
+  let categoryFindings = findings[outputStrategyId]
+  if (!categoryFindings) {
+    findings[outputStrategyId] = []
+    categoryFindings = findings[outputStrategyId]
+  }
+  if (info && info.sourcefile) {
+    finding.sourcefile = info.sourcefile
+  }
+
+  finding.id = uuid.v4()
+  categoryFindings.push(finding)
+}
+
 module.exports = {
-  outputFindings,
   formatFinding,
   getBwdTrace,
   sourceFileURI,
   convertNode2Range,
   getTrace,
   shortenSourceFile,
+  addFinding,
 }

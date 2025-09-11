@@ -11,60 +11,52 @@ const { completeEntryPoint, entryPointsUpToUser } = require('./entry-points-util
 const AstUtil = require('../../../util/ast-util')
 const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
 const config = require('../../../config')
-const { initRules } = require('../../common/rules-basic-handler')
 const logger = require('../../../util/logger')(__filename)
+const TaintChecker = require('../taint-checker')
+const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
 
-const CheckerId = 'taint_flow_gin_input'
-
-const TARGET_RULES_KIND = 'GO_INPUT'
 const TAINT_TAG_NAME = 'GO_INPUT'
 
 /**
  * Gin taint_flow checker
  */
-class GinDefaultTaintChecker {
+class GinDefaultTaintChecker extends TaintChecker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
-    this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    initRules()
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   *
-   * @returns {string}
-   * @constructor
-   */
-  static GetCheckerId() {
-    return CheckerId
+    super(resultManager, 'taint_flow_gin_input')
   }
 
   /**
    * starter trigger
    * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
    */
-  triggerAtStartOfAnalyze(analyzer) {
+  triggerAtStartOfAnalyze(analyzer, scope, node, state, info) {
     const { topScope } = analyzer
     this.prepareEntryPoints(analyzer, topScope)
-    // analyzer.entryPoints.push(...analyzer.ruleEntrypoints)
+    this.addSourceTagForSourceScope(TAINT_TAG_NAME, this.sourceScope.value)
+    this.addSourceTagForcheckerRuleConfigContent(TAINT_TAG_NAME, this.checkerRuleConfigContent)
   }
 
   /**
    * MemberAccess trigger
-   * @param node
-   * @param res
+   *
+   * @param analyzer
    * @param scope
+   * @param node
+   * @param state
+   * @param info
    */
-  triggerAtMemberAccess(node, res, scope) {
-    IntroduceTaint.introduceTaintAtMemberAccess(res, node, scope)
+  triggerAtMemberAccess(analyzer, scope, node, state, info) {
+    const taintSource = this.checkerRuleConfigContent.sources?.TaintSource
+
+    IntroduceTaint.introduceTaintAtMemberAccess(info.res, node, scope, taintSource)
   }
 
   /**
@@ -74,27 +66,28 @@ class GinDefaultTaintChecker {
    * @param topScope
    */
   prepareEntryPoints(analyzer, topScope) {
+    const { entrypoints: ruleConfigEntryPoints, sources: ruleConfigSources } = this.checkerRuleConfigContent
+
     const {
-      RouterPath: routers,
       TaintSource: TaintSourceRules,
       FuncCallArgTaintSource: FuncCallArgTaintSourceRules,
       FuncCallReturnValueTaintSource: FuncCallReturnValueTaintSourceRules,
-    } = Rules.getRules() || {}
+    } = ruleConfigSources
 
     if (config.entryPointMode !== 'SELF_COLLECT') {
       // 添加rule_config中的route入口
-      if (!_.isEmpty(routers)) {
-        for (const router of routers) {
+      if (!_.isEmpty(ruleConfigEntryPoints)) {
+        for (const entrypoint of ruleConfigEntryPoints) {
           let entryPointSymVal
-          if (router.routerFuncReceiverType) {
+          if (entrypoint.funcReceiverType) {
             entryPointSymVal = AstUtil.satisfy(
               topScope.packageManager,
               (n) =>
                 n.vtype === 'fclos' &&
-                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === router.routerFile &&
+                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
                 n?.parent?.ast?.type === 'ClassDefinition' &&
-                n?.parent?.ast?.id?.name === router.routerFuncReceiverType &&
-                n?.ast?.id.name === router.routerFunc,
+                n?.parent?.ast?.id?.name === entrypoint.funcReceiverType &&
+                n?.ast?.id.name === entrypoint.functionName,
               (node, prop) => prop === 'field',
               null,
               false
@@ -104,15 +97,14 @@ class GinDefaultTaintChecker {
               topScope.packageManager,
               (n) =>
                 n.vtype === 'fclos' &&
-                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === router.routerFile &&
-                n?.ast?.id.name === router.routerFunc,
+                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
+                n?.ast?.id.name === entrypoint.functionName,
               (node, prop) => prop === 'field',
               null,
               false
             )
           }
           if (_.isEmpty(entryPointSymVal)) {
-            logger.info('[gin-default-taint-checker]gin route entryPoint is not found')
             continue
           }
           if (Array.isArray(entryPointSymVal)) {
@@ -124,20 +116,20 @@ class GinDefaultTaintChecker {
           const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
           entryPoint.scopeVal = entryPointSymVal[0].parent
           entryPoint.argValues = []
-          entryPoint.functionName = router.routerFunc
-          entryPoint.filePath = router.routerFile
-          entryPoint.attribute = router.routerAttribute
-          entryPoint.packageName = router.packageName
+          entryPoint.functionName = entrypoint.functionName
+          entryPoint.filePath = entrypoint.filePath
+          entryPoint.attribute = entrypoint.attribute
+          entryPoint.packageName = entrypoint.packageName
           entryPoint.entryPointSymVal = entryPointSymVal[0]
           analyzer.ruleEntrypoints.push(entryPoint)
         }
       }
+    }
+    if (config.entryPointMode !== 'ONLY_CUSTOM') {
       const ginDefaultEntrypoint = ginEntryPoint.getGinDefaultEntrypoint(topScope.packageManager)
       analyzer.ruleEntrypoints.push(...ginDefaultEntrypoint)
-    }
 
-    // 添加source
-    if (config.entryPointMode !== 'ONLY_CUSTOM') {
+      // 添加source
       const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
         ginEntryPoint.getGinEntryPointAndSource(topScope.packageManager)
 
@@ -153,54 +145,70 @@ class GinDefaultTaintChecker {
         return
       }
 
-      if (Rules.getRules()?.TaintSource && Array.isArray(Rules.getRules()?.TaintSource)) {
-        Rules.getRules()?.TaintSource.push(...TaintSourceRules)
-      } else {
-        Rules.getRules().TaintSource = TaintSourceRules
+      if (!_.isEmpty(TaintSource)) {
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...TaintSource)
       }
-      if (Rules.getRules()?.FuncCallArgTaintSource && Array.isArray(Rules.getRules()?.FuncCallArgTaintSource)) {
-        Rules.getRules().FuncCallArgTaintSource.push(...FuncCallArgTaintSourceRules)
-      } else {
-        Rules.getRules().FuncCallArgTaintSource = FuncCallArgTaintSourceRules
+
+      if (!_.isEmpty(FuncCallArgTaintSource)) {
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallArgTaintSource)
       }
-      if (
-        Rules.getRules()?.FuncCallReturnValueTaintSource &&
-        Array.isArray(Rules.getRules()?.FuncCallReturnValueTaintSource)
-      ) {
-        Rules.getRules().FuncCallReturnValueTaintSource.push(...FuncCallReturnValueTaintSourceRules)
-      } else {
-        Rules.getRules().FuncCallReturnValueTaintSource = FuncCallReturnValueTaintSourceRules
+
+      if (!_.isEmpty(FuncCallReturnValueTaintSource)) {
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallReturnValueTaintSource)
       }
     }
   }
 
   /**
    * FunctionDefinition trigger
-   * @param node
-   * @param scope
-   * @param fclos
    * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
    */
-  triggerAtFunctionDefinition(node, scope, fclos, analyzer) {
-    commonUtil.fillSourceScope(fclos, this.sourceScope)
+  triggerAtFunctionDefinition(analyzer, scope, node, state, info) {
+    commonUtil.fillSourceScope(info.fclos, this.sourceScope)
   }
 
   /**
    * FunctionCall trigger
-   * @param node
-   * @param calleeFClos
-   * @param argValues
+   * @param analyzer
    * @param scope
+   * @param node
+   * @param state
    * @param info
    */
-  triggerAtFunctionCallBefore(node, calleeFClos, argValues, scope, info) {
-    const { analyzer } = info
-    const calleeObject = calleeFClos.object
-    this.checkByNameAndClassMatch(node, calleeFClos, argValues, scope)
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, argValues)
+  triggerAtFunctionCallBefore(analyzer, scope, node, state, info) {
+    const { fclos, argvalues } = info
+    const calleeObject = fclos.object
+    this.checkByNameAndClassMatch(node, fclos, argvalues, scope)
+    const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, argvalues, funcCallArgTaintSource)
 
     if (config.entryPointMode === 'ONLY_CUSTOM') return
-    this.collectRouteRegistry(node, calleeObject, argValues, scope, analyzer)
+    this.collectRouteRegistry(node, calleeObject, argvalues, scope, analyzer)
   }
 
   /**
@@ -233,23 +241,28 @@ class GinDefaultTaintChecker {
 
   /**
    * FunctionCallAfter trigger
-   * @param node
-   * @param fclos
-   * @param ret
-   * @param argvalues
+   * @param analyzer
    * @param scope
+   * @param node
+   * @param state
    * @param info
    */
-  triggerAtFunctionCallAfter(node, fclos, ret, argvalues, scope, info) {
-    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret)
+  triggerAtFunctionCallAfter(analyzer, scope, node, state, info) {
+    const { fclos, ret } = info
+    const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
+    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
   }
 
   /**
    * 每次运行完main后清空hash
-   * @param entryPoint
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
    */
-  triggerAtSymbolExecuteOfEntryPointAfter(entryPoint) {
-    if (entryPoint.functionName === 'main') ginEntryPoint.clearProcessedRouteRegistry()
+  triggerAtSymbolInterpretOfEntryPointAfter(analyzer, scope, node, state, info) {
+    if (info?.entryPoint.functionName === 'main') ginEntryPoint.clearProcessedRouteRegistry()
   }
 
   /**
@@ -263,11 +276,11 @@ class GinDefaultTaintChecker {
     if (fclos === undefined) {
       return
     }
-    const rules = Rules.getRules()?.FuncCallTaintSink
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
     if (!rules || !argvalues) return
-    const rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope).find((v) => v.kind === TARGET_RULES_KIND)
-
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope)
+    rule = rule.length > 0 ? rule[0] : null
     if (rule) {
       const args = Rules.prepareArgs(argvalues, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
@@ -288,8 +301,18 @@ class GinDefaultTaintChecker {
           if (typeof rule.attribute !== 'undefined') {
             ruleName += `\nSINK Attribute: ${rule.attribute}`
           }
-          const finding = Rules.getRule(CheckerId, node)
-          this.resultManager.addNewFinding(nd, node, fclos, TAINT_TAG_NAME, finding, ruleName, matchedSanitizerTags)
+          const taintFlowFinding = this.buildTaintFinding(
+            this.getCheckerId(),
+            this.desc,
+            node,
+            nd,
+            fclos,
+            TAINT_TAG_NAME,
+            ruleName,
+            matchedSanitizerTags
+          )
+          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
         return true
       }

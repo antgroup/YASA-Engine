@@ -88,7 +88,7 @@ async function update(dir) {
     path.join(__dirname, '../../deps/uast4python/builder'),
   ]
   try {
-    await execute(dir, args, recorder.printAndAppend)
+    await execute(null, args, recorder.printAndAppend)
   } catch (e) {
     handleException(
       e,
@@ -143,7 +143,6 @@ async function getRunPythonBenchmarkResult(dir, expectFile) {
   actualRes = recorder.getFormatResult()
   expectedResMap = resolveTestFindingResult(expectedRes)
   actualResMap = resolveTestFindingResult(actualRes)
-  // }
 
   return {
     expectedRes,

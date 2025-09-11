@@ -5,108 +5,50 @@ const AstUtil = require('../../../util/ast-util')
 const findingUtil = require('../../../util/finding-util')
 const config = require('../../../config')
 const { prepareResult, prepareLocation, prepareTrace, prepareSarifFormat } = require('./sarif')
-const entryPointConfig = require('./current-entrypoint')
-const { Errors } = require('../../../util/error-code')
 const { handleException } = require('./exception-handler')
-const logger = require('../../../util/logger')(__filename)
-
-const pat = /\#\#(\s|[A-Za-z0-9_\.])+/g
+const FindingUtil = require('../../../util/finding-util')
 
 /**
  *
  */
 class ResultManager {
-  static CONSOLE = 'console'
-
-  static FILE = 'file'
-
   /**
    *
    */
   constructor() {
-    this.outputMode = ResultManager.CONSOLE
     this.findings = {}
-    this.printings = {}
-  }
-
-  /**
-   *
-   * @param self
-   * @param result
-   */
-  addResult(self, result) {}
-
-  /**
-   *
-   * @param self
-   * @param outPutType
-   * @param outputType
-   */
-  outputResult(self, outputType) {
-    if (ResultManager.CONSOLE === outputType) {
-    } else if (ResultManager.FILE === outputType) {
-    }
   }
 
   /**
    *
    */
-  getPrintings() {
-    return this.printings
+  getFindings() {
+    return this.findings
   }
 
   /**
    *
-   */
-  outputToConsole() {}
-
-  /**
-   *
-   */
-  outputToFile() {}
-
-  /**
-   *
-   * @param argNode
-   * @param callNode
-   * @param fclos
-   * @param ruleName
    * @param finding
-   * @param tagName
-   * @param sinkRule
-   * @param matchedSanitizerTags
+   * @param outputStrategyId
    */
-  addNewFinding(argNode, callNode, fclos, tagName, finding, sinkRule, matchedSanitizerTags) {
-    if (finding && argNode && argNode.hasTagRec) {
-      let traceStack = findingUtil.getTrace(argNode, tagName)
-      const trace = SourceLine.getNodeTrace(fclos, callNode)
-      // 暂时统一去掉Field，不然展示出来的链路会重复
-      traceStack = traceStack.filter((item) => item.tag !== 'Field: ')
-      for (const i in traceStack) {
-        if (traceStack[i].tag === 'Return value: ') {
-          traceStack[i].tag = 'Return Value: '
-        }
-      }
-      finding.trace = traceStack
-      trace.tag = 'SINK: '
-      trace.affectedNodeName = AstUtil.prettyPrint(callNode?.callee)
-      const arr = sinkRule.split('\nSINK Attribute: ')
-      if (arr.length === 1) {
-        finding.sinkRule = arr[0]
-      } else if (arr.length === 2) {
-        finding.sinkRule = arr[0]
-        finding.sinkAttribute = arr[1]
-      }
-      finding.sinkInfo = {
-        sinkRule: finding.sinkRule,
-        sinkAttribute: finding.sinkAttribute,
-      }
-      finding.entrypoint = _.pickBy(_.clone(entryPointConfig.getCurrentEntryPoint()), (value) => !_.isObject(value))
-      finding.trace.push(trace)
-      finding.matchedSanitizerTags = matchedSanitizerTags
+  newFinding(finding, outputStrategyId) {
+    if (finding.node) {
+      FindingUtil.addFinding(this.findings, finding, outputStrategyId, finding.node.loc)
+    } else {
+      FindingUtil.addFinding(this.findings, finding, outputStrategyId)
     }
-    if (!this.isNewFinding(finding)) return
-    this.addFinding(finding, callNode.loc)
+  }
+
+  /**
+   *
+   * get findings by strategyId
+   * @param strategyId
+   */
+  getFindingsByStrategyId(strategyId) {
+    if (this.findings) {
+      return this.findings[strategyId]
+    }
+    return null
   }
 
   /**
@@ -163,39 +105,6 @@ class ResultManager {
     if (fdef.sourcefile) finding.sourcefile = fdef.sourcefile
     finding.id = uuid.v4()
     category.push(finding)
-    // this.findings.push(finding)
-  }
-
-  /**
-   *
-   * @param printf
-   */
-  printFindings(printf) {
-    const categories = this.findings
-    findingUtil.outputFindings(printf, categories)
-  }
-
-  /**
-   *
-   * @param format
-   */
-  getResult(format) {
-    format = format || this.options?.format
-    if (format === 'json') {
-      return this.getJsonFormat()
-    }
-    if (format === 'sarif') {
-      return this.getSarifFormat()
-    }
-    if (format === 'plaintext') {
-      return this.getPlainTextFormat()
-    }
-    handleException(
-      new Error(`format:${format} is not supported`),
-      `format:${format} is not supported`,
-      `format:${format} is not supported`
-    )
-    process.exit(1)
   }
 
   /**
@@ -217,16 +126,6 @@ class ResultManager {
     }
     finding.trace = newTrace
   }
-
-  /**
-   *
-   */
-  getPlainTextFormat() {}
-
-  /**
-   *
-   */
-  getJsonFormat() {}
 
   /**
    *
@@ -283,8 +182,7 @@ class ResultManager {
     })
 
     // prepare call graph
-    const printings = this.getPrintings()
-    const { callgraph } = printings
+    const { callgraph } = findings
     const graphs = []
     if (callgraph) {
       graphs.push({
@@ -381,65 +279,6 @@ class ResultManager {
         line: endLine,
       },
     ]
-  }
-
-  /**
-   * For cross-checking the finding annotations in the source
-   * @param src
-   * @param sourcefile
-   * @sourcefile
-   */
-  checkFindings(src, sourcefile) {
-    const allLines = src.split(/\n/)
-    const issueSpec = new Map()
-    for (let i = 0; i < allLines.length; i++) {
-      const line = allLines[i]
-      const issueTx = line.match(pat)
-      if (!issueTx) continue
-      issueSpec[i + 2] = issueTx.map((tx) => tx.trim())
-    }
-
-    const findings = []
-    const categories = this.findings
-    for (const ct in categories) {
-      for (const finding of categories[ct]) findings.push(finding)
-    }
-    for (const finding of findings) {
-      if (
-        finding.sourcefile !== sourcefile &&
-        !(finding.sourcefile && finding.sourcefile.startsWith('_f_') && !sourcefile)
-      )
-        continue
-      const { line } = finding
-      const issue = issueSpec[line]
-      let found = false
-      if (issue) {
-        for (const x in issue) {
-          const tp = issue[x]
-          if (tp.endsWith(finding.type)) {
-            found = true
-            delete issue[x]
-            break
-          }
-        }
-        if (!found) {
-          const msg = `Checker: (Absent) Issue not specified at line ${line}:${finding.type}`
-          Errors.CheckerError(msg)
-        }
-      } else {
-        const msg = `Checker: (Absent) Issue not specified at line ${line}:${finding.type}`
-        Errors.CheckerError(msg)
-      }
-    }
-
-    for (const line in issueSpec) {
-      for (const issue of issueSpec[line]) {
-        if (issue) {
-          const msg = `Checker: (FN) Finding missing at line ${line}:${issue}`
-          Errors.CheckerError(msg)
-        }
-      }
-    }
   }
 }
 

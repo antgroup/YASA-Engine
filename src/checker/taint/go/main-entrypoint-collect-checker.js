@@ -2,36 +2,20 @@ const _ = require('lodash')
 const commonUtil = require('../../../util/common-util')
 const goEntryPoint = require('../../../engine/analyzer/golang/common/entrypoint-collector/go-default-entrypoint')
 const { completeEntryPoint } = require('./entry-points-util')
-const { initRules } = require('../../common/rules-basic-handler')
 const config = require('../../../config')
-const logger = require('../../../util/logger')(__filename)
-
-const CheckerId = 'go-main-entryPoints-collection'
+const Checker = require('../../common/checker')
 
 /**
  * Go taint_flow checker
  */
-class MainEntrypointCollectChecker {
+class MainEntrypointCollectChecker extends Checker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
+    super(resultManager, 'go-main-entryPoints-collection')
     this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    initRules()
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   *
-   */
-  static GetCheckerId() {
-    return CheckerId
   }
 
   /**

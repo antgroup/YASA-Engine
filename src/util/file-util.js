@@ -157,6 +157,70 @@ function loadFileTextRec(filename, nameFilter, dirFilter, res, extExcludes) {
 
 //* ***************************** Source in JSON ***********************************
 
+// load and parse JSON files
+/**
+ *
+ * @param filename
+ */
+function loadJsonFileAsts(filename) {
+  const path_string = filename
+  let fileStat
+  let ast
+  try {
+    fileStat = fs.lstatSync(path_string)
+  } catch (e) {}
+
+  if (fileStat && fileStat.isDirectory()) {
+    // logger.info('path: ' + path_string);
+    const dir = path_string
+    let res = []
+    const files = fs.readdirSync(dir)
+    for (let i = 0; i < files.length; i++) {
+      const name = `${dir}/${files[i]}`
+      if (fs.statSync(name).isDirectory()) {
+        // go into the subdirectories
+        const sub_res = loadJsonFileAsts(name)
+        res = res.concat(sub_res)
+        continue
+      }
+
+      const lastDotIndex = name.lastIndexOf('.')
+      if (lastDotIndex === -1 || lastDotIndex === name.length - 1) {
+        continue
+      }
+      const fileExtension = name.substring(lastDotIndex + 1)
+      if (fileExtension !== 'json') {
+        continue
+      }
+
+      ast = loadJSONfile(name)
+      res.push({
+        file: filename,
+        ast,
+        language: constants.Language.JAVA,
+      })
+    }
+    return res
+  }
+  // logger.info('file: ' + path_string);
+  if (filename.indexOf('.json') === -1) {
+    filename += '.json'
+  }
+
+  ast = loadJSONfile(filename)
+  if (!ast) return fast
+
+  logger.info(`loaded: ${filename}`)
+  if (Array.isArray(ast)) {
+    return ast.map(function (unit) {
+      return { ast: unit }
+    })
+  }
+  return {
+    file: filename,
+    ast,
+  }
+}
 
 // write JSON into a file
 /**
@@ -179,9 +243,13 @@ function writeJSONfile(filename, value) {
  */
 function loadJSONfile(filename) {
   if (!fs.existsSync(filename)) {
-    return null
+    handleException(
+      null,
+      `loading JSON file error: ${filename}. File does not exist`,
+      `loading JSON file error: ${filename}. File does not exist`
+    )
+    process.exit(1)
   }
-  logger.info(`loading JSON file: ${filename}`)
   try {
     const res = jsonfile.readFileSync(filename)
     return res

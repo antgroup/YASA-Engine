@@ -1,27 +1,40 @@
-{
-  "Rules": [
-    {
-      "type": "taint_flow_test",
-      "desc": "Test for taint flow.",
-      "advice": "Avoid flowing the source to the taint sink",
-      "severity": 5
+[
+  {
+    "checkerIds": [
+      "taint_flow_test"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "__taint_src"
+        }
+      ]
+    },
+    "sanitizers": {
+      "FunctionCallSanitizer": [
+        {
+          "fsig": "validateTaint",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R",
+            "P0"
+          ],
+          "isContinue": true
+        }
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "fsig": "__taint_sink",
+          "args": [
+            0
+          ]
+        }
+      ]
     }
-  ],
-  "TaintSource": [
-    {
-      "path": "__taint_src",
-      "kind": "TEST",
-      "introPoint": 1
-    }
-  ],
-  "FuncCallTaintSink": [
-    {
-      "fsig": "__taint_sink",
-      "args": [
-        0
-      ],
-      "kind": "TEST"
-    }
-  ],
-  "AppName": "sast-go"
-}
+  }
+]

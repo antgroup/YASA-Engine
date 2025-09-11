@@ -4,8 +4,15 @@ const constValue = require('../../../util/constant')
 const Rules = require('../../common/rules-basic-handler')
 const config = require('../../../config')
 
-const { RouterPath } = Rules.getRules() || {}
-const entryPointsUpToUser = !_.isEmpty(RouterPath)
+const entrypoints = []
+if (Array.isArray(Rules.getRules()) && Rules.getRules().length > 0) {
+  for (const rule of Rules.getRules()) {
+    if (Array.isArray(rule.entrypoints)) {
+      entrypoints.push(...rule.entrypoints)
+    }
+  }
+}
+const entryPointsUpToUser = !_.isEmpty(entrypoints)
 
 /**
  * 填充entryPoint信息

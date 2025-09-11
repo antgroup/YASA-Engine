@@ -56,6 +56,6 @@ module.exports = {
   ruleConfigFile: '',
   checkerIds: [],
   checkerPackIds: [],
-  routerSourceAtSameTime: true,
+  entryPointAndSourceAtSameTime: true,
   entryPointMode: 'BOTH', // BOTH or ONLY_CUSTOM or SELF_COLLECT
 }

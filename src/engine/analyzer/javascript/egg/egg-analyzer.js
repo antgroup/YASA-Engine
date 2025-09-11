@@ -77,25 +77,19 @@ class EggAnalyzer extends JsAnalyzer {
           }
           hasAnalysised.push(`${entryPoint.filePath}.${entryPoint.functionName}`)
           entryPointConfig.setCurrentEntryPoint(entryPoint)
-          let { entryPointSymVal, argValues, scopeVal, filePath } = entryPoint
-          filePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
-          const arr = loader.getFilePathProperties(filePath, { caseStyle: 'lower' })
-          let fieldT = this.topScope
-          arr.forEach((path) => {
-            fieldT = fieldT?.field[path]
-          })
-          if (!fieldT || fieldT.vtype === 'undefine') {
-            continue
-          }
-          const valExport = fieldT
-          eggCommon.refreshCtx(valExport.value.ctx.field)
-          this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, valExport, this.state)
+          const { entryPointSymVal, argValues, scopeVal } = entryPoint
+
+          eggCommon.refreshCtx(scopeVal.value.ctx.field)
+          this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, scopeVal, this.state)
           this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
           try {
             logger.info(
               'EntryPoint [%s.%s] is executing ',
               entryPoint.filePath?.substring(0, entryPoint?.filePath?.lastIndexOf('.')),
-              entryPoint.functionName
+              entryPoint.functionName ||
+                `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_${
+                  entryPoint.entryPointSymVal?.ast.loc.end.line
+                }>`
             )
             this.executeCall(entryPointSymVal.ast, entryPointSymVal, argValues, this.state, scopeVal)
           } catch (e) {
@@ -408,6 +402,7 @@ class EggAnalyzer extends JsAnalyzer {
     )
     if (modules.length === 0) {
       Errors.NoCompileUnitError('no javascript file found in source path')
+      process.exit(1)
     }
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file, isReScan)

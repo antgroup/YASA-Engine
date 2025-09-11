@@ -24,7 +24,6 @@ const entryPointConfig = require('../../common/current-entrypoint')
 const FileUtil = require('../../../../util/file-util')
 const globby = require('fast-glob')
 const _ = require('lodash')
-const { initRulesMap } = require('../../../../checker/common/rules-basic-handler')
 const { getSourceNameList } = require('./entrypoint-collector/python-entrypoint')
 const { handleException } = require('../../common/exception-handler')
 
@@ -45,7 +44,6 @@ class PythonAnalyzer extends Analyzer {
       Rules
     )
     super(checkerManager, options)
-    initRulesMap(options.ruleConfigFile)
 
     this.fileList = []
     this.astManager = {}
@@ -115,7 +113,10 @@ class PythonAnalyzer extends Analyzer {
         logger.info(
           'EntryPoint [%s.%s] is executing',
           entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
-          entryPoint.functionName
+          entryPoint.functionName ||
+            `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_${
+              entryPoint.entryPointSymVal?.ast.loc.end.line
+            }>`
         )
 
         const fileFullPath = assembleFullPath(entryPoint.filePath, config.maindir)
@@ -131,7 +132,7 @@ class PythonAnalyzer extends Analyzer {
               this.processInstruction(
                 entryPoint.entryPointSymVal,
                 entryPoint.entryPointSymVal?.ast?.parameters[key]?.id,
-                this.state
+                state
               )
             )
           }
@@ -179,6 +180,13 @@ class PythonAnalyzer extends Analyzer {
         hasAnalysised.push(`fileBegin:${entryPoint.filePath}`)
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
+
+        const fileFullPath = assembleFullPath(entryPoint.filePath, config.maindir)
+        const sourceNameList = getSourceNameList()
+        this.refreshCtx(this.moduleManager.field[fileFullPath]?.field, sourceNameList)
+        this.refreshCtx(this.fileManager[fileFullPath]?.field, sourceNameList)
+        this.refreshCtx(this.packageManager.field[fileFullPath], sourceNameList)
+
         const { filePath } = entryPoint
         const scope = this.moduleManager.field[filePath]
         if (scope) {
@@ -1173,6 +1181,7 @@ class PythonAnalyzer extends Analyzer {
       .map((relativePath) => path.resolve(dir, relativePath))
     if (modules.length === 0) {
       Errors.NoCompileUnitError('no python file found in source path')
+      process.exit(1)
     }
     pythonParser.parsePackages(this.astManager, dir, options)
     for (const mod of modules) {

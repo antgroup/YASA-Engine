@@ -4,36 +4,23 @@ const { completeEntryPoint, entryPointsUpToUser } = require('./entry-points-util
 const AstUtil = require('../../../util/ast-util')
 const config = require('../../../config')
 const IntroduceTaint = require('../common-kit/source-util')
+const Checker = require('../../common/checker')
 
 const processedCompileUnit = new Set()
 const registerServerPoints = {}
 const processedRegisterEntryPoints = new Set()
 
-const CheckerId = 'gRpc-entryPoint-collect-checker'
 const interfaceEntryPointsMap = {}
 /**
  * gRpc entrypoint采集以及框架source添加
  */
-class GRpcEntrypointCollectChecker {
+class GRpcEntrypointCollectChecker extends Checker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   * @returns {string}
-   * @constructor
-   */
-  static GetCheckerId() {
-    return CheckerId
+    super(resultManager, 'gRpc-entryPoint-collect-checker')
   }
 
   /**
@@ -100,7 +87,7 @@ class GRpcEntrypointCollectChecker {
    * @param scope
    */
   collectInterfaceEntryPoints(interfaceExp, interfaceName, scope) {
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     interfaceExp.body.forEach((funcType) => {
       if (
         !funcType ||
@@ -125,7 +112,7 @@ class GRpcEntrypointCollectChecker {
    */
   triggerAtFunctionCallBefore(analyzer, scope, node, state, info) {
     const { fclos, argvalues } = info
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!(fclos._qid in registerServerPoints)) return // 处理Register_xxx_Server函数，即实现类注册点
     if (!Array.isArray(argvalues) || argvalues.length < 1) return
     const serverName = registerServerPoints[fclos._qid]

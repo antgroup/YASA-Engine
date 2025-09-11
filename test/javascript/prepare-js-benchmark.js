@@ -1,52 +1,110 @@
 const path = require('path')
 const fs = require('fs-extra')
 const { describe, it } = require('mocha')
+const simpleGit = require('simple-git')
+const git = simpleGit()
 const { XAST_JS_BENCHMARK, BENCHMARKS_DIR, checkBenchmarkReady } = require('../test-utils')
 const { handleException } = require('../../src/engine/analyzer/common/exception-handler')
 const logger = require('../../src/util/logger')(__filename)
 const XAST_JS_BENCHMARK_REPO_URL = 'https://github.com/alipay/ant-application-security-testing-benchmark.git'
 
 const JS_ALL_BENCHMARK_REPO_URLS = {
-  yasaNodeJsBenchmark: 'git@code.alipay.com:jiufo_test/yasaNodeJsBenchmark.git',
-  chairbenchmark: 'git@code.alipay.com:jiufo_test/chairbenchmark.git',
-  // XAST_JS_BENCHMARK: XAST_JS_BENCHMARK_REPO_URL,
+  jsbenchmark: {
+    gitRepoUrl: XAST_JS_BENCHMARK_REPO_URL,
+    branch: 'main-forYasaTest',
+  },
 }
 
-describe(`YASA auto prepare js benchmark`, function () {
-  this.timeout(100000)
-  it(`do preparing benchmark`, async function () {
-    prepareJsBenchmark()
-  })
-})
+async function cloneRepo(gitRepoUrl, targetDir, branch) {
+  // 确保目标目录存在
+  const absoluteTargetDir = path.resolve(targetDir)
+  let done = true
+  // 创建命令
+  await git
+    .clone(gitRepoUrl, absoluteTargetDir, ['-b', branch])
+    .then(() => logger.info(`仓库克隆成功！！！仓库:${gitRepoUrl} 已克隆至 ${targetDir}`))
+    .catch((err) => {
+      done = false
+      handleException(
+        err,
+        `克隆仓库:${gitRepoUrl}失败, 请手动克隆至 ${targetDir} 错误信息${err}`,
+        `克隆仓库:${gitRepoUrl}失败, 请手动克隆至 ${targetDir} 错误信息${err}`
+      )
+    })
 
-function prepareJsBenchmark() {
   try {
-    let rootDir = path.resolve(__dirname, BENCHMARKS_DIR)
-    let ready = checkBenchmarkReady(rootDir, JS_ALL_BENCHMARK_REPO_URLS)
-    if (!ready) {
-      logger.info(`靶场未准备成功`)
-      // await downloadXastJsBenchmark()
-      // const targetDir = path.resolve(__dirname, BENCHMARKS_DIR, XAST_JS_BENCHMARK)
-      // cleanDirectoryForJs(targetDir)
-      // moveSrcDirectoryForJs(targetDir)
-    } else {
-      logger.info(`靶场准备成功`)
+    if (gitRepoUrl === XAST_JS_BENCHMARK_REPO_URL) {
+      cleanDirectoryForSastJs(absoluteTargetDir)
+      moveSrcDirectoryForJs(absoluteTargetDir)
     }
   } catch (e) {
-    handleException(e, 'Error in prepareJsBenchmark ', 'Error in prepareJsBenchmark ')
-    return false
+    handleException(
+      e,
+      `[prepare-js-benchmark] 清理目录时发生错误.Error:${e}`,
+      `[prepare-js-benchmark] 清理目录时发生错误.Error:${e}`
+    )
+    done = false
   }
-  return true
+  return done
 }
 
-async function downloadXastJsBenchmark() {
-  const targetDir = path.resolve(__dirname, BENCHMARKS_DIR, XAST_JS_BENCHMARK)
-  let cloneSuccess = await cloneRepo(XAST_JS_BENCHMARK_REPO_URL, targetDir)
-  return cloneSuccess
+async function prepareTest() {
+  const allRepoReady = []
+  for (let key in JS_ALL_BENCHMARK_REPO_URLS) {
+    const repoUrl = JS_ALL_BENCHMARK_REPO_URLS[key].gitRepoUrl
+    const branch = JS_ALL_BENCHMARK_REPO_URLS[key].branch
+    const targetDir = path.resolve(__dirname, BENCHMARKS_DIR, key)
+    if (fs.existsSync(targetDir)) {
+      fs.rmSync(targetDir, { recursive: true })
+    }
+    fs.mkdirSync(targetDir, { recursive: true })
+    let repoRes = await cloneRepo(repoUrl, targetDir, branch)
+    allRepoReady.push(repoRes)
+  }
+  return allRepoReady.length > 0 && allRepoReady.every((ready) => ready)
+}
+
+/**
+ * 执行脚本需要做的准备工作是否ready
+ * @returns {boolean}
+ */
+function checkReady() {
+  try {
+    let rootDir = path.resolve(__dirname, BENCHMARKS_DIR)
+    const dirs = fs.readdirSync(rootDir)
+    let set = new Set(dirs)
+    set.delete('.DS_Store')
+    let ready = Object.keys(JS_ALL_BENCHMARK_REPO_URLS).every((repo) => set.has(repo))
+    return ready
+  } catch (e) {
+    handleException(e, `[prepare-js-benchmark] 靶场准备检查失败`, `[prepare-js-benchmark] 靶场准备检查失败`)
+    return false
+  }
+}
+
+async function doPrepare() {
+  let ready = false
+  // let ready = checkReady()
+  // logger.info(`检查sast-js靶场是否准备：${ready}`)
+  if (!ready) {
+    try {
+      logger.info(`开始克隆sast-js靶场...`)
+      await prepareTest()
+    } catch (e) {
+      handleException(
+        e,
+        `[prepare-js-benchmark] 准备测试case失败，请手动准备sast-js靶场至测试目录${path.resolve(__dirname, BENCHMARKS_DIR)}`,
+        `[prepare-js-benchmark] 准备测试case失败，请手动准备sast-js靶场至测试目录${path.resolve(__dirname, BENCHMARKS_DIR)}`
+      )
+      return
+    }
+    logger.info(`仓库克隆成功`)
+  }
+  logger.info(`靶场已准备`)
 }
 
 // 遍历并删除除目标子目录以外的所有文件和文件夹
-function cleanDirectoryForJs(directory) {
+function cleanDirectoryForSastJs(directory) {
   fs.readdirSync(directory).forEach((item) => {
     const itemPath = path.join(directory, item)
     // 跳过子aaa文件夹
@@ -56,24 +114,6 @@ function cleanDirectoryForJs(directory) {
     // 删除其他所有文件/文件夹
     fs.removeSync(itemPath)
   })
-
-  // 递归遍历目录树，清空所有 cross_file_package_namespace 目录内容
-  ;(function traverse(dir) {
-    const items = fs.readdirSync(dir, { withFileTypes: true }) // 获取带类型信息的目录项
-
-    for (const item of items) {
-      const itemPath = path.join(dir, item.name)
-
-      if (item.isDirectory()) {
-        if (item.name === 'cross_file_package_namespace') {
-          fs.removeSync(itemPath)
-        } else {
-          // 递归处理子目录
-          traverse(itemPath)
-        }
-      }
-    }
-  })(directory)
 }
 
 // 移动case目录到上层的aaa目录
@@ -86,6 +126,4 @@ function moveSrcDirectoryForJs(directory) {
   fs.removeSync(childAaaPath)
 }
 
-module.exports = {
-  prepareJsBenchmark,
-}
+doPrepare()

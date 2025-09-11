@@ -16,7 +16,7 @@ function makeFullCallGraph(analyzer) {
   config.loadDefaultRule = false
   config.loadExternalRule = false
   config.makeAllCG = true
-  const newCheckerManager = new CheckerManager(undefined, undefined, undefined, BasicRuleHandler)
+  const newCheckerManager = new CheckerManager(undefined, undefined, undefined, undefined, BasicRuleHandler)
   newCheckerManager.doRegister(callGraphRule, newCheckerManager)
   config.loadDefaultRule = true
   config.loadExternalRule = true
