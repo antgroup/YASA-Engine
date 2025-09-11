@@ -1,7 +1,7 @@
 const { extractRelativePath } = require('../../../../../util/file-util')
 const EntryPoint = require('../../../common/entrypoint')
 const constValue = require('../../../../../util/constant')
-const { routerSourceAtSameTime } = require('../../../../../config')
+const { entryPointAndSourceAtSameTime } = require('../../../../../config')
 const { findSourceOfFuncParam } = require('../../common/entrypoint-collector/python-entrypoint-source')
 
 /**
@@ -51,7 +51,7 @@ function findMcpEntryPointAndSource(filenameAstObj, dir) {
               entryPoint.attribute = 'HTTP'
               mcpEntryPointArray.push(entryPoint)
 
-              if (routerSourceAtSameTime) {
+              if (entryPointAndSourceAtSameTime) {
                 const paramSourceArray = findSourceOfFuncParam(filename, funcName, obj, null)
                 if (paramSourceArray) {
                   mcpEntryPointSourceArray.push(...paramSourceArray)

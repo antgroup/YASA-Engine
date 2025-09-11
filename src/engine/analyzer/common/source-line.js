@@ -35,17 +35,17 @@ function addSrcLineInfo(val, node, sourcefile, tag, affectedNodeName) {
         const { trace } = eachVal
         if (trace.length > 0) {
           const last_line = trace[trace.length - 1]
-          if (last_line.file === sourcefile && last_line.line === node.loc.start.line && last_line.tag === tag)
+          if (last_line.file === sourcefile && last_line.line === node.loc.start?.line && last_line.tag === tag)
             // return val;
             trace.pop()
         }
-        const start_line = node.loc.start.line
-        const end_line = node.loc.end.line
+        const start_line = node.loc.start?.line
+        const end_line = node.loc.end?.line
         const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
         eachVal.trace.push({ file: sourcefile, line: tline, node, tag, affectedNodeName })
       } else {
-        const start_line = node.loc.start.line
-        const end_line = node.loc.end.line
+        const start_line = node.loc.start?.line
+        const end_line = node.loc.end?.line
         const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
         eachVal.trace = [
           {
@@ -69,7 +69,7 @@ function addSrcLineInfo(val, node, sourcefile, tag, affectedNodeName) {
   if (trace) {
     if (trace.length > 0) {
       const last_line = trace[trace.length - 1]
-      if (last_line.file === sourcefile && last_line.line === node.loc.start.line && last_line.tag === tag)
+      if (last_line.file === sourcefile && last_line.line === node.loc.start?.line && last_line.tag === tag)
         // return val;
         trace.pop()
     }
@@ -81,16 +81,16 @@ function addSrcLineInfo(val, node, sourcefile, tag, affectedNodeName) {
       new_val = _.clone(val)
       new_val.trace = _.clone(val.trace)
     }
-    const start_line = node.loc.start.line
-    const end_line = node.loc.end.line
+    const start_line = node.loc.start?.line
+    const end_line = node.loc.end?.line
     const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
     new_val.trace.push({ file: sourcefile, line: tline, node, tag, affectedNodeName })
     processFieldAndArguments(new_val, new_val, 0, new Array())
     return new_val
   }
   const new_val = _.clone(val)
-  const start_line = node.loc.start.line
-  const end_line = node.loc.end.line
+  const start_line = node.loc.start?.line
+  const end_line = node.loc.end?.line
   const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
   new_val.trace = [
     {

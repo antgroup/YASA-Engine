@@ -67,12 +67,11 @@ function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope) {
         ) {
           res.push(tspec)
         } else if (
-          callExpr.type === 'MemberAccess' &&
+          (callExpr.type === 'MemberAccess' || callExpr.type === 'Identifier') &&
           (AstUtil.prettyPrint(fclos.rtype?.definiteType) === tspec.calleeType ||
             AstUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
             tspec.calleeType === '*') &&
-          (AstUtil.prettyPrint(fclos.rtype?.vagueType).replace(/"/g, '') === tspec.fsig ||
-            fclos._sid === tspec.fsig)
+          (AstUtil.prettyPrint(fclos.rtype?.vagueType).replace(/"/g, '') === tspec.fsig || fclos._sid === tspec.fsig)
         ) {
           // import cn.hutool.http.HttpRequest; HttpRequest.post
           res.push(tspec)

@@ -1,7 +1,6 @@
 // checker加载逻辑重构后可打开，让stc不要用
 const _ = require('lodash')
 const Rules = require('../../common/rules-basic-handler')
-const { initRules } = require('../../common/rules-basic-handler')
 const IntroduceTaint = require('../common-kit/source-util')
 const IntroduceTaintForJs = require('./source-util-for-egg')
 const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
@@ -9,6 +8,7 @@ const constValue = require('../../../util/constant')
 const commonUtil = require('../../../util/common-util')
 const loader = require('../../../util/loader')
 const { matchSinkAtFuncCall } = require('../common-kit/sink-util')
+const TaintChecker = require('../taint-checker')
 const {
   valueUtil: {
     ValueUtil: { Scoped },
@@ -16,35 +16,22 @@ const {
 } = require('../../../engine/analyzer/common')
 const config = require('../../../config')
 const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
+const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
+const { handleException } = require('../../../engine/analyzer/common/exception-handler')
 
-const CheckerId = 'taint_flow_js_input'
 const TAINT_TAG_NAME = 'JS_INPUT'
 
 /**
  *
  */
-class JsTaintChecker {
+class JsTaintChecker extends TaintChecker {
   /**
    *
-   * @param mng
    * @param resultManager
    */
   constructor(resultManager) {
+    super(resultManager, 'taint_flow_js_input')
     this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    initRules()
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   *
-   */
-  static GetCheckerId() {
-    return CheckerId
   }
 
   /**
@@ -62,6 +49,8 @@ class JsTaintChecker {
     const { topScope, fileManager } = analyzer
     this.prepareEntryPoints(analyzer, topScope, fileManager)
     analyzer.entryPoints.push(...this.entryPoints)
+    this.addSourceTagForSourceScope(TAINT_TAG_NAME, this.sourceScope.value)
+    this.addSourceTagForcheckerRuleConfigContent(TAINT_TAG_NAME, this.checkerRuleConfigContent)
   }
 
   /**
@@ -101,51 +90,72 @@ class JsTaintChecker {
    * @param fileManager
    */
   prepareEntryPoints(analyzer, topScope, fileManager) {
-    const { RouterPath: routers } = Rules.getRules() || {}
+    const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
     if (config.entryPointMode !== 'SELF_COLLECT') {
       // 自定义source入口方式，并根据入口自主加载source
       const prepareEntryPointList = []
-      if (!_.isEmpty(routers)) {
-        prepareEntryPointList.push(...routers)
+      if (!_.isEmpty(ruleConfigEntryPoints)) {
+        prepareEntryPointList.push(...ruleConfigEntryPoints)
       }
       if (!_.isEmpty(prepareEntryPointList)) {
         for (const entrypoint of prepareEntryPointList) {
-          let filepath = entrypoint.filePath || entrypoint.routerFile
-          filepath = filepath.startsWith('/') ? filepath.slice(1) : filepath
-          const arr = loader.getFilePathProperties(filepath, { caseStyle: 'lower' })
-          // const arr = filepath.split("/").filter(str => str !== "").map(str => str.split(".").shift());
-          let fieldT = topScope
-          arr.forEach((path) => {
-            fieldT = fieldT?.field[path]
-          })
-          if (!fieldT || fieldT.vtype === 'undefine') {
-            continue
+          try {
+            let filepath = entrypoint.filePath
+            filepath = filepath.startsWith('/') ? filepath.slice(1) : filepath
+            const arr = loader.getFilePathProperties(filepath, { caseStyle: 'lower' })
+            // const arr = filepath.split("/").filter(str => str !== "").map(str => str.split(".").shift());
+            let fieldT = topScope
+            arr.forEach((path) => {
+              fieldT = fieldT?.field[path]
+            })
+            if (!fieldT || fieldT.vtype === 'undefine') {
+              for (const mod in topScope.moduleManager.field) {
+                if (
+                  mod.includes(entrypoint.filePath) &&
+                  topScope.moduleManager.field[mod].ast?.type === 'CompileUnit'
+                ) {
+                  fieldT = topScope.moduleManager.field[mod]
+                  break
+                }
+              }
+            }
+
+            if (entrypoint.functionName) {
+              const func = entrypoint.functionName
+              const valExport = fieldT
+              const entryPointSymVal = commonUtil.getFclosFromScope(valExport, func)
+              if (entryPointSymVal?.vtype !== 'fclos') {
+                continue
+              }
+
+              // const argValues = []
+              const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
+              entryPoint.scopeVal = entryPointSymVal.parent
+              // entryPoint.argValues = argValues
+              entryPoint.functionName = entrypoint.functionName
+              entryPoint.filePath = entrypoint.filePath
+              entryPoint.attribute = entrypoint.attribute
+              entryPoint.entryPointSymVal = entryPointSymVal
+              this.entryPoints.push(entryPoint)
+            } else {
+              if (!fieldT.ast || fieldT.ast.type !== 'CompileUnit') continue
+              const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
+              entryPoint.scopeVal = fieldT
+              entryPoint.argValues = undefined
+              entryPoint.functionName = undefined
+              entryPoint.filePath = fieldT?.ast?.sourcefile || fieldT?.ast?.loc?.sourcefile
+              entryPoint.attribute = entrypoint.attribute
+              entryPoint.packageName = undefined
+              entryPoint.entryPointSymVal = fieldT
+              this.entryPoints.push(entryPoint)
+            }
+          } catch (e) {
+            handleException(
+              e,
+              '[js-taint-checker]An Error Occurred in custom entrypoint',
+              '[js-taint-checker]An Error Occurred in calcel custom entrypoint'
+            )
           }
-
-          const func = entrypoint.functionName || entrypoint.routerFunc
-          const valExport = fieldT
-          const entryPointSymVal = commonUtil.getFclosFromScope(valExport, func)
-          if (entryPointSymVal?.vtype !== 'fclos') {
-            continue
-          }
-
-          const scopeVal = Scoped({
-            vtype: 'scope',
-            _sid: 'mock',
-            _id: 'mock',
-            field: {},
-            parent: null,
-          })
-
-          // const argValues = []
-          const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
-          entryPoint.scopeVal = scopeVal
-          // entryPoint.argValues = argValues
-          entryPoint.functionName = entrypoint.functionName || entrypoint.routerFunc
-          entryPoint.filePath = entrypoint.filePath || entrypoint.routerFile
-          entryPoint.attribute = entrypoint.attribute || entrypoint.routerAttribute
-          entryPoint.entryPointSymVal = entryPointSymVal
-          this.entryPoints.push(entryPoint)
         }
       }
     }
@@ -177,7 +187,8 @@ class JsTaintChecker {
       return
     }
     const { fclos, argvalues } = info
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues)
+    const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
     this.checkSinkAtFunctionCall(node, fclos, argvalues)
     this.checkByFieldMatch(node, fclos, argvalues, scope)
   }
@@ -195,7 +206,9 @@ class JsTaintChecker {
       return
     }
     const { fclos, ret } = info
-    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret)
+    const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
+
+    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
   }
 
   /**
@@ -220,15 +233,13 @@ class JsTaintChecker {
    * @param argvalues
    */
   checkSinkAtFunctionCall(node, fclos, argvalues) {
-    let rules = Rules.getRules()?.FuncCallTaintSink
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
-    rules = _.clone(rules)
-    rules = rules.filter((v) => v.kind === TAINT_TAG_NAME)
-    if (!rules) return
 
-    const rule = matchSinkAtFuncCall(node, fclos, rules).find((v) => v.kind === TAINT_TAG_NAME)
+    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
       const args = Rules.prepareArgs(argvalues, fclos, rule)
@@ -250,8 +261,18 @@ class JsTaintChecker {
           if (typeof rule.attribute !== 'undefined') {
             ruleName += `\nSINK Attribute: ${rule.attribute}`
           }
-          const finding = Rules.getRule(CheckerId, node)
-          this.resultManager.addNewFinding(nd, node, fclos, TAINT_TAG_NAME, finding, ruleName, matchedSanitizerTags)
+          const taintFlowFinding = this.buildTaintFinding(
+            this.getCheckerId(),
+            this.desc,
+            node,
+            nd,
+            fclos,
+            TAINT_TAG_NAME,
+            ruleName,
+            matchedSanitizerTags
+          )
+          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
       }
     }
@@ -265,7 +286,7 @@ class JsTaintChecker {
    * @param scope
    */
   checkByFieldMatch(node, fclos, argvalues, scope) {
-    let rules = Rules.getRules()?.FuncCallTaintSink
+    let rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
@@ -351,8 +372,18 @@ class JsTaintChecker {
             if (typeof rule.attribute !== 'undefined') {
               ruleName += `\n` + `SINK Attribute: ${rule.attribute}`
             }
-            const finding = Rules.getRule(CheckerId, node)
-            this.resultManager.addNewFinding(nd, node, fclos, TAINT_TAG_NAME, finding, ruleName, matchedSanitizerTags)
+            const taintFlowFinding = this.buildTaintFinding(
+              this.getCheckerId(),
+              this.desc,
+              node,
+              nd,
+              fclos,
+              TAINT_TAG_NAME,
+              ruleName,
+              matchedSanitizerTags
+            )
+            if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) return
+            this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
           }
         }
       }

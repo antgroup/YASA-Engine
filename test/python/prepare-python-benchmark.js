@@ -7,16 +7,19 @@ const git = simpleGit()
 const BENCHMARKS_DIR = './benchmarks'
 
 const BENCHMARK_REPO_URLS = {
-  'sast-python3': 'https://github.com/alipay/ant-application-security-testing-benchmark.git',
+  'sast-python3': {
+    gitRepoUrl: 'https://github.com/alipay/ant-application-security-testing-benchmark.git',
+    branch: 'main-forYasaTest',
+  },
 }
 
-async function cloneRepo(gitRepoUrl, targetDir) {
+async function cloneRepo(gitRepoUrl, targetDir, branch) {
   // 确保目标目录存在
   const absoluteTargetDir = path.resolve(targetDir)
   let done = true
   // 创建命令
   await git
-    .clone(gitRepoUrl, absoluteTargetDir)
+    .clone(gitRepoUrl, absoluteTargetDir, ['-b', branch])
     .then(() => logger.info(`仓库克隆成功！！！仓库:${gitRepoUrl} 已克隆至 ${targetDir}`))
     .catch((err) => {
       done = false
@@ -43,13 +46,14 @@ async function cloneRepo(gitRepoUrl, targetDir) {
 async function prepareTest() {
   const allRepoReady = []
   for (let key in BENCHMARK_REPO_URLS) {
-    const repoUrl = BENCHMARK_REPO_URLS[key]
+    const repoUrl = BENCHMARK_REPO_URLS[key].gitRepoUrl
+    const branch = BENCHMARK_REPO_URLS[key].branch
     const targetDir = path.resolve(__dirname, BENCHMARKS_DIR, key)
     if (fs.existsSync(targetDir)) {
       fs.rmSync(targetDir, { recursive: true })
     }
     fs.mkdirSync(targetDir, { recursive: true })
-    let repoRes = await cloneRepo(repoUrl, targetDir)
+    let repoRes = await cloneRepo(repoUrl, targetDir, branch)
     allRepoReady.push(repoRes)
   }
   return allRepoReady.length > 0 && allRepoReady.every((ready) => ready)
