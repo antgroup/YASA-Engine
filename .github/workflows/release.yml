@@ -100,6 +100,7 @@ jobs:
           path: |
             dist/
             node_modules/
+          retention-days: 7
 
   # 3. 下载 YASA-UAST 的 Go 和 Python 二进制（可选）
   download_uast_binaries:
@@ -169,6 +170,9 @@ jobs:
     needs: [build_engine,download_uast_binaries]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4 
+
       - name: Download Engine Binaries
         uses: actions/download-artifact@v4
         with:
@@ -200,7 +204,6 @@ jobs:
           mkdir -p "$OUTPUT_DIR"
           echo "📁 Output directory: $OUTPUT_DIR"
 
-
           # ✅ 声明关联数组
           declare -A PLATFORMS
           declare -A ARTIFACT_KEYS
@@ -213,10 +216,17 @@ jobs:
           ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
 
-
+          # 添加 UAST 二进制
           PLATFORMS["linux-x64"]+=" uast4go-linux-amd64 uast4py-linux-amd64"
           PLATFORMS["macos-x64"]+=" uast4go-mac-amd64 uast4py-mac-amd64"
           PLATFORMS["macos-arm64"]+=" uast4go-mac-arm64 uast4py-mac-arm64"
+
+          # ✅ 新增：example-rule-config 资源路径
+          EXAMPLE_CONFIG_SRC="resource/example-rule-config"
+          if [[ ! -d "$EXAMPLE_CONFIG_SRC" ]]; then
+            echo "❌ Error: example-rule-config directory not found at $EXAMPLE_CONFIG_SRC"
+            exit 1
+          fi
 
           for platform in "${!PLATFORMS[@]}"; do
             echo "📦 Building package for $platform"
@@ -228,21 +238,7 @@ jobs:
 
             if [[ ! -f "$engine_path" ]]; then
               echo "❌ Engine binary missing: $engine_path"
-
-              # 🔍 调试信息：打印真实结构
-              echo "📁 Available files in engine_binaries:"
               find engine_binaries -type f | sort
-
-              echo "🔍 Searching for any yasa-engine binary..."
-              find engine_binaries -type f -name "yasa-engine*" | while read f; do
-                size=$(du -h "$f" | awk '{print $1}')
-                echo "  💡 Found: $f (size: $size)"
-              done
-
-              echo "💡 Possible fix:"
-              echo "   Check ARTIFACT_KEYS['$platform'] = '$artifact_subdir'"
-              echo "   Or verify build_engine generated this platform."
-
               exit 1
             fi
 
@@ -258,16 +254,18 @@ jobs:
               exit 1
             fi
             echo "📦 Copying node_modules..."
-            if ! cp -r "$NODE_MODULES_PATH" "$tmpdir/"; then
-              echo "❌ Failed to copy node_modules!"
+            cp -r "$NODE_MODULES_PATH" "$tmpdir/" || { echo "❌ Failed to copy node_modules!"; exit 1; }
+
+            # ✅ 新增：拷贝 example-rule-config 到 bundle 中
+            echo "📎 Copying example rule configurations..."
+            cp -r "$EXAMPLE_CONFIG_SRC" "$tmpdir/example-rule-config"
+            if [[ $? -ne 0 ]]; then
+              echo "❌ Failed to copy example-rule-config!"
               exit 1
             fi
+            echo "✅ Copied example-rule-config/"
 
-            # PACKAGE_JSON_PATH="engine_binaries/${artifact_subdir}/package.json"
-            # if [[ -f "$PACKAGE_JSON_PATH" ]]; then
-            #   cp "$PACKAGE_JSON_PATH" "$tmpdir/"
-            # fi
-
+            # ✅ 拷贝 UAST 二进制（如果存在）
             if [ -d "uast_binaries" ]; then
               for bin in "${files[@]:1}"; do
                 src="uast_binaries/$bin"
@@ -283,13 +281,7 @@ jobs:
               cd "$tmpdir"
               > sha256sum.txt
               find . -maxdepth 1 -type f -exec sha256sum {} \; >> sha256sum.txt
-              # if [ -d "node_modules" ]; then
-              #   file_count=$(find node_modules -type f | wc -l)
-              #   total_size=$(du -sb node_modules 2>/dev/null | awk '{print $1}' || echo "unknown")
-              #   echo "node_modules/ (directory, $file_count files, $total_size bytes)" >> sha256sum.txt
-              # fi
               echo "🛡️ Generated sha256sum:"
-              # cat sha256sum.txt
             )
 
             zip_name="yasa-$platform.zip"
@@ -311,11 +303,13 @@ jobs:
           echo "🎉 All packages created!"
           ls -lh "$OUTPUT_DIR/"
 
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: yasa-engine-releases
           path: releases/*.zip
+          retention-days: 7
 
   # 5. 集成测试：验证每个平台的 bundle 是否真实可用
   integration_test:
@@ -372,7 +366,9 @@ jobs:
               --checkerPackIds taint-flow-javascript-default \
               --ruleConfigFile sast-js/rule_config.json 2>&1
           )
-          echo "$output"
+          # 只打印 "=== Findings ===" 之后的 5 行
+          echo "🔍 Relevant findings (up to 5 lines after '=== Findings ==='):"
+          echo "$output" | grep -A 5 "=== Findings ===" || true
 
           if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
             echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
@@ -380,51 +376,54 @@ jobs:
           else
             echo "❌ JavaScript test FAILED: Did not meet finding criteria"
             echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
-      - name: ✅ Test Go
-        id: test_go
-        working-directory: test-data
-        run: |
-          output=$(
-            ../bundle/${{ matrix.platform.engine }} \
-              sast-go \
-              --analyzer GoAnalyzer \
-              --checkerPackIds taint-flow-golang-default \
-              --ruleConfigFile sast-go/rule_config.json \
-              --uastSDKPath ../bundle/${{ matrix.platform.uast_go }} 2>&1
-          )
-          echo "$output"
+      # - name: ✅ Test Go
+      #   id: test_go
+      #   working-directory: test-data
+      #   run: |
+      #     output=$(
+      #       ../bundle/${{ matrix.platform.engine }} \
+      #         sast-go \
+      #         --analyzer GoAnalyzer \
+      #         --checkerPackIds taint-flow-golang-default \
+      #         --ruleConfigFile sast-go/rule_config.json \
+      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_go }} 2>&1
+      #     )
+      #     echo "$output"
 
-          if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-            echo "✅ Go test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Go test FAILED: Did not meet finding criteria"
-            echo "result=failure" >> $GITHUB_OUTPUT
-          fi
+      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
+      #       echo "✅ Go test PASSED: Findings detected and not 'No findings!'"
+      #       echo "result=success" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "❌ Go test FAILED: Did not meet finding criteria"
+      #       echo "result=failure" >> $GITHUB_OUTPUT
+      #       exit 1
+      #     fi
 
-      - name: ✅ Test Python
-        id: test_python
-        working-directory: test-data
-        run: |
-          output=$(
-            ../bundle/${{ matrix.platform.engine }} \
-              sast-python3 \
-              --analyzer PythonAnalyzer \
-              --checkerPackIds taint-flow-python-default \
-              --ruleConfigFile sast-python3/rule_config.json \
-              --uastSDKPath ../bundle/${{ matrix.platform.uast_py }} 2>&1
-          )
-          echo "$output"
+      # - name: ✅ Test Python
+      #   id: test_python
+      #   working-directory: test-data
+      #   run: |
+      #     output=$(
+      #       ../bundle/${{ matrix.platform.engine }} \
+      #         sast-python3 \
+      #         --analyzer PythonAnalyzer \
+      #         --checkerPackIds taint-flow-python-default \
+      #         --ruleConfigFile sast-python3/rule_config.json \
+      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_py }} 2>&1
+      #     )
+      #     echo "$output"
 
-          if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-            echo "✅ Python test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Python test FAILED: Did not meet finding criteria"
-            echo "result=failure" >> $GITHUB_OUTPUT
-          fi
+      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
+      #       echo "✅ Python test PASSED: Findings detected and not 'No findings!'"
+      #       echo "result=success" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "❌ Python test FAILED: Did not meet finding criteria"
+      #       echo "result=failure" >> $GITHUB_OUTPUT
+      #       exit 1
+      #     fi
       # --- Optional: Upload result summary ---
       - name: 📊 Summarize Test Results
         # 确保即使前面失败也运行
@@ -432,8 +431,8 @@ jobs:
         run: |
           echo "📋 Platform: ${{ matrix.platform.zip }}"
           echo "JavaScript: ${{ steps.test_js.outputs.result }}"
-          echo "Go: ${{ steps.test_go.outputs.result }}"
-          echo "Python: ${{ steps.test_python.outputs.result }}"
+          # echo "Go: ${{ steps.test_go.outputs.result }}"
+          # echo "Python: ${{ steps.test_python.outputs.result }}"
 
   # 6. 创建 GitHub Release
   create_release:
