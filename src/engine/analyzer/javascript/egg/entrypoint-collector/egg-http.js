@@ -84,8 +84,6 @@ function getEggHttpEntryPointsAndSources(fileManager) {
     if (uastUrlInfo.paramList) {
       for (const param of uastUrlInfo.paramList) {
         TaintSource.push({
-          introPoint: 4,
-          kind: 'EGG_INPUT',
           path: param.paramName,
           scopeFunc: uastUrlInfo.methodName,
           scopeFile: uastUrlInfo.relativePath,
@@ -101,15 +99,13 @@ function getEggHttpEntryPointsAndSources(fileManager) {
   // 加载默认source
   for (const d of defaultEggTaintSource) {
     TaintSource.push({
-      introPoint: 4,
-      kind: 'EGG_INPUT',
       path: d,
       scopeFile: 'all',
       scopeFunc: 'all',
     })
   }
 
-  return { entryPoints, TaintSource }
+  return { selfCollectEntryPoints: entryPoints, selfCollectTaintSource: TaintSource }
 }
 
 /**

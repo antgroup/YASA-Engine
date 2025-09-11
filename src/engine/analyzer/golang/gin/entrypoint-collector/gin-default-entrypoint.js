@@ -152,7 +152,10 @@ function getGinDefaultEntrypoint(packageManager) {
     null,
     true
   )
-  return ginDefaultEntrypointSymvals.map((symbols) => completeEntryPoint(symbols))
+  if (ginDefaultEntrypointSymvals) {
+    return ginDefaultEntrypointSymvals.map((symbols) => completeEntryPoint(symbols))
+  }
+  return []
 }
 
 /**

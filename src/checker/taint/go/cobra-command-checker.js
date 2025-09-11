@@ -1,40 +1,31 @@
 const _ = require('lodash')
 const commonUtil = require('../../../util/common-util')
-const { completeEntryPoint, entryPointsUpToUser } = require('./entry-points-util')
+const { completeEntryPoint } = require('./entry-points-util')
 const config = require('../../../config')
+const Checker = require('../../common/checker')
 
 const processedBuiltInRegistry = new Set()
 const cobraCommandQid = 'github.com/spf13/cobra.Command<instance>'
 const preAction = ['PreRun', 'PreRunE']
 const postAction = ['RunE', 'Run']
 
-const CheckerId = 'cobra.Command-builtIn'
-
 /**
  * cobra.Command bulitIn checker
  * 为第三方库方法cobra.command做建模，添加entryPoints
  */
-class cobraCommandChecker {
+class cobraCommandChecker extends Checker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
+    super(resultManager, 'cobra.Command-builtIn')
     this.entryPoints = []
     this.sourceScope = {
       complete: false,
       value: [],
     }
     this.resultManager = resultManager
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   * @returns {string}
-   * @constructor
-   */
-  static GetCheckerId() {
-    return CheckerId
   }
 
   /**
@@ -60,7 +51,7 @@ class cobraCommandChecker {
    */
   triggerAtVariableDeclaration(analyzer, scope, node, state, info) {
     const { initVal } = info
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return
+    if (config.entryPointMode === 'ONLY_CUSTOM') return
     if (initVal?._qid !== cobraCommandQid || _.isEmpty(initVal.field)) return
     const initField = initVal.field
 
@@ -91,7 +82,7 @@ class cobraCommandChecker {
    */
   triggerAtAssignment(analyzer, scope, node, state, info) {
     const { lvalue, rvalue } = info
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!lvalue?._qid || rvalue?.vtype !== 'fclos') return
     if (!lvalue._qid.startsWith(cobraCommandQid) || ![...preAction, ...postAction].includes(lvalue._sid)) return
     if (this.ifIgnoreEntryPoint(rvalue)) return

@@ -4,7 +4,6 @@ const FileUtil = require('../../util/file-util')
 const { handleException } = require('../../engine/analyzer/common/exception-handler')
 const logger = require('../../util/logger')(__filename)
 
-let rulesMap = new Map()
 let rules
 let preprocessReady = false
 
@@ -30,7 +29,7 @@ function getRules(ruleConfigPath) {
     }
   }
   if (!rules) {
-    rules = {}
+    rules = []
   }
   return rules
 }
@@ -66,25 +65,10 @@ function prepareArgs(argvalues, fclos, rule) {
 
 /**
  *
- * @param ruleConfigPath
- */
-function initRulesMap(ruleConfigPath) {
-  const localRules = getRules(ruleConfigPath)
-  if (localRules && localRules.Rules) {
-    rulesMap = new Map()
-    for (const rule of localRules.Rules) {
-      rulesMap[rule.type] = rule
-    }
-  }
-}
-
-/**
- *
  */
 function initRules() {
   if (config.ruleConfigFile && config.ruleConfigFile !== '') {
     rules = FileUtil.loadJSONfile(FileUtil.getAbsolutePath(config.ruleConfigFile))
-    initRulesMap(config.ruleConfigFile)
   } else {
     logger.info('Attention: no ruleConfig found')
   }
@@ -178,17 +162,19 @@ function getPreprocessReady() {
 /**
  *
  * @param type
+ * @param description
  * @param node
  * @param argNode
  */
-function getRule(type, node, argNode) {
-  let rule = rulesMap[type]
-  if (!rule) rule = {}
-  rule = _.clone(rule)
-  rule.node = node
-  rule.argNode = argNode
-  rule.line = node.loc.start.line
-  return rule
+function getFinding(type, description, node, argNode) {
+  // eslint-disable-next-line sonarjs/prefer-object-literal
+  const finding = {}
+  finding.type = type
+  finding.desc = description
+  finding.node = node
+  finding.argNode = argNode
+  finding.line = node.loc.start.line
+  return finding
 }
 
 /**
@@ -196,13 +182,12 @@ function getRule(type, node, argNode) {
  * @type {{getRule: (function(*, *): *), compileAttackTrace: *, introduceTaint: introduceTaint}}
  */
 module.exports = {
-  getRule,
   getRules,
   initRules,
   matchField,
   setPreprocessReady,
   getPreprocessReady,
-  initRulesMap,
   prepareArgs,
   matchPackageValueSink,
+  getFinding,
 }

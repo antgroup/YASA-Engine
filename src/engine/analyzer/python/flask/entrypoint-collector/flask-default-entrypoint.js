@@ -1,5 +1,5 @@
 const { extractRelativePath } = require('../../../../../util/file-util')
-const { routerSourceAtSameTime } = require('../../../../../config')
+const { entryPointAndSourceAtSameTime } = require('../../../../../config')
 const { findSourceOfFuncParam } = require('../../common/entrypoint-collector/python-entrypoint-source')
 const EntryPoint = require('../../../common/entrypoint')
 const constValue = require('../../../../../util/constant')
@@ -51,7 +51,7 @@ function findFlaskEntryPointAndSource(filenameAstObj, dir) {
               entryPoint.attribute = 'HTTP'
               flaskEntryPointArray.push(entryPoint)
 
-              if (routerSourceAtSameTime) {
+              if (entryPointAndSourceAtSameTime) {
                 const paramSourceArray = findSourceOfFuncParam(filename, funcName, obj, null)
                 if (paramSourceArray) {
                   flaskEntryPointSourceArray.push(...paramSourceArray)

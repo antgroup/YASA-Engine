@@ -1,5 +1,6 @@
 const { findFlaskEntryPointAndSource } = require('../../flask/entrypoint-collector/flask-default-entrypoint')
 const {
+  findInferenceAiStudioTplEntryPointAndSource,
   findInferenceTritonEntryPointAndSource,
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
@@ -27,6 +28,15 @@ function findPythonFcEntryPointAndSource(dir, fileManager) {
   }
   if (flaskEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...flaskEntryPointSourceArray)
+  }
+
+  const { inferenceAiStudioTplEntryPointArray, inferenceAiStudioTplEntryPointSourceArray } =
+    findInferenceAiStudioTplEntryPointAndSource(filenameAstObj, dir)
+  if (inferenceAiStudioTplEntryPointArray) {
+    pyFcEntryPointArray.push(...inferenceAiStudioTplEntryPointArray)
+  }
+  if (inferenceAiStudioTplEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...inferenceAiStudioTplEntryPointSourceArray)
   }
 
   const { inferenceTritonEntryPointArray, inferenceTritonEntryPointSourceArray } =
@@ -63,7 +73,15 @@ function findPythonFileEntryPoint(fileManager) {
  */
 function getSourceNameList() {
   const sourceNameList = []
-  const sourceList = Rules.getRules()?.TaintSource
+
+  const sourceList = []
+  if (Array.isArray(Rules.getRules()) && Rules.getRules().length > 0) {
+    for (const rule of Rules.getRules()) {
+      if (Array.isArray(rule.sources?.TaintSource)) {
+        sourceList.push(...rule.sources.TaintSource)
+      }
+    }
+  }
   if (!sourceList) {
     return sourceNameList
   }

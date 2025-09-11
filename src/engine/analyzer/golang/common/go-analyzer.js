@@ -49,7 +49,6 @@ class GoAnalyzer extends Analyzer {
     this.options = options
     this.mainEntryPoints = []
     this.ruleEntrypoints = []
-    Rules.initRulesMap(options.ruleConfigFile)
   }
 
   /**
@@ -60,6 +59,7 @@ class GoAnalyzer extends Analyzer {
     const modules = FileUtil.loadAllFileTextGlobby(['**/*.(go)'], dir)
     if (modules.length === 0) {
       Errors.NoCompileUnitError('no go file found in source path')
+      process.exit(1)
     }
     for (const mod of modules) {
       SourceLine.storeCode(mod.file, mod.content)
@@ -922,6 +922,10 @@ class GoAnalyzer extends Analyzer {
     const { entryPoints } = this
     const state = this.initState(this.topScope)
     let isFromRule = false
+    if (entryPoints.length === 0) {
+      this.entryPoints.push(...this.ruleEntrypoints)
+      isFromRule = true
+    }
     if (_.isEmpty(entryPoints)) {
       logger.info('[symbolInterpret]：EntryPoints are not found')
       return true
@@ -949,7 +953,10 @@ class GoAnalyzer extends Analyzer {
       logger.info(
         'EntryPoint [%s.%s] is executing',
         entryPoint.filePath?.substring(0, entryPoint?.filePath.lastIndexOf('.')),
-        entryPoint.functionName
+        entryPoint.functionName ||
+          `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_${
+            entryPoint.entryPointSymVal?.ast.loc.end.line
+          }>`
       )
       const argValues = []
 
@@ -978,7 +985,7 @@ class GoAnalyzer extends Analyzer {
           `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log`
         )
       }
-      if (index === entryPoints.length) {
+      if (index === entryPoints.length && !isFromRule) {
         this.entryPoints.push(...this.ruleEntrypoints)
         isFromRule = true
       }

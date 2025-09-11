@@ -1,7 +1,7 @@
 ======================== Findings ========================
 
 ------------- 1: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/ellipsis/ellipsis_003_T.py
 Line 19: taint_sink(sliced)
 SINK RULE:taint_sink
@@ -26,11 +26,9 @@ Trace:
  /case/completeness/other/ellipsis/ellipsis_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(sliced)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 2: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
 Line 24: taint_sink(x)
 SINK RULE:taint_sink
@@ -64,11 +62,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
   AffectedNodeName: taint_sink
   24:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 3: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/bool_002_F.py
 Line 12: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -87,11 +83,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/bool_002_F.py
   AffectedNodeName: taint_sink
   12:  SINK:      taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 4: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
 Line 17: taint_sink(sum)
 SINK RULE:taint_sink
@@ -116,11 +110,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:     taint_sink(sum)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 5: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -139,11 +131,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 6: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py
 Line 13: taint_sink(arg)
 SINK RULE:taint_sink
@@ -162,11 +152,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:          taint_sink(arg)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 7: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py
 Line 13: taint_sink(arg1)
 SINK RULE:taint_sink
@@ -185,11 +173,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py
   AffectedNodeName: taint_sink
   13:  SINK:          taint_sink(arg1)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 8: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_005_T.py
 Line 13: taint_sink(arg)
 SINK RULE:taint_sink
@@ -208,11 +194,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_005_T.py
   AffectedNodeName: taint_sink
   13:  SINK:          taint_sink(arg)  # 显式参数应覆盖默认值
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 9: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_007_T.py
 Line 13: taint_sink(tainted_arg)
 SINK RULE:taint_sink
@@ -234,11 +218,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_007_T.py
   AffectedNodeName: taint_sink
   13:  SINK:          taint_sink(tainted_arg)  #  正确识别关键字参数污染
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 10: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_009_T.py
 Line 13: taint_sink(args.0)
 SINK RULE:taint_sink
@@ -257,11 +239,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_009_T.py
   AffectedNodeName: taint_sink
   13:  SINK:          taint_sink(args[0])  # 可变参数首元素识别
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 11: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.py
 Line 18: taint_sink(data)
 SINK RULE:taint_sink
@@ -283,11 +263,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 12: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_003_T.py
 Line 19: taint_sink(data)
 SINK RULE:taint_sink
@@ -315,11 +293,9 @@ Trace:
  /case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 13: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.py
 Line 17: taint_sink(a)
 SINK RULE:taint_sink
@@ -347,11 +323,9 @@ Trace:
  /case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(a)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 14: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/multi_invoke/multi_invoke_003_T.py
 Line 19: taint_sink(result)
 SINK RULE:taint_sink
@@ -391,11 +365,9 @@ Trace:
  /case/accuracy/context_sensitive/multi_invoke/multi_invoke_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 15: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.py
 Line 25: taint_sink(sub.call())
 SINK RULE:taint_sink
@@ -414,11 +386,9 @@ Trace:
  /case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.py
   AffectedNodeName: taint_sink
   25:  SINK:      taint_sink(sub.call())  # 调用多态方法
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 16: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.py
 Line 25: taint_sink(sub.dynamic_call())
 SINK RULE:taint_sink
@@ -437,11 +407,9 @@ Trace:
  /case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.py
   AffectedNodeName: taint_sink
   25:  SINK:      taint_sink(sub.dynamic_call())  # 调用动态绑定的方法
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 17: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/constructor_field_001_T.py
 Line 18: taint_sink(obj.data)
 SINK RULE:taint_sink
@@ -459,11 +427,9 @@ Trace:
  /case/accuracy/field_sensitive/class/constructor_field_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(obj.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 18: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/constructor_field_003_T.py
 Line 18: taint_sink(obj.data)
 SINK RULE:taint_sink
@@ -487,11 +453,9 @@ Trace:
  /case/accuracy/field_sensitive/class/constructor_field_003_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(obj.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 19: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/constructor_field_005_T.py
 Line 27: taint_sink(obj.field)
 SINK RULE:taint_sink
@@ -521,11 +485,9 @@ Trace:
  /case/accuracy/field_sensitive/class/constructor_field_005_T.py
   AffectedNodeName: taint_sink
   27:  SINK:      taint_sink(obj.field)  # 通过对象类型区分字段
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 20: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/field_len_001_T.py
 Line 27: taint_sink(a.b.c.data)
 SINK RULE:taint_sink
@@ -565,11 +527,9 @@ Trace:
  /case/accuracy/field_sensitive/class/field_len_001_T.py
   AffectedNodeName: taint_sink
   27:  SINK:      taint_sink(a.b.c.data)        # 通过路径访问 data 属性
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 21: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/field_len_003_T.py
 Line 41: taint_sink(s1)
 SINK RULE:taint_sink
@@ -639,11 +599,9 @@ Trace:
  /case/accuracy/field_sensitive/class/field_len_003_T.py
   AffectedNodeName: taint_sink
   41:  SINK:      taint_sink(s1)             # 传递污染数据
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 22: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/field_len_005_T.py
 Line 63: taint_sink(a.b.c.d.e.f.g.h.i.j.k.l.data)
 SINK RULE:taint_sink
@@ -755,11 +713,9 @@ Trace:
  /case/accuracy/field_sensitive/class/field_len_005_T.py
   AffectedNodeName: taint_sink
   63:  SINK:      taint_sink(a.b.c.d.e.f.g.h.i.j.k.l.data)  # 完整路径访问 a.b.c.d.e.f.g.h.i.j.k.l.data
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 23: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/class/inheritance_001_T.py
 Line 14: taint_sink(parent_obj.field)
 SINK RULE:taint_sink
@@ -783,11 +739,9 @@ Trace:
  /case/accuracy/field_sensitive/class/inheritance_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(parent_obj.field)  # 应检测到污点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 24: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/list_mc_001_T.py
 Line 20: taint_sink(s.0.0)
 SINK RULE:taint_sink
@@ -803,11 +757,9 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/list_mc_001_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(s[0][0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 25: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/list_mc_003_T.py
 Line 15: taint_sink(s.0.0.0)
 SINK RULE:taint_sink
@@ -823,11 +775,9 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/list_mc_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s[0][0][0])  # 访问三维污染元素
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 26: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/list_mc_006_F.py
 Line 16: taint_sink(arr.0.0)
 SINK RULE:taint_sink
@@ -840,11 +790,9 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/list_mc_006_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(arr[0][0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 27: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/map_mc_001_T.py
 Line 15: taint_sink(d.a.b)
 SINK RULE:taint_sink
@@ -860,11 +808,9 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/map_mc_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(d["a"]["b"])  # 访问污染路径
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 28: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/map_mc_003_T.py
 Line 17: taint_sink(d2.b.c.b.a)
 SINK RULE:taint_sink
@@ -885,11 +831,9 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/map_mc_003_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(d2["b"]["c"]["b"]["a"])  # 递归路径访问污染
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 29: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
 Line 15: taint_sink(data2)
 SINK RULE:taint_sink
@@ -932,11 +876,9 @@ Trace:
  /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(data2)  # 通过分支保留污点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 30: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
 Line 15: taint_sink(data2)
 SINK RULE:taint_sink
@@ -985,11 +927,9 @@ Trace:
  /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(data2)  # 通过分支保留污点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 31: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
 Line 18: taint_sink(data)
 SINK RULE:taint_sink
@@ -1011,11 +951,9 @@ Trace:
  /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 32: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
 Line 18: taint_sink(data)
 SINK RULE:taint_sink
@@ -1043,11 +981,9 @@ Trace:
  /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 33: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/loop_stmt/for_enumerate_001_T.py
 Line 14: taint_sink(value+: +index)
 SINK RULE:taint_sink
@@ -1060,11 +996,9 @@ Trace:
  /case/accuracy/flow_sensitive/loop_stmt/for_enumerate_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(f"{value}: {index}")
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 34: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/loop_stmt/for_zip_001_T.py
 Line 14: taint_sink(a+ and +b)
 SINK RULE:taint_sink
@@ -1077,11 +1011,9 @@ Trace:
  /case/accuracy/flow_sensitive/loop_stmt/for_zip_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(f"{a} and {b}")
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 35: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/normal_stmt/assign_expression_stmt_001_T.py
 Line 13: taint_sink(result)
 SINK RULE:taint_sink
@@ -1097,11 +1029,9 @@ Trace:
  /case/accuracy/flow_sensitive/normal_stmt/assign_expression_stmt_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 36: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/class/constructor_object_sensitive_001_T.py
 Line 19: taint_sink(obj)
 SINK RULE:taint_sink
@@ -1125,11 +1055,9 @@ Trace:
  /case/accuracy/object_sensitive/class/constructor_object_sensitive_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(obj)     # 传递污染源实例 obj
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 37: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py
 Line 25: taint_sink(parent_tainted)
 SINK RULE:taint_sink
@@ -1153,11 +1081,9 @@ Trace:
  /case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py
   AffectedNodeName: taint_sink
   25:  SINK:      taint_sink(parent_tainted)  # 传递污染的父类对象
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 38: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/array_object_sensitive_001_T.py
 Line 18: taint_sink(s)
 SINK RULE:taint_sink
@@ -1176,11 +1102,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/array_object_sensitive_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 39: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_001_T.py
 Line 16: taint_sink(s)
 SINK RULE:taint_sink
@@ -1196,11 +1120,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/list_object_sensitive_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 40: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_003_T.py
 Line 16: taint_sink(s)
 SINK RULE:taint_sink
@@ -1216,11 +1138,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/list_object_sensitive_003_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 41: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_005_T.py
 Line 18: taint_sink(s)
 SINK RULE:taint_sink
@@ -1233,11 +1153,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/list_object_sensitive_005_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 42: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_008_F.py
 Line 18: taint_sink(s)
 SINK RULE:taint_sink
@@ -1253,11 +1171,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/list_object_sensitive_008_F.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(s)  # 传递被覆盖后的列表
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 43: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/map_object_sensitive_001_T.py
 Line 18: taint_sink(map)
 SINK RULE:taint_sink
@@ -1272,11 +1188,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/map_object_sensitive_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(map)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 44: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/set_object_sensitive_001_T.py
 Line 17: taint_sink(polluted_set)
 SINK RULE:taint_sink
@@ -1292,11 +1206,9 @@ Trace:
  /case/accuracy/object_sensitive/collection/set_object_sensitive_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(polluted_set)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 45: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/exception_throw/exception_throw_001_T.py
 Line 14: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -1309,11 +1221,9 @@ Trace:
  /case/accuracy/path_sensitive/exception_throw/exception_throw_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 46: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/exception_throw/exception_throw_002_F.py
 Line 14: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -1326,11 +1236,9 @@ Trace:
  /case/accuracy/path_sensitive/exception_throw/exception_throw_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 47: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/continue_002_F.py
 Line 18: taint_sink(res)
 SINK RULE:taint_sink
@@ -1346,11 +1254,9 @@ Trace:
  /case/accuracy/path_sensitive/explicit_jump_control/continue_002_F.py
   AffectedNodeName: taint_sink
   18:  SINK:              taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 48: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/return_001_T.py
 Line 15: taint_sink(arg1)
 SINK RULE:taint_sink
@@ -1369,11 +1275,9 @@ Trace:
  /case/accuracy/path_sensitive/explicit_jump_control/return_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:              taint_sink(arg1)  # 直接传递污染源
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 49: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/return_002_F.py
 Line 16: taint_sink(arg1)
 SINK RULE:taint_sink
@@ -1392,11 +1296,9 @@ Trace:
  /case/accuracy/path_sensitive/explicit_jump_control/return_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:          taint_sink(arg1)      # 未执行
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 50: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.py
 Line 22: taint_sink(getattr(obj, name))
 SINK RULE:taint_sink
@@ -1420,11 +1322,9 @@ Trace:
  /case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(getattr(obj, 'name'))
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 51: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.py
 Line 21: taint_sink(getattr(obj, foo))
 SINK RULE:taint_sink
@@ -1448,11 +1348,9 @@ Trace:
  /case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(getattr(obj, 'foo'))
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 52: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_006_F.py
 Line 21: taint_sink(getattr(obj, data))
 SINK RULE:taint_sink
@@ -1476,11 +1374,9 @@ Trace:
  /case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_006_F.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(getattr(obj, 'data'))
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 53: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/ellipsis/ellipsis_001_T.py
 Line 16: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -1493,11 +1389,9 @@ Trace:
  /case/completeness/other/ellipsis/ellipsis_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 54: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/ellipsis/ellipsis_003_T.py
 Line 19: taint_sink(sliced)
 SINK RULE:taint_sink
@@ -1516,11 +1410,9 @@ Trace:
  /case/completeness/other/ellipsis/ellipsis_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(sliced)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 55: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/typeignore/typeignore_001_T.py
 Line 15: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -1533,11 +1425,9 @@ Trace:
  /case/completeness/other/typeignore/typeignore_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(taint_src)  # type: ignore
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 56: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_001_T.py
 Line 16: taint_sink(a.value)
 SINK RULE:taint_sink
@@ -1552,11 +1442,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/alias_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(a['value'])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 57: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_003_T.py
 Line 17: taint_sink(a.value)
 SINK RULE:taint_sink
@@ -1571,11 +1459,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/alias_003_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(a['value'])  # 应被污染
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 58: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_005_T.py
 Line 16: taint_sink(a.0)
 SINK RULE:taint_sink
@@ -1590,11 +1476,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/alias_005_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(a[0])  # 应被污染
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 59: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_007_T.py
 Line 18: taint_sink(a.value)
 SINK RULE:taint_sink
@@ -1609,11 +1493,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/alias_007_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(a['value'])  # 应被污染
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 60: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_009_T.py
 Line 20: taint_sink(a.data)
 SINK RULE:taint_sink
@@ -1628,11 +1510,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/alias_009_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(a.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 61: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/type_alias_001_T.py
 Line 17: taint_sink(points.0.x)
 SINK RULE:taint_sink
@@ -1648,11 +1528,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/type_alias_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(points[0]['x'])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 62: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/type_alias_003_T.py
 Line 22: taint_sink(points.0.x)
 SINK RULE:taint_sink
@@ -1676,11 +1554,9 @@ Trace:
  /case/completeness/single_app_tracing/alias/type_alias_003_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(points[0].x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 63: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_001_T.py
 Line 19: taint_sink(s.0)
 SINK RULE:taint_sink
@@ -1699,11 +1575,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(s[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 64: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_002_F.py
 Line 19: taint_sink(s.1)
 SINK RULE:taint_sink
@@ -1722,11 +1596,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_002_F.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(s[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 65: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_003_T.py
 Line 19: taint_sink(arr.0)
 SINK RULE:taint_sink
@@ -1744,11 +1616,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(arr[0])  # 访问修改后的污染元素
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 66: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_004_F.py
 Line 19: taint_sink(arr.1)
 SINK RULE:taint_sink
@@ -1766,11 +1636,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_004_F.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(arr[1])  # 访问修改后的污染元素
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 67: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_001_T.py
 Line 13: taint_sink(s.0)
 SINK RULE:taint_sink
@@ -1786,11 +1654,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(s[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 68: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_003_T.py
 Line 15: taint_sink(s)
 SINK RULE:taint_sink
@@ -1806,11 +1672,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 69: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_001_T.py
 Line 16: taint_sink(my_map.get(key1))
 SINK RULE:taint_sink
@@ -1825,11 +1689,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(my_map.get('key1'))  # 通过 get 方法访问 'key1' 的值（污染源）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 70: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_002_F.py
 Line 16: taint_sink(my_map.get(key2))
 SINK RULE:taint_sink
@@ -1844,11 +1706,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(my_map.get('key2'))  # 通过 get 方法访问 'key2' 的值（非污染源）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 71: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_003_F.py
 Line 16: taint_sink(my_map.get(taint_src))
 SINK RULE:taint_sink
@@ -1861,11 +1721,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_003_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(my_map.get(taint_src))  # 通过污染的键获取值（值本身是干净的）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 72: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_004_T.py
 Line 18: taint_sink(my_map.get(key2))
 SINK RULE:taint_sink
@@ -1880,11 +1738,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_004_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(my_map.get('key2'))  # 通过 'key2' 获取污染源
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 73: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_005_F.py
 Line 18: taint_sink(my_map.get(key1))
 SINK RULE:taint_sink
@@ -1899,11 +1755,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_005_F.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(my_map.get('key1'))  # 通过 'key1' 获取值（已删除，返回 None）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 74: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_006_T.py
 Line 15: taint_sink(list(my_map.values()))
 SINK RULE:taint_sink
@@ -1918,11 +1772,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_006_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(list(my_map.values()))  # 传递所有值的列表（包含污染源）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 75: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_009_F.py
 Line 15: taint_sink(list(my_map.keys()))
 SINK RULE:taint_sink
@@ -1937,11 +1789,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_009_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(list(my_map.keys()))  # 传递所有键的列表（键均为干净）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 76: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_010_T.py
 Line 20: taint_sink(c.taint_src)
 SINK RULE:taint_sink
@@ -1964,11 +1814,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_010_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(c['taint_src'])  # 传递嵌套字典中的 taint_src
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 77: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_012_T.py
 Line 19: taint_sink({with(params)}.id)
 SINK RULE:taint_sink
@@ -1988,11 +1836,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_012_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink({**params}['id'])  # 展开 params 并取 id 属性
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 78: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_014_T.py
 Line 23: taint_sink(new_params.id)
 SINK RULE:taint_sink
@@ -2018,11 +1864,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_014_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(new_params['id'])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 79: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/rest_parameter_no_solver_001_T.py
 Line 17: taint_sink(args.1)
 SINK RULE:taint_sink
@@ -2041,11 +1885,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/rest_parameter_no_solver_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(args[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 80: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_003_T.py
 Line 16: taint_sink(rest.0)
 SINK RULE:taint_sink
@@ -2063,11 +1905,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_003_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(rest[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 81: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_004_F.py
 Line 15: taint_sink(rest.1)
 SINK RULE:taint_sink
@@ -2085,11 +1925,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_004_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(rest[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 82: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_001_T.py
 Line 19: taint_sink(s.1+1)
 SINK RULE:taint_sink
@@ -2108,11 +1946,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(s[1 + 1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 83: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_002_F.py
 Line 19: taint_sink(s.0+1)
 SINK RULE:taint_sink
@@ -2131,11 +1967,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_002_F.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(s[0 + 1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 84: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_003_T.py
 Line 20: taint_sink(s.length-1)
 SINK RULE:taint_sink
@@ -2157,11 +1991,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_003_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(s[length - 1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 85: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_004_F.py
 Line 20: taint_sink(s.length-2)
 SINK RULE:taint_sink
@@ -2183,11 +2015,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/array_solver_004_F.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(s[length - 2])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 86: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_003_T.py
 Line 15: taint_sink(s.length-3)
 SINK RULE:taint_sink
@@ -2206,11 +2036,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s[length - 3])  # 等价于索引2（污染）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 87: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_004_F.py
 Line 15: taint_sink(s.length-2)
 SINK RULE:taint_sink
@@ -2229,11 +2057,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_004_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s[length - 2])  # 等价于索引3（未污染）
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 88: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_003_T.py
 Line 20: taint_sink(d.length-1)
 SINK RULE:taint_sink
@@ -2256,11 +2082,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_003_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(d[length - 1])  # 访问键为2的值并传给taint_sink函数
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 89: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_004_F.py
 Line 20: taint_sink(d.length-2)
 SINK RULE:taint_sink
@@ -2283,11 +2107,9 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_004_F.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(d[length - 2])  # 访问键为2的值并传给taint_sink函数
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 90: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
 Line 22: taint_sink(item)
 SINK RULE:taint_sink
@@ -2309,11 +2131,9 @@ Trace:
  /case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
   AffectedNodeName: taint_sink
   22:  SINK:              taint_sink(item)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 91: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_001_T.py
 Line 16: taint_sink(data)
 SINK RULE:taint_sink
@@ -2341,11 +2161,9 @@ Trace:
  /case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 92: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_005_T.py
 Line 23: taint_sink(taint)
 SINK RULE:taint_sink
@@ -2364,11 +2182,9 @@ Trace:
  /case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_005_T.py
   AffectedNodeName: taint_sink
   23:  SINK:          taint_sink(taint)  # 确保仅2个任务同时运行
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 93: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_009_T.py
 Line 23: taint_sink(data)
 SINK RULE:taint_sink
@@ -2399,11 +2215,9 @@ Trace:
  /case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_009_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 94: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py
 Line 26: taint_sink(obj.data)
 SINK RULE:taint_sink
@@ -2450,11 +2264,9 @@ Trace:
  /case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py
   AffectedNodeName: taint_sink
   26:  SINK:      taint_sink(obj.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 95: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/cross_class_003_T.py
 Line 31: taint_sink(a.topData.data)
 SINK RULE:taint_sink
@@ -2475,11 +2287,9 @@ Trace:
  /case/completeness/single_app_tracing/class/complex_object/cross_class_003_T.py
   AffectedNodeName: taint_sink
   31:  SINK:      taint_sink(a.topData.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 96: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
 Line 28: taint_sink(obj.get_child_data())
 SINK RULE:taint_sink
@@ -2521,11 +2331,9 @@ Trace:
  /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
   AffectedNodeName: taint_sink
   28:  SINK:      taint_sink(obj.get_child_data())  # 通过子类方法访问父类属性
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 97: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_001_T.py
 Line 18: taint_sink(obj.data)
 SINK RULE:taint_sink
@@ -2549,11 +2357,9 @@ Trace:
  /case/completeness/single_app_tracing/class/simple_object/simple_object_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(obj.data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 98: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_003_T.py
 Line 22: taint_sink(person.name)
 SINK RULE:taint_sink
@@ -2571,11 +2377,9 @@ Trace:
  /case/completeness/single_app_tracing/class/simple_object/simple_object_003_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(person.name)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 99: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
 Line 26: taint_sink(int_box.get_content())
 SINK RULE:taint_sink
@@ -2611,11 +2415,9 @@ Trace:
  /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
   AffectedNodeName: taint_sink
   26:  SINK:      taint_sink(int_box.get_content())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 100: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/assert/assert_001_T.py
 Line 22: taint_sink(arr.0)
 SINK RULE:taint_sink
@@ -2631,11 +2433,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/assert/assert_001_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(arr[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 101: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/assert/assert_002_F.py
 Line 22: taint_sink(arr.1)
 SINK RULE:taint_sink
@@ -2651,11 +2451,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/assert/assert_002_F.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(arr[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 102: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_001_T.py
 Line 14: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -2668,11 +2466,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 103: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_003_T.py
 Line 16: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -2685,11 +2481,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_003_T.py
   AffectedNodeName: taint_sink
   16:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 104: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_match_001_T.py
 Line 17: taint_sink(value)
 SINK RULE:taint_sink
@@ -2705,11 +2499,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_match_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:              taint_sink(value)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 105: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -2725,11 +2517,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 106: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -2745,11 +2535,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 107: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/all_001_T.py
 Line 13: taint_sink(item)
 SINK RULE:taint_sink
@@ -2765,11 +2553,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/all_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      all(taint_sink(item) for item in arr)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 108: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/any_001_T.py
 Line 13: taint_sink(item)
 SINK RULE:taint_sink
@@ -2785,11 +2571,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/any_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      any(taint_sink(item) for item in arr)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 109: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/for_body_002_F.py
 Line 16: taint_sink(res)
 SINK RULE:taint_sink
@@ -2805,11 +2589,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/for_body_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 110: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/forin_body_001_T.py
 Line 19: taint_sink(res)
 SINK RULE:taint_sink
@@ -2828,11 +2610,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/forin_body_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 111: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_001_T.py
 Line 17: taint_sink(res)
 SINK RULE:taint_sink
@@ -2848,11 +2628,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 112: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_002_F.py
 Line 18: taint_sink(res)
 SINK RULE:taint_sink
@@ -2868,11 +2646,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_002_F.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 113: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_body_001_T.py
 Line 19: taint_sink(res)
 SINK RULE:taint_sink
@@ -2888,11 +2664,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/while_body_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 114: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_break_001_T.py
 Line 16: taint_sink(res)
 SINK RULE:taint_sink
@@ -2908,11 +2682,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/while_break_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:          taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 115: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_001_T.py
 Line 21: taint_sink(res)
 SINK RULE:taint_sink
@@ -2928,11 +2700,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_001_T.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 116: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_002_F.py
 Line 21: taint_sink(res)
 SINK RULE:taint_sink
@@ -2948,11 +2718,9 @@ Trace:
  /case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_002_F.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(res)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 117: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/any/type_annotation_any_001_T.py
 Line 21: taint_sink(d)
 SINK RULE:taint_sink
@@ -2971,11 +2739,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/any/type_annotation_any_001_T.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(d)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 118: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/array_001_T.py
 Line 17: taint_sink(s)
 SINK RULE:taint_sink
@@ -2994,11 +2760,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/array/array_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 119: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/extslice_001_T.py
 Line 19: taint_sink(arr.([0 : 2 ], 2).0)
 SINK RULE:taint_sink
@@ -3014,11 +2778,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/array/extslice_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:          taint_sink(arr[0:2, 2][0])  # 假设我们试图从数组中提取可能存在污染的数据
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 120: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/extslice_002_F.py
 Line 19: taint_sink(arr.([0 : 2 ], 2).1)
 SINK RULE:taint_sink
@@ -3034,11 +2796,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/array/extslice_002_F.py
   AffectedNodeName: taint_sink
   19:  SINK:          taint_sink(arr[0:2, 2][1])  # 假设我们试图从数组中提取可能存在污染的数据
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 121: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/numpy_array_001_T.py
 Line 17: taint_sink(arr)
 SINK RULE:taint_sink
@@ -3054,11 +2814,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/array/numpy_array_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(arr)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 122: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytearray/bytearray_001_T.py
 Line 17: taint_sink(mutable_byte_data)
 SINK RULE:taint_sink
@@ -3074,11 +2832,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytearray/bytearray_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(mutable_byte_data)  # 将修改后的字节序列传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 123: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_003_T.py
 Line 17: taint_sink(byte_data)
 SINK RULE:taint_sink
@@ -3094,11 +2850,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_003_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(byte_data)  # 将字节序列传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 124: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_005_T.py
 Line 18: taint_sink(first_byte)
 SINK RULE:taint_sink
@@ -3117,11 +2871,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_005_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(first_byte)  # 将第一个字节传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 125: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_007_T.py
 Line 18: taint_sink(sliced_data)
 SINK RULE:taint_sink
@@ -3140,11 +2892,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_007_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(sliced_data)  # 将切片结果传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 126: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_009_T.py
 Line 19: taint_sink(concatenated_data)
 SINK RULE:taint_sink
@@ -3163,11 +2913,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_009_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(concatenated_data)  # 将拼接结果传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 127: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_011_T.py
 Line 18: taint_sink(decoded_data)
 SINK RULE:taint_sink
@@ -3186,11 +2934,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_011_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(decoded_data)  # 将解码后的字符串传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 128: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_013_T.py
 Line 18: taint_sink(position)
 SINK RULE:taint_sink
@@ -3209,11 +2955,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/bytes/bytes_013_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(position)  # 将查找结果传递给 taint_sink
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 129: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_001_T.py
 Line 15: taint_sink(s)
 SINK RULE:taint_sink
@@ -3229,11 +2973,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/collections/set_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 130: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_005_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -3252,11 +2994,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/collections/set_005_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 131: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_006_F.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -3275,11 +3015,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/collections/set_006_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 132: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_007_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -3298,11 +3036,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/collections/set_007_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 133: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_008_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -3321,11 +3057,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/collections/set_008_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 134: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/customize/type_annotation_customize_001_T.py
 Line 19: taint_sink(a.value)
 SINK RULE:taint_sink
@@ -3349,11 +3083,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/customize/type_annotation_customize_001_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(a.value)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 135: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_001_T.py
 Line 14: taint_sink(s)
 SINK RULE:taint_sink
@@ -3369,11 +3101,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/list/list_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 136: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_003_T.py
 Line 14: taint_sink(s)
 SINK RULE:taint_sink
@@ -3389,11 +3119,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/list/list_003_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 137: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_005_T.py
 Line 15: taint_sink(s)
 SINK RULE:taint_sink
@@ -3406,11 +3134,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/list/list_005_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(s)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 138: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_007_T.py
 Line 17: taint_sink(l.0)
 SINK RULE:taint_sink
@@ -3426,11 +3152,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/list/list_007_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(l[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 139: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_009_T.py
 Line 16: taint_sink(items.0)
 SINK RULE:taint_sink
@@ -3452,11 +3176,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/list/list_009_T.py
   AffectedNodeName: taint_sink
   16:  SINK:          taint_sink(items[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 140: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_001_T.py
 Line 15: taint_sink(m)
 SINK RULE:taint_sink
@@ -3471,11 +3193,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/map/map_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(m)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 141: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_006_F.py
 Line 18: taint_sink(m)
 SINK RULE:taint_sink
@@ -3491,11 +3211,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/map/map_006_F.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(m)  # 传递更新后的污染字典
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 142: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_007_T.py
 Line 18: taint_sink(m)
 SINK RULE:taint_sink
@@ -3511,11 +3229,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/map/map_007_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(m)  # 传递更新后的字典
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 143: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_008_F.py
 Line 18: taint_sink(m)
 SINK RULE:taint_sink
@@ -3531,11 +3247,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/map/map_008_F.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(m)  # 传递更新后的字典
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 144: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_009_T.py
 Line 14: taint_sink(config)
 SINK RULE:taint_sink
@@ -3557,11 +3271,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/map/map_009_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(config)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 145: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
 Line 24: taint_sink(x)
 SINK RULE:taint_sink
@@ -3589,11 +3301,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
   AffectedNodeName: taint_sink
   24:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 146: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/bool_001_T.py
 Line 12: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -3606,11 +3316,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/bool_001_T.py
   AffectedNodeName: taint_sink
   12:  SINK:      taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 147: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/bool_002_F.py
 Line 12: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -3623,11 +3331,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/bool_002_F.py
   AffectedNodeName: taint_sink
   12:  SINK:      taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 148: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_001_T.py
 Line 13: taint_sink(tainted_complex)
 SINK RULE:taint_sink
@@ -3643,11 +3349,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/complex_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_complex)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 149: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_003_T.py
 Line 14: taint_sink(b)
 SINK RULE:taint_sink
@@ -3666,11 +3370,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/complex_003_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(b)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 150: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_004_F.py
 Line 14: taint_sink(b)
 SINK RULE:taint_sink
@@ -3689,11 +3391,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/complex_004_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(b)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 151: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/float_001_T.py
 Line 13: taint_sink(tainted_float)
 SINK RULE:taint_sink
@@ -3709,11 +3409,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/float_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_float)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 152: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/int_001_T.py
 Line 13: taint_sink(tainted_int)
 SINK RULE:taint_sink
@@ -3729,11 +3427,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/int_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_int)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 153: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/none_001_T.py
 Line 13: taint_sink(tainted_none)
 SINK RULE:taint_sink
@@ -3749,11 +3445,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/none_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_none)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 154: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/str_001_T.py
 Line 13: taint_sink(tainted_str)
 SINK RULE:taint_sink
@@ -3769,11 +3463,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/str_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_str)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 155: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_bool_001_T.py
 Line 14: taint_sink(x)
 SINK RULE:taint_sink
@@ -3789,11 +3481,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_bool_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:     taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 156: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
 Line 17: taint_sink(sum)
 SINK RULE:taint_sink
@@ -3812,11 +3502,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:     taint_sink(sum)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 157: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_float_001_T.py
 Line 14: taint_sink(x)
 SINK RULE:taint_sink
@@ -3832,11 +3520,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_float_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:     taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 158: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_int_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -3852,11 +3538,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_int_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:     taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 159: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_none_001_T.py
 Line 18: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -3869,11 +3553,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_none_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 160: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_str_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -3889,11 +3571,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_str_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:     taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 161: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/tuple/tuple_001_T.py
 Line 14: taint_sink(t)
 SINK RULE:taint_sink
@@ -3909,11 +3589,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/tuple/tuple_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(t)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 162: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/tuple/tuple_003_T.py
 Line 15: taint_sink(unpacked)
 SINK RULE:taint_sink
@@ -3931,11 +3609,9 @@ Trace:
  /case/completeness/single_app_tracing/datatype/tuple/tuple_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(unpacked)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 163: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/exception_error/exception_throw/exception_try_001_T.py
 Line 14: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -3948,11 +3624,9 @@ Trace:
  /case/completeness/single_app_tracing/exception_error/exception_throw/exception_try_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 164: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/assign_expression_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -3968,11 +3642,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/assign_expression_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 165: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -3988,11 +3660,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 166: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_assignment_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4008,11 +3678,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_assignment_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 167: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_and_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4028,11 +3696,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_and_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 168: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_or_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4048,11 +3714,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_or_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 169: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_xor_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4068,11 +3732,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_xor_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 170: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_divide_assignment_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4088,11 +3750,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_divide_assignment_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 171: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_division_001_T.py
 Line 17: taint_sink(result)
 SINK RULE:taint_sink
@@ -4108,11 +3768,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_division_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 172: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_div_case_001_T.py
 Line 14: taint_sink(taint_src//2)
 SINK RULE:taint_sink
@@ -4125,11 +3783,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_div_case_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(taint_src // 2)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 173: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_division_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4145,11 +3801,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_division_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 174: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_left_shift_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4165,11 +3819,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_left_shift_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 175: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_matrix_multiplication_001_T.py
 Line 23: taint_sink(result)
 SINK RULE:taint_sink
@@ -4188,11 +3840,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_matrix_multiplication_001_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 176: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mod_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4208,11 +3858,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mod_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 177: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_modulo_assignment_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4228,11 +3876,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_modulo_assignment_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 178: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mult_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4248,11 +3894,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mult_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 179: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_multiply_assignment_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4268,11 +3912,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_multiply_assignment_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 180: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_power_assignment_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4288,11 +3930,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_power_assignment_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 181: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_right_shift_001_T.py
 Line 15: taint_sink(x)
 SINK RULE:taint_sink
@@ -4308,11 +3948,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_right_shift_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 182: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_sub_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4328,11 +3966,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_sub_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 183: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_subtract_assignment_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4348,11 +3984,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_subtract_assignment_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 184: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_and_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4368,11 +4002,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_and_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 185: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_lsh_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4388,11 +4020,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_lsh_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 186: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_not_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4405,11 +4035,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_not_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 187: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_or_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4425,11 +4053,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_or_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 188: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_rsh_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4445,11 +4071,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_rsh_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 189: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_xor_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4465,11 +4089,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_xor_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 190: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/greater_than_equal_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4485,11 +4107,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/greater_than_equal_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 191: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/less_than_equal_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4505,11 +4125,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/less_than_equal_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 192: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_001_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4525,11 +4143,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_001_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 193: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_002_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4545,11 +4161,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_002_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 194: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4565,11 +4179,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 195: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4585,11 +4197,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 196: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4605,11 +4215,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 197: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4625,11 +4233,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 198: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4645,11 +4251,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 199: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4665,11 +4269,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 200: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4685,11 +4287,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 201: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_002_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4705,11 +4305,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 202: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4725,11 +4323,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 203: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_002_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4745,11 +4341,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 204: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4765,11 +4359,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 205: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_002_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4785,11 +4377,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 206: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4805,11 +4395,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 207: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -4825,11 +4413,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 208: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4845,11 +4431,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 209: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_002_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4865,11 +4449,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 210: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4885,11 +4467,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 211: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_002_F.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -4905,11 +4485,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_002_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 212: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4922,11 +4500,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 213: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_002_F.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4939,11 +4515,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_002_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 214: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_uadd_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4956,11 +4530,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_uadd_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 215: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_usub_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4973,11 +4545,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_usub_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 216: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/conditional_expression_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -4993,11 +4563,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/conditional_expression/conditional_expression_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 217: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_and_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5013,11 +4581,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/conditional_expression/logical_and_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:       taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 218: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_and_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5033,11 +4599,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/conditional_expression/logical_and_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:       taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 219: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_or_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5053,11 +4617,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/conditional_expression/logical_or_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:       taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 220: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_or_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5073,11 +4635,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/conditional_expression/logical_or_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:       taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 221: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/lambda_expression/lambda_expression_001_T.py
 Line 23: taint_sink(result)
 SINK RULE:taint_sink
@@ -5105,11 +4665,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/lambda_expression/lambda_expression_001_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 222: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_001_T.py
 Line 21: taint_sink(Employee.lastname)
 SINK RULE:taint_sink
@@ -5133,11 +4691,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_001_T.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(Employee.lastname)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 223: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_002_F.py
 Line 19: taint_sink(employee.get(lastname))
 SINK RULE:taint_sink
@@ -5156,11 +4712,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_002_F.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(employee.get('lastname'))  # 由于 lastname 已被删除，这将返回 None
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 224: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_003_T.py
 Line 15: taint_sink(array)
 SINK RULE:taint_sink
@@ -5176,11 +4730,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(array)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 225: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_004_F.py
 Line 15: taint_sink(array)
 SINK RULE:taint_sink
@@ -5196,11 +4748,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_004_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(array)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 226: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_005_T.py
 Line 16: taint_sink(dct)
 SINK RULE:taint_sink
@@ -5216,11 +4766,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_005_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(dct)  # 将修改后的字典传递给 sink 点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 227: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_006_F.py
 Line 16: taint_sink(dct)
 SINK RULE:taint_sink
@@ -5236,11 +4784,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_006_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(dct)  # 将修改后的字典传递给 sink 点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 228: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_007_T.py
 Line 16: taint_sink(lst)
 SINK RULE:taint_sink
@@ -5256,11 +4802,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_007_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(lst)  # 将修改后的列表传递给 sink 点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 229: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_008_F.py
 Line 16: taint_sink(lst)
 SINK RULE:taint_sink
@@ -5276,11 +4820,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/del_expression_008_F.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(lst)  # 将修改后的列表传递给 sink 点
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 230: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_001_T.py
 Line 15: taint_sink(result)
 SINK RULE:taint_sink
@@ -5298,11 +4840,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 231: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_003_T.py
 Line 17: taint_sink(c)
 SINK RULE:taint_sink
@@ -5321,11 +4861,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_003_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(c)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 232: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_004_F.py
 Line 17: taint_sink(a)
 SINK RULE:taint_sink
@@ -5343,11 +4881,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_004_F.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(a)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 233: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_005_T.py
 Line 15: taint_sink(c)
 SINK RULE:taint_sink
@@ -5365,11 +4901,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_005_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(c)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 234: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_006_F.py
 Line 15: taint_sink(d)
 SINK RULE:taint_sink
@@ -5387,11 +4921,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_006_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(d)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 235: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/enum_001_T.py
 Line 23: taint_sink(color_map.blue.value)
 SINK RULE:taint_sink
@@ -5410,11 +4942,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/enum_001_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(color_map["blue"].value)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 236: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/exponentiation_operator_001_T.py
 Line 13: taint_sink(result)
 SINK RULE:taint_sink
@@ -5430,11 +4960,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/exponentiation_operator_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 237: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/list_comprehension_001_T.py
 Line 15: taint_sink(result.0)
 SINK RULE:taint_sink
@@ -5450,11 +4978,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/list_comprehension_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 238: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/list_comprehension_002_F.py
 Line 15: taint_sink(result.1)
 SINK RULE:taint_sink
@@ -5470,11 +4996,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/list_comprehension_002_F.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(result[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 239: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_001_T.py
 Line 18: taint_sink(c)
 SINK RULE:taint_sink
@@ -5490,11 +5014,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(c)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 240: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/rest_parameter_001_T.py
 Line 16: taint_sink(rest)
 SINK RULE:taint_sink
@@ -5512,11 +5034,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/rest_parameter_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(rest)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 241: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_001_T.py
 Line 15: taint_sink(array)
 SINK RULE:taint_sink
@@ -5535,11 +5055,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/spread_operator_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(array)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 242: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_003_T.py
 Line 22: taint_sink(newParams)
 SINK RULE:taint_sink
@@ -5565,11 +5083,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/spread_operator_003_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(newParams)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 243: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_005_T.py
 Line 17: taint_sink(args)
 SINK RULE:taint_sink
@@ -5588,11 +5104,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/spread_operator_005_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(args)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 244: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_007_T.py
 Line 17: taint_sink(args)
 SINK RULE:taint_sink
@@ -5611,11 +5125,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/spread_operator_007_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(args)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 245: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5631,11 +5143,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/template_literal_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 246: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_003_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5651,11 +5161,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/template_literal_003_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 247: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_005_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5671,11 +5179,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/special_expression/template_literal_005_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 248: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/bool_conversion_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5691,11 +5197,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/bool_conversion_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 249: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/float_truncate_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5711,11 +5215,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/float_truncate_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 250: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/int_truncate_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5731,11 +5233,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/int_truncate_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 251: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/str_conversion_001_T.py
 Line 13: taint_sink(tainted_str)
 SINK RULE:taint_sink
@@ -5751,11 +5251,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/str_conversion_001_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      taint_sink(tainted_str)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 252: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/type_cast_001_T.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5771,11 +5269,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/type_cast_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 253: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/type_cast_002_F.py
 Line 14: taint_sink(result)
 SINK RULE:taint_sink
@@ -5791,11 +5287,9 @@ Trace:
  /case/completeness/single_app_tracing/expression/type_cast/type_cast_002_F.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 254: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_002_T.py
 Line 13: taint_sink(input)
 SINK RULE:taint_sink
@@ -5814,11 +5308,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_002_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      process = lambda input: taint_sink(input)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 255: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_004_T.py
 Line 13: taint_sink(taint_src+y)
 SINK RULE:taint_sink
@@ -5831,11 +5323,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_004_T.py
   AffectedNodeName: taint_sink
   13:  SINK:      process = lambda x, y: taint_sink(taint_src + y)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 256: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_006_T.py
 Line 14: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -5848,11 +5338,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_006_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      (lambda: taint_sink(taint_src))()
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 257: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_008_T.py
 Line 14: taint_sink(x+n)
 SINK RULE:taint_sink
@@ -5871,11 +5359,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_008_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      make_adder = lambda n: (lambda x: taint_sink(x + n))
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 258: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_002_T.py
 Line 15: taint_sink(inner_input)
 SINK RULE:taint_sink
@@ -5900,11 +5386,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_002_T.py
   AffectedNodeName: taint_sink
   15:  SINK:              taint_sink(inner_input)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 259: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_003_T.py
 Line 14: taint_sink(arg1)
 SINK RULE:taint_sink
@@ -5923,11 +5407,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_003_T.py
   AffectedNodeName: taint_sink
   14:  SINK:          taint_sink(arg1)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 260: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_002_T.py
 Line 15: taint_sink(obj.data)
 SINK RULE:taint_sink
@@ -5948,11 +5430,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_002_T.py
   AffectedNodeName: taint_sink
   15:  SINK:      taint_sink(obj['data'])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 261: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_004_T.py
 Line 18: taint_sink(arr)
 SINK RULE:taint_sink
@@ -5967,11 +5447,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_004_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(arr)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 262: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_006_T.py
 Line 17: taint_sink(objB.name)
 SINK RULE:taint_sink
@@ -5998,11 +5476,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_006_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(objB['name'])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 263: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_001_T.py
 Line 15: taint_sink(b)
 SINK RULE:taint_sink
@@ -6021,11 +5497,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:          taint_sink(b)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 264: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_003_T.py
 Line 15: taint_sink(b)
 SINK RULE:taint_sink
@@ -6047,11 +5521,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_003_T.py
   AffectedNodeName: taint_sink
   15:  SINK:          taint_sink(b)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 265: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_007_T.py
 Line 15: taint_sink(args.0)
 SINK RULE:taint_sink
@@ -6070,11 +5542,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_007_T.py
   AffectedNodeName: taint_sink
   15:  SINK:          taint_sink(args[0])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 266: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_008_F.py
 Line 15: taint_sink(args.1)
 SINK RULE:taint_sink
@@ -6093,11 +5563,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_008_F.py
   AffectedNodeName: taint_sink
   15:  SINK:          taint_sink(args[1])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 267: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
 Line 34: self.taint_sink(self.name)
 SINK RULE:taint_sink
@@ -6123,11 +5591,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
   AffectedNodeName: self.taint_sink
   34:  SINK:          self.taint_sink(self.name)  # 使用保存的污染接收函数
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 268: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T.py
 Line 25: taint_sink(taint_src)
 SINK RULE:taint_sink
@@ -6140,11 +5606,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T.py
   AffectedNodeName: taint_sink
   25:  SINK:          taint_sink(taint_src)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 269: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py
 Line 30: taint_sink(result)
 SINK RULE:taint_sink
@@ -6160,11 +5624,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py
   AffectedNodeName: taint_sink
   30:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 270: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/property_decorator_001_T.py
 Line 43: taint_sink(obj.value)
 SINK RULE:taint_sink
@@ -6179,11 +5641,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/decorator_function/property_decorator_001_T.py
   AffectedNodeName: taint_sink
   43:  SINK:      taint_sink(obj.value)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 271: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py
 Line 22: taint_sink(result)
 SINK RULE:taint_sink
@@ -6206,11 +5666,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py
   AffectedNodeName: taint_sink
   22:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 272: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_002_T.py
 Line 21: taint_sink(first_value)
 SINK RULE:taint_sink
@@ -6241,11 +5699,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/generator_function_002_T.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(first_value)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 273: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_004_T.py
 Line 26: taint_sink(second_yield)
 SINK RULE:taint_sink
@@ -6279,11 +5735,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/generator_function_004_T.py
   AffectedNodeName: taint_sink
   26:  SINK:      taint_sink(second_yield)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 274: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_005_T.py
 Line 23: taint_sink(next(g))
 SINK RULE:taint_sink
@@ -6332,11 +5786,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/generator_function_005_T.py
   AffectedNodeName: taint_sink
   23:  SINK:      taint_sink(next(g))  # 跟踪外层生成器的首次 yield
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 275: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_007_T.py
 Line 14: taint_sink(next(gen))
 SINK RULE:taint_sink
@@ -6352,11 +5804,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/generator_function_007_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(next(gen))
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 276: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_001_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -6378,11 +5828,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 277: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_003_T.py
 Line 16: taint_sink(result)
 SINK RULE:taint_sink
@@ -6404,11 +5852,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_003_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 278: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_002_T.py
 Line 21: taint_sink(f(taint_src, _)())
 SINK RULE:taint_sink
@@ -6433,11 +5879,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_002_T.py
   AffectedNodeName: taint_sink
   21:  SINK:      taint_sink(f(taint_src, '_')())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 279: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_004_T.py
 Line 20: taint_sink(f(g, taint_src, _)())
 SINK RULE:taint_sink
@@ -6468,11 +5912,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_004_T.py
   AffectedNodeName: taint_sink
   20:  SINK:      taint_sink(f(g, taint_src, '_')())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 280: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_006_T.py
 Line 26: taint_sink(f(g, u, taint_src, _)())
 SINK RULE:taint_sink
@@ -6509,11 +5951,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_006_T.py
   AffectedNodeName: taint_sink
   26:  SINK:      taint_sink(f(g, u, taint_src, '_')())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 281: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_008_T.py
 Line 17: taint_sink(result)
 SINK RULE:taint_sink
@@ -6547,11 +5987,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_008_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 282: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_010_T.py
 Line 24: taint_sink(combined)
 SINK RULE:taint_sink
@@ -6597,11 +6035,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_010_T.py
   AffectedNodeName: taint_sink
   24:  SINK:      taint_sink(combined)  # 输出 "pre___TAINT_SRC_VALUE_post"
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 283: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_012_T.py
 Line 29: taint_sink(result)
 SINK RULE:taint_sink
@@ -6641,11 +6077,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_012_T.py
   AffectedNodeName: taint_sink
   29:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 284: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/datetime_001_T.py
 Line 17: taint_sink(dt)
 SINK RULE:taint_sink
@@ -6667,11 +6101,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/datetime_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:          taint_sink(dt)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 285: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/json_001_T.py
 Line 15: taint_sink(obj.key)
 SINK RULE:taint_sink
@@ -6693,11 +6125,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/json_001_T.py
   AffectedNodeName: taint_sink
   15:  SINK:          taint_sink(obj["key"])
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 286: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/math_001_T.py
 Line 17: taint_sink(result)
 SINK RULE:taint_sink
@@ -6719,11 +6149,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/math_001_T.py
   AffectedNodeName: taint_sink
   17:  SINK:          taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 287: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/os_001_T.py
 Line 14: taint_sink(file_path)
 SINK RULE:taint_sink
@@ -6739,11 +6167,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/os_001_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(file_path)  # 输出拼接后的路径
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 288: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/re_001_T.py
 Line 16: taint_sink(words)
 SINK RULE:taint_sink
@@ -6759,11 +6185,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/re_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(words)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 289: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/string_001_T.py
 Line 18: taint_sink(result)
 SINK RULE:taint_sink
@@ -6785,11 +6209,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/library_function/string_001_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(result)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 290: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
 Line 31: taint_sink(self.get_data())
 SINK RULE:taint_sink
@@ -6837,11 +6259,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
   AffectedNodeName: taint_sink
   31:  SINK:          taint_sink(self.get_data())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 291: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
 Line 28: taint_sink(self.get_data())
 SINK RULE:taint_sink
@@ -6877,11 +6297,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
   AffectedNodeName: taint_sink
   28:  SINK:          taint_sink(self.get_data())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 292: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py
 Line 25: taint_sink(Child.get_value())
 SINK RULE:taint_sink
@@ -6901,11 +6319,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py
   AffectedNodeName: taint_sink
   25:  SINK:      taint_sink(Child.get_value())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 293: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_002_T.py
 Line 14: taint_sink(data)
 SINK RULE:taint_sink
@@ -6933,11 +6349,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_002_T.py
   AffectedNodeName: taint_sink
   14:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 294: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_004_T.py
 Line 19: taint_sink(data)
 SINK RULE:taint_sink
@@ -6977,11 +6391,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_004_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(data)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 295: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_005_T.py
 Line 18: taint_sink(x)
 SINK RULE:taint_sink
@@ -7009,11 +6421,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_005_T.py
   AffectedNodeName: taint_sink
   18:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 296: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py
 Line 24: taint_sink(result)
 SINK RULE:taint_sink
@@ -7048,11 +6458,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py
   AffectedNodeName: taint_sink
   24:  SINK:      taint_sink(result)  # 输出 "10_5_#taint_src_value"
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 297: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/static_method/static_access_001_T.py
 Line 25: taint_sink(DataProcessor.get_static_data())
 SINK RULE:taint_sink
@@ -7074,11 +6482,9 @@ Trace:
  /case/completeness/single_app_tracing/function_call/static_method/static_access_001_T.py
   AffectedNodeName: taint_sink
   25:  SINK:      taint_sink(DataProcessor.get_static_data())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 298: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/global/global_001_T.py
 Line 16: taint_sink(x)
 SINK RULE:taint_sink
@@ -7094,11 +6500,9 @@ Trace:
  /case/completeness/single_app_tracing/variable_scope/global/global_001_T.py
   AffectedNodeName: taint_sink
   16:  SINK:      taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 299: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/global/global_003_T.py
 Line 17: taint_sink(x+y)
 SINK RULE:taint_sink
@@ -7114,11 +6518,9 @@ Trace:
  /case/completeness/single_app_tracing/variable_scope/global/global_003_T.py
   AffectedNodeName: taint_sink
   17:  SINK:      taint_sink(x + y)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 300: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/nonlocal/nonlocal_001_T.py
 Line 20: taint_sink(x)
 SINK RULE:taint_sink
@@ -7134,11 +6536,9 @@ Trace:
  /case/completeness/single_app_tracing/variable_scope/nonlocal/nonlocal_001_T.py
   AffectedNodeName: taint_sink
   20:  SINK:          taint_sink(x)
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 301: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
 Line 24: taint_sink(o.get_data())
 SINK RULE:taint_sink
@@ -7174,11 +6574,9 @@ Trace:
  /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
   AffectedNodeName: taint_sink
   24:  SINK:      taint_sink(o.get_data())
-Advice:
-	Avoid flowing the source to the taint sink
 
 ------------- 302: taint_flow_test-------------
-Description:Test for taint flow.
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_003_T.py
 Line 19: taint_sink(Child.static_data)
 SINK RULE:taint_sink
@@ -7194,8 +6592,6 @@ Trace:
  /case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_003_T.py
   AffectedNodeName: taint_sink
   19:  SINK:      taint_sink(Child.static_data)
-Advice:
-	Avoid flowing the source to the taint sink
 ==========================================================
-  #taint_flow_test:302
+  #Total-findings:302
 ==========================================================

@@ -99,7 +99,10 @@ class JsAnalyzer extends Analyzer {
         logger.info(
           'EntryPoint [%s.%s] is executing',
           entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
-          entryPoint.functionName
+          entryPoint.functionName ||
+            `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_${
+              entryPoint.entryPointSymVal?.ast.loc.end.line
+            }>`
         )
         const argValues = []
         for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
@@ -923,18 +926,6 @@ class JsAnalyzer extends Analyzer {
     }
     return retVal
   }
-}
-
-/**
- * get module exports scope from modClos
- * @param scope
- * @returns {*}
- */
-function getExportsScope(scope) {
-  if (scope.vtype !== 'scope' && scope._sid !== 'file') {
-    Errors.UnexpectedValue('export scope is not module')
-  }
-  return scope.getFieldValue('module.exports')
 }
 
 module.exports = JsAnalyzer

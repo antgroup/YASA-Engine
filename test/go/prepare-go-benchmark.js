@@ -7,16 +7,19 @@ const git = simpleGit()
 const BENCHMARKS_DIR = './benchmarks'
 
 const BENCHMARK_REPO_URLS = {
-  'sast-go': 'https://github.com/alipay/ant-application-security-testing-benchmark.git',
+  'sast-go': {
+    gitRepoUrl: 'https://github.com/alipay/ant-application-security-testing-benchmark.git',
+    branch: 'main_roll_0905',
+  },
 }
 
-async function cloneRepo(gitRepoUrl, targetDir) {
+async function cloneRepo(gitRepoUrl, targetDir, branch) {
   // 确保目标目录存在
   const absoluteTargetDir = path.resolve(targetDir)
   let done = true
   // 创建命令
   await git
-    .clone(gitRepoUrl, absoluteTargetDir)
+    .clone(gitRepoUrl, absoluteTargetDir, ['-b', branch])
     .then(() => logger.info(`仓库克隆成功！！！仓库:${gitRepoUrl} 已克隆至 ${targetDir}`))
     .catch((err) => {
       done = false
@@ -39,13 +42,14 @@ async function cloneRepo(gitRepoUrl, targetDir) {
 async function prepareTest() {
   const allRepoReady = []
   for (let key in BENCHMARK_REPO_URLS) {
-    const repoUrl = BENCHMARK_REPO_URLS[key]
+    const repoUrl = BENCHMARK_REPO_URLS[key].gitRepoUrl
+    const branch = BENCHMARK_REPO_URLS[key].branch
     const targetDir = path.resolve(__dirname, BENCHMARKS_DIR, key)
     if (fs.existsSync(targetDir)) {
       fs.rmSync(targetDir, { recursive: true })
     }
     fs.mkdirSync(targetDir, { recursive: true })
-    let repoRes = await cloneRepo(repoUrl, targetDir)
+    let repoRes = await cloneRepo(repoUrl, targetDir, branch)
     allRepoReady.push(repoRes)
   }
   return allRepoReady.length > 0 && allRepoReady.every((ready) => ready)
@@ -147,7 +151,6 @@ function processDirectory(directoryPath) {
       )
       return
     }
-
     files.forEach((file) => {
       const fullPath = path.join(directoryPath, file)
       fs.stat(fullPath, (err, stats) => {
@@ -155,7 +158,6 @@ function processDirectory(directoryPath) {
           handleException(err, `Error reading file stats: ${fullPath}`, `Error reading file stats: ${fullPath}`)
           return
         }
-
         if (stats.isDirectory()) {
           // 如果是文件夹，则递归处理
           processDirectory(fullPath)
@@ -167,7 +169,6 @@ function processDirectory(directoryPath) {
     })
   })
 }
-
 // 处理单个 .go 文件
 function processGoFile(filePath) {
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -175,36 +176,28 @@ function processGoFile(filePath) {
       handleException(err, `Error reading file: ${filePath}`, `Error reading file: ${filePath}`)
       return
     }
-
     // 查找第一个函数的名称
     const functionMatch = data.match(/func\s+([\w_]+)\(/)
     if (!functionMatch) {
       logger.info(`No functions found in file: ${filePath}`)
       return
     }
-
     const firstFunctionName = functionMatch[1]
     const taintSrc = '__taint_src'
-
     // 构造要添加的 main 函数内容
     const mainFunction = `\nfunc main() {\n  ${firstFunctionName}(${taintSrc})\n}\n`
-
     // 检查是否已经存在 main 函数，避免重复添加
     if (data.includes('func main()')) {
-      logger.info(`File already contains main function: ${filePath}`)
       return
     }
-
     // 在文件内容末尾添加 main 函数
     const updatedData = data + mainFunction
-
     // 写回文件
     fs.writeFile(filePath, updatedData, 'utf8', (err) => {
       if (err) {
         handleException(err, `Error writing file: ${filePath}`, `Error writing file: ${filePath}`)
         return
       }
-      logger.info(`Successfully updated file: ${filePath}`)
     })
   })
 }

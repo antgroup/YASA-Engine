@@ -2,38 +2,23 @@ const _ = require('lodash')
 const commonUtil = require('../../../util/common-util')
 const { completeEntryPoint, entryPointsUpToUser } = require('./entry-points-util')
 const config = require('../../../config')
+const Checker = require('../../common/checker')
 
 const processedBuiltInRegistry = new Set()
 const builtInOnjectList = ['github.com/urfave/cli.NewApp()']
 const builtInPropertyList = ['Action']
 
-const CheckerId = 'urfave-cli-builtIn'
-
 /**
  * urfave.cli bulitIn checker
  * 为第三方库方法urfave.cli做建模，添加entryPoints
  */
-class urfaveCliChecker {
+class urfaveCliChecker extends Checker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
-    this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-    this.resultManager = resultManager
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   * @returns {string}
-   * @constructor
-   */
-  static GetCheckerId() {
-    return CheckerId
+    super(resultManager, 'urfave-cli-builtIn')
   }
 
   /**
@@ -46,7 +31,7 @@ class urfaveCliChecker {
    */
   triggerAtAssignment(analyzer, scope, node, state, info) {
     const { lvalue, rvalue } = info
-    if (config.entryPointMode === 'ONLY_CUSTOM' && entryPointsUpToUser) return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!lvalue || !rvalue || rvalue.vtype !== 'fclos') return
     const { object, property } = lvalue
     if (!object || !property) return
