@@ -1,31 +1,25 @@
-终于等到您！欢迎加入YASA开源社区！
+Welcome to join the YASA open-source community!
 
-参与社区贡献的方式有很多种，每一种贡献都受到社区的含义和重视，您可以通过：
+The detailed Chinese version can be found [here](https://www.yuque.com/u22090306/bebf6g/rgm1xmoa38wlfxzc).
 
-● 代码贡献
+There are many ways to contribute to the community, and each contribution is valued by the community. You can do it through:
+- Code contribution
+- Participate in discussions and share ideas
+- Document repair/verification
+- Issue Fix
+- Security issue disclosure
+- 
+We sincerely welcome you to become a member of the YASA community and progress together with the community developers.
 
-● 参与讨论与分享
+# Participate in Code Contribution
 
-● 文档修复/验证
+If you wish to contribute to the detection checker or enhance the analysis capabilities of YASA, please refer to the following process:
 
-● Issue 修复
+- Firstly, you need to develop the local YASA code. During the development process, you must adhere to the ["YASA Code Standards"](https://www.yuque.com/u22090306/bebf6g/xi7ovzalukpgbkra).
+- Your function or change has been tested locally and meets the expected results.
+- Next, conduct the verification of the regression testing capability of YASA. Refer to ["YASA Automated Regression Testing"](https://www.yuque.com/u22090306/bebf6g/zd5xmfpzhlt4wsho) for details. Ensure that it does not affect the existing capabilities.
+- Submit your changes as a pull request through a fork. The maintainers and owners of the community will review them, and once approved, they will be merged.
 
-● 安全问题披露
+# Code of Conduct
 
-等方式参与社区贡献。非常欢迎您成为YASA社区的重要一员，与YASA社区与社区开发者们共同进步。
-
-参与代码贡献
-
-如果您想要贡献检测checker或对YASA的分析能力进行增强，可以参考以下流程：
-
-● 首先您需要开发本地YASA的代码，开发时需要遵守YASA代码规范
-
-● 您的功能或变更在本地测试符合预期。
-
-● 其次进行YASA的回归测试能力验证。详见YASA自动化回归测试，确保不影响已有能力。
-
-● 将您的变更通过fork提交PR，社区的maintainer和owner将会进行review，通过后合并。
-
-
-行为准则
-"开放式统一多语言程序分析YASA"社区遵守开源社区《贡献者公约》v1.4中规定的行为守则，请参考v1.4版本。
+"The Open Unified Multi-Language Program Analysis YASA" community adheres to the code of conduct stipulated in the ["Contributor's Covenant"](https://www.contributor-covenant.org/) of the open-source community [v1.4](https://www.contributor-covenant.org/zh-cn/version/1/4/code-of-conduct/). 
