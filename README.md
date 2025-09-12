@@ -1,24 +1,13 @@
 <img src="folder-img/logo.png" style="width:50%;"  />
 
-## [ Official Website ](https://cybersec.antgroup.com/)
 #### [简体中文](README_ZH.md) / [English](README.md)
 
-## What is YASA
-Hello! This is the open unified multi-language program analysis product YASA (Yet Another Static Analyzer)!
+YASA (Yet Another Static Analyzer) is an open-source static program analysis project. Its core innovation lies in a unified intermediate representation called the Unified Abstract Syntax Tree (UAST), designed to support multiple programming languages. Built on top of UAST, YASA provides a highly accurate static analysis framework. Users can extend its capabilities by writing custom checkers to perform various program analysis tasks—such as AST queries, data flow analysis, and function call graph analysis—and expose functionality through SDK, declarative query language (QL), or MCP.
 
-YASA is a program analysis product designed for industrial-level applications. By constructing a unified abstract syntax tree (UAST) intermediate representation and combining simulation execution technology with large model inference, YASA achieves precise data flow, pointer, and taint analysis.
-
-We are committed to building an open, unified, efficient, and accurate program analysis product, providing strong technical support for enterprise-level code security and quality assurance.
-
-## What YASA Can Do
-YASA provides unified multi-language program analysis capabilities, including YASA-UAST, YASA-Engine, YASA-UQL, YASA-MCP, YASA-SDK, xAST.
-
-Currently, YASA-UAST , YASA-Engine and xAST are open-sourced, while YASA-UQL, YASA-MCP, YASA-SDK will be open-sourced later.
-
-YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for JS/TS、Python、Go languages has been open-sourced, while support for Java language is not open-sourced yet.
+As a project originally developed within a security team, YASA also comes with built-in taint analysis capabilities, implemented as a checker, to detect security vulnerabilities.
 
 ## Components
-<img src="folder-img/Structure.png"  />
+<img src="folder-img/Structure.jpg"  />
 
 ### YASA-UAST: Unified Abstract Syntax Tree
 [YASA-UAST](https://github.com/antgroup/YASA-UAST) is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
@@ -33,7 +22,7 @@ Supports declarative unified query rule writing for multiple languages, compatib
 Provides atomic analysis APIs for large models, offering program analysis services that are large-model-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
-Provide SDK packages in multiple languages for traditional applications, including various atomic program analysis APIs, making YASA easier to integrate and offering user-friendly program analysis services within the applications.
+Provides SDK packages supporting multiple programming languages for traditional applications. It provides a variety of granular program analysis APIs, making integration easier and enabling efficient and user-friendly program analysis services within applications.
 
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) is an open-source evaluation system for SAST/IAST/DAST tool capabilities. In YASA-Engine, it serves as the regression target for post-change testing, and during the process of multi-language adaptation, it provides positive guidance on language syntax support.
@@ -42,7 +31,7 @@ Provide SDK packages in multiple languages for traditional applications, includi
 ### Low Cost for New Language Support
 - YASA is directly modeled and analyzed based on UAST. When adapting to a new language, once it is parsed into UAST, the general-layer analyzer's capabilities can be used. After supporting the new language's package structure, the new language's analysis is already supported.
 
-<img src="folder-img/newLanguage.png"  />
+<img src="folder-img/newLanguage.jpg" style="width:90%;"  />
 
 
 ### High Analysis Accuracy, Measurable, and Unified Multi-Languages
@@ -50,7 +39,7 @@ Provide SDK packages in multiple languages for traditional applications, includi
 
 - During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
 
-<img src="folder-img/xastTest.png" style="width:50%;"  />
+<img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
 ### Making Program Analysis Easily, and Friendly
 - Introduced the unified declarative rule query language UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more user-friendly.
