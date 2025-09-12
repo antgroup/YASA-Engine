@@ -45,7 +45,7 @@ Provides atomic analysis APIs for large models, offering program analysis servic
 
 - During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
 
-<img src="folder-img/xastTest.png"  />
+<img src="folder-img/xastTest.png" style="width:50%;"  />
 
 ### Making Program Analysis Easily, and Friendly
 - Introduced the unified declarative rule query language UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more user-friendly.
@@ -79,4 +79,4 @@ YASA - Making code analysis more precise, easier, and smarter.
 ## Contact Us
 [Official Website](https://cybersec.antgroup.com/)
 
-<img src="folder-img/contactus.png"  />
+<img src="folder-img/contactus.png" style="width:40%;" />
