@@ -19,7 +19,7 @@ The unified multi-language analysis engine is the core component of a modern pro
 Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
 ### YASA-MCP: Unified multi-language Program Analysis MCP 
-Provides atomic analysis APIs for large models, offering program analysis services that are large-model-friendly.
+Provides atomic analysis APIs for LLM, offering program analysis services that are LLM-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
 Provides SDK packages supporting multiple programming languages for traditional applications. It provides a variety of granular program analysis APIs, making integration easier and enabling efficient and user-friendly program analysis services within applications.
