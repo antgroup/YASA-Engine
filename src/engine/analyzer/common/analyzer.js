@@ -996,10 +996,6 @@ class Analyzer extends MemSpace {
         const { left } = node
         const { right } = node
         let tmpVal = this.processInstruction(scope, right, state)
-        if (node.cloned && !tmpVal?.refCount) {
-          tmpVal = _.clone(tmpVal)
-          tmpVal.value = _.clone(tmpVal.value)
-        }
         const oldVal = this.processInstruction(scope, left, state)
 
         // TODO: clean the following up
@@ -1074,11 +1070,6 @@ class Analyzer extends MemSpace {
         val.arith_assign = true
         val.left = this.processInstruction(scope, node.left, state)
         val.right = this.processInstruction(scope, node.right, state)
-        if (node.cloned) {
-          const clonedValue = _.clone(val.right.value)
-          val.right = _.clone(val.right)
-          val.right.value = clonedValue
-        }
         const { left } = node
         const oldVal = this.getMemberValueNoCreate(scope, left, state)
 
