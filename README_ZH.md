@@ -1,6 +1,5 @@
 <img src="folder-img/logo.png" style="width:50%;" />
 
-## [ Official Website ](https://cybersec.antgroup.com/)
 #### [简体中文](README_ZH.md) / [English](README.md)
 
 YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目。其核心是定义了一种多语言通用的中间表达——统一抽象语法树（Unified Abstract Syntax Tree，简称UAST），基于UAST实现了一套高精度的静态程序分析框架。用户可通过编写检查器（Checker）的方式，灵活实现诸如AST查询、数据流分析、函数调用图分析等多种程序分析任务，并通过SDK/声明式查询语言QL/MCP等方式对外开放能力。
@@ -28,7 +27,7 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark)是一个开源的SAST/IAST/DAST工具能力评测体系。在YASA-Engine中作为变更后测试所用的回归靶场，并且在YASA研发的过程中，提供对语言语法支持的正向指引。
 
-## YASA技术优势
+## 技术优势
 
 ### 新语言支持成本低
 - YASA直接基于UAST进行建模分析，当适配新语言时，将其解析到UAST后，即可使用通用层分析器的分析能力，支持新语言的包结构后，即已支持新语言的分析。
@@ -43,7 +42,7 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 
 <img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
-### 让程序分析更开放、易用、友好
+### 开放、友好
 - 推出统一声明式规则查询语言UQL，兼容codeql语法，并业界首创多语言统一的QL规则库，使程序分析更易用。
 
 - 推出YASA MCP（大模型友好）与SDK（应用使用友好）
