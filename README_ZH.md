@@ -38,7 +38,7 @@ YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析
 为大模型提供原子化的分析API，提供大模型友好的程序分析服务。
 
 ### YASA-SDK 统一多语言程序分析SDK
-为传统应用提供多种语言的SDK包，包含多种原子化程序分析API，使YASA更易被集成，提供应用中易用的程序分析服务。
+为传统应用提供多语言支持的 SDK 包，内置多种原子化程序分析 API，便于集成和调用，为应用程序提供高效、易用的程序分析服务。
 
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark)是一个开源的SAST/IAST/DAST工具能力评测体系。在YASA-Engine中作为变更后测试所用的回归靶场，并且在YASA研发的过程中，提供对语言语法支持的正向指引。
