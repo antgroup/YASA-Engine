@@ -11,7 +11,7 @@ YASA is a program analysis product designed for industrial-level applications. B
 We are committed to building an open, unified, efficient, and accurate program analysis product, providing strong technical support for enterprise-level code security and quality assurance.
 
 ## What YASA Can Do
-YASA provides unified multi-language program analysis capabilities, including four core components: YASA-UAST, YASA-Engine, YASA-UQL, YASA-MCP, YASA-SDK, xAST.
+YASA provides unified multi-language program analysis capabilities, including YASA-UAST, YASA-Engine, YASA-UQL, YASA-MCP, YASA-SDK, xAST.
 
 Currently, YASA-UAST , YASA-Engine and xAST are open-sourced, while YASA-UQL, YASA-MCP, YASA-SDK will be open-sourced later.
 
