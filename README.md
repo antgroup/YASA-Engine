@@ -27,7 +27,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) is an open-source evaluation system for SAST/IAST/DAST tool capabilities. In YASA-Engine, it serves as the regression target for post-change testing, and during the process of multi-language adaptation, it provides positive guidance on language syntax support.
 
-## YASA Technical Advantages
+## Technical Advantages
 ### Low Cost for New Language Support
 - YASA is directly modeled and analyzed based on UAST. When adapting to a new language, once it is parsed into UAST, the general-layer analyzer's capabilities can be used. After supporting the new language's package structure, the new language's analysis is already supported.
 
@@ -41,7 +41,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 
 <img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
-### Making Program Analysis Easily, and Friendly
+### Open and Friendly
 - Introduced the unified declarative rule query language YASA-UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more engineer-friendly.
 
 - Launched YASA MCP (LLM-friendly) and SDK (App development-friendly).
