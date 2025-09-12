@@ -20,7 +20,7 @@ YASA提供多语言统一程序分析能力，包含YASA-UAST、YASA-Engine、YA
 
 目前开源YASA-UAST与YASA-Engine两个组件，YASA-UQL与YASA-MCP后续进行开源。
 
-YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析、CG生成等能力。另外，YASA提供自定义checker能力，用户可根据具体业务需求进行灵活扩展和定制化检查器开发，欢迎广大开发者和企业用户体验使用。目前已开源Js/TS、Python、Go语言的支持，Java语言暂未开源，敬请期待。
+YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析、CG生成等能力。另外，YASA提供自定义checker能力，用户可根据具体业务需求进行灵活扩展和定制化检查器开发，欢迎广大开发者和企业用户体验使用。目前已开源JS/TS、Python、Go语言的支持，Java语言暂未开源，敬请期待。
 
 ## 核心组件介绍
 <img src="folder-img/Structure.png"  />
@@ -50,7 +50,7 @@ YASA-Engine当前默认提供了多语言统一AST解析、污点数据流分析
 
 - 在YASA研发的过程中，使用[xAST](https://github.com/alipay/ant-application-security-testing-benchmark)对我们的能力进行评测与验证，达到'能力可衡量'的效果。我们对比了YASA以及其他开源程序分析工具在xAST评价体系上的表现:
 
-<img src="folder-img/xastTest.png"  />
+<img src="folder-img/xastTest.png" style="width:50%;"  />
 
 ### 让程序分析更开放、易用、友好
 - 推出统一声明式规则查询语言UQL，兼容codeql语法，并业界首创多语言统一的QL规则库，使程序分析更易用。
@@ -84,5 +84,5 @@ YASA - 让代码分析更精确、更易用、更智能
 
 [社区官网](https://cybersec.antgroup.com/)
 
-<img src="folder-img/contactus.png"  />
+<img src="folder-img/contactus.png" style="width:40%;" />
 
