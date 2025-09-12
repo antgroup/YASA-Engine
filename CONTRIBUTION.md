@@ -8,7 +8,7 @@ There are many ways to contribute to the community, and each contribution is val
 - Document repair/verification
 - Issue Fix
 - Security issue disclosure
-- 
+  
 We sincerely welcome you to become a member of the YASA community and progress together with the community developers.
 
 # Participate in Code Contribution
