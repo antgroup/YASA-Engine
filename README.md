@@ -55,7 +55,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 ## Join Us
 Welcome to submit issues if you encounter any problems!
 
-For code contributions, please refer to [CONTRIBUTION](https://www.yuque.com/u22090306/bebf6g/rgm1xmoa38wlfxzc)
+For code contributions, please refer to [CONTRIBUTION](CONTRIBUTION.md)
 
 ## Resource Links
 [Official Documentation](https://www.yuque.com/u22090306/bebf6g)
