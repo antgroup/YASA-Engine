@@ -20,8 +20,8 @@ YASA-Engine currently offers default capabilities such as unified AST parsing fo
 ## Components
 <img src="folder-img/Structure.png"  />
 
-### YASA-UAST
-[YASA-UAST](https://github.com/antgroup/YASA-UAST)（Unified Abstract Syntax Tree）is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
+### YASA-UAST: Unified Abstract Syntax Tree
+[YASA-UAST](https://github.com/antgroup/YASA-UAST) is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
 
 ### YASA-Engine: Unified multi-language Analysis Engine
 The unified multi-language analysis engine is the core component of a modern program analysis platform. It aims to achieve efficient and precise analysis of multiple programming languages through a unified analysis framework and methodology. Also, with the help of AI capabilities, it addresses issues such as broken chains in traditional program analysis and high adaptation costs for new scenarios. (The AI part is not open-sourced yet.)
