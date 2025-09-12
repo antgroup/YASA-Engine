@@ -1,21 +1,10 @@
 <img src="folder-img/logo.png" style="width:50%;"  />
 
-## [ Official Website ](https://cybersec.antgroup.com/)
 #### [简体中文](README_ZH.md) / [English](README.md)
 
-## What is YASA
-Hello! This is the open unified multi-language program analysis product YASA (Yet Another Static Analyzer)!
+YASA (Yet Another Static Analyzer) is an open-source static program analysis project. Its core innovation lies in a unified intermediate representation called the Unified Abstract Syntax Tree (UAST), designed to support multiple programming languages. Built on top of UAST, YASA provides a highly accurate static analysis framework. Users can extend its capabilities by writing custom checkers to perform various program analysis tasks—such as AST queries, data flow analysis, and function call graph analysis—and expose functionality through an SDK, a declarative query language (QL), or the MCP protocol.
 
-YASA is a program analysis product designed for industrial-level applications. By constructing a unified abstract syntax tree (UAST) intermediate representation and combining simulation execution technology with large model inference, YASA achieves precise data flow, pointer, and taint analysis.
-
-We are committed to building an open, unified, efficient, and accurate program analysis product, providing strong technical support for enterprise-level code security and quality assurance.
-
-## What YASA Can Do
-YASA provides unified multi-language program analysis capabilities, including YASA-UAST, YASA-Engine, YASA-UQL, YASA-MCP, YASA-SDK, xAST.
-
-Currently, [YASA-UAST](https://github.com/antgroup/YASA-UAST) , [YASA-Engine](https://github.com/antgroup/YASA-Engine) and [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) are open-sourced, while YASA-UQL, YASA-MCP, YASA-SDK will be open-sourced later.
-
-YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for JS/TS、Python、Go languages has been open-sourced, while support for Java language is not open-sourced yet.
+As a project originally developed within a security team, YASA also comes with built-in taint analysis capabilities, implemented as a checker, to detect security vulnerabilities.
 
 ## Components
 <img src="folder-img/Structure.png"  />
