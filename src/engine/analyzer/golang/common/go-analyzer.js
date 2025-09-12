@@ -437,10 +437,6 @@ class GoAnalyzer extends Analyzer {
       initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', id.name)
     } else {
       initVal = this.processInstruction(scope, initialNode, state)
-      if (node.cloned && !initVal?.refCount) {
-        initVal = cloneWithDepth(initVal)
-        initVal.value = cloneWithDepth(initVal.value)
-      }
       if (initVal?.rtype && initVal.rtype !== 'DynamicType') {
         const cscope = this.processInstruction(scope, initVal.rtype, state)
         if (cscope?.vtype === 'class' && initVal.vtype !== 'primitive') {
