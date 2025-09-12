@@ -44,7 +44,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 ### Making Program Analysis Easily, and Friendly
 - Introduced the unified declarative rule query language UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more user-friendly.
 
-- Launched YASA MCP (large-model-friendly) and SDK (application-friendly).
+- Launched YASA MCP (LLM-friendly) and SDK (App development-friendly).
 
 ## Quick Start
 
