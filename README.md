@@ -7,7 +7,7 @@ YASA (Yet Another Static Analyzer) is an open-source static program analysis pro
 As a project originally developed within a security team, YASA also comes with built-in taint analysis capabilities, implemented as a checker, to detect security vulnerabilities.
 
 ## Components
-<img src="folder-img/Structure.png"  />
+<img src="folder-img/Structure.jpg"  />
 
 ### YASA-UAST: Unified Abstract Syntax Tree
 [YASA-UAST](https://github.com/antgroup/YASA-UAST) is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
@@ -31,7 +31,7 @@ Provide SDK packages in multiple languages for traditional applications, includi
 ### Low Cost for New Language Support
 - YASA is directly modeled and analyzed based on UAST. When adapting to a new language, once it is parsed into UAST, the general-layer analyzer's capabilities can be used. After supporting the new language's package structure, the new language's analysis is already supported.
 
-<img src="folder-img/newLanguage.png"  />
+<img src="folder-img/newLanguage.jpg" style="width:90%;"  />
 
 
 ### High Analysis Accuracy, Measurable, and Unified Multi-Languages
@@ -39,7 +39,7 @@ Provide SDK packages in multiple languages for traditional applications, includi
 
 - During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
 
-<img src="folder-img/xastTest.png" style="width:50%;"  />
+<img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
 ### Making Program Analysis Easily, and Friendly
 - Introduced the unified declarative rule query language UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more user-friendly.

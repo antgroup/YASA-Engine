@@ -8,7 +8,7 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 作为诞生于安全团队的开源项目，YASA也以Checker的形式内置了安全领域最重要的污点分析能力，用于安全漏洞的检测。
 
 ## 核心组件介绍
-<img src="folder-img/Structure.png"  />
+<img src="folder-img/Structure.jpg"  />
 
 ### YASA-UAST 统一多语言抽象语法树
 [YASA-UAST](https://github.com/antgroup/YASA-UAST)（Unified Abstract Syntax Tree）是一种面向多语言程序分析的中间表示结构。UAST-Parser将不同编程语言的代码解析为统一的抽象语法格式，通过UAST，不同语言的源代码可以被转换为标准化的树形结构，从而实现多语言的统一分析和处理。
@@ -33,7 +33,7 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 ### 新语言支持成本低
 - YASA直接基于UAST进行建模分析，当适配新语言时，将其解析到UAST后，即可使用通用层分析器的分析能力，支持新语言的包结构后，即已支持新语言的分析。
 
-<img src="folder-img/newLanguage.png"  />
+<img src="folder-img/newLanguage.jpg" style="width:90%;"  />
 
 
 ### 分析精度高、可衡量、多语言统一
@@ -41,7 +41,7 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 
 - 在YASA研发的过程中，使用[xAST](https://github.com/alipay/ant-application-security-testing-benchmark)对YASA-Engine的能力进行评测与验证，达到'能力可衡量'的效果。我们对比了YASA以及其他开源程序分析工具在xAST评价体系上的表现:
 
-<img src="folder-img/xastTest.png" style="width:50%;"  />
+<img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
 ### 让程序分析更开放、易用、友好
 - 推出统一声明式规则查询语言UQL，兼容codeql语法，并业界首创多语言统一的QL规则库，使程序分析更易用。
