@@ -46,7 +46,7 @@ Provide SDK packages in multiple languages for traditional applications, making 
 
 
 ### High Analysis Accuracy, Measurable, and Unified Multi-Languages
-- YASA is based on unified multi-language symbolic interpretation capabilities, offering high precision and scalability in static code analysis. It naturally supports domain-sensitive, context-sensitive, object-sensitive, path-sensitive, and flow-sensitive capabilities in the field of static analysis.
+- YASA is based on unified multi-language symbolic interpretation capabilities, offering high precision and scalability in static code analysis. It naturally supports field-sensitive, context-sensitive, object-sensitive, path-sensitive, and flow-sensitive capabilities in the field of static analysis.
 
 - During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
 
