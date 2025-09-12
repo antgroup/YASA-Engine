@@ -33,7 +33,7 @@ Supports declarative unified query rule writing for multiple languages, compatib
 Provides atomic analysis APIs for large models, offering program analysis services that are large-model-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
-Provide SDK packages in multiple languages for traditional applications, making YASA easier to integrate and offering user-friendly program analysis services within the applications.
+Provide SDK packages in multiple languages for traditional applications, including various atomic program analysis APIs, making YASA easier to integrate and offering user-friendly program analysis services within the applications.
 
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) is an open-source evaluation system for SAST/IAST/DAST tool capabilities. In YASA-Engine, it serves as the regression target for post-change testing, and during the process of multi-language adaptation, it provides positive guidance on language syntax support.
