@@ -15,7 +15,7 @@ YASA provides unified multi-language program analysis capabilities, including fo
 
 Currently, YASA-UAST and YASA-Engine are open-sourced, while YASA-UQL and YASA-MCP will be open-sourced later.
 
-YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for Js/TS、Python、Go languages has been open-sourced, while Java language support is not open-sourced yet.
+YASA-Engine currently offers default capabilities such as unified AST parsing for multiple languages, taint data flow analysis, and CG generation. Additionally, YASA provides custom checker capabilities, allowing users to flexibly extend and develop customized checkers based on specific business needs. Developers and enterprise users are welcome to try it out. Support for JS/TS、Python、Go languages has been open-sourced, while support for Java language is not open-sourced yet.
 
 ## Components
 <img src="folder-img/Structure.png"  />
@@ -40,7 +40,7 @@ Provides atomic analysis APIs for large models, offering program analysis servic
 <img src="folder-img/newLanguage.png"  />
 
 
-### High Analysis Accuracy, Measurable, and Unified Across Languages
+### High Analysis Accuracy, Measurable, and Unified Multi-Languages
 - YASA is based on unified multi-language symbolic interpretation capabilities, offering high precision and scalability in static code analysis. It naturally supports domain-sensitive, context-sensitive, object-sensitive, path-sensitive, and flow-sensitive capabilities in the field of static analysis.
 
 - During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
