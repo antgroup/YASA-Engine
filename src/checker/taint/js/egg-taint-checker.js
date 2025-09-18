@@ -202,7 +202,7 @@ class EggTaintChecker extends TaintChecker {
           handleException(
             e,
             '[js-taint-checker]An Error Occurred in custom entrypoint',
-            '[js-taint-checker]An Error Occurred in calcel custom entrypoint'
+            '[js-taint-checker]An Error Occurred in custom entrypoint'
           )
         }
       }
