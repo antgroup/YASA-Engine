@@ -13,7 +13,7 @@
     "sinks": {
       "FuncCallTaintSink": [
         {
-          "fsig": "taint_sink",
+          "fsig": "os.system",
           "args": [
             0
           ]
