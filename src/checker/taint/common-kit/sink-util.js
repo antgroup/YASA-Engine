@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const { matchField } = require('../../common/rules-basic-handler')
 const AstUtil = require('../../../util/ast-util')
+const { handleException } = require('../../../engine/analyzer/common/exception-handler')
 
 /**
  *
@@ -16,19 +17,13 @@ function matchSinkAtFuncCall(node, fclos, sinks) {
     for (const tspec of sinks) {
       if (tspec.fsig) {
         const marray = tspec.fsig.split('.')
-        if (!matchField(callExpr, marray, marray.length - 1)) {
-          if (
-            !(
-              callExpr.type === 'MemberAccess' &&
-              new RegExp(convertRuleToRegexString(tspec.fsig)).test(fclos._qid) &&
-              typeof AstUtil.prettyPrint(callExpr) === 'string' &&
-              AstUtil.prettyPrint(callExpr).includes(marray[marray.length - 1])
-            )
-          ) {
-            continue
-          }
+        if (matchField(callExpr, marray, marray.length - 1)) {
+          res.push(tspec)
         }
-        res.push(tspec)
+      } else if (tspec.fregex) {
+        if (callExpr.type === 'MemberAccess' && matchRegex(tspec.fregex, fclos._qid)) {
+          res.push(tspec)
+        }
       }
     }
   }
@@ -97,13 +92,13 @@ function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope) {
           AstUtil.prettyPrint(fclos.ast) === tspec.fsig
         ) {
           res.push(tspec)
-        } else if (
+        }
+      } else if (tspec.fregex) {
+        if (
           // 用于匹配形如 squirrel.Delete(*).Where形式的sink点，*为通配符
           callExpr.type === 'MemberAccess' &&
           tspec.calleeType === '' &&
-          new RegExp(convertRuleToRegexString(tspec.fsig)).test(fclos._qid) &&
-          typeof AstUtil.prettyPrint(callExpr) === 'string' &&
-          AstUtil.prettyPrint(callExpr).includes(tspec.fsig.split('.')[tspec.fsig.split('.').length - 1])
+          matchRegex(tspec.fregex, fclos._qid)
         ) {
           res.push(tspec)
         }
@@ -115,15 +110,16 @@ function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope) {
 
 /**
  *
- * @param rule
+ * @param pattern
+ * @param testStr
  */
-function convertRuleToRegexString(rule) {
-  // 转义正则中的特殊字符（除了 *）
-  let regexStr = rule.replace(/([.+?^${}()|[\]\\])/g, '\\$1')
-  // 将 * 替换为非贪婪匹配任意字符的正则表达式
-  regexStr = regexStr.replace(/\*/g, '.*?')
-  // 在开头和结尾添加单词边界，确保匹配完整标识符
-  return `\\b${regexStr}\\b`
+function matchRegex(pattern, testStr) {
+  try {
+    return new RegExp(pattern, 'g').test(testStr)
+  } catch (e) {
+    handleException(e, '[sink-util]An Error Occurred in compile regex', '[sink-util]An Error Occurred in compile regex')
+    return false
+  }
 }
 
 module.exports = {
