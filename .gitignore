@@ -7,4 +7,5 @@
 test/javascript/benchmarks
 test/go/benchmarks
 test/python/benchmarks
-test/java/benchmarks
+deps/uast4go
+deps/uast4python
