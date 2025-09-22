@@ -224,7 +224,7 @@ class GoDefaultTaintChecker extends TaintChecker {
             ruleName,
             matchedSanitizerTags
           )
-          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) return
+          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
         return true
