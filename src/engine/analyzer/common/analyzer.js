@@ -482,7 +482,7 @@ class Analyzer extends MemSpace {
    */
   processCompileUnit(scope, node, state) {
     if (this.checkerManager && this.checkerManager.checkAtCompileUnit) {
-      this.checkerManager.checkAtCompileUnit(this, node, scope, state, {
+      this.checkerManager.checkAtCompileUnit(this, scope, node, state, {
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
       })
