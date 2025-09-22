@@ -79,7 +79,7 @@ class EggAnalyzer extends JsAnalyzer {
           entryPointConfig.setCurrentEntryPoint(entryPoint)
           const { entryPointSymVal, argValues, scopeVal } = entryPoint
 
-          eggCommon.refreshCtx(scopeVal.value.ctx.field)
+          eggCommon.refreshCtx(scopeVal?.value?.ctx?.field)
           this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, scopeVal, this.state)
           this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
           try {

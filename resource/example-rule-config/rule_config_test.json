@@ -6,7 +6,9 @@
     "sources": {
       "TaintSource": [
         {
-          "path": "__taint_src"
+          "path": "__taint_src",
+          "scopeFile": "all",
+          "scopeFunc": "all"
         }
       ]
     },
