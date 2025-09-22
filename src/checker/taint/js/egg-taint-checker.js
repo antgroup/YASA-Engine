@@ -306,7 +306,7 @@ class EggTaintChecker extends TaintChecker {
             ruleName,
             matchedSanitizerTags
           )
-          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+          if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
       }
@@ -417,7 +417,8 @@ class EggTaintChecker extends TaintChecker {
               ruleName,
               matchedSanitizerTags
             )
-            if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+
+            if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
             this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
           }
         }
