@@ -271,7 +271,7 @@ class JsTaintChecker extends TaintChecker {
             ruleName,
             matchedSanitizerTags
           )
-          if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) continue
+          if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
       }
@@ -335,9 +335,12 @@ class JsTaintChecker extends TaintChecker {
         CallObj = CallFull.substring(0, lastIndexofCall)
       }
       if (CallObj !== RuleObj) {
-        // 三方包补偿获取
-        if (!CallObj.includes(RuleObj)) {
-          return false
+        const idx = CallObj.lastIndexOf('(')
+        const result = idx !== -1 ? CallObj.slice(0, idx) : CallObj
+        if (result !== RuleObj) {
+          if (!result.endsWith(`.${RuleObj}`) && !result.startsWith(`${RuleObj}.`)) {
+            return false
+          }
         }
       }
 
@@ -382,7 +385,8 @@ class JsTaintChecker extends TaintChecker {
               ruleName,
               matchedSanitizerTags
             )
-            if (!this.isNewTaintFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)) return
+
+            if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
             this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
           }
         }

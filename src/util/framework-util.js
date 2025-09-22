@@ -28,11 +28,6 @@ function eggSanityCheck(appEntryDir) {
   if (!fs.existsSync(configDir)) {
     return false
   }
-
-  const controllerDir = path.join(appDir, 'controller')
-  if (!fs.existsSync(controllerDir)) {
-    return false
-  }
   return true
 }
 

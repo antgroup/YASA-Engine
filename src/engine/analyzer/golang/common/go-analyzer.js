@@ -880,7 +880,7 @@ class GoAnalyzer extends Analyzer {
     if (node._meta.compileUnitProcessed) return
     node._meta.compileUnitProcessed = true
     if (this.checkerManager && this.checkerManager.checkAtCompileUnit) {
-      const interruptFlag = this.checkerManager.checkAtCompileUnit(this, node, scope, state, {
+      const interruptFlag = this.checkerManager.checkAtCompileUnit(this, scope, node, state, {
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
       })
