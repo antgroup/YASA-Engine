@@ -136,41 +136,6 @@ class TaintChecker extends Checker {
   }
 
   /**
-   * check whether taint flow finding is new or not
-   * @param finding
-   * @param outputStrategyId
-   */
-  isNewTaintFinding(finding, outputStrategyId) {
-    const category = this.resultManager?.findings[outputStrategyId]
-    if (!category) return true
-    for (const issue of category) {
-      try {
-        if (
-          issue.line === finding.line &&
-          issue.node === finding.node &&
-          issue.issuecause === finding.issuecause &&
-          issue.entry_fclos === finding.entry_fclos
-        ) {
-          if (issue.argNode && finding.argNode) {
-            if (_.isEqual(issue.argNode.trace, finding.argNode.trace)) {
-              return false
-            }
-          } else if (_.isEqual(issue.trace, finding.trace)) {
-            return false
-          }
-        }
-      } catch (e) {
-        handleException(
-          e,
-          'Error : an error occurred in TaintChecker.isNewTaintFinding',
-          'Error : an error occurred in TaintChecker.isNewTaintFinding'
-        )
-      }
-    }
-    return true
-  }
-
-  /**
    *
    * @param tagName
    * @param sources

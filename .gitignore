@@ -4,4 +4,8 @@
 /logs/
 /report/
 /node_modules/
-/test/python/benchmarks/sast-python3/
+test/javascript/benchmarks
+test/go/benchmarks
+test/python/benchmarks
+deps/uast4go
+deps/uast4python

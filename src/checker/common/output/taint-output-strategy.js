@@ -16,6 +16,7 @@ const {
   prepareSarifFormat,
 } = require('../../../engine/analyzer/common/sarif')
 const AstUtil = require('../../../util/ast-util')
+const { handleException } = require('../../../engine/analyzer/common/exception-handler')
 
 /**
  *
@@ -54,6 +55,41 @@ class TaintOutputStrategy extends OutputStrategy {
       TaintFindingUtil.outputCheckerResultToConsole(taintFindings, printf)
       logger.info(`report is write to ${reportFilePath}`)
     }
+  }
+
+  /**
+   * check whether taint flow finding is new or not
+   * @param resultManager
+   * @param finding
+   */
+  static isNewFinding(resultManager, finding) {
+    try {
+      const category = resultManager?.findings[TaintOutputStrategy.outputStrategyId]
+      if (!category) return true
+      for (const issue of category) {
+        if (
+          issue.line === finding.line &&
+          issue.node === finding.node &&
+          issue.issuecause === finding.issuecause &&
+          issue.entry_fclos === finding.entry_fclos
+        ) {
+          if (issue.argNode && finding.argNode) {
+            if (_.isEqual(issue.argNode.trace, finding.argNode.trace)) {
+              return false
+            }
+          } else if (_.isEqual(issue.trace, finding.trace)) {
+            return false
+          }
+        }
+      }
+    } catch (e) {
+      handleException(
+        e,
+        'Error : an error occurred in TaintOutputStrategy.isNewFinding',
+        'Error : an error occurred in TaintOutputStrategy.isNewFinding'
+      )
+    }
+    return true
   }
 
   /**
