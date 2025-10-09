@@ -312,7 +312,7 @@ jobs:
             uast_py: uast4py-linux-amd64
           - os: macos-latest
             zip: yasa-macos-x64.zip
-            engine: yasa-engine-macos-x64
+            engine: yasa-engine-macos-x64 
             uast_go: uast4go-mac-amd64
             uast_py: uast4py-mac-amd64
           - os: macos-latest
@@ -325,7 +325,6 @@ jobs:
             engine: yasa-engine-windows-x64.exe
             uast_go: uast4go-windows-amd64.exe
             uast_py: uast4py-windows-amd64.exe
-            shell: pwsh
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: 📥 Download Release Artifacts
@@ -344,15 +343,25 @@ jobs:
           if [ -f "bundle/${{ matrix.platform.uast_py }}" ]; then
             chmod +x "bundle/${{ matrix.platform.uast_py }}"
           fi
+        shell: bash
+        if: ${{ matrix.platform.os != 'windows-latest' }}
+
+      - name: 📦 Extract Bundle (Windows)
+        shell: pwsh
+        if: ${{ matrix.platform.os == 'windows-latest' }}
+        run: |
+          Expand-Archive -Path "releases/${{ matrix.platform.zip }}" -DestinationPath bundle
+          # Windows 不需要 chmod
 
       - name: 🌐 Clone Test Data Repository
         run: |
           git clone https://github.com/curryooo/ant-application-security-testing-benchmark.git test-data
 
-      - name: ✅ Test JavaScript
+      - name: ✅ Test JavaScript (Linux/macOS)
         id: test_js
         working-directory: test-data
-        shell: ${{ matrix.platform.shell }}
+        shell: bash
+        if: ${{ matrix.platform.os != 'windows-latest' }}
         run: |
           output=$(
             ../bundle/${{ matrix.platform.engine }} \
@@ -361,18 +370,34 @@ jobs:
               --checkerPackIds taint-flow-javascript-default \
               --ruleConfigFile sast-js/rule_config.json 2>&1
           )
-          # 只打印 "=== Findings ===" 之后的 5 行
-          echo "🔍 Relevant findings (up to 5 lines after '=== Findings ==='):"
           echo "$output" | grep -A 5 "=== Findings ===" || true
 
           if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-            echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
             echo "result=success" >> $GITHUB_OUTPUT
           else
-            echo "❌ JavaScript test FAILED: Did not meet finding criteria"
             echo "result=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
+
+      - name: ✅ Test JavaScript (Windows)
+        id: test_js_win
+        working-directory: test-data
+        shell: pwsh
+        if: ${{ matrix.platform.os == 'windows-latest' }}
+        run: |
+          $output = & "../bundle/${{ matrix.platform.engine }}" sast-js `
+            --analyzer JavaScriptAnalyzer `
+            --checkerPackIds taint-flow-javascript-default `
+            --ruleConfigFile sast-js/rule_config.json 2>&1
+
+          $output -split "`n" | Select-String "=== Findings ===" -Context 0,5
+
+          if ($output -match "=== Findings ===" -and $output -notmatch "No findings!") {
+            "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+          } else {
+            "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+            exit 1
+          }
 
       # - name: ✅ Test Go
       #   id: test_go
