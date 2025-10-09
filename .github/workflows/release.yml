@@ -55,17 +55,13 @@ jobs:
             target: node18-macos-arm64
             goarch: arm64
             out_name: yasa-engine-macos-arm64
+          - os: windows-latest
+            target: node18-win-x64
+            out_name: yasa-engine-windows-x64.exe
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # - name: Update UAST dependencies
-      #   run: |
-      #     VERSION="${{ needs.get_version_and_validate.outputs.version }}"
-      #     echo "🔄 Updating dependencies to $VERSION"
-      #     npm pkg set "dependencies.@ant-yasa/uast-spec=$VERSION"
-      #     npm pkg set "dependencies.@ant-yasa/uast-parser-java-js=$VERSION"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -80,12 +76,6 @@ jobs:
           echo "--------------------------------------------------"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
           echo "--------------------------------------------------"
-              # 记录版本用于追溯
-          # echo "Built with:" > uast-versions.txt
-          # echo "  @ant-yasa/uast-spec: $(npm ls @ant-yasa/uast-spec --parseable --depth=0 2>/dev/null || echo 'unknown')" >> uast-versions.txt
-          # echo "  @ant-yasa/uast-parser-java-js: $(npm ls @ant-yasa/uast-parser-java-js --parseable --depth=0 2>/dev/null || echo 'unknown')" >> uast-versions.txt
-          # cat uast-versions.txt
-
 
       - name: Build with pkg
         run: |
@@ -204,24 +194,31 @@ jobs:
           mkdir -p "$OUTPUT_DIR"
           echo "📁 Output directory: $OUTPUT_DIR"
 
-          # ✅ 声明关联数组
+          # 声明平台映射
           declare -A PLATFORMS
           declare -A ARTIFACT_KEYS
+          declare -A IS_WINDOWS
 
-          PLATFORMS["linux-x64"]="yasa-engine-linux-x64"
-          PLATFORMS["macos-x64"]="yasa-engine-macos-x64"
-          PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64"
-
+          # Linux
+          PLATFORMS["linux-x64"]="yasa-engine-linux-x64 uast4go-linux-amd64 uast4py-linux-amd64"
           ARTIFACT_KEYS["linux-x64"]="engine-node18-linux-x64"
+          IS_WINDOWS["linux-x64"]="false"
+
+          # macOS Intel
+          PLATFORMS["macos-x64"]="yasa-engine-macos-x64 uast4go-mac-amd64 uast4py-mac-amd64"
           ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
+          IS_WINDOWS["macos-x64"]="false"
+
+          # macOS Apple Silicon
+          PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64 uast4go-mac-arm64 uast4py-mac-arm64"
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
+          IS_WINDOWS["macos-arm64"]="false"
 
-          # 添加 UAST 二进制
-          PLATFORMS["linux-x64"]+=" uast4go-linux-amd64 uast4py-linux-amd64"
-          PLATFORMS["macos-x64"]+=" uast4go-mac-amd64 uast4py-mac-amd64"
-          PLATFORMS["macos-arm64"]+=" uast4go-mac-arm64 uast4py-mac-arm64"
+          # Windows
+          PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe uast4py-windows-amd64.exe"
+          ARTIFACT_KEYS["windows-x64"]="engine-node18-win-x64"
+          IS_WINDOWS["windows-x64"]="true"
 
-          # ✅ 新增：example-rule-config 资源路径
           EXAMPLE_CONFIG_SRC="resource/example-rule-config"
           if [[ ! -d "$EXAMPLE_CONFIG_SRC" ]]; then
             echo "❌ Error: example-rule-config directory not found at $EXAMPLE_CONFIG_SRC"
@@ -230,15 +227,14 @@ jobs:
 
           for platform in "${!PLATFORMS[@]}"; do
             echo "📦 Building package for $platform"
-            eval "files=(${PLATFORMS[$platform]})"
+            IFS=' ' read -r -a files <<< "${PLATFORMS[$platform]}"
             engine_bin="${files[0]}"
-
             artifact_subdir="${ARTIFACT_KEYS[$platform]}"
-            engine_path="engine_binaries/${artifact_subdir}/dist/$engine_bin"
+            is_win="${IS_WINDOWS[$platform]}"
 
+            engine_path="engine_binaries/${artifact_subdir}/dist/$engine_bin"
             if [[ ! -f "$engine_path" ]]; then
               echo "❌ Engine binary missing: $engine_path"
-              find engine_binaries -type f | sort
               exit 1
             fi
 
@@ -253,44 +249,37 @@ jobs:
               echo "❌ node_modules not found at $NODE_MODULES_PATH"
               exit 1
             fi
-            echo "📦 Copying node_modules..."
-            cp -r "$NODE_MODULES_PATH" "$tmpdir/" || { echo "❌ Failed to copy node_modules!"; exit 1; }
+            cp -r "$NODE_MODULES_PATH" "$tmpdir/" || { echo "❌ Failed to copy node_modules"; exit 1; }
 
-            # ✅ 新增：拷贝 example-rule-config 到 bundle 中
-            echo "📎 Copying example rule configurations..."
-            cp -r "$EXAMPLE_CONFIG_SRC" "$tmpdir/example-rule-config"
-            if [[ $? -ne 0 ]]; then
-              echo "❌ Failed to copy example-rule-config!"
-              exit 1
-            fi
-            echo "✅ Copied example-rule-config/"
+            # 拷贝 example-rule-config
+            cp -r "$EXAMPLE_CONFIG_SRC" "$tmpdir/example-rule-config" || { echo "❌ Failed to copy example-rule-config"; exit 1; }
 
-            # ✅ 拷贝 UAST 二进制（如果存在）
-            if [ -d "uast_binaries" ]; then
-              for bin in "${files[@]:1}"; do
-                src="uast_binaries/$bin"
-                if [[ ! -f "$src" ]]; then
-                  echo "❌ UAST binary not found: $src"
-                  exit 1
-                fi
-                cp "$src" "$tmpdir/" || { echo "❌ Failed to copy $bin"; exit 1; }
-              done
-            fi
+            # 拷贝 UAST 二进制
+            for bin in "${files[@]:1}"; do
+              src="uast_binaries/$bin"
+              if [[ ! -f "$src" ]]; then
+                echo "❌ UAST binary not found: $src"
+                exit 1
+              fi
+              cp "$src" "$tmpdir/" || { echo "❌ Failed to copy $bin"; exit 1; }
+            done
 
+            # 生成校验和
             (
               cd "$tmpdir"
               > sha256sum.txt
               find . -maxdepth 1 -type f -exec sha256sum {} \; >> sha256sum.txt
               echo "🛡️ Generated sha256sum:"
+              cat sha256sum.txt
             )
 
             zip_name="yasa-$platform.zip"
             TEMP_ZIP="/tmp/$zip_name"
-            echo "📦 Creating ZIP: $TEMP_ZIP"
-            if ! (cd "$tmpdir" && zip -Xqr --symlinks "$TEMP_ZIP" ./*); then
-              echo "❌ ZIP command failed!"
-              ls -la "$tmpdir"
-              exit 1
+            if [[ "$is_win" == "true" ]]; then
+              # Windows 使用更兼容的方式打包
+              (cd "$tmpdir" && zip -Xqr9 --symlinks "$TEMP_ZIP" ./*)
+            else
+              (cd "$tmpdir" && zip -Xqr --symlinks "$TEMP_ZIP" ./*)
             fi
 
             mv "$TEMP_ZIP" "$OUTPUT_DIR/$zip_name"
@@ -302,7 +291,6 @@ jobs:
 
           echo "🎉 All packages created!"
           ls -lh "$OUTPUT_DIR/"
-
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -332,6 +320,12 @@ jobs:
             engine: yasa-engine-macos-arm64
             uast_go: uast4go-mac-arm64
             uast_py: uast4py-mac-arm64
+          - os: windows-latest
+            zip: yasa-windows-x64.zip
+            engine: yasa-engine-windows-x64.exe
+            uast_go: uast4go-windows-amd64.exe
+            uast_py: uast4py-windows-amd64.exe
+            shell: pwsh
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: 📥 Download Release Artifacts
@@ -470,6 +464,8 @@ jobs:
             - `yasa-linux-x64.zip`
             - `yasa-macos-x64.zip`
             - `yasa-macos-arm64.zip`
+            - `yasa-win-x64.zip`
+
 
             Each contains:
             - YASA-Engine executable
