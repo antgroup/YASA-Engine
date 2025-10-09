@@ -352,6 +352,7 @@ jobs:
       - name: ✅ Test JavaScript
         id: test_js
         working-directory: test-data
+        shell: ${{ matrix.platform.shell }}
         run: |
           output=$(
             ../bundle/${{ matrix.platform.engine }} \
