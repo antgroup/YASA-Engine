@@ -365,7 +365,8 @@ jobs:
         run: |
           echo "begin liunx test"
           # 定义临时文件
-          OUTPUT_FILE=$(mktemp)
+          OUTPUT_FILE=$(mktemp -t yasa-js-test-XXXXXX)
+          echo "📝 Temp file: $OUTPUT_FILE"
 
           # 执行命令并将 stdout + stderr 保存到文件
           ../bundle/yasa-engine-linux-x64 \
