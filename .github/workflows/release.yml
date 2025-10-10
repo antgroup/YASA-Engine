@@ -362,14 +362,21 @@ jobs:
         if: ${{ matrix.platform.os != 'windows-latest' }}
         run: |
           echo "begin linux test"
-          OUTPUT_FILE="./temp_yasa_res.log"
-          echo "📝 Using log file: $OUTPUT_FILE"
 
-          ../bundle/yasa-engine-linux-x64 \
-            sast-js \
-            --analyzer JavaScriptAnalyzer \
-            --checkerPackIds taint-flow-javascript-default \
-            --ruleConfigFile sast-js/rule_config.json > "$OUTPUT_FILE" 2>&1
+          # 使用 matrix 中指定的正确二进制名
+          ENGINE_BINARY="${{ matrix.platform.engine }}"
+          OUTPUT_FILE="./temp_yasa_res.log"
+          ENGINE_PATH="../bundle/$ENGINE_BINARY"
+
+          echo "📝 Using engine: $ENGINE_PATH"
+          echo "📄 Output log: $OUTPUT_FILE"
+
+              # 执行命令，并捕获所有输出
+          "$ENGINE_PATH" \
+          sast-js \
+          --analyzer JavaScriptAnalyzer \
+          --checkerPackIds taint-flow-javascript-default \
+          --ruleConfigFile sast-js/rule_config.json > "$OUTPUT_FILE" 2>&1
           
           # 确保命令执行完成，即使输出很大也没问题
           echo "📄 First 20 lines of output:"
