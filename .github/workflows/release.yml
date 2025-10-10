@@ -6,7 +6,7 @@ on:
       - 'v*'  # 支持 v1.0.0 和 v1.0.0-beta.1
 
 jobs:
-  # 1. 提取版本号，并校验 YASA-UAST 是否已发布该版本
+  # 1. 提取版本号
   get_version_and_validate:
     runs-on: ubuntu-latest
     outputs:
@@ -18,21 +18,49 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
-          echo "✅ Extracted version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "npm_tag=$( [[ "$VERSION" == *"-beta."* ]] && echo "beta" || echo "latest" )" >> $GITHUB_OUTPUT
 
-          if [[ "$VERSION" == *"-beta."* ]]; then
-            echo "npm_tag=beta" >> $GITHUB_OUTPUT
-          else
-            echo "npm_tag=latest" >> $GITHUB_OUTPUT
-          fi
-
-  # 2. 构建 YASA-Engine 多平台二进制（使用 pkg）
-  build_engine:
+  # 2. 解析依赖版本（只需一次）
+  resolve_uast_versions:
     needs: get_version_and_validate
+    runs-on: ubuntu-latest
     outputs:
-      spec_version: ${{ steps.uast_versions.outputs.spec_version }}
-      parser_version: ${{ steps.uast_versions.outputs.parser_version }}
+      spec_version: ${{ steps.uast.outputs.spec_version }}
+      parser_version: ${{ steps.uast.outputs.parser_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          echo "🔍 Resolved UAST versions:"
+          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+
+      - name: 🔍 Extract UAST package versions
+        id: uast
+        run: |
+          SPEC_VERSION=$(npm list @ant-yasa/uast-spec --json | jq -r '.dependencies["@ant-yasa/uast-spec"].version')
+          PARSER_VERSION=$(npm list @ant-yasa/uast-parser-java-js --json | jq -r '.dependencies["@ant-yasa/uast-parser-java-js"].version')
+
+          echo "📦 UAST Spec Version: $SPEC_VERSION"
+          echo "📦 UAST Parser (Java/JS) Version: $PARSER_VERSION"
+
+          echo "spec_version=$SPEC_VERSION" >> $GITHUB_OUTPUT
+          echo "parser_version=$PARSER_VERSION" >> $GITHUB_OUTPUT
+
+  # 3. 构建多平台二进制（不再重复提取版本）
+  build_engine:
+    needs: [get_version_and_validate, resolve_uast_versions]
     strategy:
       matrix:
         platform:
@@ -61,30 +89,10 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install jq
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y jq
-
       - name: Install dependencies
         run: |
-          echo "📦 Installing production dependencies with npm i..."
-          npm i
-          echo "🔍 Resolved UAST versions:"
-          echo "--------------------------------------------------"
-          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-          echo "--------------------------------------------------"
-
-      - name: 🔍 Extract UAST package versions
-        id: uast_versions
-        run: |
-          SPEC_VERSION=$(npm list @ant-yasa/uast-spec --json | jq -r '.dependencies["@ant-yasa/uast-spec"].version')
-          PARSER_VERSION=$(npm list @ant-yasa/uast-parser-java-js --json | jq -r '.dependencies["@ant-yasa/uast-parser-java-js"].version')
-
-          echo "📦 UAST Spec Version: $SPEC_VERSION"
-          echo "📦 UAST Parser (Java/JS) Version: $PARSER_VERSION"
-
-          echo "spec_version=$SPEC_VERSION" >> $GITHUB_OUTPUT
-          echo "parser_version=$PARSER_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Installing production dependencies..."
+          npm ci
 
       - name: Build with pkg
         run: |
@@ -432,8 +440,8 @@ jobs:
       - name: Set Release Metadata
         id: metadata
         run: |
-          SPEC_VERSION="${{ needs.build_engine.outputs.spec_version }}"
-          PARSER_VERSION="${{ needs.build_engine.outputs.parser_version }}"
+          SPEC_VERSION="${{ needs.resolve_uast_versions.outputs.spec_version }}"
+          PARSER_VERSION="${{ needs.resolve_uast_versions.outputs.parser_version }}"
           UAST_BINARY_VERSION="${{ needs.download_uast_binaries.outputs.uast_version }}"
 
           echo "UAST_SPEC_VERSION=$SPEC_VERSION" >> $GITHUB_ENV
