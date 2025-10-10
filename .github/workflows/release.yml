@@ -27,19 +27,12 @@ jobs:
             echo "npm_tag=latest" >> $GITHUB_OUTPUT
           fi
 
-      # - name: Validate YASA-UAST version exists
-      #   run: |
-      #     VERSION=${{ steps.fix_version.outputs.version }}
-      #     echo "🔍 Validating @ant-yasa/uast-parser-java-js@$VERSION exists..."
-      #     if ! npm view @ant-yasa/uast-parser-java-js@$VERSION version > /dev/null 2>&1; then
-      #       echo "❌ ERROR: @ant-yasa/uast-parser-java-js@$VERSION not found on npm!"
-      #       exit 1
-      #     fi
-      #     echo "✅ @ant-yasa/uast-parser-java-js@$VERSION verified."
-
   # 2. 构建 YASA-Engine 多平台二进制（使用 pkg）
   build_engine:
     needs: get_version_and_validate
+    outputs:
+      spec_version: ${{ steps.uast_versions.outputs.spec_version }}
+      parser_version: ${{ steps.uast_versions.outputs.parser_version }}
     strategy:
       matrix:
         platform:
@@ -68,14 +61,30 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install jq
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y jq
+
       - name: Install dependencies
         run: |
-          echo "📦 Installing production dependencies with npm ci..."
+          echo "📦 Installing production dependencies with npm i..."
           npm i
           echo "🔍 Resolved UAST versions:"
           echo "--------------------------------------------------"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
           echo "--------------------------------------------------"
+
+      - name: 🔍 Extract UAST package versions
+        id: uast_versions
+        run: |
+          SPEC_VERSION=$(npm list @ant-yasa/uast-spec --json | jq -r '.dependencies["@ant-yasa/uast-spec"].version')
+          PARSER_VERSION=$(npm list @ant-yasa/uast-parser-java-js --json | jq -r '.dependencies["@ant-yasa/uast-parser-java-js"].version')
+
+          echo "📦 UAST Spec Version: $SPEC_VERSION"
+          echo "📦 UAST Parser (Java/JS) Version: $PARSER_VERSION"
+
+          echo "spec_version=$SPEC_VERSION" >> $GITHUB_OUTPUT
+          echo "parser_version=$PARSER_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build with pkg
         run: |
@@ -109,15 +118,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 获取 antgroup/YASA-UAST 的最新非预发布版本
-          TAG=$(gh api repos/antgroup/YASA-UAST/releases/latest \
-               --jq '.tag_name' || echo "")
-
+          TAG=$(gh api repos/antgroup/YASA-UAST/releases/latest --jq '.tag_name' || echo "")
           if [ -z "$TAG" ]; then
             echo "❌ Failed to fetch latest release tag from antgroup/YASA-UAST"
             exit 1
           fi
-
           echo "✅ Found latest stable UAST release: $TAG"
           echo "tag_name=$TAG" >> $GITHUB_OUTPUT
 
@@ -133,7 +138,6 @@ jobs:
             --pattern "uast4go-*" \
             --pattern "uast4py-*" \
             --dir uast_binaries/
-
           if [ $? -ne 0 ]; then
             echo "❌ Failed to download UAST binaries"
             exit 1
@@ -157,7 +161,7 @@ jobs:
 
   # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
   package_release:
-    needs: [build_engine,download_uast_binaries]
+    needs: [build_engine, download_uast_binaries]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -178,12 +182,9 @@ jobs:
 
       - name: Debug-List all downloaded binaries
         run: |
-          # echo "📁 Contents of engine_binaries/:"
-          # find engine_binaries -type f | sort
           echo ""
           echo "🔍 Searching for yasa-engine binaries:"
           find engine_binaries -type f -name "yasa-engine*" | xargs ls -lh
-
           echo "🔍 Searching for uast_binaries binaries:"
           find uast_binaries -type f -name "uast*" | xargs ls -lh
 
@@ -192,29 +193,23 @@ jobs:
           VERSION="${{ needs.get_version_and_validate.outputs.version }}"
           OUTPUT_DIR="./releases"
           mkdir -p "$OUTPUT_DIR"
-          echo "📁 Output directory: $OUTPUT_DIR"
 
-          # 声明平台映射
           declare -A PLATFORMS
           declare -A ARTIFACT_KEYS
           declare -A IS_WINDOWS
 
-          # Linux
           PLATFORMS["linux-x64"]="yasa-engine-linux-x64 uast4go-linux-amd64 uast4py-linux-amd64"
           ARTIFACT_KEYS["linux-x64"]="engine-node18-linux-x64"
           IS_WINDOWS["linux-x64"]="false"
 
-          # macOS Intel
           PLATFORMS["macos-x64"]="yasa-engine-macos-x64 uast4go-mac-amd64 uast4py-mac-amd64"
           ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
           IS_WINDOWS["macos-x64"]="false"
 
-          # macOS Apple Silicon
           PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64 uast4go-mac-arm64 uast4py-mac-arm64"
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
           IS_WINDOWS["macos-arm64"]="false"
 
-          # Windows
           PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe uast4py-windows-amd64.exe"
           ARTIFACT_KEYS["windows-x64"]="engine-node18-win-x64"
           IS_WINDOWS["windows-x64"]="true"
@@ -251,10 +246,8 @@ jobs:
             fi
             cp -r "$NODE_MODULES_PATH" "$tmpdir/" || { echo "❌ Failed to copy node_modules"; exit 1; }
 
-            # 拷贝 example-rule-config
             cp -r "$EXAMPLE_CONFIG_SRC" "$tmpdir/example-rule-config" || { echo "❌ Failed to copy example-rule-config"; exit 1; }
 
-            # 拷贝 UAST 二进制
             for bin in "${files[@]:1}"; do
               src="uast_binaries/$bin"
               if [[ ! -f "$src" ]]; then
@@ -264,19 +257,17 @@ jobs:
               cp "$src" "$tmpdir/" || { echo "❌ Failed to copy $bin"; exit 1; }
             done
 
-            # 生成校验和
             (
               cd "$tmpdir"
               > sha256sum.txt
               find . -maxdepth 1 -type f -exec sha256sum {} \; >> sha256sum.txt
-              echo "🛡️ Generated sha256sum:"
               cat sha256sum.txt
             )
 
             zip_name="yasa-$platform.zip"
             TEMP_ZIP="/tmp/$zip_name"
             if [[ "$is_win" == "true" ]]; then
-              # Windows 使用更兼容的方式打包
+               # Windows 使用更兼容的方式打包
               (cd "$tmpdir" && zip -Xqr9 --symlinks "$TEMP_ZIP" ./*)
             else
               (cd "$tmpdir" && zip -Xqr --symlinks "$TEMP_ZIP" ./*)
@@ -299,7 +290,7 @@ jobs:
           path: releases/*.zip
           retention-days: 7
 
-  # 5. 集成测试：验证每个平台的 bundle 是否真实可用
+  # 5. 集成测试
   integration_test:
     needs: package_release
     strategy:
@@ -351,7 +342,6 @@ jobs:
         if: ${{ matrix.platform.os == 'windows-latest' }}
         run: |
           Expand-Archive -Path "releases/${{ matrix.platform.zip }}" -DestinationPath bundle
-          # Windows 不需要 chmod
 
       - name: 🌐 Clone Test Data Repository
         run: |
@@ -363,33 +353,38 @@ jobs:
         shell: bash
         if: ${{ matrix.platform.os != 'windows-latest' }}
         run: |
-          echo "begin liunx test"
-          # 定义临时文件
-          OUTPUT_FILE=$(mktemp -t yasa-js-test-XXXXXX)
-          echo "📝 Temp file: $OUTPUT_FILE"
+          echo "begin linux test"
+          OUTPUT_FILE="./temp_yasa_res.log"
+          echo "📝 Using log file: $OUTPUT_FILE"
 
-          # 执行命令并将 stdout + stderr 保存到文件
           ../bundle/yasa-engine-linux-x64 \
             sast-js \
             --analyzer JavaScriptAnalyzer \
             --checkerPackIds taint-flow-javascript-default \
             --ruleConfigFile sast-js/rule_config.json > "$OUTPUT_FILE" 2>&1
+          
+          # 确保命令执行完成，即使输出很大也没问题
+          echo "📄 First 20 lines of output:"
+          head -n 20 "$OUTPUT_FILE" || echo "  (failed to read head)"
 
-          cat "$OUTPUT_FILE" | head -n 20
+          echo "🔍 Relevant findings:"
+          grep -A 5 "=== Findings ===" "$OUTPUT_FILE" | cat || echo "  (no matching section or empty)"
 
-          # 只打印 "=== Findings ===" 之后的 5 行
-          echo "🔍 Relevant findings (up to 5 lines after '=== Findings ==='):"
-          grep -A 5 "=== Findings ===" "$OUTPUT_FILE" || true
-
-          # 业务校验：有 === Findings === 且 没有 No findings!
-          if grep -q "=== Findings ===" "$OUTPUT_FILE" && ! grep -q "No findings!" "$OUTPUT_FILE"; then
-            echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> "$GITHUB_OUTPUT"
+          # 核心校验逻辑
+          if grep -q "=== Findings ===" "$OUTPUT_FILE"; then
+            if ! grep -q "No findings!" "$OUTPUT_FILE"; then
+              echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
+              echo "result=success" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              echo "❌ FAILED: '=== Findings ===' found but 'No findings!' present"
+            fi
           else
-            echo "❌ JavaScript test FAILED: Did not meet finding criteria"
-            echo "result=failure" >> "$GITHUB_OUTPUT"
+            echo "❌ FAILED: Missing '=== Findings ===' header"
           fi
 
+          # 只要走到这里就是失败
+          echo "result=failure" >> "$GITHUB_OUTPUT"
 
       - name: ✅ Test JavaScript (Windows)
         id: test_js_win
@@ -402,72 +397,21 @@ jobs:
             --checkerPackIds taint-flow-javascript-default `
             --ruleConfigFile sast-js/rule_config.json 2>&1
 
-          $output -split "`n" | Select-String "=== Findings ===" -Context 0,5
-
           if ($output -match "=== Findings ===" -and $output -notmatch "No findings!") {
             "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
           } else {
             "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
           }
 
-      # - name: ✅ Test Go
-      #   id: test_go
-      #   working-directory: test-data
-      #   run: |
-      #     output=$(
-      #       ../bundle/${{ matrix.platform.engine }} \
-      #         sast-go \
-      #         --analyzer GoAnalyzer \
-      #         --checkerPackIds taint-flow-golang-default \
-      #         --ruleConfigFile sast-go/rule_config.json \
-      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_go }} 2>&1
-      #     )
-      #     echo "$output"
-
-      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-      #       echo "✅ Go test PASSED: Findings detected and not 'No findings!'"
-      #       echo "result=success" >> $GITHUB_OUTPUT
-      #     else
-      #       echo "❌ Go test FAILED: Did not meet finding criteria"
-      #       echo "result=failure" >> $GITHUB_OUTPUT
-      #       exit 1
-      #     fi
-
-      # - name: ✅ Test Python
-      #   id: test_python
-      #   working-directory: test-data
-      #   run: |
-      #     output=$(
-      #       ../bundle/${{ matrix.platform.engine }} \
-      #         sast-python3 \
-      #         --analyzer PythonAnalyzer \
-      #         --checkerPackIds taint-flow-python-default \
-      #         --ruleConfigFile sast-python3/rule_config.json \
-      #         --uastSDKPath ../bundle/${{ matrix.platform.uast_py }} 2>&1
-      #     )
-      #     echo "$output"
-
-      #     if echo "$output" | grep -q "=== Findings ===" && ! echo "$output" | grep -q "No findings!"; then
-      #       echo "✅ Python test PASSED: Findings detected and not 'No findings!'"
-      #       echo "result=success" >> $GITHUB_OUTPUT
-      #     else
-      #       echo "❌ Python test FAILED: Did not meet finding criteria"
-      #       echo "result=failure" >> $GITHUB_OUTPUT
-      #       exit 1
-      #     fi
-      # --- Optional: Upload result summary ---
       - name: 📊 Summarize Test Results
-        # 确保即使前面失败也运行
-        if: always() 
+        if: always()
         run: |
           echo "📋 Platform: ${{ matrix.platform.zip }}"
           echo "JavaScript: ${{ steps.test_js.outputs.result }}"
-          # echo "Go: ${{ steps.test_go.outputs.result }}"
-          # echo "Python: ${{ steps.test_python.outputs.result }}"
 
-  # 6. 创建 GitHub Release
+  # 6. 创建 GitHub Release（含依赖版本信息）
   create_release:
-    needs: integration_test
+    needs: [integration_test, build_engine, download_uast_binaries]
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -482,13 +426,23 @@ jobs:
       - name: Move zip files to releases/
         run: |
           mkdir -p releases
-          if ls *.zip 1> /dev/null 2>&1; then
-            mv *.zip releases/
-          else
-            echo "❌ No .zip files found!"
-            exit 1
-          fi
+          mv *.zip releases/ || { echo "❌ No zip files found!"; exit 1; }
           ls -lh releases/
+
+      - name: Set Release Metadata
+        id: metadata
+        run: |
+          SPEC_VERSION="${{ needs.build_engine.outputs.spec_version }}"
+          PARSER_VERSION="${{ needs.build_engine.outputs.parser_version }}"
+          UAST_BINARY_VERSION="${{ needs.download_uast_binaries.outputs.uast_version }}"
+
+          echo "UAST_SPEC_VERSION=$SPEC_VERSION" >> $GITHUB_ENV
+          echo "UAST_PARSER_VERSION=$PARSER_VERSION" >> $GITHUB_ENV
+          echo "UAST_BINARY_VERSION=$UAST_BINARY_VERSION" >> $GITHUB_ENV
+
+          echo "📌 UAST Spec: $SPEC_VERSION"
+          echo "📌 UAST Parser: $PARSER_VERSION"
+          echo "📌 UAST Binaries: $UAST_BINARY_VERSION"
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
@@ -501,18 +455,23 @@ jobs:
             - `yasa-linux-x64.zip`
             - `yasa-macos-x64.zip`
             - `yasa-macos-arm64.zip`
-            - `yasa-win-x64.zip`
-
+            - `yasa-windows-x64.zip`
 
             Each contains:
             - YASA-Engine executable
-            - UAST Go/Python parser
             - Required node_modules
             - Required example-rule-config
             - `sha256sum.txt`
 
             All bundles have passed integration tests.
+
+            ### 🔗 Dependency Versions
+
+            - **UAST Spec**: \`$UAST_SPEC_VERSION\`
+            - **UAST Parser (Java/JS)**: \`$UAST_PARSER_VERSION\`
+            - **UAST Go & Python Binaries**: \`$UAST_BINARY_VERSION\`
+
+            > 💡 All UAST components are version-aligned for compatibility.
           artifacts: "releases/*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
           replacesArtifacts: true
-
