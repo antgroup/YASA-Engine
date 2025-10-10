@@ -363,29 +363,30 @@ jobs:
         shell: bash
         if: ${{ matrix.platform.os != 'windows-latest' }}
         run: |
-          output=$(
-            ../bundle/${{ matrix.platform.engine }} \
-              sast-js \
-              --analyzer JavaScriptAnalyzer \
-              --checkerPackIds taint-flow-javascript-default \
-              --ruleConfigFile sast-js/rule_config.json 2>&1
-          )
+          # 定义临时文件
+          OUTPUT_FILE=$(mktemp)
 
-          # 安全地输出相关 findings（最多5行）
-          echo "🔍 Relevant findings (after 'Findings' header):"
-          printf '%s' "$output" | awk '/={5,}.*Findings/{c=6}(c-- > 0)' | head -n 6 || true
+          # 执行命令并将 stdout + stderr 保存到文件
+          ../bundle/yasa-engine-linux-x64 \
+            sast-js \
+            --analyzer JavaScriptAnalyzer \
+            --checkerPackIds taint-flow-javascript-default \
+            --ruleConfigFile sast-js/rule_config.json > "$OUTPUT_FILE" 2>&1
 
-          # 判断是否有 findings 且不是“No findings!”
-          if printf '%s' "$output" | grep -Eiq "={5,} *Findings *={5,}" && \
-            ! printf '%s' "$output" | grep -Eiq "No findings!?"; then
+          # 只打印 "=== Findings ===" 之后的 5 行
+          echo "🔍 Relevant findings (up to 5 lines after '=== Findings ==='):"
+          grep -A 5 "=== Findings ===" "$OUTPUT_FILE" || true
 
+          # 业务校验：有 === Findings === 且 没有 No findings!
+          if grep -q "=== Findings ===" "$OUTPUT_FILE" && ! grep -q "No findings!" "$OUTPUT_FILE"; then
             echo "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
-            echo "result=success" >> $GITHUB_OUTPUT
+            echo "result=success" >> "$GITHUB_OUTPUT"
           else
-            echo "❌ JavaScript test FAILED: No valid findings found"
-            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ JavaScript test FAILED: Did not meet finding criteria"
+            echo "result=failure" >> "$GITHUB_OUTPUT"
             exit 1
           fi
+
 
       - name: ✅ Test JavaScript (Windows)
         id: test_js_win
@@ -398,15 +399,12 @@ jobs:
             --checkerPackIds taint-flow-javascript-default `
             --ruleConfigFile sast-js/rule_config.json 2>&1
 
-          Write-Output "🔍 Output snippet:"
-          $output -split "`n" | Select-String "Findings" -Context 0,5
+          $output -split "`n" | Select-String "=== Findings ===" -Context 0,5
 
-          if ($output -match "={5,}\s*Findings\s*={5,}" -and $output -notmatch "No findings!?") {
+          if ($output -match "=== Findings ===" -and $output -notmatch "No findings!") {
             "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
-            Write-Output "✅ JavaScript test PASSED"
           } else {
             "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
-            Write-Output "❌ JavaScript test FAILED"
             exit 1
           }
 
