@@ -401,22 +401,70 @@ jobs:
           # 只要走到这里就是失败
           echo "result=failure" >> "$GITHUB_OUTPUT"
 
-      - name: ✅ Test JavaScript (Windows)
+      - name: Test JavaScript (Windows)
         id: test_js_win
         working-directory: test-data
         shell: pwsh
         if: ${{ matrix.platform.os == 'windows-latest' }}
         run: |
-          $output = & "../bundle/${{ matrix.platform.engine }}" sast-js `
-            --analyzer JavaScriptAnalyzer `
-            --checkerPackIds taint-flow-javascript-default `
-            --ruleConfigFile sast-js/rule_config.json 2>&1
+          # 设置 UTF-8 输出编码（防止中文乱码）
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
 
-          if ($output -match "=== Findings ===" -and $output -notmatch "No findings!") {
+          # 定义引擎路径（使用 matrix 变量更通用）
+          $EnginePath = "..\bundle\${{ matrix.platform.engine }}"
+          $OutputFile = ".\temp_yasa_res.log"
+
+          Write-Host "🔍 Using engine: $EnginePath"
+          Write-Host "📄 Output log: $OutputFile"
+
+          # 执行命令并捕获所有输出（包括错误）
+          try {
+            # 使用 --% 禁止参数展开，避免特殊字符问题
+            $output = & $EnginePath --% sast-js `
+              --analyzer JavaScriptAnalyzer `
+              --checkerPackIds taint-flow-javascript-default `
+              --ruleConfigFile sast-js/rule_config.json 2>&1
+
+            # 将输出写入日志文件
+            $output | Out-File -FilePath $OutputFile -Encoding utf8
+          }
+          catch {
+            Write-Host "❌ ERROR: Failed to execute YASA-Engine" -ForegroundColor Red
+            Write-Host $_.Exception.Message
+            Write-Host "Exit code: $LastExitCode"
+            "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+            exit 1
+          }
+
+          # 显示前20行用于调试
+          Write-Host "📄 First 20 lines of output:"
+          Get-Content $OutputFile | Select-Object -First 20 | ForEach-Object { "    $_" }
+
+          # 提取 Findings 区域（最多5行）
+          $findingsSection = Get-Content $OutputFile | Select-String "=== Findings ===" -Context 0,5
+          Write-Host "🔍 Relevant findings:"
+          if ($findingsSection) {
+            $findingsSection | Format-List
+          } else {
+            Write-Host "  (no matching section)"
+          }
+
+          # 核心校验逻辑
+          $hasFindingsHeader = $output -match "===\s*Findings\s*==="
+          $hasNoFindingsMsg = $output -match "No findings[!]*"
+
+          if ($hasFindingsHeader -and !$hasNoFindingsMsg) {
+            Write-Host "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
             "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
           } else {
+            Write-Host "❌ JavaScript test FAILED: Did not meet finding criteria"
+            if (!$hasFindingsHeader) { Write-Host "- Missing '=== Findings ===' header" }
+            if ($hasNoFindingsMsg) { Write-Host "- Contains 'No findings!' message" }
             "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+            exit 1
           }
+
 
       - name: 📊 Summarize Test Results
         if: always()
