@@ -445,48 +445,57 @@ jobs:
           ls -lh releases/
 
       - name: Set Release Metadata
-        id: metadata
         run: |
+          set -e
+
           SPEC_VERSION="${{ needs.resolve_uast_versions.outputs.spec_version }}"
           PARSER_VERSION="${{ needs.resolve_uast_versions.outputs.parser_version }}"
           UAST_BINARY_VERSION="${{ needs.download_uast_binaries.outputs.uast_version }}"
 
-          echo "UAST_SPEC_VERSION=$SPEC_VERSION" >> $GITHUB_ENV
-          echo "UAST_PARSER_VERSION=$PARSER_VERSION" >> $GITHUB_ENV
-          echo "UAST_BINARY_VERSION=$UAST_BINARY_VERSION" >> $GITHUB_ENV
+          # 去掉 v 前缀
+          UAST_BINARY_VERSION_CLEAN=$(echo "$UAST_BINARY_VERSION" | sed 's/^v//')
 
           echo "📌 UAST Spec: $SPEC_VERSION"
           echo "📌 UAST Parser: $PARSER_VERSION"
-          echo "📌 UAST Binaries: $UAST_BINARY_VERSION"
+          echo "📌 UAST Binaries: $UAST_BINARY_VERSION -> $UAST_BINARY_VERSION_CLEAN"
+
+          echo "UAST_SPEC_VERSION=$SPEC_VERSION" >> $GITHUB_ENV
+          echo "UAST_PARSER_VERSION=$PARSER_VERSION" >> $GITHUB_ENV
+          echo "UAST_BINARY_VERSION=$UAST_BINARY_VERSION_CLEAN" >> $GITHUB_ENV
+
+          # 使用 printf 安全写入文件（不会受缩进影响）
+          printf '%s\n' \
+            "This release includes:" \
+            "" \
+            "- \`yasa-linux-x64.zip\`" \
+            "- \`yasa-macos-x64.zip\`" \
+            "- \`yasa-macos-arm64.zip\`" \
+            "- \`yasa-windows-x64.zip\`" \
+            "" \
+            "Each contains:" \
+            "- YASA-Engine executable" \
+            "- Required node_modules" \
+            "- Required example-rule-config" \
+            "- \`sha256sum.txt\`" \
+            "" \
+            "All bundles have passed integration tests." \
+            "" \
+            "### 🔗 Dependency Versions" \
+            "" \
+            "- **UAST Spec**: \`$SPEC_VERSION\`" \
+            "- **UAST Parser (Java/JS)**: \`$PARSER_VERSION\`" \
+            "- **UAST Go & Python Binaries**: \`$UAST_BINARY_VERSION_CLEAN\`" \
+            "" \
+            "> 💡 All UAST components are version-aligned for compatibility." \
+            > RELEASE_BODY.md
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref }}
           name: Release ${{ github.ref }}
-          body: |
-            This release includes:
-
-            - `yasa-linux-x64.zip`
-            - `yasa-macos-x64.zip`
-            - `yasa-macos-arm64.zip`
-            - `yasa-windows-x64.zip`
-
-            Each contains:
-            - YASA-Engine executable
-            - Required node_modules
-            - Required example-rule-config
-            - `sha256sum.txt`
-
-            All bundles have passed integration tests.
-
-            ### 🔗 Dependency Versions
-
-            - **UAST Spec**: \`$UAST_SPEC_VERSION\`
-            - **UAST Parser (Java/JS)**: \`$UAST_PARSER_VERSION\`
-            - **UAST Go & Python Binaries**: \`$UAST_BINARY_VERSION\`
-
-            > 💡 All UAST components are version-aligned for compatibility.
+          bodyFile: RELEASE_BODY.md   # 👈 使用文件代替内联 body
           artifacts: "releases/*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
           replacesArtifacts: true
+          allowUpdates: true
