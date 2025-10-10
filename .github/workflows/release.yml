@@ -426,7 +426,7 @@ jobs:
 
   # 6. 创建 GitHub Release（含依赖版本信息）
   create_release:
-    needs: [integration_test, build_engine, download_uast_binaries]
+    needs: [integration_test, resolve_uast_versions, download_uast_binaries]
     runs-on: ubuntu-latest
     environment: release
     permissions:
