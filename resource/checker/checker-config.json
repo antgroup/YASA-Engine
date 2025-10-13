@@ -93,5 +93,10 @@
     "checkerPath": "src/checker/taint/test-taint-checker.js",
     "description": "taint_flow_test，回归测试使用，不推荐外部使用",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_test.json"
+  },
+  {
+    "checkerId": "RestfulEntrypointCollectChecker",
+    "checkerPath": "src/checker/taint/go/restful-entrypoint-collect-checker.js",
+    "description": "go-restful entrypoint采集以及框架source添加"
   }
 ]
