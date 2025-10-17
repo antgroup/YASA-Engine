@@ -1,62 +1,5 @@
-const _ = require('lodash')
 const uuid = require('node-uuid')
-const Stat = require('./statistics')
-const AstUtil = require('./ast-util')
-const SourceLine = require('../engine/analyzer/common/source-line')
 const config = require('../config')
-const CONSTANT = require('./constant')
-const { formatSanitizerTags } = require('../checker/sanitizer/sanitizer-checker')
-
-/**
- * convert the finding to the string format
- * @param finding
- */
-function formatFinding(finding) {
-  const res = {}
-  res.type = finding.type
-  if (finding.subtype) res.subtype = finding.subtype
-  if (finding.best_practice) res.best_practice = finding.best_practice
-  res.id = finding.id
-  res.desc = finding.desc
-
-  // source file information
-  if (finding.sourcefile) {
-    const sourcefile = finding.sourcefile.toString()
-    Stat.incFileIssues(sourcefile)
-    res.sourcefile = shortenSourceFile(sourcefile)
-  }
-  // the line of the issue
-  const { loc } = finding.node
-  const line_str = loc.start.line == loc.end.line ? loc.start.line : `[${loc.start.line}, ${loc.end.line}]`
-  let code = AstUtil.prettyPrint(finding.node)
-  if (code.startsWith('{\n "type'))
-    // non-pretty-printed ast
-    code = SourceLine.formatTraces([{ file: finding.sourcefile, line: loc.start.line }])
-  res.line = `Line ${line_str}: ${code}`
-
-  // the trace of the origin of the issue
-  if (finding.trace) {
-    for (const item of finding.trace) {
-      if (item.file) item.shortfile = shortenSourceFile(item.file)
-    }
-    const trace = SourceLine.formatTraces(finding.trace)
-    res.trace = trace
-  }
-  // the trace of an example attack
-  if (finding.attackTrace) {
-    for (const item of finding.attackTrace) {
-      if (item.file) item.shortfile = shortenSourceFile(item.file)
-    }
-    res.attackTrace = SourceLine.formatTraces(finding.attackTrace)
-  }
-  // the advice
-  if (finding.advice) res.advice = finding.advice
-
-  if (finding.matchedSanitizerTags) {
-    res.matchedSanitizers = formatSanitizerTags(finding.matchedSanitizerTags)
-  }
-  return res
-}
 
 /**
  * Obtain the source lines for all involved components (breath-first version)
@@ -137,7 +80,7 @@ function shortenSourceFile(original) {
 }
 
 /**
- *
+ * sourceFileURI
  * @param original
  */
 function sourceFileURI(original) {
@@ -175,7 +118,7 @@ function convertNode2Range(node) {
 }
 
 /**
- *
+ * get trace
  * @param node
  * @param tagName
  */
@@ -186,7 +129,7 @@ function getTrace(node, tagName) {
 }
 
 /**
- *
+ * add a new finding to findings, category by outputStrategyId
  * @param findings
  * @param finding
  * @param outputStrategyId
@@ -207,8 +150,6 @@ function addFinding(findings, finding, outputStrategyId, info) {
 }
 
 module.exports = {
-  formatFinding,
-  getBwdTrace,
   sourceFileURI,
   convertNode2Range,
   getTrace,

@@ -246,25 +246,65 @@ function filterDataFromScope(symVal) {
 }
 
 /**
- *
- * @param valExport
- * @param func
+ * 获取匿名函数的唯一标识符
+ * 
+ * 该函数根据函数定义的位置信息生成匿名函数的唯一标识符，
+ * 格式为：<anonymous_起始行号_结束行号>
+ * 
+ * 注意：目前仅使用行号生成标识符，可能存在冲突风险（理想情况下应包含列号）
+ * 
+ * @param {Object} fclos - 函数闭包对象
+ * @returns {string|undefined} 生成的匿名函数标识符，如果缺少位置信息则返回 undefined
+ */
+function getAnonymousFunctionName(fclos) {
+  // 检查函数闭包是否有位置信息
+  if (fclos?.ast?.loc === undefined)
+    return undefined
+
+  // 使用函数定义的起始行和结束行生成唯一标识符
+  // 格式: <anonymous_startLine_endLine>
+  return '<anonymous_' + fclos.ast.loc.start.line + '_' + fclos.ast.loc.end.line + '>'
+}
+
+/**
+ * 在作用域中查找函数闭包对象
+ * 
+ * 该函数在给定的作用域对象中递归查找指定名称的函数闭包(fclos)，
+ * 支持查找具名函数、匿名函数以及嵌套在类和对象中的函数。
+ * 
+ * @param {Object} valExport - 作用域对象
+ * @param {string} func - 要查找的函数名称
+ * @returns {Object|null} 找到的函数闭包对象，未找到返回 null
  */
 function getFclosFromScope(valExport, func) {
   let valFunc
   const fdef = valExport?.fdef || valExport?.ast
   if (fdef && fdef?.type === 'FunctionDefinition') {
+    // 具名函数匹配
     if (fdef.id?.name === func) {
       valFunc = valExport
-    } else return null
+    }
+    // 匿名函数匹配
+    else if (func.startsWith('<anonymous')) {
+      // 生成当前函数的匿名标识符
+      const anonymousID = getAnonymousFunctionName(fdef)
+      // 标识符匹配则返回
+      if (anonymousID == func)
+        valFunc = valExport
+    } else {
+      return null
+    }
   } else {
-    // !!这里不能从topScope的modules里取，信息会缺失，直接从topScope的field里依据目录结构去取。
-    // const valExport = this.topScope.modules.field[path.join(dir,filepath)];
+    // 从作用域的字段中直接查找
     valFunc = valExport?.field[func]
+
+    // 如果直接查找失败
     if (!valFunc) {
+      // 尝试在默认导出中查找
       if (valExport?.field?.default) {
         valFunc = getFclosFromScope(valExport.field.default, func)
       } else if (!func.includes('.')) {
+        // 遍历作用域字段，查找类中的方法
         for (const i in valExport.field) {
           if (valExport.field[i] && valExport.field[i].vtype === 'class') {
             valFunc = getFclosFromScope(valExport.field[i], func)
@@ -274,8 +314,10 @@ function getFclosFromScope(valExport, func) {
           }
         }
       } else {
+        // 处理点分名称（如 "module.submodule.function"）
         const arr = func.split('.')
         let fieldT = valExport
+        // 沿着路径逐级查找
         arr.forEach((path) => {
           fieldT = fieldT?.field[path]
         })
@@ -289,53 +331,86 @@ function getFclosFromScope(valExport, func) {
 }
 
 /**
- *
- * @param fclos
- * @param sourceScope
+ * 填充污点源作用域的位置信息
+ * 
+ * 该函数用于完善污点源规则中的位置信息(locStart, locEnd)，
+ * 当分析到函数定义时，使用函数的实际位置信息填充匹配的规则。
+ * 
+ * @param {Object} fclos - 函数闭包对象
+ * @param {Object} sourceScope - 污点源作用域配置对象
  */
 function fillSourceScope(fclos, sourceScope) {
+  // 如果位置信息已完善，直接返回
   if (sourceScope.complete) return
+
   const scopeValue = sourceScope.value
   let notComplete = false
+
+  // 检查是否有未完成位置信息的规则
   for (const item of scopeValue) {
     if (item.locStart === undefined && item.locEnd === undefined) {
       notComplete = true
       break
     }
   }
+
+  // 如果所有规则位置信息都已完善，标记为完成
   if (!notComplete) {
     sourceScope.complete = true
     return
   }
-  const scpFunc = fclos.ast?.id?.name
+
+  // 确定函数名（处理匿名函数）
+  let scpFunc
+  if (fclos.ast?.name === '<anonymous>') {
+    scpFunc = getAnonymousFunctionName(fclos)
+  } else {
+    scpFunc = fclos.ast?.id?.name
+  }
+
+  // 获取函数定义位置信息
   const scpPath = fclos.ast?.loc?.sourcefile
-  const locStart =
-    fclos.ast?.parameters?.length > 0 ? fclos.ast.parameters[0].loc?.start?.line : fclos.ast?.loc?.start?.line
-  const locEnd =
-    fclos.ast?.parameters?.length > 0
-      ? fclos.ast.parameters[fclos.ast.parameters.length - 1].loc?.end?.line
-      : fclos.ast?.loc?.end?.line
+  // 计算起始行（优先使用参数位置）
+  const locStart = fclos.ast?.parameters?.length > 0
+    ? fclos.ast.parameters[0].loc?.start?.line
+    : fclos.ast?.loc?.start?.line
+  // 计算结束行（优先使用参数位置）
+  const locEnd = fclos.ast?.parameters?.length > 0
+    ? fclos.ast.parameters[fclos.ast.parameters.length - 1].loc?.end?.line
+    : fclos.ast?.loc?.end?.line
+
+  // 关键位置信息缺失则返回
   if (scpPath === undefined || locStart === undefined || locEnd === undefined) {
     return
   }
+
   let relativePath
   try {
+    // 转换为相对路径
     relativePath = scpPath.substring(scpPath.indexOf(config.maindirPrefix) + config.maindirPrefix.length)
   } catch (e) {
     return
   }
+
+  // 填充匹配规则的位置信息
   relativePath = relativePath.substring(relativePath.indexOf('/'))
   for (const item of scopeValue) {
+    // 规则1：匹配具体函数
     if (item.scopeFile === relativePath && item.scopeFunc === scpFunc) {
+      // 仅填充未完善的规则
       if (item.locStart !== undefined && item.locEnd !== undefined) {
         return
       }
       item.locStart = locStart
       item.locEnd = locEnd
-    } else if (item.scopeFile === relativePath && item.scopeFunc === 'all') {
+    }
+    // 规则2：匹配整个文件
+    else if (item.scopeFile === relativePath && item.scopeFunc === 'all') {
+      // 仅填充未完善的规则
       if (item.locStart !== undefined && item.locEnd !== undefined) {
         return
       }
+      // 标记为整个文件范围
       item.locStart = 'all'
       item.locEnd = 'all'
     }

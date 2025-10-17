@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const loader = require('../../util/loader')
 
 /**
  * replace an analysis value
@@ -155,6 +156,26 @@ function isFromSharedVar(val) {
   }
 }
 
+/**
+ * get value from package manager by qid
+ * @param scope
+ * @param qid
+ */
+function getValueFromPackageByQid(scope, qid) {
+  if (!qid || !qid.includes('.')) {
+    return null
+  }
+
+  qid = qid.startsWith('.') ? qid.slice(1) : qid
+  const arr = loader.getPackageNameProperties(qid)
+  let packageManagerT = scope
+  arr.forEach((path) => {
+    packageManagerT = packageManagerT?.field[path]
+  })
+
+  return packageManagerT
+}
+
 // ***
 
 module.exports = {
@@ -165,6 +186,7 @@ module.exports = {
   isSameValue,
 
   isFromSharedVar,
+  getValueFromPackageByQid,
 
   ValueUtil: require('../analyzer/common/value/constructor'),
   Unit: require('../analyzer/common/value/unit'),

@@ -144,7 +144,7 @@ class PythonTaintChecker extends TaintChecker {
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = file?.ast?.sourcefile || file?.ast?.loc?.sourcefile
+        entryPoint.filePath = file?.ast?.loc?.sourcefile
         entryPoint.attribute = fileEntryPoint.attribute
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file

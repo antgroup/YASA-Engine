@@ -19,7 +19,7 @@ The unified multi-language analysis engine is the core component of a modern pro
 Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
 ### YASA-MCP: Unified multi-language Program Analysis MCP 
-Provides atomic analysis APIs for large models, offering program analysis services that are large-model-friendly.
+Provides atomic analysis APIs for LLM, offering program analysis services that are LLM-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
 Provides SDK packages supporting multiple programming languages for traditional applications. It provides a variety of granular program analysis APIs, making integration easier and enabling efficient and user-friendly program analysis services within applications.
@@ -27,7 +27,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 ### xAST
 [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) is an open-source evaluation system for SAST/IAST/DAST tool capabilities. In YASA-Engine, it serves as the regression target for post-change testing, and during the process of multi-language adaptation, it provides positive guidance on language syntax support.
 
-## YASA Technical Advantages
+## Technical Advantages
 ### Low Cost for New Language Support
 - YASA is directly modeled and analyzed based on UAST. When adapting to a new language, once it is parsed into UAST, the general-layer analyzer's capabilities can be used. After supporting the new language's package structure, the new language's analysis is already supported.
 
@@ -41,10 +41,10 @@ Provides SDK packages supporting multiple programming languages for traditional 
 
 <img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
-### Making Program Analysis Easily, and Friendly
-- Introduced the unified declarative rule query language UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more user-friendly.
+### Open and Friendly
+- Introduced the unified declarative rule query language YASA-UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more engineer-friendly.
 
-- Launched YASA MCP (large-model-friendly) and SDK (application-friendly).
+- Launched YASA MCP (LLM-friendly) and SDK (App development-friendly).
 
 ## Quick Start
 
@@ -55,7 +55,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 ## Join Us
 Welcome to submit issues if you encounter any problems!
 
-For code contributions, please refer to [CONTRIBUTION](https://www.yuque.com/u22090306/bebf6g/rgm1xmoa38wlfxzc)
+For code contributions, please refer to [CONTRIBUTION](CONTRIBUTION.md)
 
 ## Resource Links
 [Official Documentation](https://www.yuque.com/u22090306/bebf6g)
@@ -71,6 +71,6 @@ Thanks to all developers who have contributed to the YASA project! Special thank
 YASA - Making code analysis more precise, easier, and smarter.
 
 ## Contact Us
-[Official Website](https://cybersec.antgroup.com/)
+[Official Website](https://cybersec.antgroup.com/station)
 
 <img src="folder-img/contactus.png" style="width:20%;" />
