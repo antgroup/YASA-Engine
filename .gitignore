@@ -9,3 +9,4 @@ test/go/benchmarks
 test/python/benchmarks
 deps/uast4go
 deps/uast4python
+.DS_Store

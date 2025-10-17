@@ -1,5 +1,6 @@
 const logger = require('../../../util/logger')(__filename)
 
+let totalErrors
 /**
  *
  * @param {Error} error
@@ -16,8 +17,31 @@ function handleException(error, infoMsg, errorMsg) {
   if (error) {
     logger.error(error)
   }
+  totalErrors = totalErrors || []
+  totalErrors.push({ errorMsg, error })
+}
+
+/**
+ *
+ */
+function clearTotalErrors() {
+  totalErrors = []
+}
+
+/**
+ *
+ */
+function outputTotalErrors() {
+  if (Array.isArray(totalErrors) && totalErrors.length > 0) {
+    for (const error of totalErrors) {
+      logger.info(error.errorMsg)
+      logger.info(error.error)
+    }
+  }
 }
 
 module.exports = {
   handleException,
+  clearTotalErrors,
+  outputTotalErrors,
 }

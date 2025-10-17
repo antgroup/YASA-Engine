@@ -1,7 +1,8 @@
 [
   {
     "checkerIds": [
-      "taint_flow_sofa_input"
+      "taint_flow_java_input",
+      "taint_flow_java_input_inner"
     ],
     "sanitizers": [
       {
