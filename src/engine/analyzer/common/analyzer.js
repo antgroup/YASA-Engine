@@ -13,9 +13,7 @@ const AstUtil = require('../../../util/ast-util')
 const ValueFormatter = require('../../../util/value-formatter')
 const stateUtil = require('../../util/state-util')
 const SymAddress = require('./sym-address')
-const { Errors } = require('../../../util/error-code')
 const { unionAllValues } = require('./memStateBVT')
-const constantValue = require('../../../util/constant')
 const { cloneWithDepth } = require('../../../util/clone-util')
 const { handleException } = require('./exception-handler')
 const {
@@ -24,7 +22,6 @@ const {
 
 const { filterDataFromScope, shallowEqual } = require('../../../util/common-util')
 const Rules = require('../../../checker/common/rules-basic-handler')
-const BasicRuleHandler = require('../../../checker/common/rules-basic-handler')
 
 // ***
 
@@ -58,6 +55,13 @@ class Analyzer extends MemSpace {
     }
     this.initValTreeStruct()
     this.entryPoints = []
+  }
+
+  /**
+   * return checkerManager
+   */
+  getCheckerManager() {
+    return this.checkerManager
   }
 
   /**
@@ -185,7 +189,7 @@ class Analyzer extends MemSpace {
   recordCheckerFindings() {
     const resultManager = this.checkerManager.getResultManager()
     if (resultManager) {
-      return resultManager.findings
+      return resultManager.getFindings()
     }
     return null
   }
@@ -478,7 +482,7 @@ class Analyzer extends MemSpace {
    */
   processCompileUnit(scope, node, state) {
     if (this.checkerManager && this.checkerManager.checkAtCompileUnit) {
-      this.checkerManager.checkAtCompileUnit(this, node, scope, state, {
+      this.checkerManager.checkAtCompileUnit(this, scope, node, state, {
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
       })
@@ -781,7 +785,7 @@ class Analyzer extends MemSpace {
         if (!this.lastReturnValue) {
           this.lastReturnValue = return_value
         } else if (this.lastReturnValue.vtype === 'union') {
-          if (return_value === this.lastReturnValue) {
+          if (return_value === this.lastReturnValue || return_value.value === this.lastReturnValue.value) {
             const new_return_value = cloneWithDepth(return_value, 2)
             this.lastReturnValue.appendValue(new_return_value, false)
           } else {
@@ -992,10 +996,6 @@ class Analyzer extends MemSpace {
         const { left } = node
         const { right } = node
         let tmpVal = this.processInstruction(scope, right, state)
-        if (node.cloned && !tmpVal?.refCount) {
-          tmpVal = _.clone(tmpVal)
-          tmpVal.value = _.clone(tmpVal.value)
-        }
         const oldVal = this.processInstruction(scope, left, state)
 
         // TODO: clean the following up
@@ -1070,11 +1070,6 @@ class Analyzer extends MemSpace {
         val.arith_assign = true
         val.left = this.processInstruction(scope, node.left, state)
         val.right = this.processInstruction(scope, node.right, state)
-        if (node.cloned) {
-          const clonedValue = _.clone(val.right.value)
-          val.right = _.clone(val.right)
-          val.right.value = clonedValue
-        }
         const { left } = node
         const oldVal = this.getMemberValueNoCreate(scope, left, state)
 
@@ -1846,21 +1841,7 @@ class Analyzer extends MemSpace {
         }
       }
     }
-    // avoid infinite loops, the re-entry should only less than 3
-    const fdecl = fclos.fdef
-    if (
-      fdecl &&
-      state.callstack.reduce((previousValue, currentValue) => {
-        return currentValue.fdef === fdecl ? previousValue + 1 : previousValue
-      }, 0) > 0
-    ) {
-      return SymbolValue({
-        type: 'FunctionCall',
-        expression: fclos,
-        arguments: argvalues,
-        ast: node,
-      })
-    }
+
     // process the function body
     if (fclos.fdef || fclos.execute) {
       const { decorators } = fclos

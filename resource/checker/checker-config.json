@@ -8,7 +8,7 @@
     "checkerId": "sanitizer",
     "checkerPath": "src/checker/sanitizer/sanitizer-checker.js",
     "description": "Sanitizer checker",
-    "demoRuleConfigPath": ""
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_sanitizer_for_java_example.json"
   },
   {
     "checkerId": "cobra.Command-builtIn",
@@ -18,20 +18,20 @@
   {
     "checkerId": "taint_flow_gin_input",
     "checkerPath": "src/checker/taint/go/gin-default-taint-checker.js",
-    "description": "Gin taint_flow checker，不使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "Gin taint_flow checker，不会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
-    "checkerId": "taint_flow_go_input_for_gin",
+    "checkerId": "taint_flow_gin_input_inner",
     "checkerPath": "src/checker/taint/go/gin-taint-checker.js",
-    "description": "Gin taint_flow checker，不使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "Gin taint_flow checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
     "checkerId": "taint_flow_go_input",
     "checkerPath": "src/checker/taint/go/go-default-taint-checker.js",
-    "description": "Go framework checker，使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "Go framework checker，会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
     "checkerId": "gorilla-mux-entrypoint-collect-checker",
@@ -59,33 +59,39 @@
     "description": "为第三方库方法urfave.cli做建模，添加entryPoints"
   },
   {
+    "checkerId": "taint_flow_sofa_input",
+    "checkerPath": "src/checker/taint/java/sofa-taint-checker.js",
+    "description": "Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
+    "demoRuleConfigPath": ""
+  },
+  {
     "checkerId": "taint_flow_egg_input",
     "checkerPath": "src/checker/taint/js/egg-taint-checker.js",
-    "description": "JavaScript Egg框架污点分析checker，不使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "JavaScript Egg框架污点分析checker",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
     "checkerId": "taint_flow_js_input",
     "checkerPath": "src/checker/taint/js/js-taint-checker.js",
-    "description": "JavaScript原生污点分析checker，使用CallGraph",
-    "demoRuleConfigPath": ""
-  },
-  {
-    "checkerId": "default_taint_flow_python_input",
-    "checkerPath": "src/checker/taint/python/python-default-taint-checker.js",
-    "description": "Python污点分析checker，使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "JavaScript原生污点分析checker，会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
     "checkerId": "taint_flow_python_input",
+    "checkerPath": "src/checker/taint/python/python-default-taint-checker.js",
+    "description": "Python污点分析checker，会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
+  },
+  {
+    "checkerId": "taint_flow_python_input_inner",
     "checkerPath": "src/checker/taint/python/python-taint-checker.js",
-    "description": "Python污点分析checker，不使用CallGraph",
-    "demoRuleConfigPath": ""
+    "description": "Python污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
   },
   {
     "checkerId": "taint_flow_test",
     "checkerPath": "src/checker/taint/test-taint-checker.js",
-    "description": "taint_flow_test",
-    "demoRuleConfigPath": ""
+    "description": "taint_flow_test，回归测试使用，不推荐外部使用",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_test.json"
   }
 ]

@@ -1,16 +1,16 @@
+const _ = require('lodash')
 const fs = require('fs')
 const path = require('path')
 const { describe, it } = require('mocha')
 const assert = require('assert')
-const config = require('../../src/config.js')
+const config = require('../../src/config')
 const logger = require('../../src/util/logger')(__filename)
 const Analyzer = require('../../src/engine/analyzer/javascript/common/js-analyzer')
 const { BENCHMARKS_DIR, XAST_JS_BENCHMARK, recordFindingStr } = require('../test-utils')
-const { prepareJsBenchmark } = require('./prepare-js-benchmark')
-const _ = require('lodash')
-const findingUtil = require('../../src/util/finding-util')
 const fileUtil = require('../../src/util/file-util')
 const { handleException } = require('../../src/engine/analyzer/common/exception-handler')
+const OutputStrategyAutoRegister = require('../../src/engine/analyzer/common/output-strategy-auto-register')
+
 const taint_flow_name = ['taint_flow_test']
 
 function regressionXastJsBenchmark() {
@@ -186,7 +186,7 @@ function getTFPN(findingResMap) {
   return { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown }
 }
 
-function runSingleTest(casePath, actualResMap) {
+function runSingleTest(casePath, actualResMap, outputStrategyAutoRegister) {
   config.ruleConfigFile = './test/javascript/rule_config.json'
   config.checkerIds = ['taint_flow_test']
   config.language = 'javascript'
@@ -209,7 +209,19 @@ function runSingleTest(casePath, actualResMap) {
 
   const findingRes = analyzer.analyzeSingleFile(code, filename)
   if (findingRes) {
-    findingUtil.outputFindings(recorder.printAndAppend, findingRes)
+    const { resultManager } = analyzer.getCheckerManager()
+    const allFindings = resultManager.getFindings()
+    if (_.isEmpty(allFindings)) {
+      recorder.printAndAppend('\n======================== Findings ======================== ')
+      recorder.printAndAppend('No findings!')
+      recorder.printAndAppend('========================================================== \n')
+    }
+    for (const outputStrategyId in allFindings) {
+      const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
+      if (strategy && typeof strategy.outputFindings === 'function') {
+        strategy.outputFindings(resultManager, strategy.getOutputFilePath(), config, recorder.printAndAppend)
+      }
+    }
     recordFinding(findingRes, filename, actualResMap)
     return { [filename]: recorder.getFormatResult() }
   }
@@ -219,10 +231,14 @@ function runXastJsBenchmark(dir) {
   let allCases = getAllTestCase(dir)
   let actualRes = {}
   let actualResMap = new Map()
+  const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+  outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap)
-    for (const [key, value] of Object.entries(singleRes)) {
-      actualRes[key] = value
+    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
+    if (singleRes) {
+      for (const [key, value] of Object.entries(singleRes)) {
+        actualRes[key] = value
+      }
     }
   }
   const expectResultPath = path.join(path.resolve(dir), '..', '..', 'expect', 'jsbenchmark-expect.json')
@@ -244,20 +260,22 @@ function checkXastJsBenchmarkResult(result) {
       writeLog(testReport, './test/javascript/test-report')
     })
     let i = 1
-    for (let caseKey of Object.keys(expectedResult)) {
-      it(`${i++}-case:${caseKey}`, function () {
-        logger.info('expected:\n' + expectedResult[caseKey])
-        logger.info('actual:\n' + actualRes[caseKey])
-        if (_.has(actualRes, caseKey)) {
-          assert.strictEqual(
-            actualRes[caseKey],
-            expectedResult[caseKey],
-            `链路${caseKey}实际trace或内容与预期不一致,请核对该链路`
-          )
-        } else {
-          assert.fail(`链路:${caseKey}不存在！！！需要排查原因`)
-        }
-      })
+    if (expectedResult) {
+      for (let caseKey of Object.keys(expectedResult)) {
+        it(`${i++}-case:${caseKey}`, function () {
+          logger.info('expected:\n' + expectedResult[caseKey])
+          logger.info('actual:\n' + actualRes[caseKey])
+          if (_.has(actualRes, caseKey)) {
+            assert.strictEqual(
+              actualRes[caseKey],
+              expectedResult[caseKey],
+              `链路${caseKey}实际trace或内容与预期不一致,请核对该链路`
+            )
+          } else {
+            assert.fail(`链路:${caseKey}不存在！！！需要排查原因`)
+          }
+        })
+      }
     }
   })
 }
@@ -270,8 +288,10 @@ function updateJsBenchmarkBackupfile(dir) {
   let allCases = getAllTestCase(dir)
   let actualRes = {}
   let actualResMap = new Map()
+  const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+  outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap)
+    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
     for (const [key, value] of Object.entries(singleRes)) {
       actualRes[key] = value
     }

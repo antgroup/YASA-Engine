@@ -1,0 +1,121 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_sofa_input"
+    ],
+    "sanitizers": [
+      {
+        "id": "SANITIZER_1",
+        "sanitizerType": "BinaryOperationSanitizer",
+        "sanitizerScenario": "SANITIZER.VALIDATE_BY_BINARYOPERATION",
+        "operator": "==",
+        "targetValue": ".*"
+      },
+      {
+        "id": "SANITIZER_2",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.VALIDATE_BY_FUNCTIONCALL",
+        "calleeType": "com.alipay.common.security.util.secutils.cmd.CmdParameterChecker",
+        "fsig": "checkCmdParameter",
+        "args": [
+          "0"
+        ]
+      },
+      {
+        "id": "SANITIZER_3",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.CALLSTACK_HAS_FUNCTIONCALL",
+        "calleeType": "com.alipay.common.security.util.secutils.cmd.AlipayCmdChecker",
+        "fsig": "hookStart",
+        "args": [
+          "0"
+        ]
+      },
+      {
+        "id": "SANITIZER_4",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.FILTER_BY_FUNCTIONCALL",
+        "calleeType": "AlipaySqlEscapeUtil",
+        "fsig": "escapeSql",
+        "args": [
+          "0"
+        ]
+      },
+      {
+        "id": "SANITIZER_5",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.CONFIG_BY_FUNCTIONCALL",
+        "calleeType": "org.yaml.snakeyaml.constructor.SafeConstructor",
+        "fsig": "SafeConstructor"
+      },
+      {
+        "id": "SANITIZER_6",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.DEFAULT",
+        "calleeType": "GroovySandboxExpressionChecker",
+        "fsig": "getSecureASTCustomizer"
+      }
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "abcde",
+          "calleeType": "",
+          "fsig": "Runtime.getRuntime().exec",
+          "sanitizerIds": [
+            "SANITIZER_1",
+            "SANITIZER_2"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "abcde",
+          "calleeType": "javax.script.ScriptEngine",
+          "fsig": "eval",
+          "sanitizerIds": [
+            "SANITIZER_3"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "abcde",
+          "calleeType": "Statement",
+          "fsig": "executeQuery",
+          "sanitizerIds": [
+            "SANITIZER_4"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "abcde",
+          "calleeType": "org.yaml.snakeyaml.Yaml",
+          "fsig": "loadAll",
+          "sanitizerIds": [
+            "SANITIZER_5"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaCommandExec",
+          "calleeType": "GroovyClassLoader",
+          "fsig": "parseClass",
+          "sanitizerIds": [
+            "SANITIZER_6"
+          ]
+        }
+      ]
+    }
+  }
+]

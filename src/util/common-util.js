@@ -1,5 +1,3 @@
-const _ = require('lodash')
-
 const { getRules } = require('../checker/common/rules-basic-handler')
 const Rules = require('../checker/common/rules-basic-handler')
 const varUtil = require('./variable-util')
@@ -20,7 +18,28 @@ function mergeSets(s1, s2) {
   for (const x of s2) res.add(x)
   return res
 }
-
+/**
+ *
+ * @param source
+ * @param res
+ */
+function mergeAToB(source, res) {
+  for (const key of Object.keys(source)) {
+    const valA = source[key]
+    const valB = res[key]
+    if (Array.isArray(valA) && Array.isArray(valB)) {
+      res[key] = valB.concat(valA)
+    } else if (Array.isArray(valA) && valB) {
+      res[key] = [valB].concat(valA)
+    } else if (Array.isArray(valB) && valA) {
+      res[key] = valB.concat([valA])
+    } else if (valB && valA && typeof valB === typeof valA && typeof valB === 'object') {
+      mergeAToB(valA, res[key])
+    } else if (valA) {
+      res[key] = valA
+    }
+  }
+}
 /**
  * getTaint of symboal value
  * @returns {*}
@@ -241,9 +260,9 @@ function getFclosFromScope(valExport, func) {
   } else {
     // !!这里不能从topScope的modules里取，信息会缺失，直接从topScope的field里依据目录结构去取。
     // const valExport = this.topScope.modules.field[path.join(dir,filepath)];
-    valFunc = valExport.field[func]
+    valFunc = valExport?.field[func]
     if (!valFunc) {
-      if (valExport.field?.default) {
+      if (valExport?.field?.default) {
         valFunc = getFclosFromScope(valExport.field.default, func)
       } else if (!func.includes('.')) {
         for (const i in valExport.field) {
@@ -326,14 +345,14 @@ function fillSourceScope(fclos, sourceScope) {
 /**
  *
  * @param sourceScope
+ * @param checkerTaintSources
  */
-function initSourceScope(sourceScope) {
+function initSourceScope(sourceScope, checkerTaintSources) {
   let hasScopedSource = false
   const sourceScopeVal = sourceScope.value
-  if (!Rules.getRules()?.TaintSource || !Array.isArray(Rules.getRules()?.TaintSource)) return
-  const { TaintSource: sourceRules } = getRules() || {}
-  if (sourceRules) {
-    for (const rule of sourceRules) {
+
+  if (Array.isArray(checkerTaintSources) && checkerTaintSources.length > 0) {
+    for (const rule of checkerTaintSources) {
       let obj = {}
       if (rule.scopeFile === 'all' && rule.scopeFunc === 'all') {
         obj = {
@@ -366,19 +385,18 @@ function initSourceScope(sourceScope) {
 /**
  *
  * @param sourceScope
+ * @param checkerTaintSources
  */
-function initSourceScopeByTaintSourceWithLoc(sourceScope) {
+function initSourceScopeByTaintSourceWithLoc(sourceScope, checkerTaintSources) {
   sourceScope.complete = true
   const sourceScopeVal = sourceScope.value
-  const { TaintSource: sourceRules } = getRules() || {}
-  if (sourceRules !== undefined) {
-    for (const rule of sourceRules) {
+  if (Array.isArray(checkerTaintSources) && checkerTaintSources.length > 0) {
+    for (const rule of checkerTaintSources) {
       let obj = {}
       if (rule.scopeFile === 'all' && rule.scopeFunc === 'all') {
         obj = {
           path: rule.path,
           kind: rule.kind,
-          introPoint: rule.introPoint,
           scopeFile: rule.scopeFile,
           scopeFunc: rule.scopeFunc,
           attribute: rule.attribute,
@@ -391,7 +409,6 @@ function initSourceScopeByTaintSourceWithLoc(sourceScope) {
         obj = {
           path: rule.path,
           kind: rule.kind,
-          introPoint: rule.introPoint,
           scopeFile: rule.scopeFile,
           scopeFunc: rule.scopeFunc,
           attribute: rule.attribute,
@@ -427,6 +444,7 @@ function getValueFromTree(tree, path) {
 
 module.exports = {
   mergeSets,
+  mergeAToB,
   getTaint,
   getSatNodes: (node, f, res, filter) => {
     return getSatNodes(node, f, res, filter, new Set())

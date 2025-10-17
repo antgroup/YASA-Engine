@@ -85,10 +85,10 @@ async function update(dir) {
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4python/builder'),
+    path.join(__dirname, '../../deps/uast4python/uast4python'),
   ]
   try {
-    await execute(dir, args, recorder.printAndAppend)
+    await execute(null, args, recorder.printAndAppend)
   } catch (e) {
     handleException(
       e,
@@ -124,7 +124,7 @@ async function getRunPythonBenchmarkResult(dir, expectFile) {
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4python/builder'),
+    path.join(__dirname, '../../deps/uast4python/uast4python'),
   ]
 
   try {
@@ -143,7 +143,6 @@ async function getRunPythonBenchmarkResult(dir, expectFile) {
   actualRes = recorder.getFormatResult()
   expectedResMap = resolveTestFindingResult(expectedRes)
   actualResMap = resolveTestFindingResult(actualRes)
-  // }
 
   return {
     expectedRes,

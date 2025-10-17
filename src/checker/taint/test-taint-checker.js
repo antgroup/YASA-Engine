@@ -1,39 +1,24 @@
 const Rules = require('../common/rules-basic-handler')
-const { initRules } = require('../common/rules-basic-handler')
 const IntroduceTaint = require('./common-kit/source-util')
 const SanitizerChecker = require('../sanitizer/sanitizer-checker')
-const commonUtil = require('../../util/common-util')
 const { matchSinkAtFuncCall } = require('./common-kit/sink-util')
 const config = require('../../config')
+const TaintChecker = require('./taint-checker')
+const TaintOutputStrategy = require('../common/output/taint-output-strategy')
 
-const CheckerId = 'taint_flow_test'
+const TAINT_TAG_NAME = 'TEST'
 
 /**
  *
  */
-class TestTaintChecker {
+class TestTaintChecker extends TaintChecker {
   /**
    *
    * @param resultManager
    */
   constructor(resultManager) {
+    super(resultManager, 'taint_flow_test')
     this.entryPoints = []
-    this.sourceScope = {
-      complete: false,
-      value: [],
-    }
-
-    this.tag = ''
-    this.resultManager = resultManager
-    initRules()
-    commonUtil.initSourceScope(this.sourceScope)
-  }
-
-  /**
-   *
-   */
-  static GetCheckerId() {
-    return CheckerId
   }
 
   /**
@@ -53,6 +38,8 @@ class TestTaintChecker {
         analyzer.entryPoints = this.entryPoints
       }
     }
+    this.addSourceTagForSourceScope(TAINT_TAG_NAME, this.sourceScope.value)
+    this.addSourceTagForcheckerRuleConfigContent(TAINT_TAG_NAME, this.checkerRuleConfigContent)
   }
 
   /**
@@ -213,42 +200,44 @@ class TestTaintChecker {
     if (!fclos) {
       return
     }
-    const rules = Rules.getRules()?.FuncCallTaintSink
-    const matchedRules = matchSinkAtFuncCall(node, fclos, rules)
-    if (matchedRules && matchedRules.length > 0) {
-      for (let i = 0; i < matchedRules.length; i++) {
-        const args = Rules.prepareArgs(argValues, fclos, matchedRules[i])
-        const sanitizers = SanitizerChecker.findSanitizerByIds(matchedRules[i].sanitizerIds)
-        const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
-          node,
-          fclos,
-          args,
-          null,
-          matchedRules[i].kind,
-          false,
-          sanitizers
-        )
-        if (ndResultWithMatchedSanitizerTagsArray) {
-          for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
-            const { nd } = ndResultWithMatchedSanitizerTags
-            const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
-            let ruleName = matchedRules[i].fsig
-            if (typeof matchedRules[i].attribute !== 'undefined') {
-              ruleName += `\nSINK Attribute: ${matchedRules[i].attribute}`
-            }
-            const finding = Rules.getRule(CheckerId, node)
-            this.resultManager.addNewFinding(
-              nd,
-              node,
-              fclos,
-              matchedRules[i].kind,
-              finding,
-              ruleName,
-              matchedSanitizerTags
-            )
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
+    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    rule = rule.length > 0 ? rule[0] : null
+
+    if (rule) {
+      const args = Rules.prepareArgs(argValues, fclos, rule)
+      const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
+      const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
+        node,
+        fclos,
+        args,
+        null,
+        TAINT_TAG_NAME,
+        false,
+        sanitizers
+      )
+      if (ndResultWithMatchedSanitizerTagsArray) {
+        for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
+          const { nd } = ndResultWithMatchedSanitizerTags
+          const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
+          let ruleName = rule.fsig
+          if (typeof rule.attribute !== 'undefined') {
+            ruleName += `\nSINK Attribute: ${rule.attribute}`
           }
-          return true
+          const taintFlowFinding = this.buildTaintFinding(
+            this.getCheckerId(),
+            this.desc,
+            node,
+            nd,
+            fclos,
+            TAINT_TAG_NAME,
+            ruleName,
+            matchedSanitizerTags
+          )
+          if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
+          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
+        return true
       }
     }
   }

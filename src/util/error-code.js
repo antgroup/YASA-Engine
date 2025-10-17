@@ -158,7 +158,7 @@ function genClass(err) {
       try {
         return handleError(new _Err(message), headMsg)
       } catch (e) {
-        logger.error(err.toString())
+        handleException(e, err.toString(), err.toString())
         return e
       }
     } else {
@@ -178,9 +178,9 @@ function handleError(err, headMsg) {
     err.toString = () => `${headMsg}: ${errMsgFunc.apply(err)}`
   }
   if (!errorTolerance(err)) {
-    handleException(err, '', headMsg)
+    throw err
   } else {
-    logger.error(err.toString())
+    handleException(err, err.toString(), err.toString())
   }
   return err
 }

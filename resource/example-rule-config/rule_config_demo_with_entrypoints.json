@@ -1,0 +1,1030 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_egg_input",
+      "taint_flow_js_input"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "ctx.query",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "ctx.queries",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "ctx.params",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "ctx.request",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "ctx.userId",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "ctx.user.userId",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.query",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.queries",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.params",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.request",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.userId",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "this.ctx.user.userId",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "fuzzyStr",
+          "scopeFile": "/app/controller/sqlEggMysql.js",
+          "scopeFunc": "eggConnWhite2"
+        },
+        {
+          "path": "param",
+          "scopeFile": "/app/controller/VariableCover/anti_variable_cover_4.js",
+          "scopeFunc": "echo4"
+        },
+        {
+          "path": "fuzzyStr",
+          "scopeFile": "/app/controller/sqlEggMysql.js",
+          "scopeFunc": "eggConnWhite1"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/VariableCover/variable_cover_1.js",
+          "scopeFunc": "query"
+        },
+        {
+          "path": "advisorId",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf3.js",
+          "scopeFunc": "paramself3"
+        },
+        {
+          "path": "instId",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf3.js",
+          "scopeFunc": "paramself3"
+        },
+        {
+          "path": "fuzzyStr",
+          "scopeFile": "/app/controller/sqlEggMysql.js",
+          "scopeFunc": "eggConnBlack1"
+        },
+        {
+          "path": "param",
+          "scopeFile": "/app/controller/VariableCover/variable_cover_3.js",
+          "scopeFunc": "echo"
+        },
+        {
+          "path": "advisorId",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf2.js",
+          "scopeFunc": "paramself"
+        },
+        {
+          "path": "instId",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf2.js",
+          "scopeFunc": "paramself"
+        },
+        {
+          "path": "sql",
+          "scopeFile": "/app/controller/mysql2Test.js",
+          "scopeFunc": "test1"
+        },
+        {
+          "path": "sql",
+          "scopeFile": "/app/controller/mysql2Test.js",
+          "scopeFunc": "test2"
+        },
+        {
+          "path": "userId",
+          "scopeFile": "/app/modules/foo/controller/FooController.ts",
+          "scopeFunc": "user"
+        },
+        {
+          "path": "fuzzyStr",
+          "scopeFile": "/app/controller/sqlEggMysql.js",
+          "scopeFunc": "eggMysqlWhite1"
+        },
+        {
+          "path": "aa",
+          "scopeFile": "/app/controller/ssrf_app_rpcAndGet_ts.ts",
+          "scopeFunc": "testSsrf"
+        },
+        {
+          "path": "fuzzyStr",
+          "scopeFile": "/app/controller/sqlEggMysql.js",
+          "scopeFunc": "eggMysqlBlack1"
+        },
+        {
+          "path": "param",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf.js",
+          "scopeFunc": "echo5"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/Level_test/level_test_2.ts",
+          "scopeFunc": "count_day"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/cmd_mgw_ts.ts",
+          "scopeFunc": "eval_mgw"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/Level_test/LevelParamSelf4.js",
+          "scopeFunc": "lps4"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/Level_test/Level_test.ts",
+          "scopeFunc": "hasHistRepayRecord"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/Level_test/level_test_4.ts",
+          "scopeFunc": "rpc_level_test_4"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/mgw.ts",
+          "scopeFunc": "hello"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/sql_mgw_ts.ts",
+          "scopeFunc": "sql_mgw"
+        },
+        {
+          "path": "aa",
+          "scopeFile": "/app/controller/ssrf_app_rpcAndGet_ts.ts",
+          "scopeFunc": "testSsrf"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/user.ts",
+          "scopeFunc": "hello"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/user.ts",
+          "scopeFunc": "oneshot"
+        },
+        {
+          "path": "params",
+          "scopeFile": "/app/controller/VariableCover/variable_cover_2.js",
+          "scopeFunc": "hhhh"
+        },
+        {
+          "path": "test_a",
+          "scopeFile": "/app/rpc/ssrf_twa_js.js",
+          "scopeFunc": "ssrf_twa"
+        }
+      ]
+    },
+    "entrypoints": [
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/File.js",
+        "functionName": "upload2SftpWhite"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/sqlEggMysql.js",
+        "functionName": "eggConnWhite2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/user.ts",
+        "functionName": "sayHello"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/VariableCover/anti_variable_cover_4.js",
+        "functionName": "echo4"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/sqlEggMysql.js",
+        "functionName": "eggConnWhite1"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/oneapi.ts",
+        "functionName": "echo"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/vm2Test.js",
+        "functionName": "testVm21"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/VariableCover/variable_cover_1.js",
+        "functionName": "query"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/execHttp.js",
+        "functionName": "execHttpTest"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/LevelParamSelf3.js",
+        "functionName": "paramself3"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/sqlEggMysql.js",
+        "functionName": "eggConnBlack1"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/VariableCover/variable_cover_3.js",
+        "functionName": "echo"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrfHttp.ts",
+        "functionName": "testhttp3"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/LevelParamSelf2.js",
+        "functionName": "paramself"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrfHttpTwo.js",
+        "functionName": "testAppSsrf2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrfHttp.ts",
+        "functionName": "ssrfHttpTest"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/mysql2Test.js",
+        "functionName": "test1"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/mysql2Test.js",
+        "functionName": "test2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/modules/foo/controller/FooController.ts",
+        "functionName": "user"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrfHttpTwo.js",
+        "functionName": "testSsrf2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/level_test_3.ts",
+        "functionName": "queryAdvisorRankListFacade"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/sqlEggMysql.js",
+        "functionName": "eggMysqlWhite1"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrf_app_rpcAndGet_ts.ts",
+        "functionName": "testSsrf"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/sqlEggMysql.js",
+        "functionName": "eggMysqlBlack1"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/File.js",
+        "functionName": "upload2SftpBlack2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/module_deserialize_directly_call.js",
+        "functionName": "moduleDeserializeTest"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/LevelParamSelf.js",
+        "functionName": "echo5"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/vm2Test.js",
+        "functionName": "testVm2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/File.js",
+        "functionName": "upload2SftpWhite2"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/level_test_2.ts",
+        "functionName": "getAdvisorReservoirManagementInfo"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/Level_test/level_test_2.ts",
+        "functionName": "count_day"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/ssrfHttp.ts",
+        "functionName": "testhttp"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/File.js",
+        "functionName": "upload2SftpBlack"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/cmd_app_rpc_ts.ts",
+        "functionName": "cmd_controller"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/cmd_mgw_ts.ts",
+        "functionName": "eval_mgw"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/Level_test/LevelParamSelf4.js",
+        "functionName": "lps4"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/Level_test/Level_test.ts",
+        "functionName": "hasHistRepayRecord"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/Level_test/level_test_4.ts",
+        "functionName": "rpc_level_test_4"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/mgw.ts",
+        "functionName": "hello"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/module_deserialize_mrpc_directly_call.js",
+        "functionName": "moduleDeserializeMrpcTest"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/sqli_app_rpc_ts.ts",
+        "functionName": "sqli_controller"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/sql_mgw_ts.ts",
+        "functionName": "sql_mgw"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/ssrf_app_rpcAndGet_ts.ts",
+        "functionName": "testSsrf"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/ssrf_mgw_ts.ts",
+        "functionName": "ssrf_mgw"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/user.ts",
+        "functionName": "hello"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/user.ts",
+        "functionName": "oneshot"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/controller/VariableCover/variable_cover_2.js",
+        "functionName": "hhhh"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/cmd_twa_js.js",
+        "functionName": "eval01_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/cmd_twa_js.js",
+        "functionName": "eval02_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/cmd_twa_js.js",
+        "functionName": "eval_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/sql_twa_js.js",
+        "functionName": "sql_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/ssrf_twa_js.js",
+        "functionName": "getProxy01_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/ssrf_twa_js.js",
+        "functionName": "getProxy02_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "/app/rpc/ssrf_twa_js.js",
+        "functionName": "ssrf_twa"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "2024112815044225016196532/huajiang/sign.js",
+        "functionName": "access"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "2024112815044225016196532/huajiang/sign.js",
+        "functionName": "templateContract"
+      },
+      {
+        "attribute": "MRPC",
+        "filePath": "2024112815044225016196532/huajiang/sign.js",
+        "functionName": "upgrade"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/app/controller/iteratorNextTest.js",
+        "functionName": "testNext"
+      }
+    ],
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.oneapi.chairmosn.EchoFacade.echo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.oneapi.chairmosn.EchoFacade.echo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.oneapi.chairmosn.EchoFacade.echo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "rpcProxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.AdvisorRankListFacade.queryAdvisorRankList.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.AdvisorRankListFacade.queryAdvisorRankList.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.proxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.rpcProxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "rpcProxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "proxy.AdvisorRankListFacade.queryAdvisorRankList"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.rpcProxy.certificateSendOrderQueryFacade.countAvailableNum.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.rpcProxy.certificateSendOrderQueryFacade.countAvailableNum.override"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.proxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.rpcProxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "rpcProxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "proxy.certificateSendOrderQueryFacade.countAvailableNum"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "ctx.oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.ctx.oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "this.oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsModuleDeserialize",
+          "fsig": "node-serialize.unserialize"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsFileOperator",
+          "fsig": "ssh2-sftp-client.get"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsFileOperator",
+          "fsig": "fs.readFileSync"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsFileOperator",
+          "fsig": "rimraf"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "NodejsFileOperator",
+          "fsig": "ssh2-sftp-client.put"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "vm.runInNewContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "vm.runInContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "vm.runInThisContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "node:vm.runInNewContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "node:vm.runInContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "node:vm.runInThisContext"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "child_process.exec"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "child_process.spawn"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "eval"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "exec"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "execSync"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "this.ctx.curl"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "this.app.curl"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "ctx.curl"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "app.curl"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "axios"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "axios.get"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSSRF",
+          "fsig": "axios.post"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsVm2Run",
+          "fsig": "vm2.VM.run"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsVm2Run",
+          "fsig": "node:vm2.VM.run"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsVm2Run",
+          "fsig": "@alipay/egg-slark.default.generate"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsVm2Run",
+          "fsig": "@alipay/egg-slark.generate"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "mysql2.createConnection.query"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "connection.query"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "mysql2.createConnection.query"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "conn.query"
+        },
+        {
+          "fsig": "dom-iterator.next",
+          "args": [
+            0
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "this.ctx.app.mysql.query"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "ctx.app.mysql.query"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsSqlInjection",
+          "fsig": "this.app.mysql.query"
+        }
+      ]
+    }
+  }
+]

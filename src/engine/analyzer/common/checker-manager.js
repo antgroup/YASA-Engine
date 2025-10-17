@@ -20,11 +20,9 @@ class CheckerManager {
    * @param resultManager
    */
   constructor(_options, checkerIds, checkerPackIds, printers, Rules, resultManager) {
-    // super()
     this.options = _options
     this.checkerIds = checkerIds
     this.checkerPackIds = checkerPackIds
-    this.sec_stat = {} // for security statistics
     this.Rules = Rules
 
     // checkpoint of checker will be registered here
@@ -63,12 +61,14 @@ class CheckerManager {
 
       const targetCheckerIds = []
       const targetCheckerPaths = []
+      const targetCheckerDescs = []
       const loadCheckerNames = []
       const checkerConfigMap = this.loadCheckerConfigAsMap()
       if (this.checkerIds) {
         for (const checkerId of this.checkerIds) {
           if (checkerConfigMap.has(checkerId) && !targetCheckerIds.includes(checkerId)) {
             targetCheckerIds.push(checkerId)
+            targetCheckerDescs.push(checkerConfigMap.get(checkerId).description)
             targetCheckerPaths.push(checkerConfigMap.get(checkerId).checkerPath)
           }
         }
@@ -80,15 +80,18 @@ class CheckerManager {
             for (const checkerId of checkerPackConfigMap.get(checkerPackId).checkerIds) {
               if (checkerConfigMap.has(checkerId) && !targetCheckerIds.includes(checkerId)) {
                 targetCheckerIds.push(checkerId)
+                targetCheckerDescs.push(checkerConfigMap.get(checkerId).description)
                 targetCheckerPaths.push(checkerConfigMap.get(checkerId).checkerPath)
               }
             }
           }
         }
       }
-      for (let targetCheckerPath of targetCheckerPaths) {
+      for (let i = 0; i < targetCheckerPaths.length; i++) {
+        let targetCheckerPath = targetCheckerPaths[i]
         targetCheckerPath = getAbsolutePath(targetCheckerPath)
-        const checkerNames = this.registerAllCheckers(this, targetCheckerPath, this.resultManager)
+        const targetCheckerDesc = targetCheckerDescs[i]
+        const checkerNames = this.registerAllCheckers(this, targetCheckerPath, targetCheckerDesc, this.resultManager)
         if (checkerNames) {
           if (Array.isArray(checkerNames)) {
             loadCheckerNames.push(...checkerNames)
@@ -124,14 +127,14 @@ class CheckerManager {
     const start_time = new Date().getTime()
     const { check_at_start_analyze } = this.checkpoints
     for (const i in check_at_start_analyze) {
-      if (this.isCheckOn(check_at_start_analyze[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_start_analyze[i].getCheckerId())) {
         try {
           check_at_start_analyze[i].triggerAtStartOfAnalyze(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtStartOfAnalyze! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtStartOfAnalyze! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_start_analyze[i].getCheckerId()}.triggerAtStartOfAnalyze! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_start_analyze[i].getCheckerId()}.triggerAtStartOfAnalyze! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -154,14 +157,14 @@ class CheckerManager {
 
     const { check_at_end_analyze } = this.checkpoints
     for (const i in check_at_end_analyze) {
-      if (this.isCheckOn(check_at_end_analyze[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_end_analyze[i].getCheckerId())) {
         try {
           check_at_end_analyze[i].triggerAtEndOfAnalyze(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfAnalyze! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfAnalyze! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_end_analyze[i].getCheckerId()}.triggerAtEndOfAnalyze! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_end_analyze[i].getCheckerId()}.triggerAtEndOfAnalyze! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -185,14 +188,14 @@ class CheckerManager {
     const start_time = new Date().getTime()
     const { check_at_compile_unit } = this.checkpoints
     for (const i in check_at_compile_unit) {
-      if (this.isCheckOn(check_at_compile_unit[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_compile_unit[i].getCheckerId())) {
         try {
           interruptFlag |= check_at_compile_unit[i].triggerAtCompileUnit(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtCompileUnit! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtCompileUnit! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_compile_unit[i].getCheckerId()}.triggerAtCompileUnit! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_compile_unit[i].getCheckerId()}.triggerAtCompileUnit! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -215,14 +218,14 @@ class CheckerManager {
     const start_time = new Date().getTime()
     const { check_at_end_compileunit } = this.checkpoints
     for (const i in check_at_end_compileunit) {
-      if (this.isCheckOn(check_at_end_compileunit[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_end_compileunit[i].getCheckerId())) {
         try {
           check_at_end_compileunit[i].triggerAtEndOfCompileUnit(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfCompileUnit! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfCompileUnit! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_end_compileunit[i].getCheckerId()}.triggerAtEndOfCompileUnit! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_end_compileunit[i].getCheckerId()}.triggerAtEndOfCompileUnit! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -244,14 +247,14 @@ class CheckerManager {
     const start_time = new Date().getTime()
     const { check_at_binary_operation } = this.checkpoints
     for (const i in check_at_binary_operation) {
-      if (this.isCheckOn(check_at_binary_operation[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_binary_operation[i].getCheckerId())) {
         try {
           check_at_binary_operation[i].triggerAtBinaryOperation(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.checkAtBinaryOperation! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.checkAtBinaryOperation! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_binary_operation[i].getCheckerId()}.checkAtBinaryOperation! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_binary_operation[i].getCheckerId()}.checkAtBinaryOperation! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -274,14 +277,14 @@ class CheckerManager {
 
     const { check_at_pre_declaration } = this.checkpoints
     for (const i in check_at_pre_declaration) {
-      if (this.isCheckOn(check_at_pre_declaration[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_pre_declaration[i].getCheckerId())) {
         try {
           check_at_pre_declaration[i].triggerAtPreDeclaration(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtPreDeclaration! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtPreDeclaration! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_pre_declaration[i].getCheckerId()}.triggerAtPreDeclaration! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_pre_declaration[i].getCheckerId()}.triggerAtPreDeclaration! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -304,14 +307,14 @@ class CheckerManager {
 
     const { check_at_funccall_syntax } = this.checkpoints
     for (const i in check_at_funccall_syntax) {
-      if (this.isCheckOn(check_at_funccall_syntax[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_funccall_syntax[i].getCheckerId())) {
         try {
           check_at_funccall_syntax[i].triggerAtFuncCallSyntax(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFuncCallSyntax! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFuncCallSyntax! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_funccall_syntax[i].getCheckerId()}.triggerAtFuncCallSyntax! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_funccall_syntax[i].getCheckerId()}.triggerAtFuncCallSyntax! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -346,14 +349,14 @@ class CheckerManager {
 
     const { check_at_function_call_before } = this.checkpoints
     for (const i in check_at_function_call_before) {
-      if (this.isCheckOn(check_at_function_call_before[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_function_call_before[i].getCheckerId())) {
         try {
           check_at_function_call_before[i].triggerAtFunctionCallBefore(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionCallBefore! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionCallBefore! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_function_call_before[i].getCheckerId()}.triggerAtFunctionCallBefore! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_function_call_before[i].getCheckerId()}.triggerAtFunctionCallBefore! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -378,14 +381,14 @@ class CheckerManager {
 
     const { check_at_function_call_after } = this.checkpoints
     for (const i in check_at_function_call_after) {
-      if (this.isCheckOn(check_at_function_call_after[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_function_call_after[i].getCheckerId())) {
         try {
           check_at_function_call_after[i].triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionCallAfter! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionCallAfter! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_function_call_after[i].getCheckerId()}.triggerAtFunctionCallAfter! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_function_call_after[i].getCheckerId()}.triggerAtFunctionCallAfter! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -409,14 +412,14 @@ class CheckerManager {
 
     const check_new_expr = this.checkpoints.check_at_new_expr
     for (const i in check_new_expr) {
-      if (this.isCheckOn(check_new_expr[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_new_expr[i].getCheckerId())) {
         try {
           check_new_expr[i].triggerAtNewExpr(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewExpr! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewExpr! Stack detail has been logged in error log!`
+            `Error occured in:${check_new_expr[i].getCheckerId()}.triggerAtNewExpr! Stack detail has been logged in error log!`,
+            `Error occured in:${check_new_expr[i].getCheckerId()}.triggerAtNewExpr! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -439,14 +442,14 @@ class CheckerManager {
     const start_time = new Date().getTime()
     const { check_at_new_object } = this.checkpoints
     for (const i in check_at_new_object) {
-      if (this.isCheckOn(check_at_new_object[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_new_object[i].getCheckerId())) {
         try {
           check_at_new_object[i].triggerAtNewObject(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewObject! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewObject! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_new_object[i].getCheckerId()}.triggerAtNewObject! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_new_object[i].getCheckerId()}.triggerAtNewObject! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -469,14 +472,14 @@ class CheckerManager {
 
     const check_new_expr_after = this.checkpoints.check_at_new_expr_after
     for (const i in check_new_expr_after) {
-      if (this.isCheckOn(check_new_expr_after[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_new_expr_after[i].getCheckerId())) {
         try {
           check_new_expr_after[i].triggerAtNewExprAfter(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewExprAfter! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtNewExprAfter! Stack detail has been logged in error log!`
+            `Error occured in:${check_new_expr_after[i].getCheckerId()}.triggerAtNewExprAfter! Stack detail has been logged in error log!`,
+            `Error occured in:${check_new_expr_after[i].getCheckerId()}.triggerAtNewExprAfter! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -500,14 +503,14 @@ class CheckerManager {
 
     const { check_at_ifcondition } = this.checkpoints
     for (const i in check_at_ifcondition) {
-      if (this.isCheckOn(check_at_ifcondition[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_ifcondition[i].getCheckerId())) {
         try {
           check_at_ifcondition[i].triggerAtIfCondition(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtIfCondition! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtIfCondition! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_ifcondition[i].getCheckerId()}.triggerAtIfCondition! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_ifcondition[i].getCheckerId()}.triggerAtIfCondition! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -534,14 +537,14 @@ class CheckerManager {
 
     const { check_at_assignment } = this.checkpoints
     for (const i in check_at_assignment) {
-      if (this.isCheckOn(check_at_assignment[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_assignment[i].getCheckerId())) {
         try {
           check_at_assignment[i].triggerAtAssignment(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtAssignment! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtAssignment! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_assignment[i].getCheckerId()}.triggerAtAssignment! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_assignment[i].getCheckerId()}.triggerAtAssignment! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -566,14 +569,14 @@ class CheckerManager {
 
     const { check_at_end_block } = this.checkpoints
     for (const i in check_at_end_block) {
-      if (this.isCheckOn(check_at_end_block[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_end_block[i].getCheckerId())) {
         try {
           check_at_end_block[i].triggerAtEndOfBlock(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfBlock! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfBlock! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_end_block[i].getCheckerId()}.triggerAtEndOfBlock! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_end_block[i].getCheckerId()}.triggerAtEndOfBlock! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -597,14 +600,14 @@ class CheckerManager {
 
     const { check_at_identifier } = this.checkpoints
     for (const i in check_at_identifier) {
-      if (this.isCheckOn(check_at_identifier[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_identifier[i].getCheckerId())) {
         try {
           check_at_identifier[i].triggerAtIdentifier(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtIdentifier! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtIdentifier! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_identifier[i].getCheckerId()}.triggerAtIdentifier! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_identifier[i].getCheckerId()}.triggerAtIdentifier! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -628,14 +631,14 @@ class CheckerManager {
 
     const { check_at_member_access } = this.checkpoints
     for (const i in check_at_member_access) {
-      if (this.isCheckOn(check_at_member_access[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_member_access[i].getCheckerId())) {
         try {
           check_at_member_access[i].triggerAtMemberAccess(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtMemberAccess! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtMemberAccess! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_member_access[i].getCheckerId()}.triggerAtMemberAccess! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_member_access[i].getCheckerId()}.triggerAtMemberAccess! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -659,14 +662,14 @@ class CheckerManager {
 
     const { check_at_function_definition } = this.checkpoints
     for (const i in check_at_function_definition) {
-      if (this.isCheckOn(check_at_function_definition[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_function_definition[i].getCheckerId())) {
         try {
           check_at_function_definition[i].triggerAtFunctionDefinition(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionDefinition! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtFunctionDefinition! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_function_definition[i].getCheckerId()}.triggerAtFunctionDefinition! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_function_definition[i].getCheckerId()}.triggerAtFunctionDefinition! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -690,7 +693,7 @@ class CheckerManager {
 
     const { check_at_symbol_execute_of_entrypoint_before } = this.checkpoints
     for (const i in check_at_symbol_execute_of_entrypoint_before) {
-      if (this.isCheckOn(check_at_symbol_execute_of_entrypoint_before[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_symbol_execute_of_entrypoint_before[i].getCheckerId())) {
         try {
           check_at_symbol_execute_of_entrypoint_before[i].triggerAtSymbolInterpretOfEntryPointBefore(
             analyzer,
@@ -702,8 +705,8 @@ class CheckerManager {
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtSymbolInterpretOfEntryPointBefore! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtSymbolInterpretOfEntryPointBefore! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_symbol_execute_of_entrypoint_before[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointBefore! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_symbol_execute_of_entrypoint_before[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointBefore! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -727,7 +730,7 @@ class CheckerManager {
 
     const { check_at_symbol_execute_of_entrypoint_after } = this.checkpoints
     for (const i in check_at_symbol_execute_of_entrypoint_after) {
-      if (this.isCheckOn(check_at_symbol_execute_of_entrypoint_after[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_symbol_execute_of_entrypoint_after[i].getCheckerId())) {
         try {
           check_at_symbol_execute_of_entrypoint_after[i].triggerAtSymbolInterpretOfEntryPointAfter(
             analyzer,
@@ -739,8 +742,8 @@ class CheckerManager {
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtSymbolInterpretOfEntryPointAfter! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtSymbolInterpretOfEntryPointAfter! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_symbol_execute_of_entrypoint_after[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointAfter! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_symbol_execute_of_entrypoint_after[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointAfter! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -763,14 +766,14 @@ class CheckerManager {
 
     const { check_at_variable_declaration } = this.checkpoints
     for (const i in check_at_variable_declaration) {
-      if (this.isCheckOn(check_at_variable_declaration[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_variable_declaration[i].getCheckerId())) {
         try {
           check_at_variable_declaration[i].triggerAtVariableDeclaration(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtVariableDeclaration! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtVariableDeclaration! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_variable_declaration[i].getCheckerId()}.triggerAtVariableDeclaration! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_variable_declaration[i].getCheckerId()}.triggerAtVariableDeclaration! Stack detail has been logged in error log!`
           )
         }
       }
@@ -793,14 +796,14 @@ class CheckerManager {
 
     const { check_at_end_of_node } = this.checkpoints
     for (const i in check_at_end_of_node) {
-      if (this.isCheckOn(check_at_end_of_node[i].__proto__.constructor.GetCheckerId())) {
+      if (this.isCheckOn(check_at_end_of_node[i].getCheckerId())) {
         try {
           check_at_end_of_node[i].triggerAtEndOfNode(analyzer, scope, node, state, info)
         } catch (e) {
           handleException(
             e,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfNode! Stack detail has been logged in error log!`,
-            `Error occured in:${check_at_start_analyze[i].__proto__.constructor.GetCheckerId()}.triggerAtEndOfNode! Stack detail has been logged in error log!`
+            `Error occured in:${check_at_end_of_node[i].getCheckerId()}.triggerAtEndOfNode! Stack detail has been logged in error log!`,
+            `Error occured in:${check_at_end_of_node[i].getCheckerId()}.triggerAtEndOfNode! Stack detail has been logged in error log!`
           )
         }
         stat.numChecks++
@@ -824,23 +827,24 @@ class CheckerManager {
    *
    * @param CheckerClass
    * @param self
+   * @param desc
    * @param resultManager
    */
-  doRegister(CheckerClass, self, resultManager) {
-    const getCheckerId = CheckerClass.GetCheckerId
-    const checkerId = getCheckerId ? getCheckerId() : undefined
+  doRegister(CheckerClass, self, resultManager, desc) {
+    const checker = new CheckerClass(resultManager)
+    checker.desc = desc
+    const checkerId = checker.getCheckerId()
     if (!checkerId) {
+      logger.warn(`Checker-- ${checker.constructor.name} does not set checkerId. Ignore!!`)
       return
     }
+    const checkerName = checker.getCheckerId()
 
-    const checker = new CheckerClass(resultManager)
-    const checkername = CheckerClass.GetCheckerId()
-
-    if (self.registered_checkers.hasOwnProperty(checkername)) {
-      logger.warn(`${checkername} is already registered, new one will override the previous`)
+    if (self.registered_checkers.hasOwnProperty(checkerName)) {
+      logger.warn(`${checkerName} is already registered, new one will override the previous`)
     }
-    // logger.info(checkername);
-    self.registered_checkers[checkername] = checker
+    // logger.info(checkerName);
+    self.registered_checkers[checkerName] = checker
 
     if (CheckerClass.prototype.triggerAtStartOfAnalyze) {
       self.checkpoints.check_at_start_analyze.push(checker)
@@ -932,16 +936,17 @@ class CheckerManager {
 
     //  add all checkpoints
 
-    return checkername
+    return checkerName
   }
 
   /**
    * Register all the checkers within the "filename" directory
    * @param self
    * @param filename
+   * @param desc
    * @param resultManager
    */
-  registerAllCheckers(self, filename, resultManager) {
+  registerAllCheckers(self, filename, desc, resultManager) {
     let fileStat
     try {
       fileStat = fs.lstatSync(filename)
@@ -956,7 +961,7 @@ class CheckerManager {
     if (!fileStat) return
 
     const CheckerClass = require(filename)
-    const checker = this.doRegister(CheckerClass, self, resultManager)
+    const checker = this.doRegister(CheckerClass, self, resultManager, desc)
     if (!filename.endsWith('.js') || !checker) return
     return [checker]
   }

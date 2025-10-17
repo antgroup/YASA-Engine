@@ -12,12 +12,13 @@
       "urfave-cli-builtIn",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "golang污点追踪-对外默认使用规则包"
   },
   {
     "checkerPackId": "taint-flow-golang-inner",
     "checkerIds": [
-      "taint_flow_go_input_for_gin",
+      "taint_flow_gin_input_inner",
       "cobra.Command-builtIn",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
@@ -26,7 +27,18 @@
       "urfave-cli-builtIn",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "golang污点追踪-蚂蚁内部使用的规则包"
+
+  },
+  {
+    "checkerPackId": "taint-flow-java-inner",
+    "checkerIds": [
+      "taint_flow_sofa_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "java污点追踪-蚂蚁内部使用的规则包"
   },
   {
     "checkerPackId": "taint-flow-javascript-default",
@@ -35,7 +47,8 @@
       "taint_flow_egg_input",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "js污点追踪-对外默认使用的规则包"
   },
   {
     "checkerPackId": "taint-flow-javascript-inner",
@@ -43,22 +56,25 @@
       "taint_flow_egg_input",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "js污点追踪-蚂蚁内部使用的规则包"
   },
   {
     "checkerPackId": "taint-flow-python-default",
     "checkerIds": [
-      "default_taint_flow_python_input",
+      "taint_flow_python_input",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "python污点追踪-对外默认使用的规则包"
   },
   {
     "checkerPackId": "taint-flow-python-inner",
     "checkerIds": [
-      "taint_flow_python_input",
+      "taint_flow_python_input_inner",
       "callgraph",
       "sanitizer"
-    ]
+    ],
+    "description": "python污点追踪-蚂蚁内部使用的规则包"
   }
 ]
