@@ -7,26 +7,26 @@ const IntroduceTaint = require('../common-kit/source-util')
 const ginEntryPoint = require('../../../engine/analyzer/golang/gin/entrypoint-collector/gin-default-entrypoint')
 const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
 const constValue = require('../../../util/constant')
-const { completeEntryPoint, entryPointsUpToUser } = require('./entry-points-util')
+const { completeEntryPoint } = require('./entry-points-util')
 const AstUtil = require('../../../util/ast-util')
 const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
 const config = require('../../../config')
-const logger = require('../../../util/logger')(__filename)
 const TaintChecker = require('../taint-checker')
 const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
+const logger = require('../../../util/logger')(__filename)
 
 const TAINT_TAG_NAME = 'GO_INPUT'
 
 /**
  * Gin taint_flow checker
  */
-class GinDefaultTaintChecker extends TaintChecker {
+class GinTaintChecker extends TaintChecker {
   /**
    * constructor
    * @param resultManager
    */
   constructor(resultManager) {
-    super(resultManager, 'taint_flow_gin_input')
+    super(resultManager, 'taint_flow_gin_input_inner')
   }
 
   /**
@@ -74,62 +74,58 @@ class GinDefaultTaintChecker extends TaintChecker {
       FuncCallReturnValueTaintSource: FuncCallReturnValueTaintSourceRules,
     } = ruleConfigSources
 
-    if (config.entryPointMode !== 'SELF_COLLECT') {
-      // 添加rule_config中的route入口
-      if (!_.isEmpty(ruleConfigEntryPoints)) {
-        for (const entrypoint of ruleConfigEntryPoints) {
-          let entryPointSymVal
-          if (entrypoint.funcReceiverType) {
-            entryPointSymVal = AstUtil.satisfy(
-              topScope.packageManager,
-              (n) =>
-                n.vtype === 'fclos' &&
-                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
-                n?.parent?.ast?.type === 'ClassDefinition' &&
-                n?.parent?.ast?.id?.name === entrypoint.funcReceiverType &&
-                n?.ast?.id.name === entrypoint.functionName,
-              (node, prop) => prop === 'field',
-              null,
-              false
-            )
-          } else {
-            entryPointSymVal = AstUtil.satisfy(
-              topScope.packageManager,
-              (n) =>
-                n.vtype === 'fclos' &&
-                fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
-                n?.ast?.id.name === entrypoint.functionName,
-              (node, prop) => prop === 'field',
-              null,
-              false
-            )
-          }
-          if (_.isEmpty(entryPointSymVal)) {
-            continue
-          }
-          if (Array.isArray(entryPointSymVal)) {
-            entryPointSymVal = _.uniqBy(entryPointSymVal, (value) => value.fdef)
-          } else {
-            entryPointSymVal = [entryPointSymVal]
-          }
-
-          const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
-          entryPoint.scopeVal = entryPointSymVal[0].parent
-          entryPoint.argValues = []
-          entryPoint.functionName = entrypoint.functionName
-          entryPoint.filePath = entrypoint.filePath
-          entryPoint.attribute = entrypoint.attribute
-          entryPoint.packageName = entrypoint.packageName
-          entryPoint.entryPointSymVal = entryPointSymVal[0]
-          analyzer.ruleEntrypoints.push(entryPoint)
+    // 添加rule_config中的route入口
+    if (!_.isEmpty(ruleConfigEntryPoints) && config.entryPointMode !== 'SELF_COLLECT') {
+      for (const entrypoint of ruleConfigEntryPoints) {
+        let entryPointSymVal
+        if (entrypoint.funcReceiverType) {
+          entryPointSymVal = AstUtil.satisfy(
+            topScope.packageManager,
+            (n) =>
+              n.vtype === 'fclos' &&
+              fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
+              n?.parent?.ast?.type === 'ClassDefinition' &&
+              n?.parent?.ast?.id?.name === entrypoint.funcReceiverType &&
+              n?.ast?.id.name === entrypoint.functionName,
+            (node, prop) => prop === 'field',
+            null,
+            false
+          )
+        } else {
+          entryPointSymVal = AstUtil.satisfy(
+            topScope.packageManager,
+            (n) =>
+              n.vtype === 'fclos' &&
+              fileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, config.maindirPrefix) === entrypoint.filePath &&
+              n?.ast?.id.name === entrypoint.functionName,
+            (node, prop) => prop === 'field',
+            null,
+            false
+          )
         }
+        if (_.isEmpty(entryPointSymVal)) {
+          continue
+        }
+        if (Array.isArray(entryPointSymVal)) {
+          entryPointSymVal = _.uniqBy(entryPointSymVal, (value) => value.fdef)
+        } else {
+          entryPointSymVal = [entryPointSymVal]
+        }
+
+        const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
+        entryPoint.scopeVal = entryPointSymVal[0].parent
+        entryPoint.argValues = []
+        entryPoint.functionName = entrypoint.functionName
+        entryPoint.filePath = entrypoint.filePath
+        entryPoint.attribute = entrypoint.attribute
+        entryPoint.packageName = entrypoint.packageName
+        entryPoint.entryPointSymVal = entryPointSymVal[0]
+        analyzer.ruleEntrypoints.push(entryPoint)
       }
     }
-    if (config.entryPointMode !== 'ONLY_CUSTOM') {
-      const ginDefaultEntrypoint = ginEntryPoint.getGinDefaultEntrypoint(topScope.packageManager)
-      analyzer.ruleEntrypoints.push(...ginDefaultEntrypoint)
 
-      // 添加source
+    // 添加source
+    if (config.entryPointMode !== 'ONLY_CUSTOM') {
       const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
         ginEntryPoint.getGinEntryPointAndSource(topScope.packageManager)
 
@@ -141,7 +137,7 @@ class GinDefaultTaintChecker extends TaintChecker {
         _.isEmpty(FuncCallArgTaintSourceRules) &&
         _.isEmpty(FuncCallReturnValueTaintSourceRules)
       ) {
-        logger.info('[gin-default-taint-checker]TaintSource are not found')
+        logger.info('[gin-taint-checker]TaintSource are not found')
         return
       }
 
@@ -250,6 +246,7 @@ class GinDefaultTaintChecker extends TaintChecker {
   triggerAtFunctionCallAfter(analyzer, scope, node, state, info) {
     const { fclos, ret } = info
     const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
+
     IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
   }
 
@@ -281,6 +278,7 @@ class GinDefaultTaintChecker extends TaintChecker {
     if (!rules || !argvalues) return
     let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope)
     rule = rule.length > 0 ? rule[0] : null
+
     if (rule) {
       const args = Rules.prepareArgs(argvalues, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
@@ -320,4 +318,4 @@ class GinDefaultTaintChecker extends TaintChecker {
   }
 }
 
-module.exports = GinDefaultTaintChecker
+module.exports = GinTaintChecker
