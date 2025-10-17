@@ -594,7 +594,7 @@ let sourcefile
  * @param options
  */
 function parse(code, options) {
-  return uastParser.parse(code)
+  return uastParser.parse(code, options)
 }
 
 module.exports = {

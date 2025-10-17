@@ -48,7 +48,7 @@ function findMcpEntryPointAndSource(filenameAstObj, dir) {
               const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
               entryPoint.filePath = shortFileName
               entryPoint.functionName = funcName
-              entryPoint.attribute = 'HTTP'
+              entryPoint.attribute = 'MCPTool'
               mcpEntryPointArray.push(entryPoint)
 
               if (entryPointAndSourceAtSameTime) {

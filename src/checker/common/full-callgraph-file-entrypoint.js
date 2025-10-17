@@ -7,6 +7,7 @@ const callGraphRule = require('../callgraph/callgraph-checker')
 const options = require('../../config')
 const { Graph } = require('../../util/graph')
 const logger = require('../../util/logger')(__filename)
+const sourceLine = require('../../engine/analyzer/common/source-line')
 
 /**
  * generate full callGraph by funcSymbolTable
@@ -73,6 +74,7 @@ function makeFullCallGraph(analyzer) {
   analyzer.checkerManager = backupCheckerManager
   config.makeAllCG = false
 }
+
 /**
  * 从CallGraph中拿取边界作为全func类型的Entrypoint
  * @param callGraph
@@ -139,7 +141,7 @@ function getAllFileEntryPointsUsingFileManager(fileManager) {
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = file?.ast?.sourcefile || file?.ast?.loc?.sourcefile
+        entryPoint.filePath = file?.ast?.loc?.sourcefile
         entryPoint.attribute = 'fullfileManagerMade'
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -148,6 +150,63 @@ function getAllFileEntryPointsUsingFileManager(fileManager) {
     }
   }
   return entryPoints
+}
+
+/**
+ * 当函数内存在关键词时，推导函数对应的callGraph边界当Entrypoint（函数类型），不在函数内，就拿相应文件当Entrypoint（文件类型）
+ * @param keywords need an array
+ * @param callGraph
+ * @param fileManager
+ */
+function getEntryPointsUsingCallGraphByKeyWords(keywords, callGraph, fileManager) {
+  const newEntryPointList = []
+  if (!callGraph || !keywords || !Array.isArray(keywords)) {
+    return newEntryPointList
+  }
+
+  for (const keyword of keywords) {
+    const alreadyCalculate = []
+    const nodes = getNodeInCallGraphByKeyword(keyword, callGraph.nodes)
+    for (const node of nodes) {
+      // const node = getNodeInCallGraphByKeyword(keyword, callGraph.nodes)
+      if (node) {
+        const fclosNodes = getFclosEntryPointsUsingCallGraphByTargetNode(node.id, callGraph, alreadyCalculate)
+        if (fclosNodes && Array.isArray(fclosNodes) && fclosNodes.length > 0) {
+          for (const f of fclosNodes) {
+            const entry = f.opts.funcSymbol
+            const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
+            entryPoint.scopeVal = entry.parent
+            entryPoint.argValues = []
+            entryPoint.functionName = entry.fdef?.id?.name
+            entryPoint.filePath = entry.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
+              ? entry.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
+              : entry.fdef?.loc?.sourcefile
+            entryPoint.attribute = 'FuncEntryPointByLoc'
+            entryPoint.packageName = undefined
+            entryPoint.entryPointSymVal = entry
+            newEntryPointList.push(entryPoint)
+          }
+        }
+      }
+    }
+
+    for (const file of Object.values(fileManager)) {
+      // const file = fileManager[loc.sourcefile]
+      const content = sourceLine.getCodeBySourceFile(file?.ast?.loc?.sourcefile)
+      if (file && content.includes(keyword)) {
+        const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
+        entryPoint.scopeVal = file
+        entryPoint.argValues = undefined
+        entryPoint.functionName = undefined
+        entryPoint.filePath = file?.ast?.sourcefile || file?.ast?.loc?.sourcefile
+        entryPoint.attribute = 'FileEntryPointByLoc'
+        entryPoint.packageName = undefined
+        entryPoint.entryPointSymVal = file
+        newEntryPointList.push(entryPoint)
+      }
+    }
+  }
+  return newEntryPointList
 }
 
 /**
@@ -296,10 +355,35 @@ function getNodeInCallGraphByLoc(loc, nodes) {
   return null
 }
 
+/**
+ * 判断函数中是否包含关键字
+ * @param keyword
+ * @param nodes
+ */
+function getNodeInCallGraphByKeyword(keyword, nodes) {
+  const result = []
+  if (keyword === '') {
+    return result
+  }
+  for (const key of nodes.keys()) {
+    if (key.includes('\\n[')) {
+      const funcDef = nodes.get(key)?.opts?.funcDef
+      if (funcDef) {
+        const content = sourceLine.getCodeByLocation(funcDef?.loc)
+        if (content.includes(keyword)) {
+          result.push(nodes.get(key))
+        }
+      }
+    }
+  }
+  return result
+}
+
 module.exports = {
   makeFullCallGraph,
   getAllEntryPointsUsingCallGraph,
   getAllFileEntryPointsUsingFileManager,
   getEntryPointsUsingCallGraphByLoc,
   getFclosEntryPointsUsingCallGraphByTargetNode,
+  getEntryPointsUsingCallGraphByKeyWords,
 }

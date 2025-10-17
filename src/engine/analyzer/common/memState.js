@@ -340,13 +340,21 @@ function unionPrimitiveValues(v1, v2) {
           }
       }
     } else if (!res.includes(v2)) res.push(v2)
-    return { vtype: v1.vtype, value: res }
+    if (v1.vtype === 'union') {
+      return UnionValue({ value: res })
+    } else {
+      return { vtype: v1.vtype, value: res }
+    }
   }
   if (v2.vtype && Array.isArray(val2)) {
     const res = val2.slice()
     if (!res.includes(v1)) res.push(v1)
     if (res.length >= options.unionValueLimit) return v2
-    return { vtype: v2.vtype, value: res }
+    if (v2.vtype === 'union') {
+      return UnionValue({ value: res })
+    } else {
+      return { vtype: v2.vtype, value: res }
+    }
   }
   return UnionValue({ value: [v1, v2] })
 }
@@ -362,4 +370,5 @@ module.exports = {
   writeValue,
   unionValues,
   forkStates,
+  unionScopeValues,
 }

@@ -46,14 +46,14 @@ class TaintOutputStrategy extends OutputStrategy {
       const taintFindings = allFindings[TaintOutputStrategy.outputStrategyId]
       let callgraphFindings
       if (taintFindings) {
+        TaintFindingUtil.outputCheckerResultToConsole(taintFindings, printf)
         callgraphFindings = allFindings[CallgraphOutputStrategy.outputStrategyId]
         const results = this.getTaintFlowAsSarif(taintFindings, callgraphFindings)
         reportFilePath = pathMod.join(Config.reportDir, outputFilePath)
         FileUtil.writeJSONfile(reportFilePath, results)
+        // for taint flow checker, output result to console at the same time
+        logger.info(`report is write to ${reportFilePath}`)
       }
-      // for taint flow checker, output result to console at the same time
-      TaintFindingUtil.outputCheckerResultToConsole(taintFindings, printf)
-      logger.info(`report is write to ${reportFilePath}`)
     }
   }
 
@@ -71,7 +71,8 @@ class TaintOutputStrategy extends OutputStrategy {
           issue.line === finding.line &&
           issue.node === finding.node &&
           issue.issuecause === finding.issuecause &&
-          issue.entry_fclos === finding.entry_fclos
+          issue.entry_fclos === finding.entry_fclos &&
+          issue.entrypoint.attribute === finding.entrypoint.attribute
         ) {
           if (issue.argNode && finding.argNode) {
             if (_.isEqual(issue.argNode.trace, finding.argNode.trace)) {

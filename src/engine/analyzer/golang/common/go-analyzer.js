@@ -77,6 +77,7 @@ class GoAnalyzer extends Analyzer {
   async scanPackages(dir, state, defaultScope) {
     this.scanModules(dir)
     this.moduleManager = await gomodParser.parsePackage(dir, this.options)
+    this.makeGoFileManager(this.moduleManager)
     const { packageInfo, moduleName } = this.moduleManager
     if (Object.entries(packageInfo.files).length === 0 && Object.entries(packageInfo.subs).length === 0) {
       return
@@ -99,6 +100,56 @@ class GoAnalyzer extends Analyzer {
     this.moduleManager.rootDir = rootDir
     this.moduleManager.rootDirName = dirName
     this._scanPackages(modulePackageManager, dirName, rootDir, state)
+  }
+
+  /**
+   * make go filemanager
+   * @param goUast
+   */
+  makeGoFileManager(goUast) {
+    if (!goUast || typeof goUast !== 'object') {
+      return
+    }
+
+    /**
+     * 深度优先搜索对象
+     * @param obj
+     * @param fileManager
+     * @param parentPath
+     */
+    function deepSearch(obj, fileManager, parentPath = '') {
+      if (!obj || typeof obj !== 'object') {
+        return
+      }
+
+      // 处理数组
+      if (Array.isArray(obj)) {
+        obj.forEach((item, index) => {
+          deepSearch(item, fileManager, `${parentPath}[${index}]`)
+        })
+        return
+      }
+
+      // 处理对象的每个键值对
+      for (const [key, value] of Object.entries(obj)) {
+        const currentPath = parentPath ? `${parentPath}.${key}` : key
+
+        // 检查key是否以.go结尾
+        if (typeof key === 'string' && key.endsWith('.go') && value && typeof value === 'object') {
+          // 在value中查找包含'node'且node.type为'CompileUnit'的节点
+          if (value.node && typeof value.node === 'object' && value.node.type === 'CompileUnit') {
+            fileManager[key] = { ast: value.node }
+            break
+          }
+        }
+
+        // 递归搜索子对象
+        deepSearch(value, fileManager, currentPath)
+      }
+    }
+
+    // 开始深度搜索
+    deepSearch(goUast, this.fileManager)
   }
 
   /**
@@ -437,6 +488,10 @@ class GoAnalyzer extends Analyzer {
       initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', id.name)
     } else {
       initVal = this.processInstruction(scope, initialNode, state)
+      if (node.cloned && !initVal?.refCount) {
+        initVal = cloneWithDepth(initVal)
+        initVal.value = cloneWithDepth(initVal.value)
+      }
       if (initVal?.rtype && initVal.rtype !== 'DynamicType') {
         const cscope = this.processInstruction(scope, initVal.rtype, state)
         if (cscope?.vtype === 'class' && initVal.vtype !== 'primitive') {
@@ -936,14 +991,14 @@ class GoAnalyzer extends Analyzer {
       if (
         (isFromRule || entryPoint.functionName === 'main') &&
         hasAnalysised.includes(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}`
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
         )
       ) {
         continue
       }
 
       hasAnalysised.push(
-        `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}`
+        `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
       )
 
       logger.info(
@@ -954,6 +1009,9 @@ class GoAnalyzer extends Analyzer {
             entryPoint.entryPointSymVal?.ast.loc.end.line
           }>`
       )
+
+      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+
       const argValues = []
 
       for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
@@ -965,7 +1023,7 @@ class GoAnalyzer extends Analyzer {
           )
         )
       }
-      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+
       try {
         this.executeCall(
           entryPoint.entryPointSymVal?.ast,

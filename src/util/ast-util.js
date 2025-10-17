@@ -4,6 +4,7 @@ const UastSpec = require('@ant-yasa/uast-spec')
 const config = require('../config')
 const varUtil = require('./variable-util')
 const BasicRuleHandler = require('../checker/common/rules-basic-handler')
+const { md5 } = require('./hash-util')
 
 const defaultFilter = (nd, prop, from) => {
   /**
@@ -15,7 +16,10 @@ const defaultFilter = (nd, prop, from) => {
       return false
     }
     if (
-      (obj.type === 'CallExpression' || obj.type === 'BinaryExpression' || obj._tags !== undefined) &&
+      (obj.type === 'CallExpression' ||
+        obj.type === 'BinaryExpression' ||
+        obj._tags !== undefined ||
+        obj.vtype === 'object') &&
       obj._has_tags
     ) {
       return true
@@ -48,8 +52,6 @@ const defaultFilter = (nd, prop, from) => {
 
 /**
  * slightly adjust the AST nodes, and add parent pointers
- * @param node
- * @param parent
  * @param sourceunit
  */
 function adjustASTNode(sourceunit) {
@@ -101,6 +103,71 @@ function annotateAST(node, options) {
     if (options.sourcefile) sourcefile = options.sourcefile
   }
   adjustASTNode(node)
+}
+
+/**
+ * 给uast分配hash
+ * @param obj
+ */
+function addNodeHash(obj) {
+  if (!obj) return
+  if (Array.isArray(obj)) {
+    obj.forEach((o) => {
+      addNodeHash(o)
+    })
+  }
+  if (typeof obj !== 'object' || Array.isArray(obj)) return
+  if (obj.type) {
+    const { getCodeByLocation } = require('../engine/analyzer/common/source-line')
+    let content = getCodeByLocation(obj.loc)
+    if (content === '') {
+      content = prettyPrint(obj)
+    }
+    const relateFilePath = obj.loc?.sourcefile?.startsWith(config.maindirPrefix)
+      ? obj.loc?.sourcefile?.substring(config.maindirPrefix.length)
+      : obj.loc?.sourcefile
+    if (!obj._meta) obj._meta = {}
+    obj._meta.nodehash = md5(
+      `${content}_${obj.loc?.start?.line}_${obj.loc?.start?.column}_${obj.loc?.end?.line}_${
+        obj.loc?.end?.column
+      }_${relateFilePath}_${obj.type}_${obj.parent?._meta?.nodehash}`
+    )
+  }
+  for (const key in obj) {
+    if (key === 'parent') continue
+    if (obj.hasOwnProperty(key)) {
+      const subObj = obj[key]
+      addNodeHash(subObj)
+    }
+  }
+}
+
+/**
+ *
+ * @param obj
+ */
+function deleteParent(obj) {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj
+  }
+
+  // 处理数组
+  if (Array.isArray(obj)) {
+    obj.forEach((item) => deleteParent(item))
+    return obj
+  }
+
+  // 处理普通对象
+  if ('parent' in obj) {
+    delete obj.parent
+  }
+
+  // 递归处理所有属性
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object' && obj[key] !== null) {
+      deleteParent(obj[key])
+    }
+  }
 }
 
 /**
@@ -489,6 +556,9 @@ function prettyPrint(node) {
     case 'CallExpression': {
       return `${prettyPrint(node.callee)}(${prettyPrint(node.arguments)})`
     }
+    case 'CastExpression': {
+      return `(${prettyPrint(node.as)})${prettyPrint(node.expression)}`
+    }
     case 'CaseClause': {
       return `case ${node.test}: ${prettyPrint(node.body)}`
     }
@@ -633,6 +703,11 @@ function prettyPrint(node) {
     }
     case 'ReferenceExpression': {
       return `&${prettyPrint(node.argument)}`
+    }
+    default: {
+      if (node.id) {
+        return `${prettyPrint(node.id)}`
+      }
     }
   }
 
@@ -821,6 +896,7 @@ module.exports = {
   prettyPrint,
   prettyPrintAST,
   annotateAST,
+  addNodeHash,
   typeToQualifiedName,
   getAncestor,
   qualifiedNameToMemberAccess,
@@ -830,6 +906,7 @@ module.exports = {
   hasTag,
   findTag,
   ASTQuery,
+  deleteParent,
   arrayHasTag,
   defaultFilter,
 }

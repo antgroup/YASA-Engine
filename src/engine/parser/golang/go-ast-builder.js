@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const JSONStream = require('JSONStream')
 const { handleException } = require('../../analyzer/common/exception-handler')
+const { addNodeHash, deleteParent } = require('../../../util/ast-util')
 
 let uastFilePath = './uast.json'
 
@@ -97,11 +98,12 @@ async function parsePackage(rootDir, options) {
 async function parseLargePackage(rootDir, options) {
   buildUAST(rootDir, options)
   const data = await parseLargeJsonFile(uastFilePath)
-  if (!options.dumpAST) {
-    addParent(data)
-    if (fs.existsSync(uastFilePath)) {
-      deleteUAST()
-    }
+  addParent(data)
+  addNodeHash(data)
+  if (options.dumpAST || options.dumpAllAST) {
+    deleteParent(data)
+  } else if (fs.existsSync(uastFilePath)) {
+    deleteUAST()
   }
   return { packageInfo: data[0], moduleName: data[1] }
 }
@@ -115,11 +117,12 @@ function parseSinglePackage(rootDir, options) {
   buildUAST(rootDir, options)
   const data = fs.readFileSync(uastFilePath, 'utf8')
   const obj = JSON.parse(data)
-  if (!options.dumpAST) {
-    addParent(obj)
-    if (fs.existsSync(uastFilePath)) {
-      deleteUAST()
-    }
+  addParent(obj)
+  addNodeHash(obj)
+  if (options.dumpAST || options.dumpAllAST) {
+    deleteParent(obj)
+  } else if (fs.existsSync(uastFilePath)) {
+    deleteUAST()
   }
   return obj
 }
