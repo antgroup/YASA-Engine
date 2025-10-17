@@ -1,0 +1,187 @@
+{
+  "java.util.List": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/list-builtins.js",
+    "subTypeList": [
+      "com.sun.jmx.remote.internal.ArrayQueue",
+      "com.sun.org.apache.xerces.internal.impl.dv.util.ByteListImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.XSModelImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.LSInputListImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.ObjectListImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.ShortListImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.StringListImpl",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.XSObjectListImpl",
+      "com.sun.org.apache.xerces.internal.xs.LSInputList",
+      "com.sun.org.apache.xerces.internal.xs.ShortList",
+      "com.sun.org.apache.xerces.internal.xs.StringList",
+      "com.sun.org.apache.xerces.internal.xs.XSNamespaceItemList",
+      "com.sun.org.apache.xerces.internal.xs.XSObjectList",
+      "com.sun.org.apache.xerces.internal.xs.datatypes.ByteList",
+      "com.sun.org.apache.xerces.internal.xs.datatypes.ObjectList",
+      "com.sun.tools.javac.model.FilteredMemberList",
+      "com.sun.tools.javac.util.List",
+      "com.sun.tools.jdi.EventSetImpl",
+      "java.util.AbstractList",
+      "java.util.AbstractSequentialList",
+      "java.util.ArrayList",
+      "java.util.LinkedList",
+      "java.util.Vector",
+      "java.util.concurrent.CopyOnWriteArrayList",
+      "javax.management.AttributeList",
+      "javax.management.relation.RoleList",
+      "javax.management.relation.RoleUnresolvedList",
+      "jdk.internal.classfile.components.ListNode",
+      "jdk.internal.classfile.impl.ListNodeImpl",
+      "sun.awt.util.IdentityArrayList",
+      "sun.swing.BakedArrayList"
+    ]
+  },
+  "java.util.Queue": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/queue-builtins.js",
+    "subTypeList": [
+      "com.sun.tools.javac.comp.Todo",
+      "com.sun.tools.javac.util.ListBuffer",
+      "java.util.AbstractQueue",
+      "java.util.ArrayDeque",
+      "java.util.Deque",
+      "java.util.LinkedList",
+      "java.util.PriorityQueue",
+      "java.util.concurrent.ArrayBlockingQueue",
+      "java.util.concurrent.BlockingDeque",
+      "java.util.concurrent.BlockingQueue",
+      "java.util.concurrent.ConcurrentLinkedDeque",
+      "java.util.concurrent.ConcurrentLinkedQueue",
+      "java.util.concurrent.DelayQueue",
+      "java.util.concurrent.LinkedBlockingDeque",
+      "java.util.concurrent.LinkedBlockingQueue",
+      "java.util.concurrent.LinkedTransferQueue",
+      "java.util.concurrent.PriorityBlockingQueue",
+      "java.util.concurrent.SynchronousQueue",
+      "java.util.concurrent.TransferQueue",
+      "jdk.javadoc.internal.tool.JavadocTodo"
+    ]
+  },
+  "java.util.Stack": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stack-builtins.js",
+    "subTypeList": [
+      "com.sun.org.apache.xalan.internal.xsltc.compiler.util.StringStack"
+    ]
+  },
+  "java.lang.StringBuilder": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stringbuilder-builtins.js"
+  },
+  "java.lang.StringBuffer": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stringbuffer-builtins.js"
+  },
+  "java.util.Set": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/set-builtins.js",
+    "subTypeList": [
+      "com.sun.jdi.event.EventSet",
+      "com.sun.tools.jdi.EventSetImpl",
+      "java.util.AbstractSet",
+      "java.util.EnumSet",
+      "java.util.NavigableSet",
+      "java.util.SequencedSet",
+      "java.util.SortedSet",
+      "java.util.TreeSet",
+      "java.util.concurrent.KeySetView",
+      "java.util.concurrent.ConcurrentSkipListSet",
+      "java.util.concurrent.CopyOnWriteArraySet",
+      "javax.print.attribute.standard.JobStateReasons",
+      "jdk.internal.util.ReferencedKeySet"
+    ]
+  },
+  "java.util.HashSet": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/hashset-builtins.js",
+    "subTypeList": [
+      "java.util.LinkedHashSet"
+    ]
+  },
+  "java.util.Map": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/map-builtins.js",
+    "subTypeList": [
+      "apple.security.AppleProvider",
+      "com.sun.net.httpserver.Headers",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.XSNamedMap4Types",
+      "com.sun.org.apache.xerces.internal.impl.xs.util.XSNamedMapImpl",
+      "com.sun.org.apache.xerces.internal.xs.XSNamedMap",
+      "com.sun.security.sasl.Provider",
+      "com.sun.security.sasl.gsskerb.JdkSASL",
+      "com.sun.xml.internal.stream.writers.XMLStreamWriterImpl",
+      "java.awt.RenderingHints",
+      "java.security.AuthProvider",
+      "java.security.Provider",
+      "java.util.AbstractMap",
+      "java.util.EnumMap",
+      "java.util.Hashtable",
+      "java.util.IdentityHashMap",
+      "java.util.NavigableMap",
+      "java.util.Properties",
+      "java.util.SequencedMap",
+      "java.util.SortedMap",
+      "java.util.TreeMap",
+      "java.util.WeakHashMap",
+      "java.util.concurrent.ConcurrentHashMap",
+      "java.util.concurrent.ConcurrentMap",
+      "java.util.concurrent.ConcurrentNavigableMap",
+      "java.util.concurrent.ConcurrentSkipListMap",
+      "java.util.jar.Attributes",
+      "javax.management.openmbean.TabularDataSupport",
+      "javax.script.Bindings",
+      "javax.script.SimpleBindings",
+      "javax.swing.UIDefaults",
+      "jdk.internal.classfile.components.MapNode",
+      "jdk.internal.classfile.impl.MapNodeImpl",
+      "jdk.internal.util.ReferencedKeyMap",
+      "org.jcp.xml.dsig.internal.dom.XMLDSigRI",
+      "sun.awt.SoftCache",
+      "sun.font.AttributeMap",
+      "sun.net.httpserver.UnmodifiableHeaders",
+      "sun.security.ec.SunEC",
+      "sun.security.jgss.SunProvider",
+      "sun.security.jgss.wrapper.SunNativeProvider",
+      "sun.security.pkcs11.SunPKCS11",
+      "sun.security.provider.Sun",
+      "sun.security.provider.VerificationProvider",
+      "sun.security.provider.certpath.ldap.JdkLDAP",
+      "sun.security.rsa.SunRsaSign",
+      "sun.security.smartcardio.SunPCSC",
+      "sun.util.PreHashedMap"
+    ]
+  },
+  "java.util.HashMap": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/hashmap-builtins.js",
+    "subTypeList": [
+      "com.sun.tools.javac.comp.CompileStates",
+      "java.util.LinkedHashMap",
+      "javax.print.attribute.standard.PrinterStateReasons",
+      "sun.net.www.http.KeepAliveCache"
+    ]
+  },
+  "java.util.concurrent.Executor": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/executor-builtins.js",
+    "subTypeList": [
+      "java.util.concurrent.AbstractExecutorService",
+      "java.util.concurrent.ExecutorService",
+      "java.util.concurrent.ForkJoinPool",
+      "java.util.concurrent.ScheduledExecutorService",
+      "java.util.concurrent.ScheduledThreadPoolExecutor",
+      "java.util.concurrent.ThreadPoolExecutor"
+    ]
+  },
+  "java.util.Timer": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/timer-builtins.js",
+    "subTypeList": [
+      "sun.jvmstat.perfdata.monitor.protocol.local.LocalEventTimer"
+    ]
+  },
+  "java.util.concurrent.CompletableFuture": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/completablefuture-builtins.js",
+    "subTypeList": [
+      "jdk.internal.net.http.common.MinimalFuture"
+    ]
+  },
+  "java.util.concurrent.atomic.AtomicReference": {
+    "modelingFilePath": "src/engine/analyzer/java/common/builtins/atomicreference-builtins.js",
+    "subTypeList": []
+  }
+}

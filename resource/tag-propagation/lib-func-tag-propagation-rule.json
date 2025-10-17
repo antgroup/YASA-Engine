@@ -1,0 +1,48 @@
+[
+  {
+    "language": "java",
+    "rules": [
+      {
+        "func": {
+          "fsig": "arraycopy",
+          "argNum": 5
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "ARG",
+          "index": 2
+        }
+      },
+      {
+        "func": {
+          "calleeType": "CompilerConfiguration",
+          "fsig": "addCompilationCustomizers"
+        },
+        "source": {
+          "type": "ARG"
+        },
+        "target": {
+          "type": "THIS"
+        }
+      },
+      {
+        "func": {
+          "calleeType": "BeanUtils",
+          "fsig": "copyProperties",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "ARG",
+          "index": 1
+        }
+      }
+    ]
+  }
+]

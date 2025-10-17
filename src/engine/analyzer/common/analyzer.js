@@ -22,6 +22,9 @@ const {
 
 const { filterDataFromScope, shallowEqual } = require('../../../util/common-util')
 const Rules = require('../../../checker/common/rules-basic-handler')
+const { getAbsolutePath, loadJSONfile } = require('../../../util/file-util')
+const { matchSinkAtFuncCallWithCalleeType } = require('../../../checker/taint/common-kit/sink-util')
+const { moveExistElementsToBuffer } = require('../java/common/builtins/buffer')
 
 // ***
 
@@ -55,6 +58,7 @@ class Analyzer extends MemSpace {
     }
     this.initValTreeStruct()
     this.entryPoints = []
+    this.libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
   }
 
   /**
@@ -322,7 +326,7 @@ class Analyzer extends MemSpace {
    */
   debugInstruction(node) {
     if (!Array.isArray(node)) {
-      const code = this.sourceCodeCache[node.sourcefile || node.loc.sourcefile]
+      const code = this.sourceCodeCache[node?.loc?.sourcefile]
 
       if (code) {
         const { start, end } = node.loc
@@ -996,6 +1000,10 @@ class Analyzer extends MemSpace {
         const { left } = node
         const { right } = node
         let tmpVal = this.processInstruction(scope, right, state)
+        if (node.cloned && !tmpVal?.refCount) {
+          tmpVal = _.clone(tmpVal)
+          tmpVal.value = _.clone(tmpVal.value)
+        }
         const oldVal = this.processInstruction(scope, left, state)
 
         // TODO: clean the following up
@@ -1070,6 +1078,11 @@ class Analyzer extends MemSpace {
         val.arith_assign = true
         val.left = this.processInstruction(scope, node.left, state)
         val.right = this.processInstruction(scope, node.right, state)
+        if (node.cloned) {
+          const clonedValue = _.clone(val.right.value)
+          val.right = _.clone(val.right)
+          val.right.value = clonedValue
+        }
         const { left } = node
         const oldVal = this.getMemberValueNoCreate(scope, left, state)
 
@@ -1589,7 +1602,7 @@ class Analyzer extends MemSpace {
     const typeQualifiedName = AstUtil.typeToQualifiedName(node.varType)
     let declTypeVal
     if (typeQualifiedName) {
-      declTypeVal = this.getMemberValue(scope, typeQualifiedName, state)
+      declTypeVal = this.getMemberValueNoCreate(scope, typeQualifiedName, state)
     }
 
     if (initVal && declTypeVal) {
@@ -1832,6 +1845,16 @@ class Analyzer extends MemSpace {
           callgraphnode.opts?.funcDef?.loc?.start?.line === fclos.fdef?.loc?.start?.line &&
           callgraphnode.opts?.funcDef?.loc?.end?.line === fclos.fdef?.loc?.end?.line
         ) {
+          this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
+            argvalues,
+            fclos,
+            pcond: state.pcond,
+            entry_fclos: this.entry_fclos,
+            einfo: state.einfo,
+            state,
+            analyzer: this,
+            ainfo: this.ainfo,
+          })
           return SymbolValue({
             type: 'FunctionCall',
             expression: fclos,
@@ -1881,8 +1904,12 @@ class Analyzer extends MemSpace {
     // a native function is built-in with semantics
     const native = NativeResolver.processNativeFunction.call(this, node, fclos, argvalues, state)
     if (native) return native
-    // 没有配置的库函数，采用默认处理方式：arg->ret
-    return this.processLibArgToRet(node, fclos, argvalues, scope, state)
+
+    const libFuncTagPropagationRuleFound = this.processLibFuncTagPropagation(node, fclos, argvalues, scope, state)
+    if (!libFuncTagPropagationRuleFound) {
+      // 没有配置的库函数，采用默认处理方式：arg->ret
+      return this.processLibArgToRet(node, fclos, argvalues, scope, state)
+    }
   }
 
   /**
@@ -1952,56 +1979,116 @@ class Analyzer extends MemSpace {
     return res
   }
 
-  // todo 可以开放指定参数索引情况，这里默认是后几个参数传到第一个参数
   /**
-   *
+   * process lib func tag propagation
    * @param node
    * @param fclos
    * @param argvalues
    * @param scope
    * @param state
    */
-  processLibArgToArg(node, fclos, argvalues, scope, state) {
-    if (argvalues.length >= 2) {
-      let res = argvalues[0]
-      for (const argIndex in argvalues) {
-        if (argIndex === '0') {
+  processLibFuncTagPropagation(node, fclos, argvalues, scope, state) {
+    let matchRuleFound = false
+    const libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
+    for (const libFuncTagPropagationRule of libFuncTagPropagationRuleArray) {
+      if (
+        matchSinkAtFuncCallWithCalleeType(node, fclos, [libFuncTagPropagationRule.func], scope, argvalues)?.length > 0
+      ) {
+        const sourceType = libFuncTagPropagationRule.source?.type
+        const targetType = libFuncTagPropagationRule.target?.type
+        if (!sourceType || !targetType) {
           continue
         }
-        const arg = argvalues[argIndex]
-        if (arg && arg.hasTagRec) {
-          res.hasTagRec = true
-          break
-        }
-        const hasTag = AstUtil.hasTag(arg, '')
-        if (hasTag) {
-          res.hasTagRec = true
-        }
-      }
 
-      res = SymbolValue(res)
-      // save pass-in arguments for later use
-      if (argvalues.length > 0) {
-        res.setMisc('pass-in', argvalues)
+        if (sourceType === 'ARG' && targetType === 'ARG') {
+          this.processLibArgToArg(
+            node,
+            fclos,
+            argvalues,
+            libFuncTagPropagationRule.source.index,
+            libFuncTagPropagationRule.target.index,
+            scope,
+            state
+          )
+          matchRuleFound = true
+        } else if (sourceType === 'ARG' && targetType === 'THIS') {
+          this.processLibArgToThis(node, fclos, argvalues, libFuncTagPropagationRule.source.index, scope, state)
+          matchRuleFound = true
+        } else if (sourceType === 'THIS' && targetType === 'ARG') {
+          this.processLibThisToArg(node, fclos, argvalues, libFuncTagPropagationRule.target.index, scope, state)
+          matchRuleFound = true
+        }
       }
-      return res
     }
+
+    return matchRuleFound
   }
 
   /**
-   *
+   * process lib arg to arg
    * @param node
    * @param fclos
    * @param argvalues
+   * @param sourceIndex
+   * @param targetIndex
    * @param scope
    * @param state
    */
-  processLibArgToThis(node, fclos, argvalues, scope, state) {
+  processLibArgToArg(node, fclos, argvalues, sourceIndex, targetIndex, scope, state) {
+    if (!argvalues || argvalues.length < 2 || !targetIndex || targetIndex >= argvalues.length) {
+      return
+    }
+    const res = argvalues[targetIndex]
+
+    res.setMisc('precise', false)
+    moveExistElementsToBuffer(res)
+
+    const passIn = res.getMisc('pass-in') || []
+    for (const argIndex in argvalues) {
+      if (sourceIndex >= 0 && sourceIndex !== Number(argIndex)) {
+        continue
+      }
+      const arg = argvalues[argIndex]
+      passIn.push(arg)
+      if (arg.hasTagRec) {
+        res.hasTagRec = true
+      }
+      const hasTag = AstUtil.hasTag(arg, '')
+      if (hasTag) {
+        res.hasTagRec = true
+      }
+    }
+
+    res.setMisc('pass-in', passIn)
+  }
+
+  /**
+   * process lib arg to this
+   * @param node
+   * @param fclos
+   * @param argvalues
+   * @param sourceIndex
+   * @param scope
+   * @param state
+   */
+  processLibArgToThis(node, fclos, argvalues, sourceIndex, scope, state) {
+    const _this = fclos.getThis()
+    if (!argvalues || !_this) {
+      return
+    }
+
+    _this.setMisc('precise', false)
+    moveExistElementsToBuffer(_this)
+
     switch (node.callee.type) {
       case 'MemberAccess':
         const thisVal = this.processInstruction(scope, node.callee.object, state)
-        for (const arg of argvalues) {
-          if (arg && arg.hasTagRec) {
+        for (const argIndex in argvalues) {
+          if (sourceIndex >= 0 && sourceIndex !== Number(argIndex)) {
+            continue
+          }
+          const arg = argvalues[argIndex]
+          if (arg.hasTagRec) {
             thisVal.setFieldValue(
               arg.id,
               ObjectValue({
@@ -2012,31 +2099,46 @@ class Analyzer extends MemSpace {
               })
             )
             thisVal.hasTagRec = true
-            break
           }
           const taintVal = AstUtil.hasTag(arg, '')
           if (taintVal) {
-            this.hasTagRec = true
+            thisVal.hasTagRec = true
           }
         }
-        return thisVal
+        break
+      case 'Identifier':
+        break
+      default:
+        break
     }
   }
 
   /**
-   *
+   * process lib this to arg
    * @param node
    * @param fclos
    * @param argvalues
+   * @param targetIndex
    * @param scope
    * @param state
    */
-  processLibThisToArg(node, fclos, argvalues, scope, state) {
+  processLibThisToArg(node, fclos, argvalues, targetIndex, scope, state) {
+    if (!argvalues) {
+      return
+    }
+
     switch (node.callee.type) {
       case 'MemberAccess':
         const thisVal = this.processInstruction(scope, node.callee.object, state)
-        if (argvalues.length() >= 1) {
-          const arg = argvalues[0]
+        for (const argIndex in argvalues) {
+          if (targetIndex >= 0 && targetIndex !== Number(argIndex)) {
+            continue
+          }
+          const arg = argvalues[argIndex]
+
+          arg.setMisc('precise', false)
+          moveExistElementsToBuffer(arg)
+
           if (thisVal && thisVal.hasTagRec) {
             arg.setFieldValue(
               thisVal.id,
@@ -2048,10 +2150,13 @@ class Analyzer extends MemSpace {
               })
             )
             arg.hasTagRec = true
-            break
           }
-          return arg
         }
+        break
+      case 'Identifier':
+        break
+      default:
+        break
     }
   }
 
@@ -2794,6 +2899,35 @@ class Analyzer extends MemSpace {
         }
       }
     }
+  }
+
+  /**
+   * load lib func tag propag
+   */
+  loadLibFuncTagPropagationRule() {
+    if (this.libFuncTagPropagationRuleArray) {
+      return this.libFuncTagPropagationRuleArray
+    }
+
+    const ruleArray = []
+    let ruleWithLangArray = []
+    try {
+      const rulePath = getAbsolutePath('resource/tag-propagation/lib-func-tag-propagation-rule.json')
+      ruleWithLangArray = loadJSONfile(rulePath)
+    } catch (e) {
+      return ruleArray
+    }
+
+    if (!Array.isArray(ruleWithLangArray)) {
+      return ruleArray
+    }
+    for (const ruleWithLang of ruleWithLangArray) {
+      if (!Array.isArray(ruleWithLang.rules)) {
+        continue
+      }
+      ruleArray.push(...ruleWithLang.rules)
+    }
+    return ruleArray
   }
 }
 
