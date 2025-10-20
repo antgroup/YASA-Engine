@@ -104,11 +104,17 @@ class PythonAnalyzer extends Analyzer {
     const hasAnalysised = []
     for (const entryPoint of entryPoints) {
       if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        if (hasAnalysised.includes(`${entryPoint.filePath}.${entryPoint.functionName}`)) {
+        if (
+          hasAnalysised.includes(
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          )
+        ) {
           continue
         }
 
-        hasAnalysised.push(`${entryPoint.filePath}.${entryPoint.functionName}`)
+        hasAnalysised.push(
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+        )
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info(
           'EntryPoint [%s.%s] is executing',
@@ -124,6 +130,8 @@ class PythonAnalyzer extends Analyzer {
         this.refreshCtx(this.moduleManager.field[fileFullPath]?.field, sourceNameList)
         this.refreshCtx(this.fileManager[fileFullPath]?.field, sourceNameList)
         this.refreshCtx(this.packageManager.field[fileFullPath], sourceNameList)
+
+        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
         const argValues = []
         try {
@@ -144,7 +152,6 @@ class PythonAnalyzer extends Analyzer {
           )
         }
 
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
         if (
           entryPoint?.entryPointSymVal?.parent?.vtype === 'class' &&
           entryPoint?.entryPointSymVal?.parent?.field._CTOR_
@@ -174,10 +181,10 @@ class PythonAnalyzer extends Analyzer {
         }
         this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
       } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-        if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}`)) {
+        if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)) {
           continue
         }
-        hasAnalysised.push(`fileBegin:${entryPoint.filePath}`)
+        hasAnalysised.push(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
 

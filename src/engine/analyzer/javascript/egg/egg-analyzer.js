@@ -72,16 +72,22 @@ class EggAnalyzer extends JsAnalyzer {
       const hasAnalysised = []
       for (const entryPoint of this.entryPoints) {
         if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-          if (hasAnalysised.includes(`${entryPoint.filePath}.${entryPoint.functionName}`)) {
+          if (
+            hasAnalysised.includes(
+              `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+            )
+          ) {
             continue
           }
-          hasAnalysised.push(`${entryPoint.filePath}.${entryPoint.functionName}`)
+          hasAnalysised.push(
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          )
           entryPointConfig.setCurrentEntryPoint(entryPoint)
           const { entryPointSymVal, argValues, scopeVal } = entryPoint
 
           eggCommon.refreshCtx(scopeVal?.value?.ctx?.field)
-          this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, scopeVal, this.state)
           this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+          this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, scopeVal, this.state)
           try {
             logger.info(
               'EntryPoint [%s.%s] is executing ',
@@ -101,10 +107,10 @@ class EggAnalyzer extends JsAnalyzer {
           }
           this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
         } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-          if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}`)) {
+          if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)) {
             continue
           }
-          hasAnalysised.push(`fileBegin:${entryPoint.filePath}`)
+          hasAnalysised.push(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)
           entryPointConfig.setCurrentEntryPoint(entryPoint)
           logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
           if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {

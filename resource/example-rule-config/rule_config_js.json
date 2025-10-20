@@ -2,7 +2,8 @@
   {
     "checkerIds": [
       "taint_flow_egg_input",
-      "taint_flow_js_input"
+      "taint_flow_js_input",
+      "taint_flow_express_input"
     ],
     "sources": {
       "TaintSource": [

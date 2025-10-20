@@ -192,7 +192,7 @@ class EggTaintChecker extends TaintChecker {
             entryPoint.scopeVal = fieldT
             entryPoint.argValues = undefined
             entryPoint.functionName = undefined
-            entryPoint.filePath = fieldT?.ast?.sourcefile || fieldT?.ast?.loc?.sourcefile
+            entryPoint.filePath = fieldT?.ast?.loc?.sourcefile
             entryPoint.attribute = entrypoint.attribute
             entryPoint.packageName = undefined
             entryPoint.entryPointSymVal = fieldT
@@ -436,7 +436,7 @@ class EggTaintChecker extends TaintChecker {
       return fclos._sid?.replace('<instance>', '')
     }
     if (typeof fclos?._qid !== 'undefined') {
-      let qid = fclos._qid?.replace('Egg.Context', 'this.ctx')
+      let qid = fclos?._qid?.replace('Egg.Context', 'this.ctx')
       qid = qid?.replace('Egg.Application', 'this.app')
       qid = qid?.replace('this.app.service', 'this.ctx.service')
       qid = qid?.replace('Egg.Request', 'this.ctx.request')
