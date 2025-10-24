@@ -10,5 +10,5 @@ test/javascript/benchmarks
 test/go/benchmarks
 test/python/benchmarks
 deps/uast4go
-deps/uast4python
+deps/uast4py
 .DS_Store
