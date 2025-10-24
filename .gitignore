@@ -1,9 +1,11 @@
 /logs/yasa.2025-09-04.log
 /logs/yasa-error.2025-09-04.log
 /.idea/
+/.vacode/
 /logs/
 /report/
 /node_modules/
+/workspace/
 test/javascript/benchmarks
 test/go/benchmarks
 test/python/benchmarks

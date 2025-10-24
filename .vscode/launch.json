@@ -1,0 +1,105 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-node-xast",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "test/python/benchmarks/sast-js/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/async_await_001_T.js",
+          "--language", "javascript",
+          "--analyzer", "JavaScriptAnalyzer",
+          "--single",
+          "--ruleConfigFile", "test/javascript/rule_config.json",
+          "--checkerIds", "src/checker/taint/test-taint-checker.js"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-go-xast",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "test/python/benchmarks/sast-go/cases/accuracy/object_sensitive/collection/map_obj_sensitive_002_T/map_obj_sensitive_002_T.go",
+          "--language", "golang",
+          "--analyzer", "GoAnalyzer",
+          "--single",
+          "--ruleConfigFile", "test/go/rule_config.json",
+          "--checkerIds", "src/checker/taint/test-taint-checker.js"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-python-xast",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "test/python/benchmarks/sast-python3/case/accuracy/flow_sensitive/loop_stmt/for_enumerate_001_T.py",
+          "--language", "python",
+          "--analyzer", "PythonAnalyzer",
+          "--single",
+          "--ruleConfigFile", "test/python/rule_config_xast_python3.json",
+          "--checkerIds", "taint_flow_test",
+          "--entrypointMode", "BOTH",
+          "--uastSDKPath", "deps/uast4py/uast4py"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-js",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "workspace/fixpoint/notaint.js",
+          "--language", "javascript",
+          "--analyzer", "JavaScriptAnalyzer",
+          "--single",
+          "--ruleConfigFile", "test/javascript/rule_config.json",
+          "--checkerIds", "src/checker/taint/test-taint-checker.js",
+          "--dumpCG"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-mcp",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "workspace/mcp/challenge5/",
+          // "workspace/mcp/challenge8/",
+          // "workspace/mcp/challenge9/",
+          "--language", "python",
+          "--analyzer", "PythonAnalyzer",
+          // "--single",
+          "--ruleConfigFile", "workspace/mcp/rule-config.json",
+          "--checkerIds", "src/checker/taint/python"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "yasa-python-cross-func",
+        "program": "${workspaceFolder}/src/main.js",
+        "args": [
+          "--sourcePath", "workspace/test_cross_func.py",
+          "--language", "python",
+          "--analyzer", "PythonAnalyzer",
+          "--ruleConfigFile", "test/python/rule_config_xast_python3.json",
+          "--checkerIds", "src/checker/taint/python"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal"
+      },
+    ]
+  }

@@ -85,7 +85,7 @@ async function update(dir) {
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4python/uast4python'),
+    path.join(__dirname, '../../deps/uast4py/uast4py'),
   ]
   try {
     await execute(null, args, recorder.printAndAppend)
@@ -124,7 +124,7 @@ async function getRunPythonBenchmarkResult(dir, expectFile) {
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4python/uast4python'),
+    path.join(__dirname, '../../deps/uast4py/uast4py'),
   ]
 
   try {
