@@ -40,7 +40,7 @@ download_binaries() {
   RELEASE_URL="https://api.github.com/repos/antgroup/YASA-UAST/releases/latest"
   
   echo "[INFO] Fetching latest release info from GitHub..."
-  TAG=$(curl -s $RELEASE_URL | grep "tag_name" | cut -d '"' -f 4)
+  TAG=$(curl -s "$RELEASE_URL" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf-8')).tag_name")
   
   if [ -z "$TAG" ]; then
     echo "[ERROR] Failed to fetch release info. Please check your network."
@@ -61,8 +61,8 @@ download_binaries() {
     TARGET=${TARGET_PATHS[$i]}
     DOWNLOAD_URL="https://github.com/antgroup/YASA-UAST/releases/download/${TAG}/${BINARY}"
     echo "[INFO] Downloading $BINARY to $TARGET..."
-    curl -L -o $TARGET $DOWNLOAD_URL
-    chmod +x $TARGET
+    curl -L -f -o "$TARGET" "$DOWNLOAD_URL" || { echo "[ERROR] Failed to download $BINARY"; exit 1; }
+    chmod +x "$TARGET"
   done
 }
 
