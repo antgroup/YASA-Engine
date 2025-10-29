@@ -33,9 +33,18 @@
 
   },
   {
+    "checkerPackId": "taint-flow-java-default",
+    "checkerIds": [
+      "taint_flow_java_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "java污点追踪-对外默认使用的规则包"
+  },
+  {
     "checkerPackId": "taint-flow-java-inner",
     "checkerIds": [
-      "taint_flow_sofa_input",
+      "taint_flow_java_input_inner",
       "callgraph",
       "sanitizer"
     ],
@@ -55,10 +64,20 @@
     "checkerPackId": "taint-flow-javascript-inner",
     "checkerIds": [
       "taint_flow_egg_input",
+      "taint_flow_express_input",
       "callgraph",
       "sanitizer"
     ],
     "description": "js污点追踪-蚂蚁内部使用的规则包"
+  },
+  {
+    "checkerPackId": "taint-flow-express",
+    "checkerIds": [
+      "taint_flow_express_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "Express 污点追踪"
   },
   {
     "checkerPackId": "taint-flow-python-default",
@@ -77,5 +96,29 @@
       "sanitizer"
     ],
     "description": "python污点追踪-蚂蚁内部使用的规则包"
+  },
+  {
+    "checkerPackId": "antql-dataflow-inner",
+    "checkerIds": [
+      "antql_getbaseclass",
+      "antql_getdefinition",
+      "antql_getsubclass",
+      "antql_hasflow",
+      "antql_hasfunctioncall",
+      "antql_hasproperty",
+      "callgraph"
+    ],
+    "description": "antql数据流-蚂蚁内部使用的规则包"
+  },
+  {
+    "checkerPackId": "java-sdk-inner",
+    "checkerIds": [
+      "get_file_ast",
+      "get_ast_source_code",
+      "callgraph"
+    ],
+    "description": "java的sdk-蚂蚁内部使用的规则包"
   }
+
+
 ]

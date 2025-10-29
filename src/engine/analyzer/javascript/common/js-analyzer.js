@@ -91,10 +91,16 @@ class JsAnalyzer extends Analyzer {
     // 自定义source入口方式，并根据入口自主加载source
     for (const entryPoint of entryPoints) {
       if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        if (hasAnalysised.includes(`${entryPoint.filePath}.${entryPoint.functionName}`)) {
+        if (
+          hasAnalysised.includes(
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          )
+        ) {
           continue
         }
-        hasAnalysised.push(`${entryPoint.filePath}.${entryPoint.functionName}`)
+        hasAnalysised.push(
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+        )
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info(
           'EntryPoint [%s.%s] is executing',
@@ -104,6 +110,9 @@ class JsAnalyzer extends Analyzer {
               entryPoint.entryPointSymVal?.ast.loc.end.line
             }>`
         )
+
+        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+
         const argValues = []
         for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
           argValues.push(
@@ -114,7 +123,7 @@ class JsAnalyzer extends Analyzer {
             )
           )
         }
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+
         try {
           this.executeCall(
             entryPoint.entryPointSymVal?.ast,
@@ -132,10 +141,10 @@ class JsAnalyzer extends Analyzer {
         }
         this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
       } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-        if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}`)) {
+        if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)) {
           continue
         }
-        hasAnalysised.push(`fileBegin:${entryPoint.filePath}`)
+        hasAnalysised.push(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
         if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
@@ -765,7 +774,7 @@ class JsAnalyzer extends Analyzer {
 
     let sourcefile
     while (node) {
-      sourcefile = node.sourcefile
+      sourcefile = node.sourcefile || node.loc.sourcefile
       if (sourcefile) break
       node = node.parent
     }

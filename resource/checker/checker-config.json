@@ -1,5 +1,35 @@
 [
   {
+    "checkerId": "antql_getbaseclass",
+    "checkerPath": "src/checker/antql/rules/antql-getbaseclass.js",
+    "description": "antql_getbaseclass"
+  },
+  {
+    "checkerId": "antql_getdefinition",
+    "checkerPath": "src/checker/antql/rules/antql-getdefinition.js",
+    "description": "antql_getdefinition"
+  },
+  {
+    "checkerId": "antql_getsubclass",
+    "checkerPath": "src/checker/antql/rules/antql-getsubclass.js",
+    "description": "antql_getsubclass"
+  },
+  {
+    "checkerId": "antql_hasflow",
+    "checkerPath": "src/checker/antql/rules/antql-hasflow.js",
+    "description": "antql_hasflow"
+  },
+  {
+    "checkerId": "antql_hasfunctioncall",
+    "checkerPath": "src/checker/antql/rules/antql-hasfunctioncall.js",
+    "description": "antql_hasfunctioncall"
+  },
+  {
+    "checkerId": "antql_hasproperty",
+    "checkerPath": "src/checker/antql/rules/antql-hasproperty.js",
+    "description": "antql_hasproperty"
+  },
+  {
     "checkerId": "callgraph",
     "checkerPath": "src/checker/callgraph/callgraph-checker.js",
     "description": "CallGraph采集checker"
@@ -59,8 +89,14 @@
     "description": "为第三方库方法urfave.cli做建模，添加entryPoints"
   },
   {
-    "checkerId": "taint_flow_sofa_input",
-    "checkerPath": "src/checker/taint/java/sofa-taint-checker.js",
+    "checkerId": "taint_flow_java_input",
+    "checkerPath": "src/checker/taint/java/java-default-taint-checker.js",
+    "description": "Java污点分析checker，会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": ""
+  },
+  {
+    "checkerId": "taint_flow_java_input_inner",
+    "checkerPath": "src/checker/taint/java/java-taint-checker.js",
     "description": "Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
     "demoRuleConfigPath": ""
   },
@@ -68,6 +104,12 @@
     "checkerId": "taint_flow_egg_input",
     "checkerPath": "src/checker/taint/js/egg-taint-checker.js",
     "description": "JavaScript Egg框架污点分析checker",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
+  },
+  {
+    "checkerId": "taint_flow_express_input",
+    "checkerPath": "src/checker/taint/js/express/express-taint-checker.js",
+    "description": "JavaScript Express框架污点分析checker",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
@@ -98,5 +140,15 @@
     "checkerId": "RestfulEntrypointCollectChecker",
     "checkerPath": "src/checker/taint/go/restful-entrypoint-collect-checker.js",
     "description": "go-restful entrypoint采集以及框架source添加"
+  },
+  {
+    "checkerId": "get_file_ast",
+    "checkerPath": "src/checker/sdk/get-file-ast-checker.js",
+    "description": "获取文件AST"
+  },
+  {
+    "checkerId": "get_ast_source_code",
+    "checkerPath": "src/checker/sdk/get-ast-source-code-checker.js",
+    "description": "获取AST对应的源码"
   }
 ]

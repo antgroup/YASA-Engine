@@ -8,13 +8,18 @@ const { handleException } = require('../../../engine/analyzer/common/exception-h
  * @param node
  * @param fclos
  * @param sinks
+ * @param argvalues
  * @returns {Array}
  */
-function matchSinkAtFuncCall(node, fclos, sinks) {
+function matchSinkAtFuncCall(node, fclos, sinks, argvalues) {
   const callExpr = node.callee || node
   const res = []
   if (sinks && sinks.length > 0) {
     for (const tspec of sinks) {
+      if (tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+        continue
+      }
+
       if (tspec.fsig) {
         const marray = tspec.fsig.split('.')
         if (matchField(callExpr, marray, marray.length - 1)) {
@@ -36,8 +41,9 @@ function matchSinkAtFuncCall(node, fclos, sinks) {
  * @param fclos
  * @param rules
  * @param scope
+ * @param argvalues
  */
-function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope) {
+function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, argvalues) {
   const callExpr = node.callee || node
   const res = []
   if (rules && rules.length > 0) {
@@ -48,6 +54,10 @@ function matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope) {
       return res
     }
     for (const tspec of rules) {
+      if (tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+        continue
+      }
+
       if (tspec.fsig) {
         if ((!tspec.calleeType || tspec.calleeType === '') && tspec.fsig === AstUtil.prettyPrint(callExpr)) {
           res.push(tspec)

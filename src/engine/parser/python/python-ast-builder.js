@@ -2,8 +2,9 @@ const childProcess = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const FileUtil = require('../../../util/file-util')
-const config = require('../../../config')
 const { handleException } = require('../../analyzer/common/exception-handler')
+const { addNodeHash, deleteParent } = require('../../../util/ast-util')
+const AstUtil = require('../../../util/ast-util')
 
 let uastFilePath = './uast'
 
@@ -31,10 +32,10 @@ function buildUAST(rootDir, options) {
     isSingle = '--singleFileParse=False'
   }
 
-  let uast4python_path = path.join(__dirname, '../../../../deps/uast4python/uast4python')
+  let uast4pythonPath = path.join(__dirname, '../../../../deps/uast4py/uast4py')
 
   if (options.uastSDKPath && options.uastSDKPath !== '') {
-    uast4python_path = options.uastSDKPath
+    uast4pythonPath = options.uastSDKPath
   } else {
     handleException(
       null,
@@ -48,7 +49,7 @@ function buildUAST(rootDir, options) {
   if (options.ASTFileOutput) {
     uastFilePath = options.ASTFileOutput
   }
-  if (!fs.existsSync(uast4python_path)) {
+  if (!fs.existsSync(uast4pythonPath)) {
     handleException(
       null,
       // eslint-disable-next-line sonarjs/no-duplicate-string
@@ -57,13 +58,13 @@ function buildUAST(rootDir, options) {
     )
     process.exit(1)
   }
-  const command = `${uast4python_path} ${isSingle}` + ` --rootDir="${rootDir}"` + ` --output="${uastFilePath}"`
+  const command = `${uast4pythonPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}"`
 
   try {
-    const options_for_command = {
+    const optionForCommand = {
       maxBuffer: 5 * 1024 * 1024 * 1024, // 5GB
     }
-    childProcess.execSync(command, options_for_command)
+    childProcess.execSync(command, optionForCommand)
   } catch (e) {
     handleException(e, `[python-ast-builder] 解析python AST时发生错误`, `[python-ast-builder] 解析python AST时发生错误`)
     return null
@@ -116,11 +117,12 @@ function parseSingleFile(filename, options) {
     return
   }
   const obj = JSON.parse(data)
-  if (!options.dumpAST) {
-    if (fs.existsSync(uastFilePath)) {
-      deleteUAST(uastFilePath)
-    }
+  if (!options.dumpAST && fs.existsSync(uastFilePath)) {
+    deleteUAST(uastFilePath)
   }
+  AstUtil.annotateAST(obj, { sourcefile: filename })
+  addNodeHash(obj)
+  deleteParent(obj)
   return obj
 }
 
@@ -153,8 +155,13 @@ function parsePackages(astManager, rootDir, options) {
         continue
       }
       const obj = JSON.parse(data)
-      const filename = config.maindir + uastFile.file.replace('uast/', '').replace('.json', '.py')
-      astManager[filename] = obj
+      AstUtil.annotateAST(obj, { sourcefile: obj.loc?.sourcefile })
+      addNodeHash(obj)
+      deleteParent(obj)
+      const filename = obj?.loc?.sourcefile
+      if (filename) {
+        astManager[filename] = obj
+      }
     }
   } catch (e) {
     handleException(

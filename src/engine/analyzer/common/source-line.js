@@ -488,12 +488,12 @@ function getNodeTrace(fdef, node) {
 
   // get source file from node rather than fdef
   let src_node = node
-  let sourcefile = fdef?.sourcefile
-  while (src_node && !src_node.sourcefile) {
+  let sourcefile = fdef?.loc?.sourcefile
+  while (src_node && !src_node?.loc?.sourcefile) {
     src_node = src_node.parent
   }
   if (src_node) {
-    sourcefile = src_node.sourcefile
+    sourcefile = src_node?.loc?.sourcefile
   }
 
   const line = loc.start.line === loc.end.line ? loc.start.line : _.range(loc.start.line, loc.end.line + 1)
@@ -543,8 +543,8 @@ function formatSingleTrace(item) {
     // obtain the fname from the AST node
     let fnode = item.node
     while (fnode) {
-      if (fnode.sourcefile) {
-        fname = fnode.sourcefile
+      if (fnode.loc.sourcefile) {
+        fname = fnode.loc.sourcefile
         break
       }
       fnode = fnode.parent
@@ -603,6 +603,43 @@ function formatTraces(trace) {
   return res
 }
 
+/**
+ *
+ * @param loc
+ * @returns {*|string}
+ */
+function getCodeByLocation(loc) {
+  const sourcefile = loc?.sourcefile
+  const startLine = loc?.start?.line
+  const endLine = loc?.end?.line
+
+  if (sourcefile && startLine && endLine) {
+    const lines = codeCache.get(sourcefile)
+    // 行索引，0-based
+    if (lines) {
+      const startIdx = startLine - 1
+      const endIdx = endLine - 1
+      const targetLines = lines.slice(startIdx, endIdx + 1)
+      if (targetLines.length === 0) return ''
+      return targetLines.join('\n')
+    }
+  }
+  return ''
+}
+
+/**
+ *
+ * @param sourcefile
+ */
+function getCodeBySourceFile(sourcefile) {
+  if (sourcefile && codeCache.has(sourcefile)) {
+    const lines = codeCache.get(sourcefile)
+    if (lines.length === 0) return ''
+    return lines.join('\n')
+  }
+  return ''
+}
+
 //* ***************************** exports ******************************
 
 module.exports = {
@@ -611,4 +648,6 @@ module.exports = {
   storeCode,
   formatTraces,
   formatSingleTrace,
+  getCodeByLocation,
+  getCodeBySourceFile,
 }

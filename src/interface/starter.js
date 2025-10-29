@@ -20,7 +20,7 @@ const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-str
  * @param isSync
  */
 async function execute(dir, args = [], printf, isSync) {
-  const analyzer = initAnalyzer(dir, args, printf)
+  const analyzer = await initAnalyzer(dir, args, printf)
   if (analyzer) {
     const processingDir = Config.maindir
     let isSuccess = false
@@ -69,7 +69,7 @@ function outputAnalyzerResult(analyzer, printf) {
  * @param args
  * @param printf
  */
-function initAnalyzer(dir, args = [], printf) {
+async function initAnalyzer(dir, args = [], printf) {
   let sourcePath
   if (dir) {
     sourcePath = dir
@@ -101,10 +101,10 @@ function initAnalyzer(dir, args = [], printf) {
         process.exit(1)
       }
     })
-    .option('--language <lang>', '指定语言（支持: javascript/typescript/golang/python）', (lang) => {
-      const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python']
+    .option('--language <lang>', '指定语言（支持: javascript/typescript/golang/python/java）', (lang) => {
+      const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python', 'java']
       if (!supported.includes(lang)) {
-        logger.info('Unknown language!! Only support javascript/typescript/golang/python')
+        logger.info('Unknown language!! Only support javascript/typescript/golang/python/java')
         process.exit(0)
       }
       if (['typescript', 'ts', 'js', 'javascript'].includes(lang)) {
@@ -151,6 +151,9 @@ function initAnalyzer(dir, args = [], printf) {
     })
     .option('--dumpAST', 'dump单文件AST', () => {
       Config.dumpAST = true
+    })
+    .option('--dumpAllAST', 'dump整个项目AST', () => {
+      Config.dumpAllAST = true
     })
     .option('--uastSDKPath <dir>', 'UAST二进制文件路径', (uastDir) => {
       Config.uastSDKPath = pathMod.isAbsolute(uastDir) ? uastDir : pathMod.resolve(pathMod.join(process.cwd(), uastDir))
@@ -233,7 +236,7 @@ function initAnalyzer(dir, args = [], printf) {
   })
 
   // 处理未知选项
-  program.allowUnknownOption(true)
+  program.allowUnknownOption(false)
   program.allowExcessArguments()
 
   // 处理帮助信息
@@ -241,7 +244,7 @@ function initAnalyzer(dir, args = [], printf) {
     printHelp()
   })
 
-  program.version('0.2.1')
+  program.version('0.2.3-inner')
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
@@ -277,7 +280,7 @@ function initAnalyzer(dir, args = [], printf) {
         Config.language = lang
       } else {
         logger.info(
-          'Unknown command or unknown language!! Note the command using -- , and language support javascript/typescript/golang/python.'
+          'Unknown command or unknown language!! Note the command using -- , and language support javascript/typescript/golang/python/java.'
         )
         process.exit(0)
       }
@@ -349,11 +352,26 @@ function initAnalyzer(dir, args = [], printf) {
     process.exit(0)
   }
 
+  // dump all AST
+  if (Config.dumpAllAST) {
+    try {
+      await Parsing.parseDirectory(Config.maindir, Config)
+      console.log('parseDirectory UAST success!')
+      process.exit(0)
+    } catch (e) {
+      handleException(e, 'Error occurred in dumpAllAST!!!!', `Error occurred in dumpAllAST!!!!${e}`)
+      process.exit(1)
+    }
+  }
+
   // prepare the output and report directories
   cleanReportDir(Config.reportDir)
 
   const JavaScriptAnalyzer = require('../engine/analyzer/javascript/common/js-analyzer')
   const EggAnalyzer = require('../engine/analyzer/javascript/egg/egg-analyzer')
+
+  const JavaAnalyzer = require('../engine/analyzer/java/common/java-analyzer')
+  const SpringAnalyzer = require('../engine/analyzer/java/spring/spring-analyzer')
 
   const GoAnalyzer = require('../engine/analyzer/golang/common/go-analyzer')
 
@@ -362,12 +380,16 @@ function initAnalyzer(dir, args = [], printf) {
   const analyzerEnum = {
     EggAnalyzer,
     JavaScriptAnalyzer,
+    JavaAnalyzer,
     GoAnalyzer,
+    SpringAnalyzer,
     PythonAnalyzer,
   }
   const analyzerLanguage = {
     EggAnalyzer: 'javascript',
     JavaScriptAnalyzer: 'javascript',
+    JavaAnalyzer: 'java',
+    SpringAnalyzer: 'java',
     GoAnalyzer: 'golang',
     PythonAnalyzer: 'python',
   }
@@ -379,8 +401,8 @@ function initAnalyzer(dir, args = [], printf) {
     if (!Analyzer || Analyzer === '') {
       handleException(
         null,
-        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|GoAnalyzer|PythonAnalyzer',
-        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|GoAnalyzer|PythonAnalyzer'
+        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer',
+        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer'
       )
       return
     }
@@ -398,6 +420,9 @@ function initAnalyzer(dir, args = [], printf) {
           break
         case 'javascript':
           f = 'JavaScriptAnalyzer'
+          break
+        case 'java':
+          f = 'JavaAnalyzer'
           break
         case 'python':
           f = 'PythonAnalyzer'
@@ -432,7 +457,7 @@ async function executeAnalyzerAsync(analyzer, processingDir) {
     }
     return true
   } catch (e) {
-    handleException(e, 'Error in executeAnalyzerAsync occurred!!!!', 'Error in executeAnalyzerAsync occurred!!!!')
+    handleException(e, 'Error occurred in executeAnalyzerAsync!!!!', 'Error occurred in executeAnalyzerAsync!!!!')
   }
   return false
 }
@@ -504,6 +529,9 @@ function loadSource(absdirs) {
     case 'ts':
       fext = ['js', 'ts', 'cjs', 'mjs']
       dirFilter.push('node_modules')
+      break
+    case 'java':
+      fext = ['java']
       break
     case 'python':
       fext = ['py']
@@ -657,6 +685,8 @@ function detectFileLanguage(filename) {
       return 'javascript'
     case 'go':
       return 'golang'
+    case 'java':
+      return 'java'
     case 'py':
       return 'python'
     default:

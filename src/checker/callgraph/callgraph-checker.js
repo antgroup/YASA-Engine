@@ -200,13 +200,7 @@ class CallgraphChecker extends Checker {
    */
   printLoc(ast) {
     let sourcefile
-    sourcefile = ast.sourcefile
-    if (sourcefile === undefined) {
-      // 补偿获取
-      if (ast?.loc?.sourcefile) {
-        sourcefile = ast?.loc?.sourcefile
-      }
-    }
+    sourcefile = ast?.loc?.sourcefile
     if (sourcefile) {
       const splits = sourcefile.split('/')
       sourcefile = splits[splits.length - 1]

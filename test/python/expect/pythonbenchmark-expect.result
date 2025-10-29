@@ -922,6 +922,27 @@ Trace:
 
 ------------- 26: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py
+Line 19: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py","functionName":"list_mc_005_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py
+  AffectedNodeName: taint_src
+  12:  SOURCE:  def list_mc_005_T(taint_src):
+ /case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py
+  AffectedNodeName: taint_sink
+  15:  CALL:      taint_sink(arr[1][0])     # 访问动态添加的污染元素
+ /case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py
+  AffectedNodeName: o
+  18:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/multidimensional_collection/list_mc_005_T.py
+  AffectedNodeName: os.system
+  19:  SINK:      os.system(o)
+
+------------- 27: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/list_mc_006_F.py
 Line 20: os.system(o)
 SINK RULE:os.system
@@ -941,7 +962,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 27: taint_flow_test-------------
+------------- 28: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/map_mc_001_T.py
 Line 19: os.system(o)
@@ -965,7 +986,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 28: taint_flow_test-------------
+------------- 29: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/multidimensional_collection/map_mc_003_T.py
 Line 21: os.system(o)
@@ -993,57 +1014,6 @@ Trace:
  /case/accuracy/field_sensitive/multidimensional_collection/map_mc_003_T.py
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
-
-------------- 29: taint_flow_test-------------
-Description:taint_flow_test，回归测试使用，不推荐外部使用
-File:/case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-Line 28: os.system(o)
-SINK RULE:os.system
-entrypoint:
-{"filePath":"/case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py","functionName":"asynchronous_chain_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
-Trace:
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: taint_src
-  12:  SOURCE:  async def asynchronous_chain_001_T(taint_src):
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: async_chain_step1
-  13:  CALL:      data1 = await async_chain_step1(taint_src)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: taint_src
-  19:  ARG PASS:  async def async_chain_step1(taint_src):
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: [return value]
-  21:  Return Value:      return taint_src
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: async_chain_step1
-  13:  CALL RETURN:     data1 = await async_chain_step1(taint_src)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: data1
-  13:  Var Pass:      data1 = await async_chain_step1(taint_src)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: async_chain_step2
-  14:  CALL:      data2 = await async_chain_step2(data1)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: data
-  23:  ARG PASS:  async def async_chain_step2(data):
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: [return value]
-  25:  Return Value:      return data
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: async_chain_step2
-  14:  CALL RETURN:     data2 = await async_chain_step2(data1)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: data2
-  14:  Var Pass:      data2 = await async_chain_step2(data1)
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: taint_sink
-  15:  CALL:      taint_sink(data2)  # 通过分支保留污点
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: o
-  27:  ARG PASS:  def taint_sink(o):
- /case/accuracy/flow_sensitive/asynchronous/asynchronous_chain_001_T.py
-  AffectedNodeName: os.system
-  28:  SINK:      os.system(o)
 
 ------------- 30: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
@@ -1108,36 +1078,6 @@ File:/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
 Line 22: os.system(o)
 SINK RULE:os.system
 entrypoint:
-{"filePath":"/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py","functionName":"asyncio_await_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
-Trace:
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: taint_src
-  12:  SOURCE:  async def asyncio_await_001_T(taint_src):
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: [return value]
-  15:  Return Value:          return taint_src
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: process
-  17:  CALL RETURN:     data = await process()
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: data
-  17:  Var Pass:      data = await process()
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: taint_sink
-  18:  CALL:      taint_sink(data)
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: o
-  21:  ARG PASS:  def taint_sink(o):
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: os.system
-  22:  SINK:      os.system(o)
-
-------------- 32: taint_flow_test-------------
-Description:taint_flow_test，回归测试使用，不推荐外部使用
-File:/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-Line 22: os.system(o)
-SINK RULE:os.system
-entrypoint:
 {"filePath":"/case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py","functionName":"main","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
 Trace:
  /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
@@ -1168,7 +1108,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 33: taint_flow_test-------------
+------------- 32: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/loop_stmt/for_enumerate_001_T.py
 Line 17: os.system(o)
@@ -1189,7 +1129,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 34: taint_flow_test-------------
+------------- 33: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/loop_stmt/for_zip_001_T.py
 Line 17: os.system(o)
@@ -1210,7 +1150,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 35: taint_flow_test-------------
+------------- 34: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/flow_sensitive/normal_stmt/assign_expression_stmt_001_T.py
 Line 18: os.system(o)
@@ -1234,7 +1174,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 36: taint_flow_test-------------
+------------- 35: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/class/constructor_object_sensitive_001_T.py
 Line 23: os.system(o.data)
@@ -1266,7 +1206,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o.data)
 
-------------- 37: taint_flow_test-------------
+------------- 36: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py
 Line 29: os.system(o.data)
@@ -1298,7 +1238,7 @@ Trace:
   AffectedNodeName: os.system
   29:  SINK:      os.system(o.data)
 
-------------- 38: taint_flow_test-------------
+------------- 37: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/array_object_sensitive_001_T.py
 Line 21: os.system(.join(o))
@@ -1325,7 +1265,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(''.join(o))
 
-------------- 39: taint_flow_test-------------
+------------- 38: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_001_T.py
 Line 20: os.system(str(o))
@@ -1349,7 +1289,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 40: taint_flow_test-------------
+------------- 39: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_003_T.py
 Line 21: os.system(str(o))
@@ -1373,7 +1313,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(str(o))
 
-------------- 41: taint_flow_test-------------
+------------- 40: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_005_T.py
 Line 22: os.system(str(o))
@@ -1394,7 +1334,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 42: taint_flow_test-------------
+------------- 41: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/list_object_sensitive_008_F.py
 Line 22: os.system(str(o))
@@ -1418,7 +1358,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 43: taint_flow_test-------------
+------------- 42: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/map_object_sensitive_001_T.py
 Line 22: os.system(str(o))
@@ -1441,7 +1381,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 44: taint_flow_test-------------
+------------- 43: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/object_sensitive/collection/set_object_sensitive_001_T.py
 Line 21: os.system(str(o))
@@ -1465,7 +1405,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(str(o))
 
-------------- 45: taint_flow_test-------------
+------------- 44: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/exception_throw/exception_throw_001_T.py
 Line 21: os.system(o)
@@ -1486,7 +1426,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 46: taint_flow_test-------------
+------------- 45: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/exception_throw/exception_throw_002_F.py
 Line 20: os.system(o)
@@ -1507,7 +1447,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 47: taint_flow_test-------------
+------------- 46: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/continue_002_F.py
 Line 21: os.system(o)
@@ -1531,7 +1471,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 48: taint_flow_test-------------
+------------- 47: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/return_001_T.py
 Line 24: os.system(o)
@@ -1558,7 +1498,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 49: taint_flow_test-------------
+------------- 48: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/path_sensitive/explicit_jump_control/return_002_F.py
 Line 22: os.system(o)
@@ -1585,7 +1525,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 50: taint_flow_test-------------
+------------- 49: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.py
 Line 20: os.system(o)
@@ -1617,7 +1557,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:          os.system(o)
 
-------------- 51: taint_flow_test-------------
+------------- 50: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.py
 Line 25: os.system(o)
@@ -1649,7 +1589,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 52: taint_flow_test-------------
+------------- 51: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_006_F.py
 Line 25: os.system(o)
@@ -1681,7 +1621,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 53: taint_flow_test-------------
+------------- 52: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/ellipsis/ellipsis_001_T.py
 Line 20: os.system(o)
@@ -1702,7 +1642,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 54: taint_flow_test-------------
+------------- 53: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/ellipsis/ellipsis_003_T.py
 Line 23: os.system(str(o))
@@ -1729,7 +1669,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(str(o))
 
-------------- 55: taint_flow_test-------------
+------------- 54: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/other/typeignore/typeignore_001_T.py
 Line 18: os.system(o)
@@ -1750,7 +1690,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 56: taint_flow_test-------------
+------------- 55: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_001_T.py
 Line 20: os.system(o)
@@ -1773,7 +1713,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 57: taint_flow_test-------------
+------------- 56: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_003_T.py
 Line 20: os.system(o)
@@ -1796,7 +1736,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 58: taint_flow_test-------------
+------------- 57: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_005_T.py
 Line 19: os.system(o)
@@ -1819,7 +1759,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 59: taint_flow_test-------------
+------------- 58: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_007_T.py
 Line 21: os.system(o)
@@ -1842,7 +1782,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 60: taint_flow_test-------------
+------------- 59: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/alias_009_T.py
 Line 23: os.system(o)
@@ -1865,7 +1805,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 61: taint_flow_test-------------
+------------- 60: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/type_alias_001_T.py
 Line 20: os.system(str(o))
@@ -1889,7 +1829,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 62: taint_flow_test-------------
+------------- 61: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/alias/type_alias_003_T.py
 Line 25: os.system(o)
@@ -1921,7 +1861,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 63: taint_flow_test-------------
+------------- 62: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_001_T.py
 Line 22: os.system(o)
@@ -1948,7 +1888,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 64: taint_flow_test-------------
+------------- 63: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_002_F.py
 Line 22: os.system(o)
@@ -1975,7 +1915,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 65: taint_flow_test-------------
+------------- 64: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_003_T.py
 Line 23: os.system(o)
@@ -2001,7 +1941,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 66: taint_flow_test-------------
+------------- 65: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/array_no_solver_004_F.py
 Line 23: os.system(o)
@@ -2027,7 +1967,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 67: taint_flow_test-------------
+------------- 66: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_001_T.py
 Line 17: os.system(o)
@@ -2051,7 +1991,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 68: taint_flow_test-------------
+------------- 67: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/list_no_solver_003_T.py
 Line 19: os.system(str(o))
@@ -2075,7 +2015,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 69: taint_flow_test-------------
+------------- 68: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_001_T.py
 Line 21: os.system(o)
@@ -2098,7 +2038,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 70: taint_flow_test-------------
+------------- 69: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_002_F.py
 Line 21: os.system(o)
@@ -2121,7 +2061,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 71: taint_flow_test-------------
+------------- 70: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_003_F.py
 Line 22: os.system(o)
@@ -2142,7 +2082,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 72: taint_flow_test-------------
+------------- 71: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_004_T.py
 Line 22: os.system(o)
@@ -2165,7 +2105,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 73: taint_flow_test-------------
+------------- 72: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_005_F.py
 Line 23: os.system(str(o))
@@ -2188,7 +2128,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(str(o))
 
-------------- 74: taint_flow_test-------------
+------------- 73: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_006_T.py
 Line 20: os.system(str(o))
@@ -2211,7 +2151,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 75: taint_flow_test-------------
+------------- 74: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_009_F.py
 Line 19: os.system(str(o))
@@ -2234,7 +2174,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 76: taint_flow_test-------------
+------------- 75: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_010_T.py
 Line 24: os.system(o)
@@ -2265,7 +2205,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 77: taint_flow_test-------------
+------------- 76: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_012_T.py
 Line 23: os.system(o)
@@ -2293,7 +2233,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 78: taint_flow_test-------------
+------------- 77: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/map_field_sensitive_014_T.py
 Line 27: os.system(o)
@@ -2327,7 +2267,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(o)
 
-------------- 79: taint_flow_test-------------
+------------- 78: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/rest_parameter_no_solver_001_T.py
 Line 21: os.system(o)
@@ -2353,6 +2293,33 @@ Trace:
  /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/rest_parameter_no_solver_001_T.py
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
+
+------------- 79: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+Line 18: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py","functionName":"spread_operator_no_solver_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: taint_src
+  11:  SOURCE:  def spread_operator_no_solver_001_T(taint_src):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: array1
+  12:  Var Pass:      array1 = ["a", "b", taint_src]
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: array
+  13:  Var Pass:      array = ["c", *array1]
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: taint_sink
+  14:  CALL:      taint_sink(array[3])
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: o
+  17:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_no_solver/spread_operator_no_solver_001_T.py
+  AffectedNodeName: os.system
+  18:  SINK:      os.system(o)
 
 ------------- 80: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
@@ -2522,6 +2489,54 @@ Trace:
 
 ------------- 86: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+Line 17: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py","functionName":"list_solver_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+  AffectedNodeName: taint_src
+  12:  SOURCE:  def list_solver_001_T(taint_src):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+  AffectedNodeName: s
+  13:  Var Pass:      s = ["a", "b", taint_src, "c", "d"]
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+  AffectedNodeName: taint_sink
+  14:  CALL:      taint_sink(s[1 + 1])
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+  AffectedNodeName: o
+  16:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_001_T.py
+  AffectedNodeName: os.system
+  17:  SINK:      os.system(o)
+
+------------- 87: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+Line 19: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py","functionName":"list_solver_002_F","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+  AffectedNodeName: taint_src
+  12:  SOURCE:  def list_solver_002_F(taint_src):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+  AffectedNodeName: s
+  13:  Var Pass:      s = ["a", "b", taint_src, "c", "d"]
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+  AffectedNodeName: taint_sink
+  14:  CALL:      taint_sink(s[1 + 2])
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+  AffectedNodeName: o
+  18:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_002_F.py
+  AffectedNodeName: os.system
+  19:  SINK:      os.system(o)
+
+------------- 88: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_003_T.py
 Line 19: os.system(o)
 SINK RULE:os.system
@@ -2547,7 +2562,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 87: taint_flow_test-------------
+------------- 89: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/list_solver_004_F.py
 Line 19: os.system(o)
@@ -2574,7 +2589,63 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 88: taint_flow_test-------------
+------------- 90: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+Line 25: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py","functionName":"map_solver_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+  AffectedNodeName: taint_src
+  13:  SOURCE:  def map_solver_001_T(taint_src):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+  AffectedNodeName: d
+  14:  Var Pass:      d = {
+  15:  Var Pass:          0: "a",
+  16:  Var Pass:          1: "b",
+  17:  Var Pass:          2: taint_src,  # 将污染源放在键为2的位置
+  18:  Var Pass:      }
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+  AffectedNodeName: taint_sink
+  20:  CALL:      taint_sink(d[1+1])  # 访问键为2的值并传给taint_sink函数
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+  AffectedNodeName: o
+  24:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_001_T.py
+  AffectedNodeName: os.system
+  25:  SINK:      os.system(o)
+
+------------- 91: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+Line 24: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py","functionName":"map_solver_002_F","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+  AffectedNodeName: taint_src
+  13:  SOURCE:  def map_solver_002_F(taint_src):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+  AffectedNodeName: d
+  14:  Var Pass:      d = {
+  15:  Var Pass:          0: "a",
+  16:  Var Pass:          1: "b",
+  17:  Var Pass:          2: taint_src,  # 将污染源放在键为2的位置
+  18:  Var Pass:      }
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+  AffectedNodeName: taint_sink
+  20:  CALL:      taint_sink(d[1+0])  # 访问键为2的值并传给taint_sink函数
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+  AffectedNodeName: o
+  23:  ARG PASS:  def taint_sink(o):
+ /case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_002_F.py
+  AffectedNodeName: os.system
+  24:  SINK:      os.system(o)
+
+------------- 92: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_003_T.py
 Line 23: os.system(o)
@@ -2605,7 +2676,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 89: taint_flow_test-------------
+------------- 93: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/accuracy/field_sensitive/one_dimensional_collection/numeric_index_state_solver/map_solver_004_F.py
 Line 24: os.system(o)
@@ -2636,7 +2707,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 90: taint_flow_test-------------
+------------- 94: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
 Line 27: os.system(str(o))
@@ -2666,7 +2737,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(str(o))
 
-------------- 91: taint_flow_test-------------
+------------- 95: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_001_T.py
 Line 25: os.system(o)
@@ -2702,7 +2773,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 92: taint_flow_test-------------
+------------- 96: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_005_T.py
 Line 28: os.system(o)
@@ -2729,7 +2800,7 @@ Trace:
   AffectedNodeName: os.system
   28:  SINK:      os.system(o)
 
-------------- 93: taint_flow_test-------------
+------------- 97: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_009_T.py
 Line 28: os.system(o)
@@ -2768,7 +2839,7 @@ Trace:
   AffectedNodeName: os.system
   28:  SINK:      os.system(o)
 
-------------- 94: taint_flow_test-------------
+------------- 98: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py
 Line 30: os.system(o)
@@ -2823,7 +2894,7 @@ Trace:
   AffectedNodeName: os.system
   30:  SINK:      os.system(o)
 
-------------- 95: taint_flow_test-------------
+------------- 99: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/cross_class_003_T.py
 Line 35: os.system(o)
@@ -2852,7 +2923,7 @@ Trace:
   AffectedNodeName: os.system
   35:  SINK:      os.system(o)
 
-------------- 96: taint_flow_test-------------
+------------- 100: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
 Line 31: os.system(o)
@@ -2902,7 +2973,7 @@ Trace:
   AffectedNodeName: os.system
   31:  SINK:      os.system(o)
 
-------------- 97: taint_flow_test-------------
+------------- 101: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_001_T.py
 Line 22: os.system(o)
@@ -2934,7 +3005,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 98: taint_flow_test-------------
+------------- 102: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_003_T.py
 Line 25: os.system(o)
@@ -2960,7 +3031,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 99: taint_flow_test-------------
+------------- 103: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
 Line 30: os.system(o)
@@ -3004,7 +3075,7 @@ Trace:
   AffectedNodeName: os.system
   30:  SINK:      os.system(o)
 
-------------- 100: taint_flow_test-------------
+------------- 104: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/assert/assert_001_T.py
 Line 26: os.system(o)
@@ -3028,7 +3099,7 @@ Trace:
   AffectedNodeName: os.system
   26:  SINK:      os.system(o)
 
-------------- 101: taint_flow_test-------------
+------------- 105: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/assert/assert_002_F.py
 Line 27: os.system(o)
@@ -3052,7 +3123,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(o)
 
-------------- 102: taint_flow_test-------------
+------------- 106: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_001_T.py
 Line 18: os.system(o)
@@ -3073,7 +3144,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 103: taint_flow_test-------------
+------------- 107: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_if_003_T.py
 Line 22: os.system(o)
@@ -3094,7 +3165,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 104: taint_flow_test-------------
+------------- 108: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_match_001_T.py
 Line 20: os.system(o)
@@ -3118,7 +3189,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 105: taint_flow_test-------------
+------------- 109: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_001_T.py
 Line 17: os.system(o)
@@ -3142,7 +3213,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 106: taint_flow_test-------------
+------------- 110: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/conditional_stmt/conditional_ternary_002_F.py
 Line 17: os.system(o)
@@ -3166,7 +3237,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 107: taint_flow_test-------------
+------------- 111: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/all_001_T.py
 Line 16: os.system(o)
@@ -3190,7 +3261,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(o)
 
-------------- 108: taint_flow_test-------------
+------------- 112: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/any_001_T.py
 Line 16: os.system(o)
@@ -3214,7 +3285,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(o)
 
-------------- 109: taint_flow_test-------------
+------------- 113: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/for_body_002_F.py
 Line 20: os.system(o)
@@ -3238,7 +3309,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 110: taint_flow_test-------------
+------------- 114: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/forin_body_001_T.py
 Line 23: os.system(o)
@@ -3265,7 +3336,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 111: taint_flow_test-------------
+------------- 115: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_001_T.py
 Line 20: os.system(o)
@@ -3289,7 +3360,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 112: taint_flow_test-------------
+------------- 116: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/nested_loop_002_F.py
 Line 22: os.system(o)
@@ -3313,7 +3384,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 113: taint_flow_test-------------
+------------- 117: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_body_001_T.py
 Line 23: os.system(o)
@@ -3337,7 +3408,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 114: taint_flow_test-------------
+------------- 118: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_break_001_T.py
 Line 21: os.system(o)
@@ -3361,7 +3432,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 115: taint_flow_test-------------
+------------- 119: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_001_T.py
 Line 25: os.system(o)
@@ -3385,7 +3456,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 116: taint_flow_test-------------
+------------- 120: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/control_flow/loop_stmt/while_else_002_F.py
 Line 25: os.system(o)
@@ -3409,7 +3480,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 117: taint_flow_test-------------
+------------- 121: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/any/type_annotation_any_001_T.py
 Line 24: os.system(o)
@@ -3436,7 +3507,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 118: taint_flow_test-------------
+------------- 122: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/array_001_T.py
 Line 20: os.system(.join(o))
@@ -3463,7 +3534,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(''.join(o))
 
-------------- 119: taint_flow_test-------------
+------------- 123: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/extslice_001_T.py
 Line 24: os.system(o)
@@ -3487,7 +3558,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 120: taint_flow_test-------------
+------------- 124: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/extslice_002_F.py
 Line 24: os.system(o)
@@ -3511,7 +3582,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 121: taint_flow_test-------------
+------------- 125: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/array/numpy_array_001_T.py
 Line 21: os.system(.join(o))
@@ -3535,7 +3606,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(''.join(o))
 
-------------- 122: taint_flow_test-------------
+------------- 126: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytearray/bytearray_001_T.py
 Line 21: os.system(bytes(o))
@@ -3559,7 +3630,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(bytes(o))
 
-------------- 123: taint_flow_test-------------
+------------- 127: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_003_T.py
 Line 21: os.system(o)
@@ -3583,7 +3654,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 124: taint_flow_test-------------
+------------- 128: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_005_T.py
 Line 22: os.system(str(o))
@@ -3610,7 +3681,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 125: taint_flow_test-------------
+------------- 129: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_007_T.py
 Line 22: os.system(o)
@@ -3637,7 +3708,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 126: taint_flow_test-------------
+------------- 130: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_009_T.py
 Line 23: os.system(o)
@@ -3664,7 +3735,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 127: taint_flow_test-------------
+------------- 131: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_011_T.py
 Line 22: os.system(o)
@@ -3691,7 +3762,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 128: taint_flow_test-------------
+------------- 132: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/bytes/bytes_013_T.py
 Line 22: os.system(str(o))
@@ -3718,7 +3789,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 129: taint_flow_test-------------
+------------- 133: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_001_T.py
 Line 19: os.system(str(o))
@@ -3742,7 +3813,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 130: taint_flow_test-------------
+------------- 134: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_005_T.py
 Line 18: os.system(str(o))
@@ -3769,7 +3840,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 131: taint_flow_test-------------
+------------- 135: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_006_F.py
 Line 18: os.system(str(o))
@@ -3796,7 +3867,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 132: taint_flow_test-------------
+------------- 136: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_007_T.py
 Line 19: os.system(str(o))
@@ -3823,7 +3894,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 133: taint_flow_test-------------
+------------- 137: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/collections/set_008_F.py
 Line 19: os.system(str(o))
@@ -3850,7 +3921,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 134: taint_flow_test-------------
+------------- 138: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/customize/type_annotation_customize_001_T.py
 Line 22: os.system(o)
@@ -3882,7 +3953,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 135: taint_flow_test-------------
+------------- 139: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_001_T.py
 Line 18: os.system(str(o))
@@ -3906,7 +3977,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 136: taint_flow_test-------------
+------------- 140: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_003_T.py
 Line 18: os.system(str(o))
@@ -3930,7 +4001,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 137: taint_flow_test-------------
+------------- 141: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_005_T.py
 Line 19: os.system(str(o))
@@ -3951,7 +4022,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 138: taint_flow_test-------------
+------------- 142: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_007_T.py
 Line 20: os.system(o)
@@ -3975,7 +4046,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 139: taint_flow_test-------------
+------------- 143: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/list/list_009_T.py
 Line 23: os.system(o)
@@ -4005,7 +4076,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 140: taint_flow_test-------------
+------------- 144: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_001_T.py
 Line 19: os.system(str(o))
@@ -4028,7 +4099,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 141: taint_flow_test-------------
+------------- 145: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_006_F.py
 Line 22: os.system(str(o))
@@ -4052,7 +4123,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 142: taint_flow_test-------------
+------------- 146: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_007_T.py
 Line 22: os.system(str(o))
@@ -4076,7 +4147,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 143: taint_flow_test-------------
+------------- 147: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_008_F.py
 Line 22: os.system(str(o))
@@ -4100,7 +4171,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 144: taint_flow_test-------------
+------------- 148: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/map/map_009_T.py
 Line 22: os.system(str(o))
@@ -4130,7 +4201,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 145: taint_flow_test-------------
+------------- 149: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
 Line 27: os.system(o)
@@ -4166,7 +4237,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(o)
 
-------------- 146: taint_flow_test-------------
+------------- 150: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/bool_001_T.py
 Line 15: os.system(str(o))
@@ -4187,7 +4258,7 @@ Trace:
   AffectedNodeName: os.system
   15:  SINK:      os.system(str(o))
 
-------------- 147: taint_flow_test-------------
+------------- 151: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/bool_002_F.py
 Line 15: os.system(str(o))
@@ -4208,7 +4279,7 @@ Trace:
   AffectedNodeName: os.system
   15:  SINK:      os.system(str(o))
 
-------------- 148: taint_flow_test-------------
+------------- 152: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_001_T.py
 Line 16: os.system(str(o))
@@ -4232,7 +4303,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(str(o))
 
-------------- 149: taint_flow_test-------------
+------------- 153: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_003_T.py
 Line 17: os.system(str(o))
@@ -4259,7 +4330,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 150: taint_flow_test-------------
+------------- 154: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/complex_004_F.py
 Line 17: os.system(str(o))
@@ -4286,7 +4357,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 151: taint_flow_test-------------
+------------- 155: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/float_001_T.py
 Line 16: os.system(str(o))
@@ -4310,7 +4381,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(str(o))
 
-------------- 152: taint_flow_test-------------
+------------- 156: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/int_001_T.py
 Line 16: os.system(str(o))
@@ -4334,7 +4405,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(str(o))
 
-------------- 153: taint_flow_test-------------
+------------- 157: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/none_001_T.py
 Line 16: os.system(str(o))
@@ -4358,7 +4429,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(str(o))
 
-------------- 154: taint_flow_test-------------
+------------- 158: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/str_001_T.py
 Line 16: os.system(o)
@@ -4382,7 +4453,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(o)
 
-------------- 155: taint_flow_test-------------
+------------- 159: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_bool_001_T.py
 Line 17: os.system(str(o))
@@ -4406,7 +4477,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 156: taint_flow_test-------------
+------------- 160: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
 Line 20: os.system(str(o))
@@ -4433,7 +4504,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 157: taint_flow_test-------------
+------------- 161: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_float_001_T.py
 Line 17: os.system(str(o))
@@ -4457,7 +4528,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 158: taint_flow_test-------------
+------------- 162: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_int_001_T.py
 Line 18: os.system(str(o))
@@ -4481,7 +4552,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 159: taint_flow_test-------------
+------------- 163: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_none_001_T.py
 Line 21: os.system(o)
@@ -4502,7 +4573,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 160: taint_flow_test-------------
+------------- 164: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/primitives/type_annotation_str_001_T.py
 Line 18: os.system(o)
@@ -4526,7 +4597,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 161: taint_flow_test-------------
+------------- 165: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/tuple/tuple_001_T.py
 Line 18: os.system(str(o))
@@ -4550,7 +4621,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 162: taint_flow_test-------------
+------------- 166: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/datatype/tuple/tuple_003_T.py
 Line 19: os.system(str(o))
@@ -4576,7 +4647,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 163: taint_flow_test-------------
+------------- 167: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/exception_error/exception_throw/exception_try_001_T.py
 Line 21: os.system(o)
@@ -4597,7 +4668,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 164: taint_flow_test-------------
+------------- 168: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/assign_expression_001_T.py
 Line 18: os.system(o)
@@ -4621,7 +4692,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 165: taint_flow_test-------------
+------------- 169: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_001_T.py
 Line 18: os.system(o)
@@ -4645,7 +4716,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 166: taint_flow_test-------------
+------------- 170: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_add_assignment_001_T.py
 Line 19: os.system(o)
@@ -4669,7 +4740,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 167: taint_flow_test-------------
+------------- 171: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_and_001_T.py
 Line 19: os.system(str(o))
@@ -4693,7 +4764,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 168: taint_flow_test-------------
+------------- 172: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_or_001_T.py
 Line 19: os.system(str(o))
@@ -4717,7 +4788,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 169: taint_flow_test-------------
+------------- 173: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_bitwise_xor_001_T.py
 Line 19: os.system(str(o))
@@ -4741,7 +4812,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 170: taint_flow_test-------------
+------------- 174: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_divide_assignment_001_T.py
 Line 20: os.system(str(o))
@@ -4765,7 +4836,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 171: taint_flow_test-------------
+------------- 175: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_division_001_T.py
 Line 21: os.system(str(o))
@@ -4789,7 +4860,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(str(o))
 
-------------- 172: taint_flow_test-------------
+------------- 176: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_div_case_001_T.py
 Line 17: os.system(str(o))
@@ -4810,7 +4881,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 173: taint_flow_test-------------
+------------- 177: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_floor_division_001_T.py
 Line 19: os.system(str(o))
@@ -4834,7 +4905,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 174: taint_flow_test-------------
+------------- 178: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_left_shift_001_T.py
 Line 19: os.system(str(o))
@@ -4858,7 +4929,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 175: taint_flow_test-------------
+------------- 179: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_matrix_multiplication_001_T.py
 Line 27: os.system(str(o))
@@ -4885,7 +4956,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(str(o))
 
-------------- 176: taint_flow_test-------------
+------------- 180: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mod_001_T.py
 Line 17: os.system(str(o))
@@ -4909,7 +4980,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 177: taint_flow_test-------------
+------------- 181: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_modulo_assignment_001_T.py
 Line 19: os.system(str(o))
@@ -4933,7 +5004,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 178: taint_flow_test-------------
+------------- 182: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_mult_001_T.py
 Line 20: os.system(str(o))
@@ -4957,7 +5028,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 179: taint_flow_test-------------
+------------- 183: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_multiply_assignment_001_T.py
 Line 20: os.system(str(o))
@@ -4981,7 +5052,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 180: taint_flow_test-------------
+------------- 184: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_power_assignment_001_T.py
 Line 19: os.system(str(o))
@@ -5005,7 +5076,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 181: taint_flow_test-------------
+------------- 185: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_right_shift_001_T.py
 Line 19: os.system(str(o))
@@ -5029,7 +5100,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 182: taint_flow_test-------------
+------------- 186: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_sub_001_T.py
 Line 20: os.system(str(o))
@@ -5053,7 +5124,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 183: taint_flow_test-------------
+------------- 187: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/binary_expression_subtract_assignment_001_T.py
 Line 20: os.system(str(o))
@@ -5077,7 +5148,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 184: taint_flow_test-------------
+------------- 188: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_and_001_T.py
 Line 18: os.system(str(o))
@@ -5101,7 +5172,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 185: taint_flow_test-------------
+------------- 189: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_lsh_001_T.py
 Line 18: os.system(str(o))
@@ -5125,7 +5196,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 186: taint_flow_test-------------
+------------- 190: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_not_001_T.py
 Line 18: os.system(str(o))
@@ -5140,7 +5211,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 187: taint_flow_test-------------
+------------- 191: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_or_001_T.py
 Line 18: os.system(str(o))
@@ -5164,7 +5235,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 188: taint_flow_test-------------
+------------- 192: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_rsh_001_T.py
 Line 18: os.system(str(o))
@@ -5188,7 +5259,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 189: taint_flow_test-------------
+------------- 193: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/bitwise_expression_xor_001_T.py
 Line 18: os.system(str(o))
@@ -5212,7 +5283,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 190: taint_flow_test-------------
+------------- 194: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/greater_than_equal_001_T.py
 Line 19: os.system(str(o))
@@ -5236,7 +5307,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 191: taint_flow_test-------------
+------------- 195: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/less_than_equal_001_T.py
 Line 19: os.system(str(o))
@@ -5260,7 +5331,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 192: taint_flow_test-------------
+------------- 196: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_001_F.py
 Line 18: os.system(str(o))
@@ -5284,7 +5355,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 193: taint_flow_test-------------
+------------- 197: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_and_002_T.py
 Line 18: os.system(o)
@@ -5308,7 +5379,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 194: taint_flow_test-------------
+------------- 198: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_001_T.py
 Line 18: os.system(o)
@@ -5332,7 +5403,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 195: taint_flow_test-------------
+------------- 199: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/logic_expression_or_002_F.py
 Line 18: os.system(o)
@@ -5356,7 +5427,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 196: taint_flow_test-------------
+------------- 200: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_001_T.py
 Line 18: os.system(str(o))
@@ -5380,7 +5451,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 197: taint_flow_test-------------
+------------- 201: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_equal_002_F.py
 Line 18: os.system(str(o))
@@ -5404,7 +5475,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 198: taint_flow_test-------------
+------------- 202: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_001_T.py
 Line 18: os.system(str(o))
@@ -5428,7 +5499,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 199: taint_flow_test-------------
+------------- 203: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_greater_002_F.py
 Line 18: os.system(str(o))
@@ -5452,7 +5523,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 200: taint_flow_test-------------
+------------- 204: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_001_T.py
 Line 20: os.system(str(o))
@@ -5476,7 +5547,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 201: taint_flow_test-------------
+------------- 205: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_in_002_F.py
 Line 20: os.system(str(o))
@@ -5500,7 +5571,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 202: taint_flow_test-------------
+------------- 206: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_001_T.py
 Line 20: os.system(str(o))
@@ -5524,7 +5595,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 203: taint_flow_test-------------
+------------- 207: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_002_F.py
 Line 20: os.system(str(o))
@@ -5548,7 +5619,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 204: taint_flow_test-------------
+------------- 208: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_001_T.py
 Line 20: os.system(str(o))
@@ -5572,7 +5643,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 205: taint_flow_test-------------
+------------- 209: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_is_not_002_F.py
 Line 20: os.system(str(o))
@@ -5596,7 +5667,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 206: taint_flow_test-------------
+------------- 210: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_001_T.py
 Line 18: os.system(str(o))
@@ -5620,7 +5691,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 207: taint_flow_test-------------
+------------- 211: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_less_002_F.py
 Line 18: os.system(str(o))
@@ -5644,7 +5715,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 208: taint_flow_test-------------
+------------- 212: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_001_T.py
 Line 20: os.system(str(o))
@@ -5668,7 +5739,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 209: taint_flow_test-------------
+------------- 213: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_equal_002_F.py
 Line 20: os.system(str(o))
@@ -5692,7 +5763,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 210: taint_flow_test-------------
+------------- 214: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_001_T.py
 Line 20: os.system(str(o))
@@ -5716,7 +5787,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 211: taint_flow_test-------------
+------------- 215: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/relation_expression_not_in_002_F.py
 Line 20: os.system(str(o))
@@ -5740,7 +5811,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 212: taint_flow_test-------------
+------------- 216: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_001_T.py
 Line 19: os.system(str(o))
@@ -5755,7 +5826,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 213: taint_flow_test-------------
+------------- 217: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_not_002_F.py
 Line 19: os.system(str(o))
@@ -5770,7 +5841,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 214: taint_flow_test-------------
+------------- 218: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_uadd_001_T.py
 Line 19: os.system(str(o))
@@ -5785,7 +5856,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 215: taint_flow_test-------------
+------------- 219: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/basic_expression_operation/unary_expression_usub_001_T.py
 Line 19: os.system(str(o))
@@ -5800,7 +5871,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 216: taint_flow_test-------------
+------------- 220: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/conditional_expression_001_T.py
 Line 19: os.system(o)
@@ -5824,7 +5895,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 217: taint_flow_test-------------
+------------- 221: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_and_001_T.py
 Line 17: os.system(o)
@@ -5848,7 +5919,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 218: taint_flow_test-------------
+------------- 222: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_and_002_F.py
 Line 17: os.system(o)
@@ -5872,7 +5943,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 219: taint_flow_test-------------
+------------- 223: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_or_001_T.py
 Line 17: os.system(o)
@@ -5896,7 +5967,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 220: taint_flow_test-------------
+------------- 224: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/conditional_expression/logical_or_002_F.py
 Line 17: os.system(o)
@@ -5920,7 +5991,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 221: taint_flow_test-------------
+------------- 225: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/lambda_expression/lambda_expression_001_T.py
 Line 26: os.system(o)
@@ -5956,7 +6027,7 @@ Trace:
   AffectedNodeName: os.system
   26:  SINK:      os.system(o)
 
-------------- 222: taint_flow_test-------------
+------------- 226: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_001_T.py
 Line 25: os.system(o)
@@ -5988,7 +6059,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 223: taint_flow_test-------------
+------------- 227: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_002_F.py
 Line 23: os.system(str(o))
@@ -6015,7 +6086,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(str(o))
 
-------------- 224: taint_flow_test-------------
+------------- 228: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_003_T.py
 Line 19: os.system(str(o))
@@ -6039,7 +6110,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 225: taint_flow_test-------------
+------------- 229: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_004_F.py
 Line 19: os.system(str(o))
@@ -6063,7 +6134,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 226: taint_flow_test-------------
+------------- 230: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_005_T.py
 Line 20: os.system(str(o))
@@ -6087,7 +6158,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 227: taint_flow_test-------------
+------------- 231: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_006_F.py
 Line 20: os.system(str(o))
@@ -6111,7 +6182,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 228: taint_flow_test-------------
+------------- 232: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_007_T.py
 Line 20: os.system(str(o))
@@ -6135,7 +6206,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 229: taint_flow_test-------------
+------------- 233: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/del_expression_008_F.py
 Line 20: os.system(str(o))
@@ -6159,7 +6230,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 230: taint_flow_test-------------
+------------- 234: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_001_T.py
 Line 19: os.system(o)
@@ -6185,7 +6256,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 231: taint_flow_test-------------
+------------- 235: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_003_T.py
 Line 21: os.system(o)
@@ -6212,7 +6283,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 232: taint_flow_test-------------
+------------- 236: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_004_F.py
 Line 21: os.system(o)
@@ -6238,7 +6309,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 233: taint_flow_test-------------
+------------- 237: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_005_T.py
 Line 19: os.system(o)
@@ -6264,7 +6335,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 234: taint_flow_test-------------
+------------- 238: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/destructuring_assignment_006_F.py
 Line 19: os.system(o)
@@ -6290,7 +6361,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 235: taint_flow_test-------------
+------------- 239: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/enum_001_T.py
 Line 27: os.system(str(o))
@@ -6317,7 +6388,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(str(o))
 
-------------- 236: taint_flow_test-------------
+------------- 240: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/exponentiation_operator_001_T.py
 Line 17: os.system(str(o))
@@ -6341,7 +6412,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 237: taint_flow_test-------------
+------------- 241: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/list_comprehension_001_T.py
 Line 18: os.system(o)
@@ -6365,7 +6436,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 238: taint_flow_test-------------
+------------- 242: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/list_comprehension_002_F.py
 Line 18: os.system(o)
@@ -6389,7 +6460,31 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 239: taint_flow_test-------------
+------------- 243: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+Line 21: os.system(o)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py","functionName":"map_comprehension_001_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+  AffectedNodeName: taint_src
+  12:  SOURCE:  def map_comprehension_001_T(taint_src):
+ /case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+  AffectedNodeName: result
+  15:  Var Pass:          result = {i: taint_src for i in range(1)} # 简化示例，只循环一次以展示概念
+ /case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+  AffectedNodeName: taint_sink
+  16:  CALL:          taint_sink(result[0])
+ /case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+  AffectedNodeName: o
+  20:  ARG PASS:  def taint_sink(o):
+ /case/completeness/single_app_tracing/expression/special_expression/map_comprehension_001_T.py
+  AffectedNodeName: os.system
+  21:  SINK:      os.system(o)
+
+------------- 244: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_001_T.py
 Line 22: os.system(o)
@@ -6413,7 +6508,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 240: taint_flow_test-------------
+------------- 245: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/rest_parameter_001_T.py
 Line 20: os.system(str(o))
@@ -6439,7 +6534,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(str(o))
 
-------------- 241: taint_flow_test-------------
+------------- 246: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_001_T.py
 Line 19: os.system(str(o))
@@ -6466,7 +6561,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 242: taint_flow_test-------------
+------------- 247: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_003_T.py
 Line 26: os.system(str(o))
@@ -6500,7 +6595,7 @@ Trace:
   AffectedNodeName: os.system
   26:  SINK:      os.system(str(o))
 
-------------- 243: taint_flow_test-------------
+------------- 248: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_005_T.py
 Line 21: os.system(str(o))
@@ -6527,7 +6622,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(str(o))
 
-------------- 244: taint_flow_test-------------
+------------- 249: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/spread_operator_007_T.py
 Line 21: os.system(str(o))
@@ -6554,7 +6649,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(str(o))
 
-------------- 245: taint_flow_test-------------
+------------- 250: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_001_T.py
 Line 18: os.system(o)
@@ -6578,7 +6673,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 246: taint_flow_test-------------
+------------- 251: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_003_T.py
 Line 18: os.system(o)
@@ -6602,7 +6697,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 247: taint_flow_test-------------
+------------- 252: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/special_expression/template_literal_005_T.py
 Line 18: os.system(o)
@@ -6626,7 +6721,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 248: taint_flow_test-------------
+------------- 253: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/bool_conversion_001_T.py
 Line 18: os.system(str(o))
@@ -6650,7 +6745,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 249: taint_flow_test-------------
+------------- 254: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/float_truncate_001_T.py
 Line 18: os.system(str(o))
@@ -6674,7 +6769,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 250: taint_flow_test-------------
+------------- 255: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/int_truncate_001_T.py
 Line 17: os.system(str(o))
@@ -6698,7 +6793,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(str(o))
 
-------------- 251: taint_flow_test-------------
+------------- 256: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/str_conversion_001_T.py
 Line 16: os.system(o)
@@ -6722,7 +6817,7 @@ Trace:
   AffectedNodeName: os.system
   16:  SINK:      os.system(o)
 
-------------- 252: taint_flow_test-------------
+------------- 257: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/type_cast_001_T.py
 Line 18: os.system(str(o))
@@ -6746,7 +6841,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 253: taint_flow_test-------------
+------------- 258: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/expression/type_cast/type_cast_002_F.py
 Line 18: os.system(str(o))
@@ -6770,7 +6865,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(str(o))
 
-------------- 254: taint_flow_test-------------
+------------- 259: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_002_T.py
 Line 17: os.system(o)
@@ -6797,7 +6892,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 255: taint_flow_test-------------
+------------- 260: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_004_T.py
 Line 17: os.system(o)
@@ -6818,7 +6913,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 256: taint_flow_test-------------
+------------- 261: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_006_T.py
 Line 18: os.system(o)
@@ -6839,7 +6934,7 @@ Trace:
   AffectedNodeName: os.system
   18:  SINK:      os.system(o)
 
-------------- 257: taint_flow_test-------------
+------------- 262: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/anonymous_function_closure/anonymous_function_008_T.py
 Line 20: os.system(o)
@@ -6866,7 +6961,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 258: taint_flow_test-------------
+------------- 263: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_002_T.py
 Line 23: os.system(o)
@@ -6899,7 +6994,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 259: taint_flow_test-------------
+------------- 264: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_003_T.py
 Line 20: os.system(o)
@@ -6926,7 +7021,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 260: taint_flow_test-------------
+------------- 265: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_002_T.py
 Line 23: os.system(o)
@@ -6955,7 +7050,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(o)
 
-------------- 261: taint_flow_test-------------
+------------- 266: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_004_T.py
 Line 22: os.system(str(o))
@@ -6978,7 +7073,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 262: taint_flow_test-------------
+------------- 267: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_006_T.py
 Line 27: os.system(o)
@@ -7013,7 +7108,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(o)
 
-------------- 263: taint_flow_test-------------
+------------- 268: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_001_T.py
 Line 22: os.system(o)
@@ -7040,7 +7135,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 264: taint_flow_test-------------
+------------- 269: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_003_T.py
 Line 22: os.system(o)
@@ -7070,7 +7165,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 265: taint_flow_test-------------
+------------- 270: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_007_T.py
 Line 22: os.system(o)
@@ -7097,7 +7192,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 266: taint_flow_test-------------
+------------- 271: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_various_types_008_F.py
 Line 22: os.system(o)
@@ -7124,7 +7219,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 267: taint_flow_test-------------
+------------- 272: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
 Line 17: os.system(o)
@@ -7158,7 +7253,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 268: taint_flow_test-------------
+------------- 273: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T.py
 Line 32: os.system(o)
@@ -7179,7 +7274,7 @@ Trace:
   AffectedNodeName: os.system
   32:  SINK:      os.system(o)
 
-------------- 269: taint_flow_test-------------
+------------- 274: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py
 Line 34: os.system(o)
@@ -7203,7 +7298,7 @@ Trace:
   AffectedNodeName: os.system
   34:  SINK:      os.system(o)
 
-------------- 270: taint_flow_test-------------
+------------- 275: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/property_decorator_001_T.py
 Line 47: os.system(o)
@@ -7226,7 +7321,7 @@ Trace:
   AffectedNodeName: os.system
   47:  SINK:      os.system(o)
 
-------------- 271: taint_flow_test-------------
+------------- 276: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py
 Line 26: os.system(o)
@@ -7257,7 +7352,7 @@ Trace:
   AffectedNodeName: os.system
   26:  SINK:      os.system(o)
 
-------------- 272: taint_flow_test-------------
+------------- 277: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_002_T.py
 Line 25: os.system(o)
@@ -7296,7 +7391,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 273: taint_flow_test-------------
+------------- 278: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_004_T.py
 Line 30: os.system(o)
@@ -7338,7 +7433,7 @@ Trace:
   AffectedNodeName: os.system
   30:  SINK:      os.system(o)
 
-------------- 274: taint_flow_test-------------
+------------- 279: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_005_T.py
 Line 27: os.system(o)
@@ -7395,7 +7490,7 @@ Trace:
   AffectedNodeName: os.system
   27:  SINK:      os.system(o)
 
-------------- 275: taint_flow_test-------------
+------------- 280: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/generator_function_007_T.py
 Line 17: os.system(o)
@@ -7419,7 +7514,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 276: taint_flow_test-------------
+------------- 281: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_001_T.py
 Line 19: os.system(o)
@@ -7449,7 +7544,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 277: taint_flow_test-------------
+------------- 282: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/generator_function/yieldFrom_003_T.py
 Line 19: os.system(o)
@@ -7479,7 +7574,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 278: taint_flow_test-------------
+------------- 283: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_002_T.py
 Line 25: os.system(o)
@@ -7509,7 +7604,7 @@ Trace:
   AffectedNodeName: os.system
   25:  SINK:      os.system(o)
 
-------------- 279: taint_flow_test-------------
+------------- 284: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_004_T.py
 Line 24: os.system(o)
@@ -7545,7 +7640,7 @@ Trace:
   AffectedNodeName: os.system
   24:  SINK:      os.system(o)
 
-------------- 280: taint_flow_test-------------
+------------- 285: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_006_T.py
 Line 30: os.system(o)
@@ -7587,7 +7682,7 @@ Trace:
   AffectedNodeName: os.system
   30:  SINK:      os.system(o)
 
-------------- 281: taint_flow_test-------------
+------------- 286: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_008_T.py
 Line 21: os.system(o)
@@ -7629,7 +7724,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 282: taint_flow_test-------------
+------------- 287: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_010_T.py
 Line 28: os.system(o)
@@ -7683,7 +7778,7 @@ Trace:
   AffectedNodeName: os.system
   28:  SINK:      os.system(o)
 
-------------- 283: taint_flow_test-------------
+------------- 288: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_012_T.py
 Line 32: os.system(o)
@@ -7731,7 +7826,7 @@ Trace:
   AffectedNodeName: os.system
   32:  SINK:      os.system(o)
 
-------------- 284: taint_flow_test-------------
+------------- 289: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/datetime_001_T.py
 Line 22: os.system(str(o))
@@ -7761,7 +7856,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(str(o))
 
-------------- 285: taint_flow_test-------------
+------------- 290: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/json_001_T.py
 Line 21: os.system(o)
@@ -7791,7 +7886,7 @@ Trace:
   AffectedNodeName: os.system
   21:  SINK:      os.system(o)
 
-------------- 286: taint_flow_test-------------
+------------- 291: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/math_001_T.py
 Line 23: os.system(str(o))
@@ -7821,7 +7916,7 @@ Trace:
   AffectedNodeName: os.system
   23:  SINK:      os.system(str(o))
 
-------------- 287: taint_flow_test-------------
+------------- 292: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/os_001_T.py
 Line 17: os.system(o)
@@ -7845,7 +7940,7 @@ Trace:
   AffectedNodeName: os.system
   17:  SINK:      os.system(o)
 
-------------- 288: taint_flow_test-------------
+------------- 293: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/re_001_T.py
 Line 19: os.system(str(o))
@@ -7869,7 +7964,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(str(o))
 
-------------- 289: taint_flow_test-------------
+------------- 294: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/library_function/string_001_T.py
 Line 22: os.system(o)
@@ -7899,7 +7994,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 290: taint_flow_test-------------
+------------- 295: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
 Line 35: os.system(o)
@@ -7955,7 +8050,7 @@ Trace:
   AffectedNodeName: os.system
   35:  SINK:      os.system(o)
 
-------------- 291: taint_flow_test-------------
+------------- 296: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
 Line 37: os.system(data)
@@ -7999,7 +8094,7 @@ Trace:
   AffectedNodeName: os.system
   37:  SINK:      os.system(data)
 
-------------- 292: taint_flow_test-------------
+------------- 297: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py
 Line 29: os.system(o)
@@ -8027,7 +8122,7 @@ Trace:
   AffectedNodeName: os.system
   29:  SINK:      os.system(o)
 
-------------- 293: taint_flow_test-------------
+------------- 298: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_002_T.py
 Line 22: os.system(o)
@@ -8063,7 +8158,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 294: taint_flow_test-------------
+------------- 299: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_004_T.py
 Line 22: os.system(o)
@@ -8111,7 +8206,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 295: taint_flow_test-------------
+------------- 300: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_005_T.py
 Line 22: os.system(o)
@@ -8147,7 +8242,7 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 
-------------- 296: taint_flow_test-------------
+------------- 301: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py
 Line 28: os.system(o)
@@ -8190,7 +8285,7 @@ Trace:
   AffectedNodeName: os.system
   28:  SINK:      os.system(o)
 
-------------- 297: taint_flow_test-------------
+------------- 302: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/function_call/static_method/static_access_001_T.py
 Line 29: os.system(o)
@@ -8220,7 +8315,7 @@ Trace:
   AffectedNodeName: os.system
   29:  SINK:      os.system(o)
 
-------------- 298: taint_flow_test-------------
+------------- 303: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/global/global_001_T.py
 Line 19: os.system(o)
@@ -8244,7 +8339,7 @@ Trace:
   AffectedNodeName: os.system
   19:  SINK:      os.system(o)
 
-------------- 299: taint_flow_test-------------
+------------- 304: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/global/global_003_T.py
 Line 20: os.system(o)
@@ -8268,7 +8363,7 @@ Trace:
   AffectedNodeName: os.system
   20:  SINK:      os.system(o)
 
-------------- 300: taint_flow_test-------------
+------------- 305: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/nonlocal/nonlocal_001_T.py
 Line 26: os.system(o)
@@ -8292,7 +8387,7 @@ Trace:
   AffectedNodeName: os.system
   26:  SINK:      os.system(o)
 
-------------- 301: taint_flow_test-------------
+------------- 306: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
 Line 28: os.system(o)
@@ -8336,7 +8431,7 @@ Trace:
   AffectedNodeName: os.system
   28:  SINK:      os.system(o)
 
-------------- 302: taint_flow_test-------------
+------------- 307: taint_flow_test-------------
 Description:taint_flow_test，回归测试使用，不推荐外部使用
 File:/case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_003_T.py
 Line 22: os.system(o)
@@ -8360,5 +8455,5 @@ Trace:
   AffectedNodeName: os.system
   22:  SINK:      os.system(o)
 ==========================================================
-  #Total-findings:302
+  #Total-findings:307
 ==========================================================

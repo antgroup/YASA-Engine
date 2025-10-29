@@ -8,6 +8,7 @@ module.exports = {
   //* ***************************** only dumpAST ***************************
 
   dumpAST: false, // dump ast to json format
+  dumpAllAST: false, // dump all ast to json format
 
   //* *****************************  path and so on ***************************
 
@@ -20,9 +21,9 @@ module.exports = {
   // logLevel: 'info',
 
   //* *****************************  parsing *********************************
-  // javascript | golang | python
+  // javascript | golang | java | python
   language: '',
-  // EggAnalyzer | JavaScriptAnalyzer | GoAnalyzer | PythonAnalyzer
+  // EggAnalyzer | JavaScriptAnalyzer | JavaAnalyzer | SpringAnalyzer | GoAnalyzer | PythonAnalyzer
   analyzer: '',
   uastSDKPath: '',
   //* *****************************  subject  *********************************
