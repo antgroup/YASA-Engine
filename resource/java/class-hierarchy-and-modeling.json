@@ -1,6 +1,6 @@
 {
   "java.util.List": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/list-builtins.js",
+    "modelingFilePath": "./builtins/list-builtins",
     "subTypeList": [
       "com.sun.jmx.remote.internal.ArrayQueue",
       "com.sun.org.apache.xerces.internal.impl.dv.util.ByteListImpl",
@@ -36,7 +36,7 @@
     ]
   },
   "java.util.Queue": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/queue-builtins.js",
+    "modelingFilePath": "./builtins/queue-builtins",
     "subTypeList": [
       "com.sun.tools.javac.comp.Todo",
       "com.sun.tools.javac.util.ListBuffer",
@@ -61,19 +61,19 @@
     ]
   },
   "java.util.Stack": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stack-builtins.js",
+    "modelingFilePath": "./builtins/stack-builtins",
     "subTypeList": [
       "com.sun.org.apache.xalan.internal.xsltc.compiler.util.StringStack"
     ]
   },
   "java.lang.StringBuilder": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stringbuilder-builtins.js"
+    "modelingFilePath": "./builtins/stringbuilder-builtins"
   },
   "java.lang.StringBuffer": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/stringbuffer-builtins.js"
+    "modelingFilePath": "./builtins/stringbuffer-builtins"
   },
   "java.util.Set": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/set-builtins.js",
+    "modelingFilePath": "./builtins/set-builtins",
     "subTypeList": [
       "com.sun.jdi.event.EventSet",
       "com.sun.tools.jdi.EventSetImpl",
@@ -91,13 +91,13 @@
     ]
   },
   "java.util.HashSet": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/hashset-builtins.js",
+    "modelingFilePath": "./builtins/hashset-builtins",
     "subTypeList": [
       "java.util.LinkedHashSet"
     ]
   },
   "java.util.Map": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/map-builtins.js",
+    "modelingFilePath": "./builtins/map-builtins",
     "subTypeList": [
       "apple.security.AppleProvider",
       "com.sun.net.httpserver.Headers",
@@ -149,7 +149,7 @@
     ]
   },
   "java.util.HashMap": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/hashmap-builtins.js",
+    "modelingFilePath": "./builtins/hashmap-builtins",
     "subTypeList": [
       "com.sun.tools.javac.comp.CompileStates",
       "java.util.LinkedHashMap",
@@ -158,7 +158,7 @@
     ]
   },
   "java.util.concurrent.Executor": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/executor-builtins.js",
+    "modelingFilePath": "./builtins/executor-builtins",
     "subTypeList": [
       "java.util.concurrent.AbstractExecutorService",
       "java.util.concurrent.ExecutorService",
@@ -169,19 +169,19 @@
     ]
   },
   "java.util.Timer": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/timer-builtins.js",
+    "modelingFilePath": "./builtins/timer-builtins",
     "subTypeList": [
       "sun.jvmstat.perfdata.monitor.protocol.local.LocalEventTimer"
     ]
   },
   "java.util.concurrent.CompletableFuture": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/completablefuture-builtins.js",
+    "modelingFilePath": "./builtins/completablefuture-builtins",
     "subTypeList": [
       "jdk.internal.net.http.common.MinimalFuture"
     ]
   },
   "java.util.concurrent.atomic.AtomicReference": {
-    "modelingFilePath": "src/engine/analyzer/java/common/builtins/atomicreference-builtins.js",
+    "modelingFilePath": "./builtins/atomicreference-builtins",
     "subTypeList": []
   }
 }

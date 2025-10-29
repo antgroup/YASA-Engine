@@ -7,8 +7,17 @@
 /node_modules/
 /workspace/
 test/javascript/benchmarks
+test/java/benchmarks
 test/go/benchmarks
 test/python/benchmarks
+test/javascript/logs
+test/java/logs
+test/go/logs
+test/python/logs
+test/javascript/test-report
+test/java/test-report
+test/go/test-report
+test/python/test-report
 deps/uast4go
 deps/uast4py
 .DS_Store
