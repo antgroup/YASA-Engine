@@ -236,7 +236,7 @@ async function initAnalyzer(dir, args = [], printf) {
   })
 
   // 处理未知选项
-  program.allowUnknownOption(true)
+  program.allowUnknownOption(false)
   program.allowExcessArguments()
 
   // 处理帮助信息

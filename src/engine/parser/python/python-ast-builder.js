@@ -32,7 +32,7 @@ function buildUAST(rootDir, options) {
     isSingle = '--singleFileParse=False'
   }
 
-  let uast4pythonPath = path.join(__dirname, '../../../../deps/uast4python/uast4python')
+  let uast4pythonPath = path.join(__dirname, '../../../../deps/uast4py/uast4py')
 
   if (options.uastSDKPath && options.uastSDKPath !== '') {
     uast4pythonPath = options.uastSDKPath
