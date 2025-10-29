@@ -77,9 +77,9 @@ jobs:
             target: node18-macos-arm64
             goarch: arm64
             out_name: yasa-engine-macos-arm64
-          - os: windows-latest
-            target: node18-win-x64
-            out_name: yasa-engine-windows-x64.exe
+          # - os: windows-latest
+          #   target: node18-win-x64
+          #   out_name: yasa-engine-windows-x64.exe
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
@@ -222,9 +222,9 @@ jobs:
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
           IS_WINDOWS["macos-arm64"]="false"
 
-          PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe uast4py-windows-amd64.exe"
-          ARTIFACT_KEYS["windows-x64"]="engine-node18-win-x64"
-          IS_WINDOWS["windows-x64"]="true"
+          # PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe uast4py-windows-amd64.exe"
+          # ARTIFACT_KEYS["windows-x64"]="engine-node18-win-x64"
+          # IS_WINDOWS["windows-x64"]="true"
 
           EXAMPLE_CONFIG_SRC="resource/example-rule-config"
           if [[ ! -d "$EXAMPLE_CONFIG_SRC" ]]; then
@@ -323,11 +323,11 @@ jobs:
             engine: yasa-engine-macos-arm64
             uast_go: uast4go-mac-arm64
             uast_py: uast4py-mac-arm64
-          - os: windows-latest
-            zip: yasa-windows-x64.zip
-            engine: yasa-engine-windows-x64.exe
-            uast_go: uast4go-windows-amd64.exe
-            uast_py: uast4py-windows-amd64.exe
+          # - os: windows-latest
+          #   zip: yasa-windows-x64.zip
+          #   engine: yasa-engine-windows-x64.exe
+          #   uast_go: uast4go-windows-amd64.exe
+          #   uast_py: uast4py-windows-amd64.exe
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: 📥 Download Release Artifacts
@@ -349,11 +349,11 @@ jobs:
         shell: bash
         if: ${{ matrix.platform.os != 'windows-latest' }}
 
-      - name: 📦 Extract Bundle (Windows)
-        shell: pwsh
-        if: ${{ matrix.platform.os == 'windows-latest' }}
-        run: |
-          Expand-Archive -Path "releases/${{ matrix.platform.zip }}" -DestinationPath bundle
+      # - name: 📦 Extract Bundle (Windows)
+      #   shell: pwsh
+      #   if: ${{ matrix.platform.os == 'windows-latest' }}
+      #   run: |
+      #     Expand-Archive -Path "releases/${{ matrix.platform.zip }}" -DestinationPath bundle
 
       - name: 🌐 Clone Test Data Repository
         run: |
@@ -405,59 +405,59 @@ jobs:
           # 只要走到这里就是失败
           echo "result=failure" >> "$GITHUB_OUTPUT"
 
-      - name: ✅ Test JavaScript (Windows)
-        id: test_js_win
-        working-directory: test-data
-        shell: pwsh
-        if: ${{ matrix.platform.os == 'windows-latest' }}
-        run: |
-          # 设置 UTF-8
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          $OutputEncoding = [System.Text.Encoding]::UTF8
+      # - name: ✅ Test JavaScript (Windows)
+      #   id: test_js_win
+      #   working-directory: test-data
+      #   shell: pwsh
+      #   if: ${{ matrix.platform.os == 'windows-latest' }}
+      #   run: |
+      #     # 设置 UTF-8
+      #     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+      #     $OutputEncoding = [System.Text.Encoding]::UTF8
 
-          $EnginePath = "..\bundle\${{ matrix.platform.engine }}"
-          $OutputFile = ".\temp_yasa_res.log"
+      #     $EnginePath = "..\bundle\${{ matrix.platform.engine }}"
+      #     $OutputFile = ".\temp_yasa_res.log"
 
-          Write-Host "🔍 Using engine: $EnginePath"
-          Write-Host "📄 Output log: $OutputFile"
+      #     Write-Host "🔍 Using engine: $EnginePath"
+      #     Write-Host "📄 Output log: $OutputFile"
 
-          try {
-            # ✅ 所有参数写在一行，避免 \` 换行问题
-            $output = & $EnginePath --% sast-js --analyzer JavaScriptAnalyzer --checkerPackIds taint-flow-javascript-default --ruleConfigFile sast-js/rule_config.json 2>&1
-            $output | Out-File -FilePath $OutputFile -Encoding utf8
-          }
-          catch {
-            Write-Host "❌ ERROR: Failed to execute YASA-Engine" -ForegroundColor Red
-            Write-Host $_.Exception.Message
-            Write-Host "Exit code: $LastExitCode"
-            "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
-            exit 1
-          }
+      #     try {
+      #       # ✅ 所有参数写在一行，避免 \` 换行问题
+      #       $output = & $EnginePath --% sast-js --analyzer JavaScriptAnalyzer --checkerPackIds taint-flow-javascript-default --ruleConfigFile sast-js/rule_config.json 2>&1
+      #       $output | Out-File -FilePath $OutputFile -Encoding utf8
+      #     }
+      #     catch {
+      #       Write-Host "❌ ERROR: Failed to execute YASA-Engine" -ForegroundColor Red
+      #       Write-Host $_.Exception.Message
+      #       Write-Host "Exit code: $LastExitCode"
+      #       "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+      #       exit 1
+      #     }
 
-          Write-Host "📄 First 20 lines of output:"
-          Get-Content $OutputFile | Select-Object -First 20 | ForEach-Object { "    $_" }
+      #     Write-Host "📄 First 20 lines of output:"
+      #     Get-Content $OutputFile | Select-Object -First 20 | ForEach-Object { "    $_" }
 
-          $findingsSection = Get-Content $OutputFile | Select-String "=== Findings ===" -Context 0,5
-          Write-Host "🔍 Relevant findings:"
-          if ($findingsSection) {
-            $findingsSection | Format-List
-          } else {
-            Write-Host "  (no matching section)"
-          }
+      #     $findingsSection = Get-Content $OutputFile | Select-String "=== Findings ===" -Context 0,5
+      #     Write-Host "🔍 Relevant findings:"
+      #     if ($findingsSection) {
+      #       $findingsSection | Format-List
+      #     } else {
+      #       Write-Host "  (no matching section)"
+      #     }
 
-          $hasFindingsHeader = $output -match "===\s*Findings\s*==="
-          $hasNoFindingsMsg = $output -match "No findings[!]*"
+      #     $hasFindingsHeader = $output -match "===\s*Findings\s*==="
+      #     $hasNoFindingsMsg = $output -match "No findings[!]*"
 
-          if ($hasFindingsHeader -and !$hasNoFindingsMsg) {
-            Write-Host "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
-            "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
-          } else {
-            Write-Host "❌ JavaScript test FAILED: Did not meet finding criteria"
-            if (!$hasFindingsHeader) { Write-Host "- Missing '=== Findings ===' header" }
-            if ($hasNoFindingsMsg) { Write-Host "- Contains 'No findings!' message" }
-            "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
-            exit 1
-          }
+      #     if ($hasFindingsHeader -and !$hasNoFindingsMsg) {
+      #       Write-Host "✅ JavaScript test PASSED: Findings detected and not 'No findings!'"
+      #       "result=success" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+      #     } else {
+      #       Write-Host "❌ JavaScript test FAILED: Did not meet finding criteria"
+      #       if (!$hasFindingsHeader) { Write-Host "- Missing '=== Findings ===' header" }
+      #       if ($hasNoFindingsMsg) { Write-Host "- Contains 'No findings!' message" }
+      #       "result=failure" | Out-File -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+      #       exit 1
+      #     }
 
       - name: 📊 Summarize Test Results
         if: always()
@@ -511,7 +511,6 @@ jobs:
             "- \`yasa-linux-x64.zip\`" \
             "- \`yasa-macos-x64.zip\`" \
             "- \`yasa-macos-arm64.zip\`" \
-            "- \`yasa-windows-x64.zip\`" \
             "" \
             "Each contains:" \
             "- YASA-Engine executable" \

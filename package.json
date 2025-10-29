@@ -2,11 +2,11 @@
   "name": "@ant-yasa/yasa-engine",
   "version": "0.0.0",
   "description": "yet another static analyzer",
-  "main": "./src/main.js",
-  "bin": "./src/main.js",
+  "main": "./dist/main.js",
+  "bin": "./dist/main.js",
   "dependencies": {
-    "@ant-yasa/uast-parser-java-js": "^0.1.50",
-    "@ant-yasa/uast-spec": "^0.1.50",
+    "@ant-yasa/uast-parser-java-js": "^0.1.49",
+    "@ant-yasa/uast-spec": "^0.1.26",
     "@babel/core": "^7.14.6",
     "@babel/parser": "^7.16.4",
     "@babel/plugin-proposal-decorators": "^7.14.5",
@@ -21,6 +21,7 @@
     "@babel/preset-typescript": "^7.16.7",
     "chalk": "^2.4.2",
     "commander": "^14.0.0",
+    "escodegen": "^2.1.0",
     "fast-glob": "^3.2.7",
     "fs-extra": "^7.0.1",
     "graphviz": "^0.0.9",
@@ -32,11 +33,17 @@
     "node-uuid": "^1.4.8",
     "semver": "^7.3.8",
     "tmp": "^0.2.3",
+    "tsx": "^4.20.6",
     "underscore": "^1.9.1",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@babel/plugin-syntax-top-level-await": "^7.14.5",
+    "@types/escodegen": "^0.0.10",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jsonfile": "^6.1.4",
+    "@types/lodash": "^4.17.20",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
@@ -75,8 +82,12 @@
     "webpack-obfuscator": "^3.4.1"
   },
   "scripts": {
-    "test-js": "mocha test/javascript/test-js-benchmark.js && mocha test/javascript/test-egg-benchmark.js",
-    "test-java": "mocha test/java/test-java-benchmark.js",
+    "test-js": "npx mocha --require tsx/cjs test/javascript/test-js-benchmark.ts",
+    "test-egg": "npx mocha --require tsx/cjs test/javascript/test-egg-benchmark.ts",
+    "test-java": "npx mocha --require tsx/cjs test/java/test-java-benchmark.ts",
+    "test-go": "npx mocha --require tsx/cjs test/go/test-go-benchmark.ts",
+    "test-python": "npx mocha --require tsx/cjs test/python/test-python-benchmark.ts",
+    "test-all": "npm run test-js && npm run test-egg && npm run test-java && npm run test-go && npm run test-python",
     "build-uast": "gulp --cwd ./ -f gulpfile_cli.js uastDump && pkg distUastDump/uast.js",
     "build-engine": "gulp --cwd ./ -f gulpfile_cli.js engine && pkg dist/engine.js",
     "build-sym": "gulp --cwd ./ -f gulpfile_sym.js",
@@ -152,9 +163,14 @@
     "indent": 2
   },
   "pkg": {
-    "scripts": [],
+    "scripts": [
+      "dist/checker/**/*.js",
+      "dist/engine/**/*.js",
+      "dist/util/**/*.js",
+      "dist/interface/**/*.js"
+    ],
     "assets": [
-      "src/**/*",
+      "dist/**/*",
       "resource/**/*"
     ],
     "targets": [
@@ -163,5 +179,6 @@
       "node18-linux-x64"
     ]
   },
+  "license": "ISC",
   "repository": "git@github.com:antgroup/YASA-Engine.git"
 }
