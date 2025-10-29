@@ -82,6 +82,7 @@
     "checkerPackId": "taint-flow-python-default",
     "checkerIds": [
       "taint_flow_python_input",
+      "django_entrypoint_collect_checker",
       "callgraph",
       "sanitizer"
     ],
