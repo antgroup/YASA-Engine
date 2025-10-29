@@ -5,7 +5,7 @@
       "taint_flow_gin_input",
       "taint_flow_go_input",
       "cobra.Command-builtIn",
-      "RestfulEntrypointCollectChecker",
+      "go-restful-entryPoints-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
       "go-main-entryPoints-collection",

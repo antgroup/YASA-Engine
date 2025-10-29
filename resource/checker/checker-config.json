@@ -137,7 +137,7 @@
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_test.json"
   },
   {
-    "checkerId": "RestfulEntrypointCollectChecker",
+    "checkerId": "go-restful-entryPoints-collect-checker",
     "checkerPath": "src/checker/taint/go/restful-entrypoint-collect-checker.js",
     "description": "go-restful entrypoint采集以及框架source添加"
   },
