@@ -1,0 +1,24 @@
+[
+  {
+    "checkerIds": ["django_entrypoint_collect_checker", "taint_flow_python_input"],
+    "sources": {
+      "TaintSource": [
+        {"path": "request", "scopeFile": "all", "scopeFunc": "all"},
+        {"path": "get", "scopeFile": "all", "scopeFunc": "all"},
+        {"path": "post", "scopeFile": "all", "scopeFunc": "all"}
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {"fsig": "os.system", "args": [0], "attribute": "CommandInjection"},
+        {"fsig": "subprocess.call", "args": [0], "attribute": "CommandInjection"},
+        {"fsig": "subprocess.run", "args": [0], "attribute": "CommandInjection"},
+        {"fsig": "subprocess.Popen", "args": [0], "attribute": "CommandInjection"},
+        {"fsig": "eval", "args": [0], "attribute": "CodeInjection"},
+        {"fsig": "exec", "args": [0], "attribute": "CodeInjection"},
+        {"fsig": "cursor.execute", "args": [0], "attribute": "SQLInjection"},
+        {"fsig": "cur.execute", "args": [0], "attribute": "SQLInjection"}
+      ]
+    }
+  }
+]
