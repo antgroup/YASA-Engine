@@ -1,0 +1,2167 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_gin_input_inner",
+      "taint_flow_go_input",
+      "taint_flow_gin_input"
+    ],
+    "sources": {
+      "FuncCallArgTaintSource": [
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindJSON",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindYAML",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindXML",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindUri",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindQuery",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindWith",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "BindHeader",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "MustBindWith",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "Bind",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBind",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindBodyWith",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindJSON",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindQuery",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindUri",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindHeader",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindWith",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindXML",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "calleeType": "*gin.Context",
+          "fsig": "ShouldBindYAML",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        }
+      ],
+      "TaintSource": [
+        {
+          "className": "*gin.Context",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "path": "Params",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "className": "*gin.Context",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "path": "Accepted",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "className": "*gin.Context",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "path": "Request",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        }
+      ],
+      "FuncCallReturnValueTaintSource": [
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "FullPath",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetHeader",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "QueryArray",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "Query",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "PostFormArray",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "PostForm",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "Param",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetStringSlice",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetString",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetRawData",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "ClientIP",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "ContentType",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "Cookie",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetQueryArray",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetQuery",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetPostFormArray",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetPostForm",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "DefaultPostForm",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "DefaultQuery",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetPostFormMap",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetQueryMap",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetStringMap",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetStringMapString",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "GetStringMapStringSlice",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "PostFormMap",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "calleeType": "*gin.Context",
+          "fsig": "QueryMap",
+          "introPoint": 4,
+          "kind": "GO_INPUT",
+          "scopeFile": "all",
+          "scopeFunc": "all",
+          "values": [
+            "0"
+          ]
+        }
+      ]
+    },
+    "sanitizers": [ ],
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fregex": "squirrel[\\s\\S]*?Select\\([^)]*\\)(?:\\.\\w+\\([^)]*\\))*\\s*\\.Where",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fregex": "squirrel[\\s\\S]*?Expr\\([^)]*\\)(?:\\.\\w+\\([^)]*\\))*\\s*\\.Where",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fregex": "squirrel[\\s\\S]*?Insert\\([^)]*\\)(?:\\.\\w+\\([^)]*\\))*\\s*\\.Where",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fregex": "[\\s\\S]*?Delete\\([^)]*\\)(?:\\.\\w+\\([^)]*\\))*\\s*\\.Where",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fregex": "squirrel[\\s\\S]*?Update\\([^)]*\\)(?:\\.\\w+\\([^)]*\\))*\\s*\\.Where",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.QueryOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.Queue",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.QueueOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.Write",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "",
+          "fsig": "conn.WriteOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Conn",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Conn",
+          "fsig": "QueryOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Conn",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.DB",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.DB",
+          "fsig": "QueryOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.DB",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "ColumnExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "For",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "GroupExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "Having",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "Join",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "OrderExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "TableExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "Where",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "WhereIn",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "WhereInMulti",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "WhereOr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*pg.Query",
+          "fsig": "FormatQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "Prepare",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetAll",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetValue",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetArray",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetCount",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "Raw",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetScan",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetStruct",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "GetStructs",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "DoQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "DoExec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "DoCommit",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.DB",
+          "fsig": "DoPrepare",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "GetScan",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "GetStruct",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "GetStructs",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "DoQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "DoExec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "DoCommit",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.Core",
+          "fsig": "DoPrepare",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "GetScan",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "GetStruct",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "GetStructs",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "DoQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "DoExec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "DoCommit",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "gdb.TX",
+          "fsig": "DoPrepare",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Statement.AddClause",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Statement.AddClauseIfNotExists",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Raw",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Where",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Find",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "First",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Take",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Last",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Order",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Not",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Or",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Select",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Table",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Group",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Having",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Joins",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Distinct",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*gorm.DB",
+          "fsig": "Pluck",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*mongo.Collection",
+          "fsig": "Find",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*mongo.Collection",
+          "fsig": "FindOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "Select",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "Get",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "MustExec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "Queryx",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "NamedExec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*DB",
+          "fsig": "NamedQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "QueryString",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "SQL",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Where",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "And",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Or",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Alias",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "NotIn",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "In",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Select",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "SetExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "OrderBy",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Having",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "GroupBy",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "SumInt",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Sum",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Sums",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "SumsInt",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "Join",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Engine",
+          "fsig": "NamedQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "QueryString",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "SQL",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Where",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "And",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Or",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Alias",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "NotIn",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "In",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Select",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "SetExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "OrderBy",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Having",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "GroupBy",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "SumInt",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Sum",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Sums",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "SumsInt",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "Join",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Session",
+          "fsig": "NamedQuery",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "ExecContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "PrepareContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Prepare",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "QueryContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "QueryRowContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "NewRaw",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "QueryRow",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Raw",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "ColumnExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "DistinctOn",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "For",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "GroupExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Having",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "ModelTableExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "OrderExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "TableExpr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Where",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "WhereOr",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Begin.Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Begin.ExecContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Begin.Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "BeginTx.Query",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "BeginTx.ExecContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "BeginTx.Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sqlx.DB",
+          "fsig": "Exec",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sqlx.DB",
+          "fsig": "Get",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*sqlx.DB",
+          "fsig": "Select",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "CountDocuments",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "DeleteMany",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "DeleteOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "Distinct",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "Find",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "FindOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "FindOneAndDelete",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "FindOneAndReplace",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "FindOneAndUpdate",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "ReplaceOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "UpdateMany",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "UpdateOne",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "Watch",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*Collection",
+          "fsig": "Aggregate",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSqlInjection",
+          "calleeType": "*xorm.Session",
+          "fsig": "Sql",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoSSRF",
+          "calleeType": "",
+          "fsig": "http.Get",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "GoSSRF",
+          "calleeType": "",
+          "fsig": "http.Post",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoSSRF",
+          "calleeType": "",
+          "fsig": "http.NewRequest",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoCommandExec",
+          "calleeType": "",
+          "fsig": "exec.Command",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoCommandExec",
+          "calleeType": "",
+          "fsig": "exec.CommandContext",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "GoCommandExec",
+          "calleeType": "",
+          "fsig": "exec.LookPath",
+          "kind": "GO_INPUT"
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "GoCommandExec",
+          "calleeType": "",
+          "fregex": "(?:[a-zA-Z0-9_./]*\\\\.)?remotecommand\\\\.\\\\s*NewSPDYExecutor\\\\s*\\\\([^)]*\\\\)\\\\.\\\\s*StreamWithContext(?:\\\\s*\\\\([^)]*\\\\))?",
+          "kind": "GO_INPUT",
+          "sanitizerIds": [ ]
+        }
+      ]
+    },
+    "entrypoints": [
+      {
+        "attribute": "HTTP",
+        "filePath": "/internal/routes/routes.go",
+        "funcReceiverType": "",
+        "functionName": "SetupRoutes"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/internal/handlers/product_handler.go",
+        "funcReceiverType": "ProductHandler",
+        "functionName": "GetProductByName"
+      },
+      {
+        "attribute": "HTTP",
+        "filePath": "/internal/handlers/user_handler.go",
+        "funcReceiverType": "UserHandler",
+        "functionName": "GetUserByID"
+      }
+    ]
+  }
+]
