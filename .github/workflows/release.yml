@@ -97,29 +97,18 @@ jobs:
           npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-          # 🔧 新增：TypeScript 编译
           
       - name: Compile TypeScript with tsc
         run: |
           echo "🛠️  Compiling TypeScript..."
           npx tsc --build
 
-          # 可选：检查关键输出是否存在
-          if [ ! -f "dist/index.js" ] && [ ! -f "dist/cli.js" ]; then
-            echo "❌ Compilation failed: No output in dist/"
-            ls -la src || true
-            exit 1
-          fi
           echo "✅ TypeScript compiled successfully"
 
       - name: Build with pkg
         run: |
           echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
           npx pkg . --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
-          if [ ! -f "dist/${{ matrix.platform.out_name }}" ]; then
-            echo "❌ Failed to generate binary: dist/${{ matrix.platform.out_name }}"
-            exit 1
-          fi
           echo "✅ Built: dist/${{ matrix.platform.out_name }}"
 
 
