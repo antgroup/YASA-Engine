@@ -1,138 +1,138 @@
 [
   {
     "checkerId": "antql_getbaseclass",
-    "checkerPath": "src/checker/antql/rules/antql-getbaseclass.js",
+    "checkerPath": "checker/antql/rules/antql-getbaseclass.ts",
     "description": "antql_getbaseclass"
   },
   {
     "checkerId": "antql_getdefinition",
-    "checkerPath": "src/checker/antql/rules/antql-getdefinition.js",
+    "checkerPath": "checker/antql/rules/antql-getdefinition.ts",
     "description": "antql_getdefinition"
   },
   {
     "checkerId": "antql_getsubclass",
-    "checkerPath": "src/checker/antql/rules/antql-getsubclass.js",
+    "checkerPath": "checker/antql/rules/antql-getsubclass.ts",
     "description": "antql_getsubclass"
   },
   {
     "checkerId": "antql_hasflow",
-    "checkerPath": "src/checker/antql/rules/antql-hasflow.js",
+    "checkerPath": "checker/antql/rules/antql-hasflow.ts",
     "description": "antql_hasflow"
   },
   {
     "checkerId": "antql_hasfunctioncall",
-    "checkerPath": "src/checker/antql/rules/antql-hasfunctioncall.js",
+    "checkerPath": "checker/antql/rules/antql-hasfunctioncall.ts",
     "description": "antql_hasfunctioncall"
   },
   {
     "checkerId": "antql_hasproperty",
-    "checkerPath": "src/checker/antql/rules/antql-hasproperty.js",
+    "checkerPath": "checker/antql/rules/antql-hasproperty.ts",
     "description": "antql_hasproperty"
   },
   {
     "checkerId": "callgraph",
-    "checkerPath": "src/checker/callgraph/callgraph-checker.js",
+    "checkerPath": "checker/callgraph/callgraph-checker.ts",
     "description": "CallGraph采集checker"
   },
   {
     "checkerId": "sanitizer",
-    "checkerPath": "src/checker/sanitizer/sanitizer-checker.js",
+    "checkerPath": "checker/sanitizer/sanitizer-checker.ts",
     "description": "Sanitizer checker",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_sanitizer_for_java_example.json"
   },
   {
     "checkerId": "cobra.Command-builtIn",
-    "checkerPath": "src/checker/taint/go/cobra-command-checker.js",
+    "checkerPath": "checker/taint/go/cobra-command-checker.ts",
     "description": "为第三方库方法cobra.command做建模，添加entryPoints"
   },
   {
     "checkerId": "taint_flow_gin_input",
-    "checkerPath": "src/checker/taint/go/gin-default-taint-checker.js",
+    "checkerPath": "checker/taint/go/gin-default-taint-checker.ts",
     "description": "Gin taint_flow checker，不会使用CallGraph边界制作entrypoint",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
     "checkerId": "taint_flow_gin_input_inner",
-    "checkerPath": "src/checker/taint/go/gin-taint-checker.js",
+    "checkerPath": "checker/taint/go/gin-taint-checker.ts",
     "description": "Gin taint_flow checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
     "checkerId": "taint_flow_go_input",
-    "checkerPath": "src/checker/taint/go/go-default-taint-checker.js",
+    "checkerPath": "checker/taint/go/go-default-taint-checker.ts",
     "description": "Go framework checker，会使用CallGraph边界制作entrypoint",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
     "checkerId": "gorilla-mux-entrypoint-collect-checker",
-    "checkerPath": "src/checker/taint/go/gorilla-mux-entrypoint-collect-checker.js",
+    "checkerPath": "checker/taint/go/gorilla-mux-entrypoint-collect-checker.ts",
     "description": "Mux entryPoint采集以及框架source添加"
   },
   {
     "checkerId": "gRpc-entryPoint-collect-checker",
-    "checkerPath": "src/checker/taint/go/gRpc-entrypoint-collect-checker.js",
+    "checkerPath": "checker/taint/go/gRpc-entrypoint-collect-checker.ts",
     "description": "gRpc entrypoint采集以及框架source添加"
   },
   {
     "checkerId": "go-main-entryPoints-collection",
-    "checkerPath": "src/checker/taint/go/main-entrypoint-collect-checker.js",
+    "checkerPath": "checker/taint/go/main-entrypoint-collect-checker.ts",
     "description": "go-main-entryPoints-collection"
   },
   {
     "checkerId": "sync.Once.Do-builtIn",
-    "checkerPath": "src/checker/taint/go/sync-once-do-checker.js",
+    "checkerPath": "checker/taint/go/sync-once-do-checker.ts",
     "description": "为Go内置库方法sync.Once.Do做建模，执行且只执行一次传给Do方法的funcDef"
   },
   {
     "checkerId": "urfave-cli-builtIn",
-    "checkerPath": "src/checker/taint/go/urfave-cli-checker.js",
+    "checkerPath": "checker/taint/go/urfave-cli-checker.ts",
     "description": "为第三方库方法urfave.cli做建模，添加entryPoints"
   },
   {
     "checkerId": "taint_flow_java_input",
-    "checkerPath": "src/checker/taint/java/java-default-taint-checker.js",
+    "checkerPath": "checker/taint/java/java-default-taint-checker.ts",
     "description": "Java污点分析checker，会使用CallGraph边界制作entrypoint",
     "demoRuleConfigPath": ""
   },
   {
     "checkerId": "taint_flow_java_input_inner",
-    "checkerPath": "src/checker/taint/java/java-taint-checker.js",
+    "checkerPath": "checker/taint/java/java-taint-checker.ts",
     "description": "Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
     "demoRuleConfigPath": ""
   },
   {
     "checkerId": "taint_flow_egg_input",
-    "checkerPath": "src/checker/taint/js/egg-taint-checker.js",
+    "checkerPath": "checker/taint/js/egg-taint-checker.ts",
     "description": "JavaScript Egg框架污点分析checker",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
     "checkerId": "taint_flow_express_input",
-    "checkerPath": "src/checker/taint/js/express/express-taint-checker.js",
+    "checkerPath": "checker/taint/js/express/express-taint-checker.js",
     "description": "JavaScript Express框架污点分析checker",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
     "checkerId": "taint_flow_js_input",
-    "checkerPath": "src/checker/taint/js/js-taint-checker.js",
+    "checkerPath": "checker/taint/js/js-taint-checker.ts",
     "description": "JavaScript原生污点分析checker，会使用CallGraph边界制作entrypoint",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
     "checkerId": "taint_flow_python_input",
-    "checkerPath": "src/checker/taint/python/python-default-taint-checker.js",
+    "checkerPath": "checker/taint/python/python-default-taint-checker.ts",
     "description": "Python污点分析checker，会使用CallGraph边界制作entrypoint",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
   },
   {
     "checkerId": "taint_flow_python_input_inner",
-    "checkerPath": "src/checker/taint/python/python-taint-checker.js",
+    "checkerPath": "checker/taint/python/python-taint-checker.ts",
     "description": "Python污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
   },
   {
     "checkerId": "taint_flow_test",
-    "checkerPath": "src/checker/taint/test-taint-checker.js",
+    "checkerPath": "checker/taint/test-taint-checker.ts",
     "description": "taint_flow_test，回归测试使用，不推荐外部使用",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_test.json"
   },
@@ -143,12 +143,12 @@
   },
   {
     "checkerId": "get_file_ast",
-    "checkerPath": "src/checker/sdk/get-file-ast-checker.js",
+    "checkerPath": "checker/sdk/get-file-ast-checker.ts",
     "description": "获取文件AST"
   },
   {
     "checkerId": "get_ast_source_code",
-    "checkerPath": "src/checker/sdk/get-ast-source-code-checker.js",
+    "checkerPath": "checker/sdk/get-ast-source-code-checker.ts",
     "description": "获取AST对应的源码"
   }
 ]
