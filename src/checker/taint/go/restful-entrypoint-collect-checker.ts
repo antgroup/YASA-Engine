@@ -9,21 +9,21 @@ const { completeEntryPoint } = require("./entry-points-util");
 const processedRouteRegistry = new Set();
 
 class RestfulEntrypointCollectChecker extends Checker {
-    constructor(resultManager) {
+    constructor(resultManager: any) {
         super(resultManager, "go-restful-entryPoints-collect-checker");
     }
 
-    triggerAtFunctionCallBefore(analyzer, scope, node, state, info) {
+    triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
         const { fclos, argvalues } = info;
 
         this.collectRouteRegistry(node, fclos, argvalues, scope, info);
     }
 
-    triggerAtSymbolInterpretOfEntryPointAfter(analyzer, scope, node, state, info) {
+    triggerAtSymbolInterpretOfEntryPointAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
         if (info?.entryPoint.functionName === 'main') processedRouteRegistry.clear();
     }
 
-    collectRouteRegistry(callExpNode, calleeFClos, argValues, scope, info) {
+    collectRouteRegistry(callExpNode: any, calleeFClos: any, argValues: any, scope: any, info: any) {
         const { analyzer, state } = info;
         if (config.entryPointMode === 'ONLY_CUSTOM') return;
         if (!(calleeFClos && calleeFClos.object && calleeFClos.property)) return;
