@@ -4,6 +4,7 @@ const {
   findInferenceTritonEntryPointAndSource,
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
+const { findDjangoEntryPointAndSource } = require('../../django/entrypoint-collector/django-default-entrypoint')
 const BasicRuleHandler = require('../../../../../checker/common/rules-basic-handler')
 
 type FileManager = Record<string, any>
@@ -35,6 +36,14 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager):
   }
   if (flaskEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...flaskEntryPointSourceArray)
+  }
+
+  const { djangoEntryPointArray, djangoEntryPointSourceArray } = findDjangoEntryPointAndSource(filenameAstObj, dir)
+  if (djangoEntryPointArray) {
+    pyFcEntryPointArray.push(...djangoEntryPointArray)
+  }
+  if (djangoEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...djangoEntryPointSourceArray)
   }
 
   const { inferenceAiStudioTplEntryPointArray, inferenceAiStudioTplEntryPointSourceArray } =
@@ -106,3 +115,4 @@ export = {
   findPythonFileEntryPoint,
   getSourceNameList,
 }
+
