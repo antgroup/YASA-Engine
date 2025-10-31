@@ -1,0 +1,146 @@
+[
+  {
+    "checkerIds": [
+      "django-entrypoint-collector",
+      "taint_flow_python_input_inner"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "request.GET",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request.POST",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request.FILES",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request.COOKIES",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request.META",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request.body",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        }
+      ],
+      "FuncCallArgTaintSource": [
+        {
+          "fsig": "request.GET.get",
+          "args": [
+            "0"
+          ],
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "fsig": "request.POST.get",
+          "args": [
+            "0"
+          ],
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "fsig": "request.FILES.get",
+          "args": [
+            "0"
+          ],
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "fsig": "request.COOKIES.get",
+          "args": [
+            "0"
+          ],
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "fsig": "request.META.get",
+          "args": [
+            "0"
+          ],
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        }
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "fsig": "os.system",
+          "args": [
+            0
+          ],
+          "attribute": "CommandInjection"
+        },
+        {
+          "fsig": "subprocess.call",
+          "args": [
+            0
+          ],
+          "attribute": "CommandInjection"
+        },
+        {
+          "fsig": "subprocess.run",
+          "args": [
+            0
+          ],
+          "attribute": "CommandInjection"
+        },
+        {
+          "fsig": "subprocess.Popen",
+          "args": [
+            0
+          ],
+          "attribute": "CommandInjection"
+        },
+        {
+          "fsig": "eval",
+          "args": [
+            0
+          ],
+          "attribute": "CodeInjection"
+        },
+        {
+          "fsig": "exec",
+          "args": [
+            0
+          ],
+          "attribute": "CodeInjection"
+        },
+        {
+          "fsig": "cursor.execute",
+          "args": [
+            0
+          ],
+          "attribute": "SQLInjection"
+        },
+        {
+          "fsig": "HttpResponse",
+          "args": [
+            0
+          ],
+          "attribute": "XSS"
+        }
+      ]
+    }
+  }
+]
+
+
