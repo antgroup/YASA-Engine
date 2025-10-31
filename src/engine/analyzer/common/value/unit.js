@@ -1,6 +1,5 @@
 const _ = require('lodash')
 const { Errors } = require('../../../../util/error-code')
-const logger = require('../../../../util/logger')(__filename)
 
 /**
  *
