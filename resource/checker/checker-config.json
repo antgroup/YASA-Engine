@@ -145,7 +145,7 @@
     "checkerId": "django-entrypoint-collector",
     "checkerPath": "src/checker/common/django-entrypoint-collector.ts",
     "description": "Django entrypoint collector"
-  }
+  },
   {
     "checkerId": "get_file_ast",
     "checkerPath": "checker/sdk/get-file-ast-checker.ts",
