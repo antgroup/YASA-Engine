@@ -5,6 +5,7 @@
       "taint_flow_gin_input",
       "taint_flow_go_input",
       "cobra.Command-builtIn",
+      "go-restful-entryPoints-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
       "go-main-entryPoints-collection",
@@ -82,7 +83,7 @@
     "checkerPackId": "taint-flow-python-default",
     "checkerIds": [
       "taint_flow_python_input",
-      "django_entrypoint_collect_checker",
+      "django-entrypoint-collector",
       "callgraph",
       "sanitizer"
     ],
