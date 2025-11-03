@@ -97,6 +97,7 @@ class GoAnalyzer extends Analyzer {
    * @param defaultScope
    */
   async scanPackages(dir: any, state: any, defaultScope?: any): Promise<any> {
+    const parserStart = Date.now()
     this.scanModules(dir)
     this.moduleManager = await GoParser.parsePackage(dir, this.options)
     const { numOfGoMod } = this.moduleManager
@@ -125,7 +126,12 @@ class GoAnalyzer extends Analyzer {
     }
     this.moduleManager.rootDir = rootDir
     this.moduleManager.rootDirName = dirName
+    const parserTime = Date.now() - parserStart
+    const processStart = Date.now()
     this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
+    const processTime = Date.now() - processStart
+    logger.info(`ParseCode time: ${parserTime}ms`)
+    logger.info(`ProcessModule time: ${processTime}ms`)
   }
 
   /**

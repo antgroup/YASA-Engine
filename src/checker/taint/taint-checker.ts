@@ -36,7 +36,7 @@ class TaintChecker extends Checker {
     const tagName = finding.kind
     const callNode = finding.node
     const sinkRule = finding.ruleName
-    const { fclos, matchedSanitizerTags } = finding
+    const { fclos, matchedSanitizerTags, callstack } = finding
     if (finding && argNode && argNode.hasTagRec) {
       let traceStack = TaintCheckerFindingUtil.getTrace(argNode, tagName)
       const trace = TaintCheckerSourceLine.getNodeTrace(fclos, callNode)
@@ -67,6 +67,7 @@ class TaintChecker extends Checker {
       )
       finding.trace.push(trace)
       finding.matchedSanitizerTags = matchedSanitizerTags
+      finding.callstack = callstack
     }
     this.filterDuplicateSource(finding)
     return finding
@@ -102,6 +103,7 @@ class TaintChecker extends Checker {
    * @param kind
    * @param ruleName
    * @param matchedSanitizerTags
+   * @param callstack
    */
   buildTaintFinding(
     checkerId: any,
@@ -111,7 +113,8 @@ class TaintChecker extends Checker {
     fclos: any,
     kind: any,
     ruleName: any,
-    matchedSanitizerTags: any
+    matchedSanitizerTags: any,
+    callstack: any
   ): any {
     const taintFlowFinding = this.buildTaintFindingObject(
       checkerId,
@@ -121,7 +124,8 @@ class TaintChecker extends Checker {
       fclos,
       kind,
       ruleName,
-      matchedSanitizerTags
+      matchedSanitizerTags,
+      callstack
     )
     return this.buildTaintFindingDetail(taintFlowFinding)
   }
@@ -136,6 +140,7 @@ class TaintChecker extends Checker {
    * @param kind
    * @param ruleName
    * @param matchedSanitizerTags
+   * @param callstack
    */
   buildTaintFindingObject(
     checkerId: any,
@@ -145,7 +150,8 @@ class TaintChecker extends Checker {
     fclos: any,
     kind: any,
     ruleName: any,
-    matchedSanitizerTags: any
+    matchedSanitizerTags: any,
+    callstack: any
   ): any {
     const taintFlowFinding = TaintCheckerRules.getFinding(checkerId, checkerDesc, node)
     taintFlowFinding.nd = nd
@@ -154,6 +160,7 @@ class TaintChecker extends Checker {
     taintFlowFinding.kind = kind
     taintFlowFinding.ruleName = ruleName
     taintFlowFinding.matchedSanitizerTags = matchedSanitizerTags
+    taintFlowFinding.callstack = callstack
     return taintFlowFinding
   }
 
