@@ -108,7 +108,7 @@
   },
   {
     "checkerId": "taint_flow_express_input",
-    "checkerPath": "checker/taint/js/express/express-taint-checker.js",
+    "checkerPath": "checker/taint/js/express/express-taint-checker.ts",
     "description": "JavaScript Express框架污点分析checker",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },

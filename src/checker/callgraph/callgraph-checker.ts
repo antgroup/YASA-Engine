@@ -188,8 +188,8 @@ class CallgraphChecker extends CheckerCallgraph {
     }
     ret = ret.split('\n')[0]
     ret = ret.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
-    if (ret.length > 200) {
-      ret = `${ret.slice(0, 200)}...`
+    if (ret.length > 500) {
+      ret = `${ret.slice(0, 500)}...`
     }
     // attach loc
     if (fdef) {

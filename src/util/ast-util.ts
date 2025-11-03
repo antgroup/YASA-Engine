@@ -300,6 +300,7 @@ function satisfy(
           '_id',
           '_qid',
           'vtype',
+          '_meta',
         ].indexOf(prop) !== -1
       ) {
         continue
