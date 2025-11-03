@@ -154,7 +154,7 @@ function getTFPN(findingResMap: Map<string, any>): {
 
 function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): any {
   const configPath = require.resolve('../../src/config')
-  console.log(`[CONFIG] Loaded from: ${configPath}`)
+  logger.info(`[CONFIG] Loaded from: ${configPath}`)
 
   config.ruleConfigFile = __dirname + '/rule_config.json'
   config.checkerIds = ['taint_flow_test']
