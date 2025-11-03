@@ -38,6 +38,8 @@ class Analyzer extends MemSpace {
 
   checkerManager: any
 
+  enablePerformanceLogging: boolean
+
   lastReturnValue: any
 
   thisFClos: any
@@ -57,6 +59,19 @@ class Analyzer extends MemSpace {
   prevIterationTime: number
 
   statistics: { numProcessedInstructions: number }
+
+  // 性能监控相关属性
+  performanceStats: {
+    instructionTimes: Map<string, number[]> // 指令总执行时间记录（包含嵌套调用）
+    instructionCounts: Map<string, number> // 指令执行次数统计
+    instructionNetTimes: Map<string, number[]> // 指令净执行时间记录（排除嵌套调用）
+    totalExecutionTime: number // 总执行时间
+    startTime: number // 开始时间
+    monitoringOverhead: number // 监控开销
+    updateStatsOverhead: number // 更新统计信息的开销
+    executionStack: Array<{ startTime: number; nestedTime: number }> // 执行栈，用于跟踪嵌套调用
+    loggedDependencies: Set<string> // 已记录的文件依赖关系
+  }
 
   entryPoints: any[]
 
@@ -82,19 +97,31 @@ class Analyzer extends MemSpace {
   constructor(checkerManager: any, options?: any) {
     super()
     this.options = options || {}
-    this.checkerManager = checkerManager // the associated checkerManager
-    this.lastReturnValue = null // recording the return value of the last function call
-    this.thisFClos = null // the closure of the current function under analysis
-    this.entry_fclos = null // the closure of the outer function first invoked
-    this.inRange = false // in range statement flag
-    this.ainfo = {} // for information during entire analyzing
-    this.sourceCodeCache = {} // cached source code
+    this.checkerManager = checkerManager // 关联的检查器管理器
+    this.enablePerformanceLogging = this.options.enablePerformanceLogging || false // 默认关闭
+    this.lastReturnValue = null // 记录最后一次函数调用的返回值
+    this.thisFClos = null // 当前分析函数的闭包
+    this.entry_fclos = null // 最外层函数的闭包
+    this.inRange = false // 范围语句标志
+    this.ainfo = {} // 整个分析过程中的信息
+    this.sourceCodeCache = {} // 缓存的源代码
     this.lastProcessedNode = null
-    // time-out control
+    // 超时控制
     this.thisIterationTime = 0
     this.prevIterationTime = 0
     this.statistics = {
       numProcessedInstructions: 0,
+    }
+    this.performanceStats = {
+      instructionTimes: new Map(),
+      instructionCounts: new Map(),
+      instructionNetTimes: new Map(),
+      totalExecutionTime: 0,
+      startTime: 0,
+      monitoringOverhead: 0,
+      updateStatsOverhead: 0,
+      executionStack: [],
+      loggedDependencies: new Set(),
     }
     this.initValTreeStruct()
     this.entryPoints = []
@@ -106,6 +133,210 @@ class Analyzer extends MemSpace {
    */
   getCheckerManager() {
     return this.checkerManager
+  }
+
+  /**
+   * 开始性能监控
+   */
+  startPerformanceMonitor() {
+    if (!this.enablePerformanceLogging) return
+
+    const startTime = Date.now()
+    this.performanceStats.startTime = startTime
+    this.performanceStats.totalExecutionTime = 0
+    this.performanceStats.instructionTimes.clear()
+    this.performanceStats.instructionCounts.clear()
+    this.performanceStats.instructionNetTimes.clear()
+    this.performanceStats.monitoringOverhead = 0
+    this.performanceStats.updateStatsOverhead = 0
+    this.performanceStats.executionStack = []
+  }
+
+  /**
+   * 结束性能监控
+   */
+  endPerformanceMonitor() {
+    if (!this.enablePerformanceLogging) return
+
+    const endTime = Date.now()
+    this.performanceStats.totalExecutionTime = endTime - this.performanceStats.startTime
+    this.logPerformanceStats()
+  }
+
+  /**
+   * 输出性能统计信息
+   */
+  logPerformanceStats() {
+    const totalOverhead = this.performanceStats.updateStatsOverhead
+    const overheadPercent = ((totalOverhead / this.performanceStats.totalExecutionTime) * 100).toFixed(1)
+
+    logger.info('=== Performance Statistics ===')
+
+    if (this.performanceStats.instructionTimes.size === 0) {
+      logger.info('No instruction data available')
+      return
+    }
+
+    // 计算整体平均时间
+    let totalAvgTime = 0
+    let totalInstructions = 0
+    for (const [locationKey, times] of this.performanceStats.instructionTimes) {
+      const count = this.performanceStats.instructionCounts.get(locationKey) || 0
+      const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length
+      totalAvgTime += avgTime * count
+      totalInstructions += count
+    }
+    const overallAvgTime = totalInstructions > 0 ? totalAvgTime / totalInstructions : 0
+
+    logger.info(
+      `Time: ${this.performanceStats.totalExecutionTime}ms | Instructions: ${this.statistics.numProcessedInstructions} | Overhead: ${totalOverhead.toFixed(1)}ms (${overheadPercent}%) | Locations: ${this.performanceStats.instructionTimes.size} | Avg: ${overallAvgTime.toFixed(2)}ms`
+    )
+
+    // 前5个最慢指令（按净时间排序）
+    const executionTimeEntries = Array.from(this.performanceStats.instructionTimes.entries())
+      .map(([locationKey, times]) => {
+        const netTimes = this.performanceStats.instructionNetTimes.get(locationKey) || []
+        const netMaxTime = netTimes.length > 0 ? Math.max(...netTimes) : 0
+        const netAvgTime = netTimes.length > 0 ? netTimes.reduce((sum, time) => sum + time, 0) / netTimes.length : 0
+        return {
+          locationKey,
+          maxTime: Math.max(...times),
+          avgTime: times.reduce((sum, time) => sum + time, 0) / times.length,
+          netMaxTime,
+          netAvgTime,
+          count: this.performanceStats.instructionCounts.get(locationKey) || 0,
+        }
+      })
+      .sort((a, b) => b.netMaxTime - a.netMaxTime)
+      .slice(0, 5)
+
+    if (executionTimeEntries.length > 0) {
+      logger.info('Top 5 Slowest Instructions (by Net Time):')
+      executionTimeEntries.forEach((entry, index) => {
+        const [instructionType, ...locationParts] = entry.locationKey.split(':')
+        const location = locationParts.join(':')
+        logger.info(
+          `  ${index + 1}. ${instructionType} at ${location} (Net: Max ${entry.netMaxTime.toFixed(2)}ms, Avg ${entry.netAvgTime.toFixed(2)}ms | Total: Max ${entry.maxTime.toFixed(2)}ms, Avg ${entry.avgTime.toFixed(2)}ms | Count: ${entry.count})`
+        )
+      })
+    }
+
+    // 前5个最频繁指令
+    const executionCountEntries = Array.from(this.performanceStats.instructionCounts.entries())
+      .map(([locationKey, count]) => {
+        const times = this.performanceStats.instructionTimes.get(locationKey)
+        return {
+          locationKey,
+          count,
+          avgTime: times ? times.reduce((sum, time) => sum + time, 0) / times.length : 0,
+          maxTime: times ? Math.max(...times) : 0,
+        }
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+
+    if (executionCountEntries.length > 0) {
+      logger.info('Top 5 Most Frequent Instructions:')
+      executionCountEntries.forEach((entry, index) => {
+        const [instructionType, ...locationParts] = entry.locationKey.split(':')
+        const location = locationParts.join(':')
+        logger.info(
+          `  ${index + 1}. ${instructionType} at ${location} (Count: ${entry.count}, Avg: ${entry.avgTime.toFixed(2)}ms)`
+        )
+      })
+    }
+  }
+
+  /**
+   * 更新指令的性能统计信息
+   * @param instructionType - 正在执行的指令类型
+   * @param startTime - 开始时间
+   * @param endTime - 结束时间
+   * @param node - 正在处理的AST节点
+   */
+  updatePerformanceStats(instructionType: string, startTime: number, endTime: number, node: any) {
+    const stackDepth = this.performanceStats.executionStack.length
+
+    // 调试：检测文件切换（相同依赖只输出一次）
+    if (this.lastProcessedNode && this.lastProcessedNode.loc && node.loc) {
+      const lastFile = this.lastProcessedNode.loc.sourcefile
+      const currentFile = node.loc.sourcefile
+      if (lastFile && currentFile && lastFile !== currentFile) {
+        const dependencyKey = `${lastFile} -> ${currentFile}`
+        if (!this.performanceStats.loggedDependencies.has(dependencyKey)) {
+          this.performanceStats.loggedDependencies.add(dependencyKey)
+          logger.info(`[DEBUG] 文件依赖: ${dependencyKey}`)
+        }
+      }
+    }
+
+    // 将当前指令信息推入栈
+    this.performanceStats.executionStack.push({ startTime, nestedTime: 0 })
+
+    // 计算总执行时间（包含嵌套调用）
+    const totalExecutionTime = endTime - startTime
+
+    // 从栈中弹出并计算净执行时间
+    const stackEntry = this.performanceStats.executionStack.pop()!
+    const netExecutionTime = Math.max(0, totalExecutionTime - stackEntry.nestedTime)
+
+    // 更新父指令的嵌套时间
+    if (stackDepth > 0) {
+      const parentEntry = this.performanceStats.executionStack[stackDepth - 1]
+      parentEntry.nestedTime += totalExecutionTime
+    }
+
+    // 使用位置+类型创建唯一键
+    const locationKey = this.getLocationKey(node, instructionType)
+
+    // 更新总指令时间（包含嵌套调用）
+    if (!this.performanceStats.instructionTimes.has(locationKey)) {
+      this.performanceStats.instructionTimes.set(locationKey, [])
+    }
+    this.performanceStats.instructionTimes.get(locationKey)!.push(totalExecutionTime)
+
+    // 更新净指令时间（排除嵌套调用）
+    if (!this.performanceStats.instructionNetTimes.has(locationKey)) {
+      this.performanceStats.instructionNetTimes.set(locationKey, [])
+    }
+    this.performanceStats.instructionNetTimes.get(locationKey)!.push(netExecutionTime)
+
+    // 更新指令计数
+    const currentCount = this.performanceStats.instructionCounts.get(locationKey) || 0
+    this.performanceStats.instructionCounts.set(locationKey, currentCount + 1)
+  }
+
+  /**
+   * 基于位置和类型生成指令的唯一键
+   * @param node - 正在处理的AST节点
+   * @param instructionType - 指令类型
+   * @returns 唯一键字符串
+   */
+  getLocationKey(node: any, instructionType: string): string {
+    if (!node || !node.loc) {
+      return `${instructionType}:unknown_location`
+    }
+
+    let sourceFile = node.loc.sourcefile || 'unknown_file'
+
+    // 如果存在项目路径前缀，则移除
+    if (this.options && this.options.maindir) {
+      const projectPath = this.options.maindir
+      if (sourceFile.startsWith(projectPath)) {
+        sourceFile = sourceFile.substring(projectPath.length)
+        // 移除可能存在的开头斜杠
+        if (sourceFile.startsWith('/')) {
+          sourceFile = sourceFile.substring(1)
+        }
+      }
+    }
+
+    const startLine = node.loc.start?.line || 0
+    const startColumn = node.loc.start?.column || 0
+    const endLine = node.loc.end?.line || 0
+    const endColumn = node.loc.end?.column || 0
+
+    return `${instructionType}:${sourceFile}:${startLine}:${startColumn}:${endLine}:${endColumn}`
   }
 
   /**
@@ -156,14 +387,19 @@ class Analyzer extends MemSpace {
       if (typeof this.preProcess4SingleFile === 'function' && typeof this.symbolInterpret === 'function') {
         Rules.setPreprocessReady(false)
         logger.info(`start preProcess...`)
+        this.startPerformanceMonitor()
         this.preProcess4SingleFile(source, fileName) // impl in lang/framework analyzer
+        const time3 = Date.now()
         this.startAnalyze()
+        const time4 = Date.now()
+        logger.info(`startAnalyze cost: ${time4 - time3}`)
         Rules.setPreprocessReady(true)
         logger.info(`preProcess done...`)
         const time2 = Date.now()
         logger.info(`preProcess cost: ${time2 - time1}`)
         this.symbolInterpret() // impl in lang/framework analyzer
         this.endAnalyze()
+        this.endPerformanceMonitor()
       } else {
         logger.info(`this analyzer has not support analyzeSingleFile yet`)
       }
@@ -179,18 +415,23 @@ class Analyzer extends MemSpace {
    */
   async analyzeProjectAsync(processingDir: any) {
     try {
-      const time1 = Date.now()
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
+        const time1 = Date.now()
         Rules.setPreprocessReady(false)
         logger.info(`start preProcess...`)
-        await this.preProcess(processingDir) // impl in lang/framework analyzer
+        this.startPerformanceMonitor()
+        await this.preProcess(processingDir)
+        const time3 = Date.now()
         this.startAnalyze()
+        const time4 = Date.now()
+        logger.info(`startAnalyze cost: ${time4 - time3}`)
         Rules.setPreprocessReady(true)
         logger.info(`preProcess done...`)
         const time2 = Date.now()
         logger.info(`preProcess cost: ${time2 - time1}`)
-        this.symbolInterpret() // impl in lang/framework analyzer
+        this.symbolInterpret()
         this.endAnalyze()
+        this.endPerformanceMonitor()
       }
       return this.recordCheckerFindings()
     } catch (e) {
@@ -212,6 +453,7 @@ class Analyzer extends MemSpace {
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
         Rules.setPreprocessReady(false)
         logger.info(`start preProcess...`)
+        this.startPerformanceMonitor()
         this.preProcess(processingDir) // impl in lang/framework analyzer
         this.startAnalyze()
         Rules.setPreprocessReady(true)
@@ -220,6 +462,7 @@ class Analyzer extends MemSpace {
         logger.info(`preProcess cost: ${time2 - time1}`)
         this.symbolInterpret() // impl in lang/framework analyzer
         this.endAnalyze()
+        this.endPerformanceMonitor()
       }
       return this.recordCheckerFindings()
     } catch (e) {
@@ -441,7 +684,14 @@ class Analyzer extends MemSpace {
     }
     // TODO 添加判断，后续指令是否是跟在return或throw后且在同一个scope内无法执行的指令 4+
     this.statistics.numProcessedInstructions++
+
+    // 记录执行时间用于性能监控
     let val
+    let startTime = 0
+    if (this.enablePerformanceLogging) {
+      startTime = Date.now()
+    }
+
     try {
       val = inst.call(this, scope, node, state)
     } catch (e) {
@@ -451,6 +701,15 @@ class Analyzer extends MemSpace {
         `process${node.type} error! loc is${node.loc.sourcefile}::${node.loc.start.line}_${node.loc.end.line}`
       )
       val = UndefinedValue()
+    }
+
+    if (this.enablePerformanceLogging) {
+      const endTime = Date.now()
+
+      // 更新性能统计信息并跟踪开销
+      const updateStartTime = Date.now()
+      this.updatePerformanceStats(node.type, startTime, endTime, node)
+      this.performanceStats.updateStatsOverhead += Date.now() - updateStartTime
     }
     if (!this.preprocessState && val?.__preprocess) {
       delete val.__preprocess
@@ -1996,8 +2255,8 @@ class Analyzer extends MemSpace {
           res.hasTagRec = true
           break
         }
-        const taintVal = AstUtil.findTag(arg, '')
-        if (taintVal) {
+        const hasTag = AstUtil.hasTag(arg, '')
+        if (hasTag) {
           res.hasTagRec = true
         }
       }
@@ -2161,8 +2420,8 @@ class Analyzer extends MemSpace {
             )
             thisVal.hasTagRec = true
           }
-          const taintVal = AstUtil.hasTag(arg, '')
-          if (taintVal) {
+          const hasTag = AstUtil.hasTag(arg, '')
+          if (hasTag) {
             thisVal.hasTagRec = true
           }
         }

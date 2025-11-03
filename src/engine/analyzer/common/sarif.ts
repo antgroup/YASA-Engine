@@ -4,8 +4,14 @@ interface SarifLocation {
   physicalLocation?: {
     artifactLocation?: { uri: string }
     region?: any
+    nodeHash: string
   }
   [key: string]: any
+}
+
+interface CallstackElement {
+  type: number
+  nodeHash: string
 }
 
 interface SarifResult {
@@ -17,6 +23,7 @@ interface SarifResult {
   codeFlows: any
   locations: SarifLocation[]
   matchedSanitizerTags: any
+  callstack: CallstackElement[]
 }
 
 /**
@@ -29,6 +36,7 @@ interface SarifResult {
  * @param trace
  * @param location
  * @param matchedSanitizerTags
+ * @param callstackElments
  */
 function prepareResult(
   title: string,
@@ -38,7 +46,8 @@ function prepareResult(
   sinkInfo: any,
   trace: any,
   location: SarifLocation,
-  matchedSanitizerTags: any
+  matchedSanitizerTags: any,
+  callstackElments: CallstackElement[]
 ): SarifResult {
   return {
     message: {
@@ -51,6 +60,7 @@ function prepareResult(
     codeFlows: trace,
     locations: [location],
     matchedSanitizerTags: formatSanitizerTags(matchedSanitizerTags),
+    callstack: callstackElments,
   }
 }
 
@@ -62,6 +72,7 @@ function prepareResult(
  * @param endColumn
  * @param uri
  * @param snippetText
+ * @param nodeHash
  * @param affectedNodeName
  */
 function prepareLocation(
@@ -71,6 +82,7 @@ function prepareLocation(
   endColumn: number,
   uri: string,
   snippetText: string,
+  nodeHash: string,
   affectedNodeName?: string
 ): SarifLocation {
   const res: SarifLocation = {
@@ -85,6 +97,7 @@ function prepareLocation(
           text: snippetText,
         },
       },
+      nodeHash,
     },
   }
   if (affectedNodeName) {
@@ -143,4 +156,26 @@ function prepareSarifFormat(results: SarifResult[], graphs: any): Record<string,
   }
 }
 
-module.exports = { prepareResult, prepareLocation, prepareTrace, prepareSarifFormat }
+/**
+ *
+ */
+function prepareCallstackElements(callstack: any[]): CallstackElement[] {
+  const resultArray: CallstackElement[] = []
+  if (!callstack) {
+    return resultArray
+  }
+
+  for (const element of callstack) {
+    if (element.vtype === 'fclos') {
+      const callstackElement: CallstackElement = {
+        type: 0,
+        nodeHash: element.ast?._meta?.nodehash || '',
+      }
+      resultArray.push(callstackElement)
+    }
+  }
+
+  return resultArray
+}
+
+module.exports = { prepareResult, prepareLocation, prepareTrace, prepareSarifFormat, prepareCallstackElements }

@@ -88,9 +88,6 @@
     "test-go": "npx mocha --require tsx/cjs test/go/test-go-benchmark.ts",
     "test-python": "npx mocha --require tsx/cjs test/python/test-python-benchmark.ts",
     "test-all": "npm run test-js && npm run test-egg && npm run test-java && npm run test-go && npm run test-python",
-    "build-uast": "gulp --cwd ./ -f gulpfile_cli.js uastDump && pkg distUastDump/uast.js",
-    "build-engine": "gulp --cwd ./ -f gulpfile_cli.js engine && pkg dist/engine.js",
-    "build-sym": "gulp --cwd ./ -f gulpfile_sym.js",
     "lint": "eslint .",
     "lint:duplicates": "jscpd .",
     "lint:fix": "eslint --fix ."
