@@ -25,7 +25,7 @@ interface EntryPointInfo {
 }
 
 interface EntryPointMarkParam {
-  entryPoint: EntryPoint
+  entryPoint: InstanceType<typeof EntryPoint>
   funcArg: any
 }
 
@@ -48,7 +48,7 @@ function isUrlsFile(filePath: string | null | undefined): boolean {
  * 适配Django框架特有的路由注册模式
  */
 class DjangoEntrypointCollector extends Checker {
-  entryPoints: EntryPoint[]
+  entryPoints: InstanceType<typeof EntryPoint>[]
   // 存储需要标记 URL 路径参数的 entrypoint（在运行时标记）
   entryPointsToMarkParams: EntryPointMarkParam[]
 
@@ -132,7 +132,7 @@ class DjangoEntrypointCollector extends Checker {
       return
     }
 
-    logger.info(`[DjangoCollector]  Found ${djangoEntryPointArray.length} Django routes in static scan`)
+    logger.info(`[DjangoCollector] Found ${djangoEntryPointArray.length} Django routes in static scan`)
 
     // 将静态扫描得到的 entrypoint 信息转换为完整的 entrypoint 对象
     for (const epInfo of djangoEntryPointArray) {
@@ -272,5 +272,4 @@ class DjangoEntrypointCollector extends Checker {
 }
 
 module.exports = DjangoEntrypointCollector
-
 

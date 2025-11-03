@@ -51,7 +51,7 @@ interface EntryPointInfo {
 }
 
 interface DjangoEntryPointResult {
-  djangoEntryPointArray: EntryPoint[]
+  djangoEntryPointArray: InstanceType<typeof EntryPoint>[]
   djangoEntryPointSourceArray: any[]
 }
 
@@ -64,7 +64,7 @@ function findDjangoEntryPointAndSource(
   filenameAstObj: Record<string, { body?: AstNode[] }>,
   dir: string
 ): DjangoEntryPointResult {
-  const djangoEntryPointArray: EntryPoint[] = []
+  const djangoEntryPointArray: InstanceType<typeof EntryPoint>[] = []
   const djangoEntryPointSourceArray: any[] = []
 
   for (const filename in filenameAstObj) {
