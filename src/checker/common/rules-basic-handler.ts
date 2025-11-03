@@ -24,9 +24,7 @@ function getRules(ruleConfigPath: string): any[] {
       if (ruleConfigPath) {
         rules = FileUtil.loadJSONfile(ruleConfigPath)
       } else if (!_.isEmpty(config.ruleConfigFile)) {
-        rules = FileUtil.loadJSONfile(
-          FileUtil.getAbsolutePath(config.ruleConfigFile)
-        )
+        rules = FileUtil.loadJSONfile(FileUtil.getAbsolutePath(config.ruleConfigFile))
       }
     } catch (e) {
       handleException(
@@ -80,9 +78,7 @@ function initRules(): void {
   logger.info(`rules-basic-handler [CONFIG] Loaded from: ${configPath}`)
 
   if (config.ruleConfigFile && config.ruleConfigFile !== '') {
-    rules = FileUtil.loadJSONfile(
-      FileUtil.getAbsolutePath(config.ruleConfigFile)
-    )
+    rules = FileUtil.loadJSONfile(FileUtil.getAbsolutePath(config.ruleConfigFile))
   } else {
     logger.info('Attention: no ruleConfig found')
   }
