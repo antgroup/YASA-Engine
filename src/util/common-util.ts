@@ -245,31 +245,30 @@ function filterDataFromScope(symVal: any): boolean {
 
 /**
  * 获取匿名函数的唯一标识符
- * 
+ *
  * 该函数根据函数定义的位置信息生成匿名函数的唯一标识符，
  * 格式为：<anonymous_起始行号_结束行号>
- * 
+ *
  * 注意：目前仅使用行号生成标识符，可能存在冲突风险（理想情况下应包含列号）
- * 
+ *
  * @param {Object} fclos - 函数闭包对象
  * @returns {string|undefined} 生成的匿名函数标识符，如果缺少位置信息则返回 undefined
  */
 function getAnonymousFunctionName(fclos: any) {
   // 检查函数闭包是否有位置信息
-  if (fclos?.ast?.loc === undefined)
-    return undefined
+  if (fclos?.ast?.loc === undefined) return undefined
 
   // 使用函数定义的起始行和结束行生成唯一标识符
   // 格式: <anonymous_startLine_endLine>
-  return '<anonymous_' + fclos.ast.loc.start.line + '_' + fclos.ast.loc.end.line + '>'
+  return `<anonymous_${fclos.ast.loc.start.line}_${fclos.ast.loc.end.line}>`
 }
 
 /**
  * 在作用域中查找函数闭包对象
- * 
+ *
  * 该函数在给定的作用域对象中递归查找指定名称的函数闭包(fclos)，
  * 支持查找具名函数、匿名函数以及嵌套在类和对象中的函数。
- * 
+ *
  * @param {Object} valExport - 作用域对象
  * @param {string} func - 要查找的函数名称
  * @returns {Object|null} 找到的函数闭包对象，未找到返回 null
@@ -287,8 +286,7 @@ function getFclosFromScope(valExport: any, func: any): any {
       // 生成当前函数的匿名标识符
       const anonymousID = getAnonymousFunctionName(fdef)
       // 标识符匹配则返回
-      if (anonymousID == func)
-        valFunc = valExport
+      if (anonymousID == func) valFunc = valExport
     } else {
       return null
     }
@@ -330,10 +328,10 @@ function getFclosFromScope(valExport: any, func: any): any {
 
 /**
  * 填充污点源作用域的位置信息
- * 
+ *
  * 该函数用于完善污点源规则中的位置信息(locStart, locEnd)，
  * 当分析到函数定义时，使用函数的实际位置信息填充匹配的规则。
- * 
+ *
  * @param {Object} fclos - 函数闭包对象
  * @param {Object} sourceScope - 污点源作用域配置对象
  */
@@ -368,13 +366,10 @@ function fillSourceScope(fclos: any, sourceScope: any): void {
   // 获取函数定义位置信息
   const scpPath = fclos.ast?.loc?.sourcefile
   // 计算起始行（优先使用参数位置）
-  const locStart = fclos.ast?.parameters?.length > 0
-    ? fclos.ast.parameters[0].loc?.start?.line
-    : fclos.ast?.loc?.start?.line
+  const locStart =
+    fclos.ast?.parameters?.length > 0 ? fclos.ast.parameters[0].loc?.start?.line : fclos.ast?.loc?.start?.line
   // 计算结束行（优先使用参数位置）
-  const locEnd = fclos.ast?.parameters?.length > 0
-    ? fclos.ast.parameters[fclos.ast.parameters.length - 1].loc?.end?.line
-    : fclos.ast?.loc?.end?.line
+  const locEnd = fclos.ast?.loc?.end?.line
 
   // 关键位置信息缺失则返回
   if (scpPath === undefined || locStart === undefined || locEnd === undefined) {

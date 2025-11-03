@@ -104,7 +104,11 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     .option('--language <lang>', '指定语言（支持: javascript/typescript/golang/python/java）', (lang: any) => {
       const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python', 'java']
       if (!supported.includes(lang)) {
-        logger.info('Unknown language!! Only support javascript/typescript/golang/python/java')
+        handleException(
+          null,
+          'Unknown language!! Only support javascript/typescript/golang/python/java',
+          'Unknown language!! Only support javascript/typescript/golang/python/java'
+        )
         process.exit(0)
       }
       if (['typescript', 'ts', 'js', 'javascript'].includes(lang)) {
@@ -353,7 +357,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
   if (Config.dumpAllAST) {
     try {
       await Parsing.parseDirectory(Config.maindir, Config)
-      console.log('parseDirectory UAST success!')
+      logger.info('parseDirectory UAST success!')
       process.exit(0)
     } catch (e: any) {
       handleException(e, 'Error occurred in dumpAllAST!!!!', `Error occurred in dumpAllAST!!!!${e}`)
