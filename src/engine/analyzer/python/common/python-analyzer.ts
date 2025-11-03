@@ -46,6 +46,8 @@ class PythonAnalyzer extends (Analyzer as any) {
 
     this.fileList = []
     this.astManager = {}
+    this.totalParseTime = 0
+    this.totalProcessTime = 0
   }
 
   /**
@@ -59,6 +61,8 @@ class PythonAnalyzer extends (Analyzer as any) {
 
       this.scanModules(dir)
       this.astManager = {}
+      logger.info(`ParseCode time: ${this.totalParseTime}ms`)
+      logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
     } catch (e) {
       handleException(
         e,
@@ -1057,7 +1061,13 @@ class PythonAnalyzer extends (Analyzer as any) {
       Errors.NoCompileUnitError('no python file found in source path')
       process.exit(1)
     }
+
+    // 记录parsePackages耗时
+    const parseStart = Date.now()
     PythonParser.parsePackages(this.astManager, dir, options)
+    const parseTime = Date.now() - parseStart
+    this.totalParseTime += parseTime
+
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1066,6 +1076,9 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.addASTInfo(ast, mod.content, mod.file, isReScan as any)
       }
     }
+
+    // 记录processModule耗时
+    const processStart = Date.now()
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1073,6 +1086,8 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.processModule(ast, filename, isReScan as any)
       }
     }
+    const processTime = Date.now() - processStart
+    this.totalProcessTime += processTime
   }
 }
 

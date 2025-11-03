@@ -21,4 +21,9 @@ test/python/test-report
 deps/uast4go
 deps/uast4py
 .DS_Store
-deps/uast4python
+src/uast
+/logs/
+/report/
+/node_modules/
+/workspace/
+deps/uast4py

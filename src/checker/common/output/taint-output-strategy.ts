@@ -18,6 +18,7 @@ const {
   prepareTrace,
   prepareResult,
   prepareSarifFormat,
+  prepareCallstackElements,
 } = require('../../../engine/analyzer/common/sarif')
 const AstUtil = require('../../../util/ast-util')
 const { handleException } = require('../../../engine/analyzer/common/exception-handler')
@@ -115,10 +116,21 @@ class TaintOutputStrategy extends OutputStrategy {
           const [{ line: startLine, character: startColumn }, { line: endLine, character: endColumn }] =
             FindingUtil.convertNode2Range(item.node)
           locations.push(
-            prepareLocation(startLine, startColumn, endLine, endColumn, uri, snippetText, affectedNodeName)
+            prepareLocation(
+              startLine,
+              startColumn,
+              endLine,
+              endColumn,
+              uri,
+              snippetText,
+              item.node?._meta?.nodehash,
+              affectedNodeName
+            )
           )
         } else if (item.str) {
-          locations.push(prepareLocation(0, 0, 0, 0, 'egg controller', item.str, affectedNodeName))
+          locations.push(
+            prepareLocation(0, 0, 0, 0, 'egg controller', item.str, item.node?._meta?.nodehash, affectedNodeName)
+          )
         }
       })
       const trace = prepareTrace(locations)
@@ -131,8 +143,11 @@ class TaintOutputStrategy extends OutputStrategy {
         endLine,
         endColumn,
         finding.sourcefile,
-        AstUtil.prettyPrint(finding.node)
+        AstUtil.prettyPrint(finding.node),
+        finding.node?._meta?.nodehash
       )
+
+      const callstackElements = prepareCallstackElements(finding.callstack)
 
       results.push(
         prepareResult(
@@ -143,7 +158,8 @@ class TaintOutputStrategy extends OutputStrategy {
           finding.sinkInfo,
           trace,
           location,
-          finding.matchedSanitizerTags
+          finding.matchedSanitizerTags,
+          callstackElements
         )
       )
     })
@@ -176,7 +192,9 @@ class TaintOutputStrategy extends OutputStrategy {
                 funcDef.loc.start.column,
                 funcDef.loc.end.line,
                 funcDef.loc.end.column,
-                funcDef.loc.sourcefile
+                funcDef.loc.sourcefile,
+                '',
+                funcDef._meta?.nodehash || ''
               )
             }
             return res
@@ -191,7 +209,9 @@ class TaintOutputStrategy extends OutputStrategy {
                 callSite.loc.start.column,
                 callSite.loc.end.line,
                 callSite.loc.end.column,
-                callSite.loc.sourcefile
+                callSite.loc.sourcefile,
+                '',
+                callSite._meta?.nodehash || ''
               )
             }
             res.id = id
