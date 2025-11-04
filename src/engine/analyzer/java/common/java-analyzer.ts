@@ -74,7 +74,11 @@ class JavaAnalyzer extends (Analyzer as any) {
     const time1 = Date.now()
     const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!**/src/test/**'], dir)
     if (packageFiles.length === 0) {
-      Errors.NoCompileUnitError('no java file found in source path')
+      handleException(
+        null,
+        'find no target compileUnit of the project : no java file found in source path',
+        'find no target compileUnit of the project : no java file found in source path'
+      )
       process.exit(1)
     }
     ;(this as any).unprocessedFileScopes = new Set()
@@ -365,7 +369,7 @@ class JavaAnalyzer extends (Analyzer as any) {
         }
       }
     }
-    res._this = defscope;
+    res._this = defscope
 
     return res
   }

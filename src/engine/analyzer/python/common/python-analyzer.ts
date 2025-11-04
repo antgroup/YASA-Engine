@@ -1058,7 +1058,11 @@ class PythonAnalyzer extends (Analyzer as any) {
       })
       .map((relativePath: string) => path.resolve(dir, relativePath))
     if (modules.length === 0) {
-      Errors.NoCompileUnitError('no python file found in source path')
+      handleException(
+        null,
+        'find no target compileUnit of the project : no python file found in source path',
+        'find no target compileUnit of the project : no python file found in source path'
+      )
       process.exit(1)
     }
 

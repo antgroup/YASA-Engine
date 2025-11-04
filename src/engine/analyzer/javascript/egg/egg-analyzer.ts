@@ -409,7 +409,11 @@ class EggAnalyzer extends (JsAnalyzer as any) {
       egg_app_path
     )
     if (modules.length === 0) {
-      Errors.NoCompileUnitError('no javascript file found in source path')
+      handleException(
+        null,
+        'find no target compileUnit of the project : no js/ts file found in source path',
+        'find no target compileUnit of the project : no js/ts file found in source path'
+      )
       process.exit(1)
     }
     for (const mod of modules) {

@@ -206,8 +206,12 @@ class JsAnalyzer extends Analyzer {
       dir
     )
     if (modules.length === 0) {
-      Errors.NoCompileUnitError('no javascript file found in source path')
-      process.exit(1)
+      handleException(
+        null,
+        'find no target compileUnit of the project : no js/ts file found in source path',
+        'find no target compileUnit of the project : no js/ts file found in source path'
+      )
+      process.exit(0)
     }
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file)
@@ -223,13 +227,13 @@ class JsAnalyzer extends Analyzer {
   processModuleSrc(source: any, filename: any) {
     const { options } = this
     options.sourcefile = filename
-    
+
     // 记录parseCode耗时
     const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
     const parseTime = Date.now() - parseStart
     this.totalParseTime += parseTime
-    
+
     this.sourceCodeCache[filename] = source
     if (ast) {
       // 记录processModule耗时
@@ -237,7 +241,7 @@ class JsAnalyzer extends Analyzer {
       const result = this.processModule(ast, filename)
       const processTime = Date.now() - processStart
       this.totalProcessTime += processTime
-      
+
       return result
     }
   }
