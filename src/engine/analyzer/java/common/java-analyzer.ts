@@ -72,9 +72,13 @@ class JavaAnalyzer extends (Analyzer as any) {
    */
   scanPackages(dir: any) {
     const time1 = Date.now()
-    const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!src/test/**'], dir)
+    const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!**/src/test/**'], dir)
     if (packageFiles.length === 0) {
-      Errors.NoCompileUnitError('no java file found in source path')
+      handleException(
+        null,
+        'find no target compileUnit of the project : no java file found in source path',
+        'find no target compileUnit of the project : no java file found in source path'
+      )
       process.exit(1)
     }
     ;(this as any).unprocessedFileScopes = new Set()
@@ -82,7 +86,6 @@ class JavaAnalyzer extends (Analyzer as any) {
       this.preloadFileToPackage(packageFile.content, packageFile.file)
     }
     const time2 = Date.now()
-    logger.info(`preLoadFileToPackage: ${time2 - time1}`)
     for (const unprocessedFileScope of (this as any).unprocessedFileScopes) {
       if (unprocessedFileScope.isProcessed) continue
       // unprocessedFileScope.isProcessed = true;
@@ -92,7 +95,8 @@ class JavaAnalyzer extends (Analyzer as any) {
     ;(this as any).unprocessedFileScopes.clear()
     delete (this as any).unprocessedFileScopes
     const time3 = Date.now()
-    logger.info(`processPackageScope: ${time3 - time2}`)
+    logger.info(`ParseCode time: ${time2 - time1}ms`)
+    logger.info(`ProcessModule time: ${time3 - time2}ms`)
   }
 
   /**
@@ -365,7 +369,7 @@ class JavaAnalyzer extends (Analyzer as any) {
         }
       }
     }
-    res._this = defscope;
+    res._this = defscope
 
     return res
   }

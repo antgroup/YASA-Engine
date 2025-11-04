@@ -64,8 +64,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     const { fclos, argvalues } = info
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
     IntroduceTaintJava.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
-    this.checkByNameAndClassMatch(node, fclos, argvalues, scope)
-    this.checkByFieldMatch(node, fclos, argvalues, scope)
+    this.checkByNameAndClassMatch(node, fclos, argvalues, scope, state, info)
+    this.checkByFieldMatch(node, fclos, argvalues, scope, state, info)
   }
 
   /**
@@ -89,8 +89,10 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
+   * @param info
    */
-  checkByNameAndClassMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, argvalues: any, scope: any, state: any, info: any) {
     const sinkRules = this.assembleFunctionCallSinkRule()
 
     const rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope)
@@ -131,7 +133,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
             fclos,
             TAINT_TAG_NAME_JAVA,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state.callstack
           )
           if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyJava.outputStrategyId)
@@ -148,8 +151,10 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
+   * @param info
    */
-  checkByFieldMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByFieldMatch(node: any, fclos: any, argvalues: any, scope: any, state: any, info: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (!rules) return
 
@@ -245,7 +250,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
               fclos,
               TAINT_TAG_NAME_JAVA,
               ruleName,
-              matchedSanitizerTags
+              matchedSanitizerTags,
+              state.callstack
             )
 
             if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue

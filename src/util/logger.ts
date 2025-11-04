@@ -66,6 +66,7 @@ log4jsLogger.configure({
       compress: true,
     },
     stdoutFilter: { type: 'logLevelFilter', appender: 'stdout', level: logLevel, maxLevel: 'warn' },
+    clientStdoutFilter: { type: 'logLevelFilter', appender: 'stdout', level: 'error', maxLevel: 'error' },
     infoFilter: { type: 'logLevelFilter', appender: 'file', level: logLevel, maxLevel: 'warn' },
     errFilter: { type: 'logLevelFilter', appender: 'errorFile', level: 'error' },
   },

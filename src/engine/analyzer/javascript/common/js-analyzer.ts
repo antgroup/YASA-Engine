@@ -49,6 +49,8 @@ class JsAnalyzer extends Analyzer {
       complete: false,
       value: [],
     }
+    this.totalParseTime = 0
+    this.totalProcessTime = 0
   }
 
   /**
@@ -75,6 +77,8 @@ class JsAnalyzer extends Analyzer {
 
     // just scan and execute every module
     this.scanModules(dir)
+    logger.info(`ParseCode time: ${this.totalParseTime}ms`)
+    logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
   }
 
   /**
@@ -202,8 +206,12 @@ class JsAnalyzer extends Analyzer {
       dir
     )
     if (modules.length === 0) {
-      Errors.NoCompileUnitError('no javascript file found in source path')
-      process.exit(1)
+      handleException(
+        null,
+        'find no target compileUnit of the project : no js/ts file found in source path',
+        'find no target compileUnit of the project : no js/ts file found in source path'
+      )
+      process.exit(0)
     }
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file)
@@ -219,10 +227,22 @@ class JsAnalyzer extends Analyzer {
   processModuleSrc(source: any, filename: any) {
     const { options } = this
     options.sourcefile = filename
+
+    // 记录parseCode耗时
+    const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
+    const parseTime = Date.now() - parseStart
+    this.totalParseTime += parseTime
+
     this.sourceCodeCache[filename] = source
     if (ast) {
-      return this.processModule(ast, filename)
+      // 记录processModule耗时
+      const processStart = Date.now()
+      const result = this.processModule(ast, filename)
+      const processTime = Date.now() - processStart
+      this.totalProcessTime += processTime
+
+      return result
     }
   }
 

@@ -211,8 +211,12 @@ async function parseDirectory(dir: any, options: Record<string, any>) {
             dir
           )
           if (modules.length === 0) {
-            Errors.NoCompileUnitError('no javascript file found in source path')
-            process.exit(1)
+            handleException(
+              null,
+              'find no target compileUnit of the project : no js/ts file found in source path',
+              'find no target compileUnit of the project : no js/ts file found in source path'
+            )
+            process.exit(0)
           }
           for (const mod of modules) {
             options.sourcefile = mod.file
@@ -247,8 +251,12 @@ async function parseDirectory(dir: any, options: Record<string, any>) {
         case 'java': {
           const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!src/test/**'], dir)
           if (packageFiles.length === 0) {
-            Errors.NoCompileUnitError('no java file found in source path')
-            process.exit(1)
+            handleException(
+              null,
+              'find no target compileUnit of the project : no java file found in source path',
+              'find no target compileUnit of the project : no java file found in source path'
+            )
+            process.exit(0)
           }
           for (const packageFile of packageFiles) {
             options.sourcefile = packageFile.file
@@ -324,7 +332,11 @@ function processGoUast(goUast: any, options: Record<string, any>) {
             // JSON序列化并写入文件
             fs.writeFileSync(outputPath, JSON.stringify(nodeWithoutParent))
           } catch (error) {
-            handleException(error, `写入文件失败: ${outputPath}`, `写入文件失败: ${outputPath}, 错误: ${(error as Error).message}`)
+            handleException(
+              error,
+              `写入文件失败: ${outputPath}`,
+              `写入文件失败: ${outputPath}, 错误: ${(error as Error).message}`
+            )
           }
         }
         break
@@ -379,7 +391,11 @@ function processPythonUast(pythonUast: any, options: Record<string, any>) {
   try {
     fs.ensureDirSync(outputDir)
   } catch (error) {
-    handleException(error, `创建目录失败: ${outputDir}`, `创建目录失败: ${outputDir}, 错误: ${(error as Error).message}`)
+    handleException(
+      error,
+      `创建目录失败: ${outputDir}`,
+      `创建目录失败: ${outputDir}, 错误: ${(error as Error).message}`
+    )
     return
   }
 

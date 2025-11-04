@@ -104,7 +104,11 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     .option('--language <lang>', '指定语言（支持: javascript/typescript/golang/python/java）', (lang: any) => {
       const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python', 'java']
       if (!supported.includes(lang)) {
-        logger.info('Unknown language!! Only support javascript/typescript/golang/python/java')
+        handleException(
+          null,
+          'Unknown language!! Only support javascript/typescript/golang/python/java',
+          'Unknown language!! Only support javascript/typescript/golang/python/java'
+        )
         process.exit(0)
       }
       if (['typescript', 'ts', 'js', 'javascript'].includes(lang)) {
@@ -211,6 +215,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     .option('--configFilePath <configFilePath>', '指定config配置文件路径（JSON格式）', (configFilePath: any) => {
       loadConfig(configFilePath)
     })
+    .option('--enablePerformanceLogging', '启用性能监控日志输出', () => {
+      Config.enablePerformanceLogging = true
+    })
   // 处理非选项参数（如直接传入的目录）
   program.arguments('[paths...]').action((paths: any) => {
     if (paths.length > 0) {
@@ -244,7 +251,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     printHelp()
   })
 
-  program.version('0.2.3-inner')
+  program.version('0.2.4-inner')
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
@@ -350,7 +357,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
   if (Config.dumpAllAST) {
     try {
       await Parsing.parseDirectory(Config.maindir, Config)
-      console.log('parseDirectory UAST success!')
+      logger.info('parseDirectory UAST success!')
       process.exit(0)
     } catch (e: any) {
       handleException(e, 'Error occurred in dumpAllAST!!!!', `Error occurred in dumpAllAST!!!!${e}`)
