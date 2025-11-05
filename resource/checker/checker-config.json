@@ -142,6 +142,11 @@
     "description": "go-restful entrypoint采集以及框架source添加"
   },
   {
+    "checkerId": "echo-entrypoint-collect-checker",
+    "checkerPath": "checker/taint/go/echo-entrypoint-collect-checker.ts",
+    "description": "echo entrypoint采集以及框架source添加"
+  },
+  {
     "checkerId": "get_file_ast",
     "checkerPath": "checker/sdk/get-file-ast-checker.ts",
     "description": "获取文件AST"
