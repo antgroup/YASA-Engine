@@ -21,6 +21,7 @@
     "checkerIds": [
       "taint_flow_gin_input_inner",
       "cobra.Command-builtIn",
+      "go-restful-entryPoints-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
       "go-main-entryPoints-collection",
