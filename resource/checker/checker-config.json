@@ -137,6 +137,11 @@
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_test.json"
   },
   {
+    "checkerId": "go-restful-entryPoints-collect-checker",
+    "checkerPath": "checker/taint/go/restful-entrypoint-collect-checker.ts",
+    "description": "go-restful entrypoint采集以及框架source添加"
+  },
+  {
     "checkerId": "get_file_ast",
     "checkerPath": "checker/sdk/get-file-ast-checker.ts",
     "description": "获取文件AST"
