@@ -6,11 +6,19 @@ const varUtil = require('./variable-util')
 const BasicRuleHandler = require('../checker/common/rules-basic-handler')
 const { md5 } = require('./hash-util')
 
+let getCodeByLocation: ((loc: any) => string) | null = null
+function getGetCodeByLocation(): (loc: any) => string {
+  if (!getCodeByLocation) {
+    const sourceLine = require('../engine/analyzer/common/source-line')
+    getCodeByLocation = sourceLine.getCodeByLocation
+  }
+  if (!getCodeByLocation) {
+    throw new Error('getCodeByLocation is not initialized')
+  }
+  return getCodeByLocation
+}
+
 const defaultFilter = (nd: any, prop: string, from: any): boolean => {
-  /**
-   *
-   * @param obj
-   */
   function objHasCallExpressionOrBinaryExpressionOrTag(obj: any): boolean {
     if (!obj) {
       return false
@@ -52,36 +60,55 @@ const defaultFilter = (nd: any, prop: string, from: any): boolean => {
 
 /**
  * slightly adjust the AST nodes, and add parent pointers
- * @param sourceunit
+ * 遍历 AST 节点树，为每个节点添加 parent 指针和 sourcefile 信息
+ * @param sourceunit 根 AST 节点
  */
 function adjustASTNode(sourceunit: any): void {
   const visited = new Set()
   visited.add(sourceunit)
   const worklist = [sourceunit]
-  while (worklist.length) {
-    const node = worklist.shift()
-    for (const prop of Object.keys(node)) {
+  // 使用索引访问元素，避免 shift() 的 O(n) 开销
+  let index = 0
+  
+  while (index < worklist.length) {
+    const node = worklist[index++]
+    
+    // 直接使用 for...in 遍历属性，避免 Object.keys() 创建数组的开销
+    for (const prop in node) {
+      // 跳过原型链上的属性
+      if (!Object.prototype.hasOwnProperty.call(node, prop)) continue
+      
       const sub_node = node[prop]
-      if (sub_node && typeof sub_node === 'object' && sub_node.type) {
-        switch (sub_node.type) {
-          case 'FunctionDefinition':
-            sub_node.name = sub_node.id?.name ?? `<anonymous>`
-            break
-          case 'ClassDefinition':
-            sub_node.name = sub_node.id?.name ?? '<anonymous>'
-            break
+      // 跳过 null、undefined、非对象类型
+      if (!sub_node || typeof sub_node !== 'object') continue
+      
+      if (sub_node.type) {
+        const nodeType = sub_node.type
+        if (nodeType === 'FunctionDefinition') {
+          sub_node.name = sub_node.id?.name ?? `<anonymous>`
+        } else if (nodeType === 'ClassDefinition') {
+          sub_node.name = sub_node.id?.name ?? '<anonymous>'
         }
-        if (visited.has(sub_node)) continue
-        sub_node.parent = node
-        sub_node.loc = sub_node.loc || {}
-        sub_node.loc.sourcefile = sourcefile
-        worklist.push(sub_node)
-        visited.add(sub_node)
+        
+        // 使用 visited Set 避免重复处理已访问的节点
+        if (!visited.has(sub_node)) {
+          sub_node.parent = node
+          if (!sub_node.loc) {
+            sub_node.loc = {}
+          }
+          sub_node.loc.sourcefile = sourcefile
+          worklist.push(sub_node)
+          visited.add(sub_node)
+        }
       } else if (Array.isArray(sub_node)) {
-        for (const sn of sub_node) {
+        const arrLen = sub_node.length
+        for (let i = 0; i < arrLen; i++) {
+          const sn = sub_node[i]
           if (sn?.type && !visited.has(sn)) {
             sn.parent = node
-            sn.loc = sn.loc || {}
+            if (!sn.loc) {
+              sn.loc = {}
+            }
             sn.loc.sourcefile = sourcefile
             worklist.push(sn)
             visited.add(sn)
@@ -112,62 +139,107 @@ function annotateAST(node: any, options?: AnnotateOptions): void {
 
 /**
  * 给uast分配hash
- * @param obj
+ * 递归遍历 AST 节点树，为每个有 type 的节点计算并分配 nodehash
+ * @param obj 根 AST 节点
+ * @param visited 已访问节点集合（内部使用，外部调用时无需传入）
  */
-function addNodeHash(obj: any): void {
+function addNodeHash(obj: any, visited?: WeakSet<any>): void {
   if (!obj) return
-  if (Array.isArray(obj)) {
-    obj.forEach((o: any) => {
-      addNodeHash(o)
-    })
+  
+  if (!visited) {
+    visited = new WeakSet()
   }
-  if (typeof obj !== 'object' || Array.isArray(obj)) return
+  
+  addNodeHashInternal(obj, visited)
+}
+
+function addNodeHashInternal(obj: any, visited: WeakSet<any>): void {
+  if (Array.isArray(obj)) {
+    const arrLen = obj.length
+    // 使用传统 for 循环，避免 forEach 的函数调用开销
+    for (let i = 0; i < arrLen; i++) {
+      const item = obj[i]
+      if (item && !visited.has(item)) {
+        addNodeHash(item, visited)
+      }
+    }
+    return
+  }
+  
+  if (typeof obj !== 'object') return
+  
+  // visited WeakSet 避免重复处理循环引用或共享节点
+  if (visited.has(obj)) return
+  visited.add(obj)
+  
   if (obj.type) {
-    const { getCodeByLocation } = require('../engine/analyzer/common/source-line')
-    let content = getCodeByLocation(obj.loc)
+    let content = ''
+    const loc = obj.loc
+    if (loc && loc.sourcefile && loc.start && loc.end) {
+      const getCode = getGetCodeByLocation()
+      content = getCode(loc)
+    }
     if (content === '') {
       content = prettyPrint(obj)
     }
-    const relateFilePath = obj.loc?.sourcefile?.startsWith(config.maindirPrefix)
-      ? obj.loc?.sourcefile?.substring(config.maindirPrefix.length)
-      : obj.loc?.sourcefile
-    if (!obj._meta) obj._meta = {}
-    obj._meta.nodehash = md5(
-      `${content}_${obj.loc?.start?.line}_${obj.loc?.start?.column}_${obj.loc?.end?.line}_${
-        obj.loc?.end?.column
-      }_${relateFilePath}_${obj.type}_${obj.parent?._meta?.nodehash}`
-    )
-  }
-  for (const key in obj) {
-    if (key === 'parent') continue
-    if (obj.hasOwnProperty(key)) {
-      const subObj = obj[key]
-      addNodeHash(subObj)
+    
+    let relateFilePath = obj.loc?.sourcefile
+    if (relateFilePath && config.maindirPrefix && relateFilePath.startsWith(config.maindirPrefix)) {
+      relateFilePath = relateFilePath.substring(config.maindirPrefix.length)
     }
+    
+    if (!obj._meta) {
+      obj._meta = {}
+    }
+    
+    // 使用数组 join() 替代多次字符串拼接，减少中间对象创建
+    const parentHash = obj.parent?._meta?.nodehash || ''
+    const hashParts = [
+      content,
+      loc?.start?.line || '',
+      loc?.start?.column || '',
+      loc?.end?.line || '',
+      loc?.end?.column || '',
+      relateFilePath || '',
+      obj.type,
+      parentHash,
+    ]
+    
+    obj._meta.nodehash = md5(hashParts.join('_'))
+  }
+  
+  // 使用 for...in 直接遍历，避免 Object.keys() 创建新数组
+  for (const key in obj) {
+    // 跳过 parent 和 _meta
+    // _meta 对象本身没有 type 属性，不会进入 if (obj.type) 分支处理
+    if (key === 'parent' || key === '_meta') continue
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue
+    
+    const subObj = obj[key]
+    if (!subObj || typeof subObj !== 'object') continue
+    
+    addNodeHashInternal(subObj, visited)
   }
 }
 
 /**
- *
- * @param obj
+ * 递归删除 AST 节点树中所有节点的 parent 指针
+ * @param obj 根 AST 节点
  */
 function deleteParent(obj: any) {
   if (typeof obj !== 'object' || obj === null) {
     return obj
   }
 
-  // 处理数组
   if (Array.isArray(obj)) {
     obj.forEach((item) => deleteParent(item))
     return obj
   }
 
-  // 处理普通对象
   if ('parent' in obj) {
     delete obj.parent
   }
 
-  // 递归处理所有属性
   for (const key in obj) {
     if (obj.hasOwnProperty(key) && typeof obj[key] === 'object' && obj[key] !== null) {
       deleteParent(obj[key])
@@ -388,7 +460,6 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
     // 查找field的属性，field属性里每一个符号值都要搜索
     for (const fieldProp of checkFieldsProps) {
       if (_.has(symVal, fieldProp)) {
-        // 处理数组的情况
         if (Array.isArray(symVal?.[fieldProp])) {
           for (const eleVal of symVal?.[fieldProp]) {
             const tagVal = hasTagRec(eleVal, targetAttribute, stack + 1, visited)
@@ -397,7 +468,6 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
             }
           }
         } else {
-          // 处理普通对象
           for (const key in symVal?.[fieldProp]) {
             const eleVal = symVal?.[fieldProp][key]
             if (
@@ -417,7 +487,6 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
     // 查找普通属性,普通属性只check自身
     for (const prop of checkRawProps) {
       if (_.has(symVal, prop)) {
-        // 处理数组的情况 eg arguments
         if (Array.isArray(symVal?.[prop]) && symVal?.[prop]?.length > 0) {
           for (const eleVal of symVal?.[prop]) {
             const tagVal = hasTagRec(eleVal, targetAttribute, stack + 1, visited)

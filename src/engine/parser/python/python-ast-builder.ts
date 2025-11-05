@@ -34,10 +34,10 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
 
   let isSingle = ''
   if (options.single) {
-    isSingle = '--singleFileParse=True'
+    isSingle = '--singleFileParse'
     uastFilePath += '.json'
   } else {
-    isSingle = '--singleFileParse=False'
+    isSingle = ''
   }
 
   let uast4pyPath = path.join(__dirname, '../../../../deps/uast4py/uast4py')
@@ -66,7 +66,7 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
     )
     process.exit(0)
   }
-  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}"`
+  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}" -j32`
 
   try {
     const optionForCommand = {
@@ -148,9 +148,12 @@ function parsePackages(astManager: any, rootDir: string, options?: BuildOptions)
   options.single = false
   try {
     buildUASTPython(rootDir, options)
+    
     const uastJsonFiles = FileUtil.loadAllFileTextGlobby(['**/*.(json)'], uastFilePath)
+    
     for (const uastFile of uastJsonFiles) {
       const data = uastFile.content
+      
       if (data.startsWith('Syntax error in file') || data.startsWith('UnicodeDecodeError in file')) {
         handleException(
           null,
@@ -162,16 +165,24 @@ function parsePackages(astManager: any, rootDir: string, options?: BuildOptions)
         }
         continue
       }
+      
       const obj = JSON.parse(data)
+      
       AstUtil.annotateAST(obj, { sourcefile: obj.loc?.sourcefile })
+      
       addNodeHash(obj)
+      
       deleteParent(obj)
+      
       const filename = obj?.loc?.sourcefile
       if (filename) {
         astManager[filename] = obj
       }
     }
+    
   } catch (e) {
+    const logger = require('../../../util/logger')(__filename)
+    logger.error(`[python-ast-builder] parsePackage error: ${rootDir}`)
     handleException(
       e,
       `[python-ast-builder] parsePackage error: ${rootDir}`,

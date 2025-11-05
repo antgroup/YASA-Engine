@@ -65,13 +65,11 @@ class JavaAnalyzer extends (Analyzer as any) {
   }
 
   /**
-   * scan project dir
-   * parse java files
-   * prebuild package scope
-   * @param dir dir is the main directory of the project
+   * 扫描项目目录，解析 Java 文件并预构建包作用域
+   * 
+   * @param dir - 项目目录
    */
   scanPackages(dir: any) {
-    const time1 = Date.now()
     const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!**/src/test/**'], dir)
     if (packageFiles.length === 0) {
       handleException(
@@ -82,10 +80,13 @@ class JavaAnalyzer extends (Analyzer as any) {
       process.exit(1)
     }
     ;(this as any).unprocessedFileScopes = new Set()
+    // 在循环中，每个文件都会先 parseCode，再 preload，分开计时（使用 record 累加）
     for (const packageFile of packageFiles) {
       this.preloadFileToPackage(packageFile.content, packageFile.file)
     }
-    const time2 = Date.now()
+    
+    // 开始 ProcessModule 阶段：处理所有文件作用域（分析 AST）
+    this.performanceTracker.start('processModule')
     for (const unprocessedFileScope of (this as any).unprocessedFileScopes) {
       if (unprocessedFileScope.isProcessed) continue
       // unprocessedFileScope.isProcessed = true;
@@ -94,9 +95,9 @@ class JavaAnalyzer extends (Analyzer as any) {
     }
     ;(this as any).unprocessedFileScopes.clear()
     delete (this as any).unprocessedFileScopes
-    const time3 = Date.now()
-    logger.info(`ParseCode time: ${time2 - time1}ms`)
-    logger.info(`ProcessModule time: ${time3 - time2}ms`)
+    this.performanceTracker.end('processModule')
+    
+    // 输出时间统计（performanceTracker 已自动输出各阶段耗时）
   }
 
   /**
@@ -139,16 +140,25 @@ class JavaAnalyzer extends (Analyzer as any) {
   }
 
   /**
-   * parse file src and preload package
-   * @param source
-   * @param filename
-   * @returns {*}
+   * 解析文件并预加载到包管理器
+   * 
+   * 注意：此方法在循环中被调用多次，每个文件的 parseCode 和 preload 时间都会累加到总时间中。
+   * 
+   * @param source - 源代码内容
+   * @param filename - 文件名
+   * @returns 包作用域和文件作用域
    */
   preloadFileToPackage(source: any, filename: any) {
     const { options } = this
     options.sourcefile = filename
     options.language = 'java'
+    
+    // 记录 parseCode 时间：解析源代码为 AST
+    const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
+    const parseTime = Date.now() - parseStart
+    this.performanceTracker.record('parseCode', parseTime)
+    
     this.sourceCodeCache[filename] = source
     if (!ast) {
       handleException(
@@ -169,6 +179,9 @@ class JavaAnalyzer extends (Analyzer as any) {
     const packageName = ast._meta.qualifiedName ?? ''
 
     const packageScope = this.packageManager.getSubPackage(packageName, true)
+
+    // 开始记录 preload 时间：初始化文件作用域、处理类定义等
+    const preloadStart = Date.now()
 
     // file scope init
     // value specifies what module exports, closure specifies file closure
@@ -217,6 +230,11 @@ class JavaAnalyzer extends (Analyzer as any) {
       this.checkerManager.checkAtEndOfCompileUnit(this, null, null, state, null)
     }
     this.fileManager[filename] = fileScope
+    
+    // 记录 preload 时间：累加到总 preload 时间中
+    const preloadTime = Date.now() - preloadStart
+    this.performanceTracker.record('preload', preloadTime)
+    
     return { packageScope, fileScope }
   }
 
