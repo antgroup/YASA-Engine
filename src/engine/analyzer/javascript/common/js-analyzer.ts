@@ -245,6 +245,7 @@ class JsAnalyzer extends Analyzer {
       return result
     }
   }
+
   /**
    *
    * @param source
