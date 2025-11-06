@@ -108,7 +108,7 @@ jobs:
       - name: Build with pkg
         run: |
           echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
-          npx pkg . --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
+          npx pkg . --options max-old-space-size=13312 --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
           echo "✅ Built: dist/${{ matrix.platform.out_name }}"
 
 
