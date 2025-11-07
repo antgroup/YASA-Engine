@@ -4,7 +4,7 @@ const RouteRegistryProperty = ["Filter", "To", "If"]
 const RouteRegistryObject = ["github.com/emicklei/go-restful/v3.WebService<instance>", "github.com/emicklei/go-restful.WebService<instance>"]
 const IntroduceTaint = require("../common-kit/source-util");
 const Checker = require("../../common/checker");
-const { completeEntryPoint } = require("./entry-points-util");
+const completeEntryPoint = require('../common-kit/entry-points-util')
 
 const processedRouteRegistry = new Set();
 

@@ -27,3 +27,4 @@ src/uast
 /node_modules/
 /workspace/
 deps/uast4py
+src/report
