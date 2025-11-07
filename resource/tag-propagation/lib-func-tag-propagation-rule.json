@@ -4,6 +4,7 @@
     "rules": [
       {
         "func": {
+          "calleeType": "System",
           "fsig": "arraycopy",
           "argNum": 5
         },

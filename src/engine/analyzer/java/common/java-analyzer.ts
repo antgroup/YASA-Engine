@@ -299,11 +299,13 @@ class JavaAnalyzer extends (Analyzer as any) {
    */
   processVariableDeclaration(scope: any, node: any, state: any) {
     const initVal = super.processVariableDeclaration(scope, node, state)
-    if (initVal && typeof initVal?.rtype === 'undefined') {
-      if (node.varType !== null && node.varType !== undefined) {
-        initVal.rtype = { type: undefined }
+    if (initVal && node.varType !== null && node.varType !== undefined) {
+      initVal.rtype = { type: undefined }
+      const val = this.getMemberValueNoCreate(scope, node.varType.id, state)
+      if (val) {
+        initVal.rtype.definiteType = UastSpec.identifier(val._qid)
+      } else {
         initVal.rtype.definiteType = node.varType.id
-        initVal.rtype.val = this.getMemberValueNoCreate(scope, node.varType.id, state)
       }
     }
     return initVal
@@ -317,6 +319,16 @@ class JavaAnalyzer extends (Analyzer as any) {
    */
   processIdentifier(scope: any, node: any, state: any) {
     const res = super.processIdentifier(scope, node, state)
+
+    if (res && !res.rtype) {
+      res.rtype = { type: undefined }
+      if (res.vtype === 'class') {
+        res.rtype.definiteType = UastSpec.identifier(res._qid)
+      } else {
+        res.rtype.definiteType = node
+      }
+    }
+
     const { fileScope } = res
     if (fileScope && !fileScope.isProcessed) {
       this.processInstruction(fileScope, fileScope.ast, this.initState(fileScope))
@@ -358,10 +370,13 @@ class JavaAnalyzer extends (Analyzer as any) {
     if (defscope.vtype === 'fclos' && defscope._sid?.includes('anonymous') && res.vtype === 'symbol') {
       res = defscope
     }
+
     if (defscope.rtype && defscope.rtype !== 'DynamicType' && res.rtype === undefined) {
       res.rtype = { type: undefined }
-      res.rtype.definiteType = defscope.rtype.type ? defscope.rtype : defscope.rtype.definiteType
-      res.rtype.vagueType = defscope.rtype.vagueType ? `${defscope.rtype.vagueType}.${res.name}` : res.name
+      res.rtype.definiteType = defscope.rtype.type ? defscope.rtype.type : defscope.rtype.definiteType
+      res.rtype.vagueType = defscope.rtype.vagueType
+        ? `${defscope.rtype.vagueType}.${resolved_prop.name}`
+        : resolved_prop.name
     }
     const { fileScope } = res
     if (fileScope && !fileScope.isProcessed) {
@@ -600,6 +615,9 @@ class JavaAnalyzer extends (Analyzer as any) {
 
     // analyze the resolved function closure and the function arguments
     let res = this.executeCall(node, fclos, argvalues, state, scope)
+    if (res) {
+      res.rtype = fclos.rtype
+    }
 
     if (res instanceof UndefinedValue && fclos._sid?.includes('<anonymous') && fclos.fdef?.body?.body?.length === 1) {
       const oldBodyExpr = fclos.fdef.body.body[0]
