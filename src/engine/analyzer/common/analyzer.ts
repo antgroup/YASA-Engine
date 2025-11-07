@@ -2464,6 +2464,7 @@ class Analyzer extends MemSpace {
           for (let i = 0; i < paramLength; i++) {
             if (
               param[i].varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
+              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param[i].varType?.id?.name}`) ||
               (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param[i].varType?.id?.name))
             ) {
               continue

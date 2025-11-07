@@ -101,7 +101,6 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype).endsWith(`.${tspec.calleeType}`) ||
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
-            fclos.object?.rtype?.val?._qid === tspec.calleeType ||
             tspec.calleeType === '*') &&
           AstUtilSinkUtil.prettyPrint(fclos.property) === tspec.fsig
         ) {
@@ -112,7 +111,6 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.rtype).endsWith(`.${tspec.calleeType}`) ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
-            fclos.rtype?.val?._qid === tspec.calleeType ||
             tspec.calleeType === '*') &&
           AstUtilSinkUtil.prettyPrint(fclos.ast) === tspec.fsig
         ) {
