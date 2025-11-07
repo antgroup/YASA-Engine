@@ -1,6 +1,7 @@
+import { handleException } from '../../../engine/analyzer/common/exception-handler'
+
 const _ = require('lodash')
-const IntroduceTaint = require('../common-kit/source-util')
-const BasicRuleHandler = require('../../common/rules-basic-handler')
+const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
 const CommonUtil = require('../../../util/common-util')
 const {
   findPythonFcEntryPointAndSource,
@@ -8,21 +9,17 @@ const {
 const Constant = require('../../../util/constant')
 const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
 const AstUtil = require('../../../util/ast-util')
-const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
-const { matchSinkAtFuncCall, matchRegex } = require('../common-kit/sink-util')
 const Config = require('../../../config')
 const FileUtil = require('../../../util/file-util')
 const { extractRelativePath } = require('../../../util/file-util')
 const logger = require('../../../util/logger')(__filename)
-const TaintChecker = require('../taint-checker')
-const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
 
 const TAINT_TAG_NAME_PYTHON = 'PYTHON_INPUT'
 
 /**
  *
  */
-class PythonTaintChecker extends TaintChecker {
+class PythonTaintChecker extends PythonTaintAbstractChecker {
   /**
    * constructor
    * @param resultManager
@@ -155,183 +152,6 @@ class PythonTaintChecker extends TaintChecker {
   }
 
   /**
-   * trigger at identifier
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param state
-   * @param info
-   */
-  triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any) {
-    IntroduceTaint.introduceTaintAtIdentifier(node, info.res, this.sourceScope.value)
-  }
-
-  /**
-   * trigger before function call
-   * @param analyzer
-   * @param node
-   * @param scope
-   * @param state
-   * @param info
-   */
-  triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
-    const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
-    this.checkByNameMatch(node, fclos, argvalues)
-    this.checkByFieldMatch(node, fclos, argvalues)
-  }
-
-  /**
-   * FunctionCallAfter trigger
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param state
-   * @param info
-   */
-  triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, ret } = info
-    const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
-
-    IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
-  }
-
-  /**
-   * check sink by name
-   * @param node
-   * @param fclos
-   * @param argvalues
-   * @returns {boolean}
-   */
-  checkByNameMatch(node: any, fclos: any, argvalues: any) {
-    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
-    if (_.isEmpty(rules)) {
-      return
-    }
-    let rule = matchSinkAtFuncCall(node, fclos, rules)
-    rule = rule.length > 0 ? rule[0] : null
-
-    if (rule) {
-      this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
-    }
-  }
-
-  /**
-   *
-   * @param node
-   * @param fclos
-   * @param argvalues
-   * @param scope
-   */
-  checkByFieldMatch(node: any, fclos: any, argvalues: any) {
-    let rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
-    if (_.isEmpty(rules)) {
-      return
-    }
-    rules = _.clone(rules)
-    rules = rules.filter((v: any) => v.kind === TAINT_TAG_NAME_PYTHON)
-    if (!rules) return
-    rules.some((rule: any): boolean => {
-      if (typeof rule.fsig !== 'string') {
-        return false
-      }
-      const callFull = this.getObj(fclos)
-      if (typeof callFull === 'undefined') {
-        return false
-      }
-      if (rule.fsig) {
-        if (rule.fsig === callFull) {
-          this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
-          return true
-        }
-      } else {
-        if (!rule.fregex) {
-          return false
-        }
-        if (callFull.type === 'MemberAccess' && matchRegex(rule.fregex, fclos._qid)) {
-          this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
-          return true
-        }
-      }
-      return false
-    })
-  }
-
-  /**
-   * get obj
-   * @param fclos
-   */
-  getObj(fclos: any): any {
-    if (
-      typeof fclos?._sid !== 'undefined' &&
-      typeof fclos?._qid === 'undefined' &&
-      typeof fclos?._this === 'undefined'
-    ) {
-      const index = fclos?._sid.indexOf('>.')
-      const result = index !== -1 ? fclos?._sid.substring(index + 2) : fclos?._sid
-      return result.replace('<instance>', '').replace('()', '')
-    }
-    if (typeof fclos?._qid !== 'undefined') {
-      const index = fclos._qid.indexOf('>.')
-      const result = index !== -1 ? fclos?._qid.substring(index + 2) : fclos?._qid
-      return result.replace('<instance>', '').replace('()', '')
-    }
-    if (!(fclos === fclos?._this)) {
-      return this.getObj(fclos._this)
-    }
-    const index = fclos?._sid.indexOf('>.')
-    const result = index !== -1 ? fclos?._sid.substring(index + 2) : fclos?._sid
-    if (result) {
-      return result.replace('<instance>', '').replace('()', '')
-    }
-  }
-
-  /**
-   *
-   * @param node
-   * @param argvalues
-   * @param fclos
-   * @param rule
-   */
-  findArgsAndAddNewFinding(node: any, argvalues: any, fclos: any, rule: any) {
-    const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
-    const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
-    const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
-      node,
-      fclos,
-      args,
-      null,
-      TAINT_TAG_NAME_PYTHON,
-      true,
-      sanitizers
-    )
-    if (ndResultWithMatchedSanitizerTagsArray) {
-      for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
-        const { nd } = ndResultWithMatchedSanitizerTags
-        const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
-        let ruleName = rule.fsig
-        if (typeof rule.attribute !== 'undefined') {
-          ruleName += `\nSINK Attribute: ${rule.attribute}`
-        }
-        const taintFlowFinding = this.buildTaintFinding(
-          this.getCheckerId(),
-          this.desc,
-          node,
-          nd,
-          fclos,
-          TAINT_TAG_NAME_PYTHON,
-          ruleName,
-          matchedSanitizerTags
-        )
-        if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
-        this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
-      }
-      return true
-    }
-  }
-
-  /**
    *
    */
   loadPythonDefaultRule() {
@@ -339,7 +159,9 @@ class PythonTaintChecker extends TaintChecker {
     try {
       const rulePath = FileUtil.getAbsolutePath('./resource/python/python-default-rule.json')
       pythonDefaultRule = FileUtil.loadJSONfile(rulePath)
-    } catch (e) {}
+    } catch (e) {
+      handleException(e, 'Error occurred in load python default rule', 'Error occurred in load python default rule')
+    }
     return pythonDefaultRule
   }
 }
