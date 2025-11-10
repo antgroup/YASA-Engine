@@ -17,7 +17,6 @@ const logger = require('../../../../util/logger')(__filename)
 
 const TAINT_TAG_NAME = 'EXPRESS_INPUT'
 
-
 /**
  *
  */
@@ -280,8 +279,6 @@ class ExpressTaintChecker extends TaintChecker {
       return
     }
     rules = _.clone(rules)
-    rules = rules.filter((v: any) => v.kind === TAINT_TAG_NAME)
-    if (!rules) return
 
     let matched = false
     rules.some((rule: any) => {

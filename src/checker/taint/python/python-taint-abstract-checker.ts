@@ -83,13 +83,10 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param scope
    */
   checkByFieldMatch(node: any, fclos: any, argvalues: any) {
-    let rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
-    rules = _.clone(rules)
-    rules = rules.filter((v: any) => v.kind === TAINT_TAG_NAME_PYTHON)
-    if (!rules) return
     rules.some((rule: any): boolean => {
       if (typeof rule.fsig !== 'string') {
         return false
