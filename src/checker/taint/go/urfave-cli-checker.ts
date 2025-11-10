@@ -1,7 +1,4 @@
-const {
-  completeEntryPoint: completeEntryPointUrfaveCli,
-  entryPointsUpToUser: entryPointsUpToUserUrfaveCli,
-} = require('./entry-points-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
 const configUrfaveCli = require('../../../config')
 const CheckerUrfaveCli = require('../../common/checker')
 
@@ -41,7 +38,7 @@ class urfaveCliChecker extends CheckerUrfaveCli {
     const hash = JSON.stringify(node.right.loc)
     if (processedBuiltInRegistryUrfaveCli.has(hash)) return
     processedBuiltInRegistryUrfaveCli.add(hash)
-    analyzer.entryPoints.push(completeEntryPointUrfaveCli(rvalue))
+    analyzer.entryPoints.push(completeEntryPoint(rvalue))
   }
 }
 

@@ -94,7 +94,7 @@ class GoAnalyzer extends Analyzer {
 
   /**
    * 扫描并解析 Go 包
-   * 
+   *
    * @param dir - 项目目录
    * @param state - 分析状态
    * @param defaultScope - 默认作用域
@@ -133,11 +133,11 @@ class GoAnalyzer extends Analyzer {
       }
       this.moduleManager.rootDir = rootDir
       this.moduleManager.rootDirName = dirName
-      
+
       // 正常流程：结束 parseCode 阶段
       this.performanceTracker.end('parseCode')
       parseCodeEnded = true
-      
+
       // 开始 ProcessModule 阶段：处理模块（分析 AST）
       this.performanceTracker.start('processModule')
       this._scanPackages(modulePackageManager, dirName, rootDir, state, true)

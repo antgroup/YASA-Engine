@@ -1,6 +1,6 @@
 const _ = require('lodash')
 const GoEntryPoint = require('../../../engine/analyzer/golang/common/entrypoint-collector/go-default-entrypoint')
-const { completeEntryPoint } = require('./entry-points-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
 const Config = require('../../../config')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const AstUtil = require('../../../util/ast-util')

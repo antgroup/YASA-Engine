@@ -1,4 +1,4 @@
-const { completeEntryPoint } = require('./entry-points-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
 const Config = require('../../../config')
 
 const RouteRegistryProperty = ['HandleFunc', 'Handle', 'Handler']
