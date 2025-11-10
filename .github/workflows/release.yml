@@ -97,12 +97,20 @@ jobs:
           npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+          
+      - name: Compile TypeScript with tsc
+        run: |
+          echo "🛠️  Compiling TypeScript..."
+          npx tsc --build
+
+          echo "✅ TypeScript compiled successfully"
 
       - name: Build with pkg
         run: |
           echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
-          npx pkg . --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
-          echo "✅ Built: ${{ matrix.platform.out_name }}"
+          npx pkg . --options max-old-space-size=13312 --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
+          echo "✅ Built: dist/${{ matrix.platform.out_name }}"
+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

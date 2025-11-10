@@ -46,13 +46,12 @@ class PythonAnalyzer extends (Analyzer as any) {
 
     this.fileList = []
     this.astManager = {}
-    this.totalParseTime = 0
-    this.totalProcessTime = 0
   }
 
   /**
-   *
-   * @param dir
+   * 预处理阶段：扫描模块并解析代码
+   * 
+   * @param dir - 项目目录
    */
   async preProcess(dir: any) {
     try {
@@ -61,8 +60,6 @@ class PythonAnalyzer extends (Analyzer as any) {
 
       this.scanModules(dir)
       this.astManager = {}
-      logger.info(`ParseCode time: ${this.totalParseTime}ms`)
-      logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
     } catch (e) {
       handleException(
         e,
@@ -1041,9 +1038,15 @@ class PythonAnalyzer extends (Analyzer as any) {
   }
 
   /**
-   *
-   * @param dir
-   * @param isReScan
+   * 扫描并解析 Python 模块
+   * 
+   * 注意：Python Analyzer 使用批量解析方式，流程如下：
+   * 1. 先批量解析所有文件为 AST（parseCode）
+   * 2. 然后逐个预加载模块信息（preload）
+   * 3. 最后逐个处理模块（processModule）
+   * 
+   * @param dir - 项目目录
+   * @param isReScan - 是否为重新扫描
    */
   scanModules(dir: any, isReScan: boolean = false) {
     const { options } = this
@@ -1066,12 +1069,12 @@ class PythonAnalyzer extends (Analyzer as any) {
       process.exit(1)
     }
 
-    // 记录parsePackages耗时
-    const parseStart = Date.now()
+    // 开始 parseCode 阶段：批量解析所有 Python 包为 AST
+    this.performanceTracker.start('parseCode')
     PythonParser.parsePackages(this.astManager, dir, options)
-    const parseTime = Date.now() - parseStart
-    this.totalParseTime += parseTime
+    this.performanceTracker.end('parseCode')
 
+    this.performanceTracker.start('preload')
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1080,9 +1083,10 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.addASTInfo(ast, mod.content, mod.file, isReScan as any)
       }
     }
-
-    // 记录processModule耗时
-    const processStart = Date.now()
+    this.performanceTracker.end('preload')
+    
+    // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
+    this.performanceTracker.start('processModule')
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1090,8 +1094,7 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.processModule(ast, filename, isReScan as any)
       }
     }
-    const processTime = Date.now() - processStart
-    this.totalProcessTime += processTime
+    this.performanceTracker.end('processModule')
   }
 }
 

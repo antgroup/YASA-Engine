@@ -49,36 +49,43 @@ class JsAnalyzer extends Analyzer {
       complete: false,
       value: [],
     }
-    this.totalParseTime = 0
-    this.totalProcessTime = 0
   }
 
   /**
-   *
-   * @param source
-   * @param fileName
+   * 单文件预处理：解析并处理单个文件
+   * 
+   * @param source - 源代码内容
+   * @param fileName - 文件名
    */
   preProcess4SingleFile(source: any, fileName: any) {
     this.initTopScope()
     this.state = this.initState()
+
+    // 记录 parseCode 时间：解析源代码为 AST
+    this.performanceTracker.start('parseCode')
     this.uast = this.parseUast(source, fileName)
+    this.performanceTracker.end('parseCode')
+
     if (this.uast) {
       this.initModuleScope(this.uast, fileName)
-      this.processModuleSrc(source, fileName)
+  
+      // 注意：直接调用 processModule 处理已解析的 AST，避免调用 processModuleSrc 导致重复解析
+      this.performanceTracker.start('processModule')
+      this.processModule(this.uast, fileName)
+      this.performanceTracker.end('processModule')
     }
   }
 
   /**
-   *
-   * @param dir
+   * 预处理阶段：扫描模块并解析代码
+   * 
+   * @param dir - 项目目录
    */
   preProcess(dir: any) {
     Initializer.initGlobalScope(this.topScope)
 
     // just scan and execute every module
     this.scanModules(dir)
-    logger.info(`ParseCode time: ${this.totalParseTime}ms`)
-    logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
   }
 
   /**
@@ -219,32 +226,34 @@ class JsAnalyzer extends Analyzer {
   }
 
   /**
-   * parse src and process module
-   * @param source
-   * @param filename
-   * @returns {*}
+   * 处理模块源代码：解析并处理单个模块
+   * 
+   * @param source - 源代码内容
+   * @param filename - 文件名
+   * @returns 处理结果
    */
   processModuleSrc(source: any, filename: any) {
     const { options } = this
     options.sourcefile = filename
 
-    // 记录parseCode耗时
+    // 记录 parseCode 时间：解析源代码为 AST
     const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
     const parseTime = Date.now() - parseStart
-    this.totalParseTime += parseTime
+    this.performanceTracker.record('parseCode', parseTime)
 
     this.sourceCodeCache[filename] = source
     if (ast) {
-      // 记录processModule耗时
+      // 记录 processModule 时间：处理模块（分析 AST）
       const processStart = Date.now()
       const result = this.processModule(ast, filename)
       const processTime = Date.now() - processStart
-      this.totalProcessTime += processTime
+      this.performanceTracker.record('processModule', processTime)
 
       return result
     }
   }
+
   /**
    *
    * @param source

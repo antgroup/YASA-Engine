@@ -52,4 +52,3 @@ function completeEntryPoint(main: MainFunction): typeof EntryPoint {
 }
 
 module.exports = completeEntryPoint
-
