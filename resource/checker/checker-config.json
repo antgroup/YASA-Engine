@@ -131,6 +131,11 @@
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
   },
   {
+    "checkerId": "taint_flow_python_django_input",
+    "checkerPath": "checker/taint/python/django-taint-checker.ts",
+    "description": "python Django框架 entrypoint采集以及框架source添加"
+  },
+  {
     "checkerId": "taint_flow_test",
     "checkerPath": "checker/taint/test-taint-checker.ts",
     "description": "taint_flow_test，回归测试使用，不推荐外部使用",

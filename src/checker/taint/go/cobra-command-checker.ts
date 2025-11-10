@@ -1,7 +1,7 @@
 import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
 
 const _ = require('lodash')
-const { completeEntryPoint: completeEntryPointCobra } = require('./entry-points-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
 const configCobra = require('../../../config')
 const CheckerCobra = require('../../common/checker')
 
@@ -64,7 +64,7 @@ class cobraCommandChecker extends CheckerCobra {
         if (initField.hasOwnProperty(action) && initField[action]?.vtype === 'fclos') {
           const ep = initField[action]
           if (this.ifIgnoreEntryPoint(ep)) return
-          targetEntryPoints.push(completeEntryPointCobra(ep))
+          targetEntryPoints.push(completeEntryPoint(ep))
         }
       })
     }
@@ -87,7 +87,7 @@ class cobraCommandChecker extends CheckerCobra {
     if (!lvalue?._qid || rvalue?.vtype !== 'fclos') return
     if (!lvalue._qid.startsWith(cobraCommandQid) || ![...preAction, ...postAction].includes(lvalue._sid)) return
     if (this.ifIgnoreEntryPoint(rvalue)) return
-    analyzer.entryPoints.push(completeEntryPointCobra(rvalue))
+    analyzer.entryPoints.push(completeEntryPoint(rvalue))
   }
 
   /**

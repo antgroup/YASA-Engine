@@ -58,6 +58,8 @@ class EggAnalyzer extends (JsAnalyzer as any) {
 
     // 让this.ctx.***能找到符号值
     this.loadToApp(dir, this.state)
+    logger.info(`ParseCode time: ${this.totalParseTime}ms`)
+    logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
   }
 
   /**

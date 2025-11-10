@@ -60,15 +60,15 @@ class JsAnalyzer extends Analyzer {
   preProcess4SingleFile(source: any, fileName: any) {
     this.initTopScope()
     this.state = this.initState()
-    
+
     // 记录 parseCode 时间：解析源代码为 AST
     this.performanceTracker.start('parseCode')
     this.uast = this.parseUast(source, fileName)
     this.performanceTracker.end('parseCode')
-    
+
     if (this.uast) {
       this.initModuleScope(this.uast, fileName)
-      
+  
       // 注意：直接调用 processModule 处理已解析的 AST，避免调用 processModuleSrc 导致重复解析
       this.performanceTracker.start('processModule')
       this.processModule(this.uast, fileName)

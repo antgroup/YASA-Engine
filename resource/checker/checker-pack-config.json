@@ -84,6 +84,7 @@
     "checkerPackId": "taint-flow-python-default",
     "checkerIds": [
       "taint_flow_python_input",
+      "taint_flow_python_django_input",
       "callgraph",
       "sanitizer"
     ],
@@ -93,6 +94,7 @@
     "checkerPackId": "taint-flow-python-inner",
     "checkerIds": [
       "taint_flow_python_input_inner",
+      "taint_flow_python_django_input",
       "callgraph",
       "sanitizer"
     ],
