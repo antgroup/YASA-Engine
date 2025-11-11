@@ -84,7 +84,7 @@ class JavaAnalyzer extends (Analyzer as any) {
     for (const packageFile of packageFiles) {
       this.preloadFileToPackage(packageFile.content, packageFile.file)
     }
-    
+
     // 开始 ProcessModule 阶段：处理所有文件作用域（分析 AST）
     this.performanceTracker.start('processModule')
     for (const unprocessedFileScope of (this as any).unprocessedFileScopes) {
@@ -96,7 +96,7 @@ class JavaAnalyzer extends (Analyzer as any) {
     ;(this as any).unprocessedFileScopes.clear()
     delete (this as any).unprocessedFileScopes
     this.performanceTracker.end('processModule')
-    
+
     // 输出时间统计（performanceTracker 已自动输出各阶段耗时）
   }
 
@@ -152,13 +152,13 @@ class JavaAnalyzer extends (Analyzer as any) {
     const { options } = this
     options.sourcefile = filename
     options.language = 'java'
-    
+
     // 记录 parseCode 时间：解析源代码为 AST
     const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
     const parseTime = Date.now() - parseStart
     this.performanceTracker.record('parseCode', parseTime)
-    
+
     this.sourceCodeCache[filename] = source
     if (!ast) {
       handleException(
@@ -230,11 +230,11 @@ class JavaAnalyzer extends (Analyzer as any) {
       this.checkerManager.checkAtEndOfCompileUnit(this, null, null, state, null)
     }
     this.fileManager[filename] = fileScope
-    
+
     // 记录 preload 时间：累加到总 preload 时间中
     const preloadTime = Date.now() - preloadStart
     this.performanceTracker.record('preload', preloadTime)
-    
+
     return { packageScope, fileScope }
   }
 

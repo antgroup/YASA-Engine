@@ -31,7 +31,6 @@ if (Array.isArray(Rules.getRules()) && Rules.getRules().length > 0) {
     }
   }
 }
-const entryPointsUpToUser: boolean = !_.isEmpty(entrypoints)
 
 /**
  * 填充entryPoint信息
@@ -43,8 +42,7 @@ function completeEntryPoint(main: MainFunction): typeof EntryPoint {
   entryPoint.scopeVal = main.parent
   entryPoint.argValues = []
   entryPoint.entryPointSymVal = main
-  entryPoint.filePath =
-    main.filePath || main.ast?.loc?.sourcefile?.substring(config.maindirPrefix.length)
+  entryPoint.filePath = main.filePath || main.ast?.loc?.sourcefile?.substring(config.maindirPrefix.length)
   entryPoint.functionName = main.functionName || main.ast?.id?.name
   entryPoint.attribute = 'HTTP'
   entryPoint.parent ??= main.parent
@@ -53,7 +51,4 @@ function completeEntryPoint(main: MainFunction): typeof EntryPoint {
   return entryPoint
 }
 
-module.exports = {
-  completeEntryPoint,
-  entryPointsUpToUser,
-}
+module.exports = completeEntryPoint

@@ -175,7 +175,7 @@ class JsTaintChecker extends TaintChecker {
 
   /**
    *
-   
+
    * @param analyzer
    * @param scope
    * @param node
@@ -286,13 +286,10 @@ class JsTaintChecker extends TaintChecker {
    * @param scope
    */
   checkByFieldMatch(node: any, fclos: any, argvalues: any, scope: any) {
-    let rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
+    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
-    rules = _.clone(rules)
-    rules = rules.filter((v: any) => v.kind === TAINT_TAG_NAME_JS_TAINT)
-    if (!rules) return
 
     let matched = false
     rules.some((rule: any) => {
