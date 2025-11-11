@@ -251,7 +251,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     printHelp()
   })
 
-  program.version('0.2.4-inner')
+  program.version('0.2.6-inner')
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
