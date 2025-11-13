@@ -50,7 +50,7 @@ class PythonAnalyzer extends (Analyzer as any) {
 
   /**
    * 预处理阶段：扫描模块并解析代码
-   * 
+   *
    * @param dir - 项目目录
    */
   async preProcess(dir: any) {
@@ -312,7 +312,7 @@ class PythonAnalyzer extends (Analyzer as any) {
     if (fclos.vtype === 'class' && fclos.field && Object.prototype.hasOwnProperty.call(fclos.field, '_CTOR_')) {
       return this.buildNewObject(fclos.cdef, argvalues, fclos, state, node, scope)
     }
-
+    // todo 待迁移到库函数建模中
     if (node.callee.type === 'MemberAccess' && node.callee.property.name === 'append' && fclos?.object?.parent) {
       this.saveVarInCurrentScope(fclos.object.parent, fclos.object, argvalues[0], state)
       return
@@ -780,23 +780,23 @@ class PythonAnalyzer extends (Analyzer as any) {
         }
         for (let i = 0; i < id.elements.length; i++) {
           const union = unionAllValues(scopes[i], state)
-          this.saveVarInCurrentScope(scope, id.elements[i], union, state)
+          this.saveVarInScope(scope, id.elements[i], union, state)
         }
       } else if (Array.isArray(initVal.field) && initVal.field.length >= 1) {
         const minLen = Math.min(id.elements.length, initVal.field.length)
         for (let i = 0; i < minLen; i++) {
-          this.saveVarInCurrentScope(scope, id.elements[i], initVal.field[i], state)
+          this.saveVarInScope(scope, id.elements[i], initVal.field[i], state)
         }
       } else if (isSequentialNumericKeysField(initVal)) {
         const minLen = Math.min(id.elements.length, Object.keys(initVal.field).length)
         for (let i = 0; i < minLen; i++) {
-          this.saveVarInCurrentScope(scope, id.elements[i], initVal.field[i], state)
+          this.saveVarInScope(scope, id.elements[i], initVal.field[i], state)
         }
       } else {
-        for (const i in id.elements) this.saveVarInCurrentScope(scope, id.elements[i], initVal, state)
+        for (const i in id.elements) this.saveVarInScope(scope, id.elements[i], initVal, state)
       }
     } else {
-      this.saveVarInCurrentScope(scope, id, initVal, state)
+      this.saveVarInScope(scope, id, initVal, state)
     }
 
     if (
@@ -1039,12 +1039,12 @@ class PythonAnalyzer extends (Analyzer as any) {
 
   /**
    * 扫描并解析 Python 模块
-   * 
+   *
    * 注意：Python Analyzer 使用批量解析方式，流程如下：
    * 1. 先批量解析所有文件为 AST（parseCode）
    * 2. 然后逐个预加载模块信息（preload）
    * 3. 最后逐个处理模块（processModule）
-   * 
+   *
    * @param dir - 项目目录
    * @param isReScan - 是否为重新扫描
    */
@@ -1084,7 +1084,7 @@ class PythonAnalyzer extends (Analyzer as any) {
       }
     }
     this.performanceTracker.end('preload')
-    
+
     // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
     this.performanceTracker.start('processModule')
     for (const mod of modules) {
