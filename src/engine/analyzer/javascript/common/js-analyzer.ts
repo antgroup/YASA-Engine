@@ -62,17 +62,17 @@ class JsAnalyzer extends Analyzer {
     this.state = this.initState()
 
     // 记录 parseCode 时间：解析源代码为 AST
-    this.performanceTracker.start('parseCode')
+    this.performanceTracker.start('preProcess.parseCode')
     this.uast = this.parseUast(source, fileName)
-    this.performanceTracker.end('parseCode')
-
+    this.performanceTracker.end('preProcess.parseCode')
+    
     if (this.uast) {
       this.initModuleScope(this.uast, fileName)
   
       // 注意：直接调用 processModule 处理已解析的 AST，避免调用 processModuleSrc 导致重复解析
-      this.performanceTracker.start('processModule')
+      this.performanceTracker.start('preProcess.processModule')
       this.processModule(this.uast, fileName)
-      this.performanceTracker.end('processModule')
+      this.performanceTracker.end('preProcess.processModule')
     }
   }
 
@@ -220,9 +220,13 @@ class JsAnalyzer extends Analyzer {
       )
       process.exit(0)
     }
+    this.performanceTracker.start('preProcess.parseCode')
+    this.performanceTracker.start('preProcess.processModule')
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file)
     }
+    this.performanceTracker.end('preProcess.processModule')
+    this.performanceTracker.end('preProcess.parseCode')
   }
 
   /**
@@ -240,7 +244,7 @@ class JsAnalyzer extends Analyzer {
     const parseStart = Date.now()
     const ast = Parsing.parseCode(source, options)
     const parseTime = Date.now() - parseStart
-    this.performanceTracker.record('parseCode', parseTime)
+    this.performanceTracker.record('preProcess.parseCode', parseTime)
 
     this.sourceCodeCache[filename] = source
     if (ast) {
@@ -248,7 +252,7 @@ class JsAnalyzer extends Analyzer {
       const processStart = Date.now()
       const result = this.processModule(ast, filename)
       const processTime = Date.now() - processStart
-      this.performanceTracker.record('processModule', processTime)
+      this.performanceTracker.record('preProcess.processModule', processTime)
 
       return result
     }

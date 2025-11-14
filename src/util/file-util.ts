@@ -441,6 +441,9 @@ function extractRelativePath(fullPath: string, dir: string): string | null {
   if (!fullPath) {
     return null
   }
+  if (!dir) {
+    return null
+  }
   let relativePath = fullPath.substring(dir.length)
   if (!relativePath.startsWith('/')) {
     relativePath = `/${relativePath}`

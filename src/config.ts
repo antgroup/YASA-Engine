@@ -11,6 +11,8 @@ export interface IConfig {
   // AST Dump
   dumpAST?: boolean
   dumpAllAST?: boolean
+  intermediateDir?: string // 中间文件缓存目录路径
+  incremental?: string | boolean // 增量分析模式 (true|false|force)
 
   // Paths
   ASTFileOutput?: string
@@ -66,6 +68,8 @@ const configObject: IConfig = {
 
   dumpAST: false, // dump ast to json format
   dumpAllAST: false, // dump all ast to json format
+  intermediateDir: '', // 中间文件缓存目录路径（默认使用 reportDir/ast-output）
+  incremental: false, // 增量分析模式（默认禁用，需要显式配置）
 
   //* *****************************  path and so on ***************************
 
