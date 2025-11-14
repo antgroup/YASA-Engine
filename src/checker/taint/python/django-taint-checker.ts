@@ -58,36 +58,13 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtPreDeclaration(analyzer: any, scope: any, node: any, state: any, info: any): boolean | undefined {
-    const fileName = node.loc?.sourcefile
-    if (!fileName) return
-    if (registerFile.size === 0 || !registerFile.has(fileName)) {
-      return
-    }
-
-    const varName = node.id.name
-    const initValue = node.init
-    if (varName === 'urlpatterns' && initValue) {
-      this.collectDjangoEntrypointAndSource(analyzer, scope, state, initValue)
-    }
-  }
-
-  /**
-   *
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param state
-   * @param info
-   */
   triggerAtAssignment(analyzer: any, scope: any, node: any, state: any, info: any): boolean | undefined {
     const fileName = node.loc?.sourcefile
     if (!fileName) return
     if (registerFile.size === 0 || !registerFile.has(fileName)) {
       return
     }
-    // 处理urlpatterns += []
-    if (node.left.name === 'urlpatterns' && node.right.type === 'BinaryExpression') {
+    if (node.left.name === 'urlpatterns') {
       const { right } = node
       this.collectDjangoEntrypointAndSource(analyzer, scope, state, right)
     }
