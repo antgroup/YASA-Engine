@@ -1,3 +1,5 @@
+import { floor } from 'lodash'
+
 const _ = require('lodash')
 const Uuid = require('node-uuid')
 const chalk = require('chalk')
@@ -189,11 +191,11 @@ class Analyzer extends MemSpace {
 
   /**
    * 执行分析流程的通用方法，统一处理性能追踪（同步版本）
-   * 
+   *
    * **重要说明：**
    * - 此方法仅用于同步 preProcess 场景，preProcessFn 必须返回 void（不能返回 Promise）
    * - 如果 preProcessFn 可能返回 Promise，请使用 executeAnalysisPipelineAsync 方法
-   * 
+   *
    * @param preProcessFn - 执行同步 preProcess 的函数（必须返回 void，不能返回 Promise）
    * @param symbolInterpretFn - 执行 symbolInterpret 的函数
    */
@@ -230,9 +232,9 @@ class Analyzer extends MemSpace {
 
   /**
    * 执行分析流程的通用方法（异步版本），统一处理性能追踪
-   * 
+   *
    * 用于处理异步 preProcess 场景，避免 analyzeProjectAsync 中的代码重复。
-   * 
+   *
    * @param preProcessFn - 执行异步 preProcess 的函数
    * @param symbolInterpretFn - 执行 symbolInterpret 的函数
    */
@@ -272,9 +274,9 @@ class Analyzer extends MemSpace {
 
   /**
    * 分析单个文件
-   * 
+   *
    * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
-   * 
+   *
    * @param source - 源代码内容
    * @param fileName - 文件名
    * @returns 分析结果
@@ -297,9 +299,9 @@ class Analyzer extends MemSpace {
 
   /**
    * 异步分析项目
-   * 
+   *
    * 用于处理支持异步 preProcess 的分析器（如 Go Analyzer、Python Analyzer）。
-   * 
+   *
    * @param processingDir - 要分析的项目目录
    * @returns 分析结果
    */
@@ -323,10 +325,10 @@ class Analyzer extends MemSpace {
 
   /**
    * 同步分析项目
-   * 
+   *
    * 用于处理同步 preProcess 的分析器（如 Java Analyzer、JavaScript Analyzer）。
    * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
-   * 
+   *
    * @param processingDir - 要分析的项目目录
    * @returns 分析结果
    */
@@ -575,9 +577,8 @@ class Analyzer extends MemSpace {
     }
 
     // 性能追踪：结束指令执行并更新统计（内部会检查是否启用）
-    this.performanceTracker.endInstructionAndUpdateStats(
-      node,
-      (node: any, instructionType: string) => this.getLocationKey(node, instructionType)
+    this.performanceTracker.endInstructionAndUpdateStats(node, (node: any, instructionType: string) =>
+      this.getLocationKey(node, instructionType)
     )
     if (!this.preprocessState && val?.__preprocess) {
       delete val.__preprocess

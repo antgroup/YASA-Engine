@@ -1,3 +1,5 @@
+import SymAddress from '../../common/sym-address'
+
 const { Analyzer } = require('../../common')
 const CheckerManager = require('../../common/checker-manager')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
@@ -768,35 +770,8 @@ class PythonAnalyzer extends (Analyzer as any) {
         v_copy._this = scope
         v_copy.parent = scope
       }
-    } else if (id.type === 'TupleExpression') {
-      if (initVal.vtype === 'union') {
-        const pairs = floor(initVal.field.length / id.elements.length)
-        const scopes = new Array(id.elements.length)
-        for (let i = 0; i < id.elements.length; i++) scopes[i] = new Array(pairs)
-        for (let i = 0; i < pairs; i++) {
-          for (let j = 0; j < id.elements.length; j++) {
-            scopes[j][i] = initVal.field[i * id.elements.length + j]
-          }
-        }
-        for (let i = 0; i < id.elements.length; i++) {
-          const union = unionAllValues(scopes[i], state)
-          this.saveVarInScope(scope, id.elements[i], union, state)
-        }
-      } else if (Array.isArray(initVal.field) && initVal.field.length >= 1) {
-        const minLen = Math.min(id.elements.length, initVal.field.length)
-        for (let i = 0; i < minLen; i++) {
-          this.saveVarInScope(scope, id.elements[i], initVal.field[i], state)
-        }
-      } else if (isSequentialNumericKeysField(initVal)) {
-        const minLen = Math.min(id.elements.length, Object.keys(initVal.field).length)
-        for (let i = 0; i < minLen; i++) {
-          this.saveVarInScope(scope, id.elements[i], initVal.field[i], state)
-        }
-      } else {
-        for (const i in id.elements) this.saveVarInScope(scope, id.elements[i], initVal, state)
-      }
     } else {
-      this.saveVarInScope(scope, id, initVal, state)
+      this.saveVarInCurrentScope(scope, id, initVal, state)
     }
 
     if (
@@ -820,6 +795,156 @@ class PythonAnalyzer extends (Analyzer as any) {
       initVal.sort = declTypeVal.sort
     }
     return initVal
+  }
+
+  /**
+   * "left = right", "left *= right", etc.
+   * @param scope
+   * @param node
+   * @param state
+   */
+  processAssignmentExpression(scope: any, node: any, state: any) {
+    /*
+    { operator,
+      left,
+      right,
+      cloned
+    }
+    */
+    switch (node.operator) {
+      case '=': {
+        const { left } = node
+        const { right } = node
+        let tmpVal = this.processInstruction(scope, right, state)
+        if (node.cloned && !tmpVal?.refCount) {
+          tmpVal = _.clone(tmpVal)
+          tmpVal.value = _.clone(tmpVal.value)
+        }
+        const oldVal = this.processInstruction(scope, left, state)
+        tmpVal = SourceLine.addSrcLineInfo(
+          tmpVal,
+          node,
+          node.loc && node.loc.sourcefile,
+          'Var Pass: ',
+          left.type === 'TupleExpression' ? left.elements : left.name
+        )
+
+        if (left.type === 'TupleExpression') {
+          this.handleTupleAssign(scope, left, tmpVal, state)
+        } else {
+          if (!tmpVal)
+            // explicit null value
+            tmpVal = PrimitiveValue({ type: 'Literal', value: null, loc: right.loc })
+          const sid = SymAddress.toStringID(node.left)
+          tmpVal.sid = !tmpVal.id || tmpVal.id === '<anonymous>' ? sid : tmpVal.id
+          if (this.checkerManager && this.checkerManager.checkAtAssignment) {
+            const lscope = this.getDefScope(scope, left)
+            const mindex = this.resolveIndices(scope, left, state)
+            this.checkerManager.checkAtAssignment(this, scope, node, state, {
+              lscope,
+              lvalue: oldVal,
+              rvalue: tmpVal,
+              pcond: state.pcond,
+              binfo: state.binfo,
+              entry_fclos: this.entry_fclos,
+              mindex,
+              einfo: state.einfo,
+              state,
+              ainfo: this.ainfo,
+            })
+          }
+          if (left.name === undefined && left.sid !== undefined) {
+            left.name = left.sid
+          }
+          tmpVal = SourceLine.addSrcLineInfo(tmpVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', left.name)
+          this.saveVarInScope(scope, left, tmpVal, state, oldVal)
+        }
+        return tmpVal
+      }
+      case '&=':
+      case '^=':
+      case '<<=':
+      case '>>=':
+      case '+=':
+      case '-=':
+      case '*=':
+      case '/=':
+      case '%=': {
+        const val = SymbolValue(node)
+        val.type = 'BinaryOperation'
+        val.operator = node.operator.substring(0, node.operator.length - 1)
+        val.arith_assign = true
+        val.left = this.processInstruction(scope, node.left, state)
+        val.right = this.processInstruction(scope, node.right, state)
+        if (node.cloned) {
+          const clonedValue = _.clone(val.right.value)
+          val.right = _.clone(val.right)
+          val.right.value = clonedValue
+        }
+        const { left } = node
+        const oldVal = this.getMemberValueNoCreate(scope, left, state)
+
+        const hasTags = (val.left && val.left.hasTagRec) || (val.right && val.right.hasTagRec)
+        if (hasTags) val.hasTagRec = hasTags
+
+        this.saveVarInScope(scope, node.left, val, state)
+
+        if (this.checkerManager && this.checkerManager.checkAtAssignment) {
+          const lscope = this.getDefScope(scope, node.left)
+          const mindex = this.resolveIndices(scope, node.left, state)
+          this.checkerManager.checkAtAssignment(this, scope, node, state, {
+            lscope,
+            lvalue: oldVal,
+            rvalue: val,
+            pcond: state.pcond,
+            binfo: state.binfo,
+            entry_fclos: this.entry_fclos,
+            mindex,
+            einfo: state.einfo,
+            state,
+            ainfo: this.ainfo,
+          })
+          // this.recordSideEffect(lscope, node.left, val.left);
+        }
+        return val
+      }
+    }
+  }
+
+  /**
+   *
+   * @param scope
+   * @param left
+   * @param rightVal
+   * @param state
+   */
+  handleTupleAssign(scope: any, left: any, rightVal: any, state: any) {
+    if (rightVal.vtype === 'union') {
+      const pairs = floor(rightVal.field.length / left.elements.length)
+      const scopes = new Array(left.elements.length)
+      for (let i = 0; i < left.elements.length; i++) scopes[i] = new Array(pairs)
+      for (let i = 0; i < pairs; i++) {
+        for (let j = 0; j < left.elements.length; j++) {
+          scopes[j][i] = rightVal.field[i * left.elements.length + j]
+        }
+      }
+      for (let i = 0; i < left.elements.length; i++) {
+        const union = unionAllValues(scopes[i], state)
+        this.saveVarInScope(scope, left.elements[i], union, state)
+      }
+    } else if (Array.isArray(rightVal.field) && rightVal.field.length >= 1) {
+      const minLen = Math.min(left.elements.length, rightVal.field.length)
+      for (let i = 0; i < minLen; i++) {
+        this.saveVarInScope(scope, left.elements[i], rightVal.field[i], state)
+      }
+    } else if (isSequentialNumericKeysField(rightVal)) {
+      const minLen = Math.min(left.elements.length, Object.keys(rightVal.field).length)
+      for (let i = 0; i < minLen; i++) {
+        this.saveVarInScope(scope, left.elements[i], rightVal.field[i], state)
+      }
+    } else {
+      for (const i in left.elements) this.saveVarInScope(scope, left.elements[i], rightVal, state)
+    }
 
     /**
      *
