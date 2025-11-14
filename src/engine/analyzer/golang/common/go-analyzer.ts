@@ -101,7 +101,7 @@ class GoAnalyzer extends Analyzer {
    */
   async scanPackages(dir: any, state: any, defaultScope?: any): Promise<any> {
     // 开始 parseCode 阶段：扫描模块并解析包结构
-    this.performanceTracker.start('parseCode')
+    this.performanceTracker.start('preProcess.parseCode')
     let parseCodeEnded = false
     try {
       this.scanModules(dir)
@@ -135,17 +135,17 @@ class GoAnalyzer extends Analyzer {
       this.moduleManager.rootDirName = dirName
 
       // 正常流程：结束 parseCode 阶段
-      this.performanceTracker.end('parseCode')
+      this.performanceTracker.end('preProcess.parseCode')
       parseCodeEnded = true
 
       // 开始 ProcessModule 阶段：处理模块（分析 AST）
-      this.performanceTracker.start('processModule')
+      this.performanceTracker.start('preProcess.processModule')
       this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
-      this.performanceTracker.end('processModule')
+      this.performanceTracker.end('preProcess.processModule')
     } finally {
       // 确保 parseCode 阶段总是被正确结束（如果之前没有结束，如提前返回的情况）
       if (!parseCodeEnded) {
-        this.performanceTracker.end('parseCode')
+        this.performanceTracker.end('preProcess.parseCode')
       }
     }
   }
