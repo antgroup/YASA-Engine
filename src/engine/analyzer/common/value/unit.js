@@ -172,7 +172,7 @@ class Unit {
           })
 
           if (this._has_tags) {
-            sub_fval = this._has_tags
+            sub_fval.hasTagRec = this._has_tags
           }
           if (typeof this._tags !== 'undefined') {
             sub_fval._tags = _.clone(this._tags)
