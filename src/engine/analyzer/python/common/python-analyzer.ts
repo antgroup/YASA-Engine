@@ -1195,11 +1195,11 @@ class PythonAnalyzer extends (Analyzer as any) {
     }
 
     // 开始 parseCode 阶段：批量解析所有 Python 包为 AST
-    this.performanceTracker.start('parseCode')
+    this.performanceTracker.start('preProcess.parseCode')
     PythonParser.parsePackages(this.astManager, dir, options)
-    this.performanceTracker.end('parseCode')
+    this.performanceTracker.end('preProcess.parseCode')
 
-    this.performanceTracker.start('preload')
+    this.performanceTracker.start('preProcess.preload')
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1208,10 +1208,10 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.addASTInfo(ast, mod.content, mod.file, isReScan as any)
       }
     }
-    this.performanceTracker.end('preload')
+    this.performanceTracker.end('preProcess.preload')
 
     // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
-    this.performanceTracker.start('processModule')
+    this.performanceTracker.start('preProcess.processModule')
     for (const mod of modules) {
       const filename = mod.file
       const ast = this.astManager[filename]
@@ -1219,7 +1219,7 @@ class PythonAnalyzer extends (Analyzer as any) {
         this.processModule(ast, filename, isReScan as any)
       }
     }
-    this.performanceTracker.end('processModule')
+    this.performanceTracker.end('preProcess.processModule')
   }
 }
 

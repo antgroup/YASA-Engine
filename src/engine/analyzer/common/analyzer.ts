@@ -28,7 +28,7 @@ const { getAbsolutePath, loadJSONfile } = require('../../../util/file-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../../../checker/taint/common-kit/sink-util')
 const { moveExistElementsToBuffer } = require('../java/common/builtins/buffer')
 const { PerformanceTracker } = require('../../../util/performance-tracker')
-// ***
+
 
 /**
  * The main AST analyzer with checker invoking
@@ -91,8 +91,8 @@ class Analyzer extends MemSpace {
     this.checkerManager = checkerManager // 关联的检查器管理器
     this.performanceTracker = new PerformanceTracker()
     this.enablePerformanceLogging = this.options.enablePerformanceLogging || false // 默认关闭
-    // 启用指令监控（如果启用了性能日志）
-    this.performanceTracker.enableInstructionMonitor(this.enablePerformanceLogging)
+    // 启用详细指令统计（如果启用了性能日志，输出 top 信息）
+    this.performanceTracker.setEnableDetailedInstructionStats(this.enablePerformanceLogging)
     this.lastReturnValue = null // 记录最后一次函数调用的返回值
     this.thisFClos = null // 当前分析函数的闭包
     this.entry_fclos = null // 最外层函数的闭包
@@ -227,7 +227,7 @@ class Analyzer extends MemSpace {
     this.endAnalyze()
 
     // 记录性能数据并输出摘要（会自动输出指令统计）
-    this.performanceTracker.logPerformance()
+    this.performanceTracker.logPerformance(this)
   }
 
   /**
@@ -269,7 +269,7 @@ class Analyzer extends MemSpace {
     this.endAnalyze()
 
     // 记录性能数据并输出摘要（会自动输出指令统计）
-    this.performanceTracker.logPerformance()
+    this.performanceTracker.logPerformance(this)
   }
 
   /**

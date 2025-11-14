@@ -69,9 +69,14 @@ log4jsLogger.configure({
     clientStdoutFilter: { type: 'logLevelFilter', appender: 'stdout', level: 'error', maxLevel: 'error' },
     infoFilter: { type: 'logLevelFilter', appender: 'file', level: logLevel, maxLevel: 'warn' },
     errFilter: { type: 'logLevelFilter', appender: 'errorFile', level: 'error' },
+    // YASA 日志专用：只写入文件，不输出到控制台（避免与控制台的 process.stdout.write 重复），使用默认的 file appender 保证顺序
+    yasaFileOnly: { type: 'logLevelFilter', appender: 'file', level: logLevel, maxLevel: 'warn' },
+    yasaErrorFileOnly: { type: 'logLevelFilter', appender: 'errorFile', level: 'error' },
   },
   categories: {
     default: { appenders: ['stdoutFilter', 'infoFilter', 'errFilter'], level: logLevel },
+    // YASA 日志 category：只写入文件，不输出到控制台，使用默认的 file appender 保证顺序一致
+    console: { appenders: ['yasaFileOnly', 'yasaErrorFileOnly'], level: logLevel },
   },
 })
 

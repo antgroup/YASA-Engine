@@ -163,14 +163,15 @@ function outputAnalyzerResult(analyzer: any, checker: any, printf?: PrintFunctio
     const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
     outputStrategyAutoRegister.autoRegisterAllStrategies()
 
-    logger.info('\n=================  outputFindings  =======================')
+    const { yasaSeparator } = require('../util/format-util')
+    yasaSeparator('outputFindings')
     for (const outputStrategyId of checker.getStrategyId()) {
       const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
       if (strategy && typeof strategy.outputFindings === 'function') {
         strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
       }
     }
-    logger.info('\n================  outputFindings done  ===================')
+    yasaSeparator('')
   }
   logger.info('analyze done')
   outputTotalErrors()

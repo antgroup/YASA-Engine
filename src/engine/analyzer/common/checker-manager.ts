@@ -110,7 +110,8 @@ class CheckerManager {
     this.registered_checkers = {}
 
     if (!this.options) return
-    logger.info('===================== Register rules ======================')
+    const { yasaSeparator } = require('../../../util/format-util')
+    yasaSeparator('Register rules')
     try {
       this.kit = checkerKit
       this.resultManager = resultManager || new ResultManager()
@@ -162,7 +163,7 @@ class CheckerManager {
       handleException(e, 'Error occurred in CheckerManager_ctor', 'Error occurred in CheckerManager_ctor')
     }
 
-    logger.info('===========================================================\n')
+    yasaSeparator('')
   }
 
   /**
