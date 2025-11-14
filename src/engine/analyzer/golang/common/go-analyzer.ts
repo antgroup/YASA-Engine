@@ -93,49 +93,61 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
-   * scan project dir
-   * parse go files
-   * prebuild package scope
-   * @param dir dir is the main directory of the project
-   * @param state
-   * @param defaultScope
+   * 扫描并解析 Go 包
+   *
+   * @param dir - 项目目录
+   * @param state - 分析状态
+   * @param defaultScope - 默认作用域
    */
   async scanPackages(dir: any, state: any, defaultScope?: any): Promise<any> {
-    const parserStart = Date.now()
-    this.scanModules(dir)
-    this.moduleManager = await GoParser.parsePackage(dir, this.options)
-    const { numOfGoMod } = this.moduleManager
-    if (numOfGoMod > 1) {
-      logger.info(`[go-analyzer] found more than one go.mod files. The num of go.mod files is ${numOfGoMod}`)
-    }
-    this.makeGoFileManager(this.moduleManager)
-    const { packageInfo, moduleName } = this.moduleManager
-    if (Object.entries(packageInfo.files).length === 0 && Object.entries(packageInfo.subs).length === 0) {
-      return
-    }
-    let { goModPath } = this.moduleManager
-    if (!goModPath) goModPath = ''
-    // TODO 如果模块名叫code.alipay.com/antjail/antdpa，进去会截断
-    const modulePackageManager = defaultScope || this.packageManager.getSubPackage(moduleName, true)
+    // 开始 parseCode 阶段：扫描模块并解析包结构
+    this.performanceTracker.start('preProcess.parseCode')
+    let parseCodeEnded = false
+    try {
+      this.scanModules(dir)
+      this.moduleManager = await GoParser.parsePackage(dir, this.options)
+      const { numOfGoMod } = this.moduleManager
+      if (numOfGoMod > 1) {
+        logger.info(`[go-analyzer] found more than one go.mod files. The num of go.mod files is ${numOfGoMod}`)
+      }
+      this.makeGoFileManager(this.moduleManager)
+      const { packageInfo, moduleName } = this.moduleManager
+      if (Object.entries(packageInfo.files).length === 0 && Object.entries(packageInfo.subs).length === 0) {
+        // 提前返回：没有文件需要处理，在 finally 中结束 parseCode
+        return
+      }
+      let { goModPath } = this.moduleManager
+      if (!goModPath) goModPath = ''
+      // TODO 如果模块名叫code.alipay.com/antjail/antdpa，进去会截断
+      const modulePackageManager = defaultScope || this.packageManager.getSubPackage(moduleName, true)
 
-    // 计算项目模块根路径(go.mod所在目录)
-    const moduleRootPath = this.getModuleRootPath(goModPath, Config.maindir)
-    const rootDirOffset = moduleRootPath === '' ? [] : moduleRootPath.split('/')
-    let rootDir = packageInfo.subs['/']
-    let dirName = Config.maindir.replace(/\/$/, '').split('/').at(-1)
-    for (dirName of rootDirOffset) {
-      if (dirName in rootDir?.subs) {
-        rootDir = rootDir.subs[dirName]
+      // 计算项目模块根路径(go.mod所在目录)
+      const moduleRootPath = this.getModuleRootPath(goModPath, Config.maindir)
+      const rootDirOffset = moduleRootPath === '' ? [] : moduleRootPath.split('/')
+      let rootDir = packageInfo.subs['/']
+      let dirName = Config.maindir.replace(/\/$/, '').split('/').at(-1)
+      for (dirName of rootDirOffset) {
+        if (dirName in rootDir?.subs) {
+          rootDir = rootDir.subs[dirName]
+        }
+      }
+      this.moduleManager.rootDir = rootDir
+      this.moduleManager.rootDirName = dirName
+
+      // 正常流程：结束 parseCode 阶段
+      this.performanceTracker.end('preProcess.parseCode')
+      parseCodeEnded = true
+
+      // 开始 ProcessModule 阶段：处理模块（分析 AST）
+      this.performanceTracker.start('preProcess.processModule')
+      this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
+      this.performanceTracker.end('preProcess.processModule')
+    } finally {
+      // 确保 parseCode 阶段总是被正确结束（如果之前没有结束，如提前返回的情况）
+      if (!parseCodeEnded) {
+        this.performanceTracker.end('preProcess.parseCode')
       }
     }
-    this.moduleManager.rootDir = rootDir
-    this.moduleManager.rootDirName = dirName
-    const parserTime = Date.now() - parserStart
-    const processStart = Date.now()
-    this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
-    const processTime = Date.now() - processStart
-    logger.info(`ParseCode time: ${parserTime}ms`)
-    logger.info(`ProcessModule time: ${processTime}ms`)
   }
 
   /**

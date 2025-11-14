@@ -37,7 +37,7 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
 
     await Initializer.initBeans(this.topScope, dir)
 
-    this.scanPackages(dir)
+    await this.scanPackages(dir)
 
     Initializer.initPackageScope(this.topScope.packageManager)
 

@@ -2,7 +2,7 @@ import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
 
 const _ = require('lodash')
 const GoEntryPoint = require('../../../engine/analyzer/golang/common/entrypoint-collector/go-default-entrypoint')
-const { completeEntryPoint } = require('./entry-points-util')
+const { completeEntryPoint } = require('../common-kit/entry-points-util')
 const Config = require('../../../config')
 const Checker = require('../../common/checker')
 

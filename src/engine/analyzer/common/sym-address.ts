@@ -74,7 +74,7 @@ function toStringID(node: any, visited: VisitedMap): string | undefined {
       if (node.isPrefix) return node.operator + toStringIDCached(node.subExpression, visited)
       return toStringIDCached(node.subExpression, visited) + node.operator
     case 'TupleExpression': {
-      const sub_ids = node.components.map((x: any) => toStringIDCached(x, visited))
+      const sub_ids = node.elements.map((x: any) => toStringIDCached(x, visited))
       const sid = sub_ids.join(',')
       return `<${sid}>`
     }

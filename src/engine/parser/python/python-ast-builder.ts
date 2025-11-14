@@ -1,6 +1,7 @@
 const ChildProcess = require('child_process')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
 const FileUtil = require('../../../util/file-util')
 const { handleException } = require('../../analyzer/common/exception-handler')
 const { addNodeHash, deleteParent } = require('../../../util/ast-util')
@@ -34,10 +35,10 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
 
   let isSingle = ''
   if (options.single) {
-    isSingle = '--singleFileParse=True'
+    isSingle = '--singleFileParse'
     uastFilePath += '.json'
   } else {
-    isSingle = '--singleFileParse=False'
+    isSingle = ''
   }
 
   let uast4pyPath = path.join(__dirname, '../../../../deps/uast4py/uast4py')
@@ -66,7 +67,10 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
     )
     process.exit(0)
   }
-  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}"`
+
+  // 并行任务数：根据 CPU 核心数自动设置
+  const numJobs = os.cpus().length
+  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}" -j${numJobs}`
 
   try {
     const optionForCommand = {
@@ -148,9 +152,12 @@ function parsePackages(astManager: any, rootDir: string, options?: BuildOptions)
   options.single = false
   try {
     buildUASTPython(rootDir, options)
+
     const uastJsonFiles = FileUtil.loadAllFileTextGlobby(['**/*.(json)'], uastFilePath)
+
     for (const uastFile of uastJsonFiles) {
       const data = uastFile.content
+
       if (data.startsWith('Syntax error in file') || data.startsWith('UnicodeDecodeError in file')) {
         handleException(
           null,
@@ -162,15 +169,21 @@ function parsePackages(astManager: any, rootDir: string, options?: BuildOptions)
         }
         continue
       }
+
       const obj = JSON.parse(data)
+
       AstUtil.annotateAST(obj, { sourcefile: obj.loc?.sourcefile })
+
       addNodeHash(obj)
+
       deleteParent(obj)
+
       const filename = obj?.loc?.sourcefile
       if (filename) {
         astManager[filename] = obj
       }
     }
+
   } catch (e) {
     handleException(
       e,

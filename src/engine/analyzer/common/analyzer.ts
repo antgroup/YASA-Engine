@@ -1,3 +1,5 @@
+import { floor } from 'lodash'
+
 const _ = require('lodash')
 const Uuid = require('node-uuid')
 const chalk = require('chalk')
@@ -25,8 +27,8 @@ const Rules = require('../../../checker/common/rules-basic-handler')
 const { getAbsolutePath, loadJSONfile } = require('../../../util/file-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../../../checker/taint/common-kit/sink-util')
 const { moveExistElementsToBuffer } = require('../java/common/builtins/buffer')
+const { PerformanceTracker } = require('../../../util/performance-tracker')
 
-// ***
 
 /**
  * The main AST analyzer with checker invoking
@@ -60,19 +62,6 @@ class Analyzer extends MemSpace {
 
   statistics: { numProcessedInstructions: number }
 
-  // 性能监控相关属性
-  performanceStats: {
-    instructionTimes: Map<string, number[]> // 指令总执行时间记录（包含嵌套调用）
-    instructionCounts: Map<string, number> // 指令执行次数统计
-    instructionNetTimes: Map<string, number[]> // 指令净执行时间记录（排除嵌套调用）
-    totalExecutionTime: number // 总执行时间
-    startTime: number // 开始时间
-    monitoringOverhead: number // 监控开销
-    updateStatsOverhead: number // 更新统计信息的开销
-    executionStack: Array<{ startTime: number; nestedTime: number }> // 执行栈，用于跟踪嵌套调用
-    loggedDependencies: Set<string> // 已记录的文件依赖关系
-  }
-
   entryPoints: any[]
 
   libFuncTagPropagationRuleArray: any[]
@@ -89,6 +78,8 @@ class Analyzer extends MemSpace {
 
   preprocessState: boolean | undefined
 
+  performanceTracker: import('../../../util/performance-tracker').IPerformanceTracker
+
   /**
    *
    * @param checkerManager
@@ -98,7 +89,10 @@ class Analyzer extends MemSpace {
     super()
     this.options = options || {}
     this.checkerManager = checkerManager // 关联的检查器管理器
+    this.performanceTracker = new PerformanceTracker()
     this.enablePerformanceLogging = this.options.enablePerformanceLogging || false // 默认关闭
+    // 启用详细指令统计（如果启用了性能日志，输出 top 信息）
+    this.performanceTracker.setEnableDetailedInstructionStats(this.enablePerformanceLogging)
     this.lastReturnValue = null // 记录最后一次函数调用的返回值
     this.thisFClos = null // 当前分析函数的闭包
     this.entry_fclos = null // 最外层函数的闭包
@@ -112,17 +106,7 @@ class Analyzer extends MemSpace {
     this.statistics = {
       numProcessedInstructions: 0,
     }
-    this.performanceStats = {
-      instructionTimes: new Map(),
-      instructionCounts: new Map(),
-      instructionNetTimes: new Map(),
-      totalExecutionTime: 0,
-      startTime: 0,
-      monitoringOverhead: 0,
-      updateStatsOverhead: 0,
-      executionStack: [],
-      loggedDependencies: new Set(),
-    }
+
     this.initValTreeStruct()
     this.entryPoints = []
     this.libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
@@ -133,177 +117,6 @@ class Analyzer extends MemSpace {
    */
   getCheckerManager() {
     return this.checkerManager
-  }
-
-  /**
-   * 开始性能监控
-   */
-  startPerformanceMonitor() {
-    if (!this.enablePerformanceLogging) return
-
-    const startTime = Date.now()
-    this.performanceStats.startTime = startTime
-    this.performanceStats.totalExecutionTime = 0
-    this.performanceStats.instructionTimes.clear()
-    this.performanceStats.instructionCounts.clear()
-    this.performanceStats.instructionNetTimes.clear()
-    this.performanceStats.monitoringOverhead = 0
-    this.performanceStats.updateStatsOverhead = 0
-    this.performanceStats.executionStack = []
-  }
-
-  /**
-   * 结束性能监控
-   */
-  endPerformanceMonitor() {
-    if (!this.enablePerformanceLogging) return
-
-    const endTime = Date.now()
-    this.performanceStats.totalExecutionTime = endTime - this.performanceStats.startTime
-    this.logPerformanceStats()
-  }
-
-  /**
-   * 输出性能统计信息
-   */
-  logPerformanceStats() {
-    const totalOverhead = this.performanceStats.updateStatsOverhead
-    const overheadPercent = ((totalOverhead / this.performanceStats.totalExecutionTime) * 100).toFixed(1)
-
-    logger.info('=== Performance Statistics ===')
-
-    if (this.performanceStats.instructionTimes.size === 0) {
-      logger.info('No instruction data available')
-      return
-    }
-
-    // 计算整体平均时间
-    let totalAvgTime = 0
-    let totalInstructions = 0
-    for (const [locationKey, times] of this.performanceStats.instructionTimes) {
-      const count = this.performanceStats.instructionCounts.get(locationKey) || 0
-      const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length
-      totalAvgTime += avgTime * count
-      totalInstructions += count
-    }
-    const overallAvgTime = totalInstructions > 0 ? totalAvgTime / totalInstructions : 0
-
-    logger.info(
-      `Time: ${this.performanceStats.totalExecutionTime}ms | Instructions: ${this.statistics.numProcessedInstructions} | Overhead: ${totalOverhead.toFixed(1)}ms (${overheadPercent}%) | Locations: ${this.performanceStats.instructionTimes.size} | Avg: ${overallAvgTime.toFixed(2)}ms`
-    )
-
-    // 前5个最慢指令（按净时间排序）
-    const executionTimeEntries = Array.from(this.performanceStats.instructionTimes.entries())
-      .map(([locationKey, times]) => {
-        const netTimes = this.performanceStats.instructionNetTimes.get(locationKey) || []
-        const netMaxTime = netTimes.length > 0 ? Math.max(...netTimes) : 0
-        const netAvgTime = netTimes.length > 0 ? netTimes.reduce((sum, time) => sum + time, 0) / netTimes.length : 0
-        return {
-          locationKey,
-          maxTime: Math.max(...times),
-          avgTime: times.reduce((sum, time) => sum + time, 0) / times.length,
-          netMaxTime,
-          netAvgTime,
-          count: this.performanceStats.instructionCounts.get(locationKey) || 0,
-        }
-      })
-      .sort((a, b) => b.netMaxTime - a.netMaxTime)
-      .slice(0, 5)
-
-    if (executionTimeEntries.length > 0) {
-      logger.info('Top 5 Slowest Instructions (by Net Time):')
-      executionTimeEntries.forEach((entry, index) => {
-        const [instructionType, ...locationParts] = entry.locationKey.split(':')
-        const location = locationParts.join(':')
-        logger.info(
-          `  ${index + 1}. ${instructionType} at ${location} (Net: Max ${entry.netMaxTime.toFixed(2)}ms, Avg ${entry.netAvgTime.toFixed(2)}ms | Total: Max ${entry.maxTime.toFixed(2)}ms, Avg ${entry.avgTime.toFixed(2)}ms | Count: ${entry.count})`
-        )
-      })
-    }
-
-    // 前5个最频繁指令
-    const executionCountEntries = Array.from(this.performanceStats.instructionCounts.entries())
-      .map(([locationKey, count]) => {
-        const times = this.performanceStats.instructionTimes.get(locationKey)
-        return {
-          locationKey,
-          count,
-          avgTime: times ? times.reduce((sum, time) => sum + time, 0) / times.length : 0,
-          maxTime: times ? Math.max(...times) : 0,
-        }
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-
-    if (executionCountEntries.length > 0) {
-      logger.info('Top 5 Most Frequent Instructions:')
-      executionCountEntries.forEach((entry, index) => {
-        const [instructionType, ...locationParts] = entry.locationKey.split(':')
-        const location = locationParts.join(':')
-        logger.info(
-          `  ${index + 1}. ${instructionType} at ${location} (Count: ${entry.count}, Avg: ${entry.avgTime.toFixed(2)}ms)`
-        )
-      })
-    }
-  }
-
-  /**
-   * 更新指令的性能统计信息
-   * @param instructionType - 正在执行的指令类型
-   * @param startTime - 开始时间
-   * @param endTime - 结束时间
-   * @param node - 正在处理的AST节点
-   */
-  updatePerformanceStats(instructionType: string, startTime: number, endTime: number, node: any) {
-    const stackDepth = this.performanceStats.executionStack.length
-
-    // 调试：检测文件切换（相同依赖只输出一次）
-    if (this.lastProcessedNode && this.lastProcessedNode.loc && node.loc) {
-      const lastFile = this.lastProcessedNode.loc.sourcefile
-      const currentFile = node.loc.sourcefile
-      if (lastFile && currentFile && lastFile !== currentFile) {
-        const dependencyKey = `${lastFile} -> ${currentFile}`
-        if (!this.performanceStats.loggedDependencies.has(dependencyKey)) {
-          this.performanceStats.loggedDependencies.add(dependencyKey)
-          logger.info(`[DEBUG] 文件依赖: ${dependencyKey}`)
-        }
-      }
-    }
-
-    // 将当前指令信息推入栈
-    this.performanceStats.executionStack.push({ startTime, nestedTime: 0 })
-
-    // 计算总执行时间（包含嵌套调用）
-    const totalExecutionTime = endTime - startTime
-
-    // 从栈中弹出并计算净执行时间
-    const stackEntry = this.performanceStats.executionStack.pop()!
-    const netExecutionTime = Math.max(0, totalExecutionTime - stackEntry.nestedTime)
-
-    // 更新父指令的嵌套时间
-    if (stackDepth > 0) {
-      const parentEntry = this.performanceStats.executionStack[stackDepth - 1]
-      parentEntry.nestedTime += totalExecutionTime
-    }
-
-    // 使用位置+类型创建唯一键
-    const locationKey = this.getLocationKey(node, instructionType)
-
-    // 更新总指令时间（包含嵌套调用）
-    if (!this.performanceStats.instructionTimes.has(locationKey)) {
-      this.performanceStats.instructionTimes.set(locationKey, [])
-    }
-    this.performanceStats.instructionTimes.get(locationKey)!.push(totalExecutionTime)
-
-    // 更新净指令时间（排除嵌套调用）
-    if (!this.performanceStats.instructionNetTimes.has(locationKey)) {
-      this.performanceStats.instructionNetTimes.set(locationKey, [])
-    }
-    this.performanceStats.instructionNetTimes.get(locationKey)!.push(netExecutionTime)
-
-    // 更新指令计数
-    const currentCount = this.performanceStats.instructionCounts.get(locationKey) || 0
-    this.performanceStats.instructionCounts.set(locationKey, currentCount + 1)
   }
 
   /**
@@ -377,29 +190,104 @@ class Analyzer extends MemSpace {
   }
 
   /**
+   * 执行分析流程的通用方法，统一处理性能追踪（同步版本）
    *
-   * @param source
-   * @param fileName
+   * **重要说明：**
+   * - 此方法仅用于同步 preProcess 场景，preProcessFn 必须返回 void（不能返回 Promise）
+   * - 如果 preProcessFn 可能返回 Promise，请使用 executeAnalysisPipelineAsync 方法
+   *
+   * @param preProcessFn - 执行同步 preProcess 的函数（必须返回 void，不能返回 Promise）
+   * @param symbolInterpretFn - 执行 symbolInterpret 的函数
+   */
+  private executeAnalysisPipeline(preProcessFn: () => void, symbolInterpretFn: () => void): void {
+    // 开始整体性能追踪
+    this.performanceTracker.start()
+    this.performanceTracker.start('preProcess')
+
+    Rules.setPreprocessReady(false)
+    // 启用指令级别的性能监控（如果已启用性能日志）
+    this.performanceTracker.startInstructionMonitor()
+
+    // 执行同步 preProcess
+    preProcessFn()
+
+    this.performanceTracker.end('preProcess')
+    this.performanceTracker.start('startAnalyze')
+
+    this.startAnalyze()
+
+    this.performanceTracker.end('startAnalyze')
+    Rules.setPreprocessReady(true)
+
+    this.performanceTracker.start('symbolInterpret')
+
+    symbolInterpretFn()
+
+    this.performanceTracker.end('symbolInterpret')
+    this.endAnalyze()
+
+    // 记录性能数据并输出摘要（会自动输出指令统计）
+    this.performanceTracker.logPerformance(this)
+  }
+
+  /**
+   * 执行分析流程的通用方法（异步版本），统一处理性能追踪
+   *
+   * 用于处理异步 preProcess 场景，避免 analyzeProjectAsync 中的代码重复。
+   *
+   * @param preProcessFn - 执行异步 preProcess 的函数
+   * @param symbolInterpretFn - 执行 symbolInterpret 的函数
+   */
+  private async executeAnalysisPipelineAsync(
+    preProcessFn: () => Promise<void>,
+    symbolInterpretFn: () => void
+  ): Promise<void> {
+    // 开始整体性能追踪
+    this.performanceTracker.start()
+    this.performanceTracker.start('preProcess')
+
+    Rules.setPreprocessReady(false)
+    // 启用指令级别的性能监控（如果已启用性能日志）
+    this.performanceTracker.startInstructionMonitor()
+
+    // 执行异步 preProcess
+    await preProcessFn()
+
+    this.performanceTracker.end('preProcess')
+    this.performanceTracker.start('startAnalyze')
+
+    this.startAnalyze()
+
+    this.performanceTracker.end('startAnalyze')
+    Rules.setPreprocessReady(true)
+
+    this.performanceTracker.start('symbolInterpret')
+
+    symbolInterpretFn()
+
+    this.performanceTracker.end('symbolInterpret')
+    this.endAnalyze()
+
+    // 记录性能数据并输出摘要（会自动输出指令统计）
+    this.performanceTracker.logPerformance(this)
+  }
+
+  /**
+   * 分析单个文件
+   *
+   * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
+   *
+   * @param source - 源代码内容
+   * @param fileName - 文件名
+   * @returns 分析结果
    */
   analyzeSingleFile(source: any, fileName: any) {
     try {
-      const time1 = Date.now()
       if (typeof this.preProcess4SingleFile === 'function' && typeof this.symbolInterpret === 'function') {
-        Rules.setPreprocessReady(false)
-        logger.info(`start preProcess...`)
-        this.startPerformanceMonitor()
-        this.preProcess4SingleFile(source, fileName) // impl in lang/framework analyzer
-        const time3 = Date.now()
-        this.startAnalyze()
-        const time4 = Date.now()
-        logger.info(`startAnalyze cost: ${time4 - time3}`)
-        Rules.setPreprocessReady(true)
-        logger.info(`preProcess done...`)
-        const time2 = Date.now()
-        logger.info(`preProcess cost: ${time2 - time1}`)
-        this.symbolInterpret() // impl in lang/framework analyzer
-        this.endAnalyze()
-        this.endPerformanceMonitor()
+        this.executeAnalysisPipeline(
+          () => this.preProcess4SingleFile(source, fileName),
+          () => this.symbolInterpret()
+        )
       } else {
         logger.info(`this analyzer has not support analyzeSingleFile yet`)
       }
@@ -410,28 +298,20 @@ class Analyzer extends MemSpace {
   }
 
   /**
+   * 异步分析项目
    *
-   * @param processingDir
+   * 用于处理支持异步 preProcess 的分析器（如 Go Analyzer、Python Analyzer）。
+   *
+   * @param processingDir - 要分析的项目目录
+   * @returns 分析结果
    */
   async analyzeProjectAsync(processingDir: any) {
     try {
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
-        const time1 = Date.now()
-        Rules.setPreprocessReady(false)
-        logger.info(`start preProcess...`)
-        this.startPerformanceMonitor()
-        await this.preProcess(processingDir)
-        const time3 = Date.now()
-        this.startAnalyze()
-        const time4 = Date.now()
-        logger.info(`startAnalyze cost: ${time4 - time3}`)
-        Rules.setPreprocessReady(true)
-        logger.info(`preProcess done...`)
-        const time2 = Date.now()
-        logger.info(`preProcess cost: ${time2 - time1}`)
-        this.symbolInterpret()
-        this.endAnalyze()
-        this.endPerformanceMonitor()
+        await this.executeAnalysisPipelineAsync(
+          () => this.preProcess(processingDir),
+          () => this.symbolInterpret()
+        )
       }
       return this.recordCheckerFindings()
     } catch (e) {
@@ -444,25 +324,21 @@ class Analyzer extends MemSpace {
   }
 
   /**
+   * 同步分析项目
    *
-   * @param processingDir
+   * 用于处理同步 preProcess 的分析器（如 Java Analyzer、JavaScript Analyzer）。
+   * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
+   *
+   * @param processingDir - 要分析的项目目录
+   * @returns 分析结果
    */
   analyzeProject(processingDir: any) {
     try {
-      const time1 = Date.now()
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
-        Rules.setPreprocessReady(false)
-        logger.info(`start preProcess...`)
-        this.startPerformanceMonitor()
-        this.preProcess(processingDir) // impl in lang/framework analyzer
-        this.startAnalyze()
-        Rules.setPreprocessReady(true)
-        logger.info(`preProcess done...`)
-        const time2 = Date.now()
-        logger.info(`preProcess cost: ${time2 - time1}`)
-        this.symbolInterpret() // impl in lang/framework analyzer
-        this.endAnalyze()
-        this.endPerformanceMonitor()
+        this.executeAnalysisPipeline(
+          () => this.preProcess(processingDir),
+          () => this.symbolInterpret()
+        )
       }
       return this.recordCheckerFindings()
     } catch (e) {
@@ -685,13 +561,10 @@ class Analyzer extends MemSpace {
     // TODO 添加判断，后续指令是否是跟在return或throw后且在同一个scope内无法执行的指令 4+
     this.statistics.numProcessedInstructions++
 
-    // 记录执行时间用于性能监控
-    let val
-    let startTime = 0
-    if (this.enablePerformanceLogging) {
-      startTime = Date.now()
-    }
+    // 如果启用了性能日志（enablePerformanceLogging），会自动记录指令执行时间和次数
+    this.performanceTracker.startInstruction()
 
+    let val
     try {
       val = inst.call(this, scope, node, state)
     } catch (e) {
@@ -703,14 +576,10 @@ class Analyzer extends MemSpace {
       val = UndefinedValue()
     }
 
-    if (this.enablePerformanceLogging) {
-      const endTime = Date.now()
-
-      // 更新性能统计信息并跟踪开销
-      const updateStartTime = Date.now()
-      this.updatePerformanceStats(node.type, startTime, endTime, node)
-      this.performanceStats.updateStatsOverhead += Date.now() - updateStartTime
-    }
+    // 性能追踪：结束指令执行并更新统计（内部会检查是否启用）
+    this.performanceTracker.endInstructionAndUpdateStats(node, (node: any, instructionType: string) =>
+      this.getLocationKey(node, instructionType)
+    )
     if (!this.preprocessState && val?.__preprocess) {
       delete val.__preprocess
       this.processPre(val, state)
@@ -2596,6 +2465,7 @@ class Analyzer extends MemSpace {
           for (let i = 0; i < paramLength; i++) {
             if (
               param[i].varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
+              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param[i].varType?.id?.name}`) ||
               (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param[i].varType?.id?.name))
             ) {
               continue

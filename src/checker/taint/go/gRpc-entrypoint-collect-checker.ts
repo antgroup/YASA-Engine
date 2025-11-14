@@ -1,9 +1,6 @@
 import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
 
-const {
-  completeEntryPoint,
-  entryPointsUpToUser,
-} = require('./entry-points-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
 const AstUtil = require('../../../util/ast-util')
 const config = require('../../../config')
 const IntroduceTaint = require('../common-kit/source-util')

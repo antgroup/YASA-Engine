@@ -1,5 +1,5 @@
 const AstUtil = require('../../../../../util/ast-util')
-const { completeEntryPoint } = require('../../../../../checker/taint/go/entry-points-util')
+const completeEntryPoint = require('../../../../../checker/taint/common-kit/entry-points-util')
 
 export {}
 
