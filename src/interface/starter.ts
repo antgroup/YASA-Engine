@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, import/no-commonjs, @typescript-eslint/no-use-before-define */
 const fs = require('fs-extra')
 const path = require('path')
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _ = require('lodash')
 const { Command } = require('commander')
 const Config = require('../config')
@@ -11,15 +13,17 @@ const { ErrorCode, Errors } = require('../util/error-code')
 const FrameworkUtil = require('../util/framework-util')
 const { handleException } = require('../engine/analyzer/common/exception-handler')
 const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-strategy-auto-register')
+const { yasaWarning } = require('../util/format-util')
 
 /**
  * the main entry point of the usual scan
- * @param dir
- * @param args
- * @param printf
- * @param isSync
+ * @param {any} dir - Source directory or file path
+ * @param {any[]} args - Command line arguments (default: [])
+ * @param {any} printf - Print function for output (optional)
+ * @param {any} isSync - Whether to run synchronously (optional)
+ * @returns {Promise<any>} Analyzer results or undefined
  */
-async function execute(dir: any, args: any[] = [], printf: any, isSync: any) {
+async function execute(dir: any, args: any[] = [], printf?: any, isSync?: any) {
   const analyzer = await initAnalyzer(dir, args, printf)
   if (analyzer) {
     const processingDir = Config.maindir
@@ -37,8 +41,9 @@ async function execute(dir: any, args: any[] = [], printf: any, isSync: any) {
 
 /**
  * output all the findings of all registered checker
- * @param analyzer
- * @param printf
+ * @param {any} analyzer - The analyzer instance
+ * @param {any} printf - Print function for output
+ * @returns {any} All findings or null
  */
 function outputAnalyzerResult(analyzer: any, printf: any) {
   if (!printf || typeof printf !== 'function') {
@@ -50,30 +55,36 @@ function outputAnalyzerResult(analyzer: any, printf: any) {
     const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
     outputStrategyAutoRegister.autoRegisterAllStrategies()
     allFindings = resultManager.getFindings()
-    logger.info('\n=================  outputFindings  =======================')
+    const { yasaSeparator } = require('../util/format-util')
+    yasaSeparator('outputFindings')
     for (const outputStrategyId in allFindings) {
       const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
       if (strategy && typeof strategy.outputFindings === 'function') {
         strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
       }
     }
-    logger.info('\n================  outputFindings done  ===================')
+    yasaSeparator('')
   }
   logger.info('analyze done')
   return allFindings
 }
 
 /**
- *
- * @param dir
- * @param args
- * @param printf
+ * Initialize the analyzer with command line arguments
+ * @param {any} dir - Source directory or file path
+ * @param {any[]} args - Command line arguments (default: [])
+ * @param {any} printf - Print function for output (optional, unused, kept for compatibility)
+ * @returns {Promise<any>} Analyzer instance
+ * @note High complexity function - refactoring deferred per user request
  */
-async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, complexity
+async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   let sourcePath: any
   if (dir) {
     sourcePath = dir
   }
+  // 标记是否显式设置了 --intermediate-dir
+  let intermediateDirExplicitlySet = false
 
   // load the basic configuration from e.g. 'config.json'
   loadConfig(Config.configFilePath)
@@ -218,17 +229,39 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
     .option('--enablePerformanceLogging', '启用性能监控日志输出', () => {
       Config.enablePerformanceLogging = true
     })
+    .option('--intermediate-dir <directory>', '指定中间文件缓存目录路径', (intermediateDir: any) => {
+      intermediateDirExplicitlySet = true
+      // 检查如果目录为空，提示错误并禁用增量分析
+      if (!intermediateDir || intermediateDir.trim() === '') {
+        handleException(
+          null,
+          'ERROR: --intermediate-dir cannot be empty. Incremental analysis will be disabled.',
+          'ERROR: --intermediate-dir cannot be empty. Incremental analysis will be disabled.'
+        )
+        Config.incremental = false
+        Config.intermediateDir = ''
+      } else {
+        Config.intermediateDir = intermediateDir
+      }
+    })
+    .option('--incremental <mode>', '增量分析模式 (true|false|force)', (mode: any) => {
+      if (mode === 'force') {
+        Config.incremental = 'force'
+      } else {
+        Config.incremental = mode === 'true' || mode === true || mode === '1' || mode === 1
+      }
+    })
   // 处理非选项参数（如直接传入的目录）
   program.arguments('[paths...]').action((paths: any) => {
     if (paths.length > 0) {
-      for (const path of paths) {
+      for (const pathItem of paths) {
         try {
-          if (fs.existsSync(path)) {
-            const stats = fs.statSync(path)
+          if (fs.existsSync(pathItem)) {
+            const stats = fs.statSync(pathItem)
             if (stats.isFile()) {
               Config.single = true
             }
-            sourcePath = path
+            sourcePath = pathItem
           }
         } catch (err: any) {
           handleException(
@@ -255,6 +288,19 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
+
+  // 检查如果启用了增量分析，但 --intermediate-dir 未设置或为空，则禁用增量分析
+  if (
+    Config.incremental !== false &&
+    Config.incremental !== 'false' &&
+    (!intermediateDirExplicitlySet || !Config.intermediateDir || Config.intermediateDir.trim() === '')
+  ) {
+    yasaWarning(
+      '--intermediate-dir must be specified when incremental analysis is enabled. Incremental analysis will be disabled.'
+    )
+    Config.incremental = false
+    Config.intermediateDir = ''
+  }
 
   Stat.parsingTime = 0
 
@@ -442,9 +488,10 @@ async function initAnalyzer(dir: any, args: any[] = [], printf: any) {
 }
 
 /**
- *
- * @param analyzer
- * @param processingDir
+ * Execute analyzer asynchronously
+ * @param {any} analyzer - The analyzer instance
+ * @param {any} processingDir - Directory to process
+ * @returns {Promise<boolean>} Success status
  */
 async function executeAnalyzerAsync(analyzer: any, processingDir: any) {
   try {
@@ -464,9 +511,10 @@ async function executeAnalyzerAsync(analyzer: any, processingDir: any) {
 }
 
 /**
- *
- * @param analyzer
- * @param processingDir
+ * Execute analyzer synchronously
+ * @param {any} analyzer - The analyzer instance
+ * @param {any} processingDir - Directory to process
+ * @returns {boolean} Success status
  */
 function executeAnalyzer(analyzer: any, processingDir: any) {
   try {
@@ -486,10 +534,14 @@ function executeAnalyzer(analyzer: any, processingDir: any) {
 }
 
 // 递归函数，用于删除对象及其子对象中的 'parent' 属性
+// 注意：此函数已不再使用，保留用于历史兼容性
 /**
- *
- * @param obj
+ * Remove parent property from object recursively (deprecated)
+ * @param {any} obj - Object to process
+ * @returns {any} Processed object
+ * @deprecated This function is no longer used
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function removeParentProperty(obj: any) {
   if (typeof obj !== 'object' || obj === null) {
     return obj
@@ -508,9 +560,9 @@ function removeParentProperty(obj: any) {
   return obj
 }
 /**
- *
- * @param absdirs
- * @returns {Array}
+ * Load source files from directory
+ * @param {any} absdirs - Absolute directory paths
+ * @returns {Array} Array of source file objects with file and content
  */
 function loadSource(absdirs: any) {
   if (!Config.language) {
@@ -537,6 +589,9 @@ function loadSource(absdirs: any) {
     case 'python':
       fext = ['py']
       break
+    default:
+      // Keep default .sol extension for unknown languages
+      break
   }
 
   const res: any[] = []
@@ -555,7 +610,7 @@ function loadSource(absdirs: any) {
 
 /**
  * load the configuration file from the disk
- * @param configfile
+ * @param {any} configfile - Path to configuration file
  */
 function loadConfig(configfile: any) {
   let file = configfile || 'config.json'
@@ -582,7 +637,9 @@ function loadConfig(configfile: any) {
 /**
  * clean or create the directory for report for external usage
  * @param odir target directory
+ * @note High complexity function - refactoring deferred per user request
  */
+// eslint-disable-next-line complexity
 function cleanReportDir(odir: any) {
   // handle the trigger output directory
   if (odir) {
@@ -599,8 +656,8 @@ function cleanReportDir(odir: any) {
             const filePath = `${odir}/${fname}`
             if (fs.statSync(filePath).isFile()) fs.unlinkSync(filePath)
           } else if (fname === 'html') {
-            const sub_path = `${odir}/${fname}`
-            cleanReportDir(sub_path)
+            const subPath = `${odir}/${fname}`
+            cleanReportDir(subPath)
           }
         }
       }
@@ -625,9 +682,9 @@ function printHelp() {
 }
 
 /**
- *
- * @param apps
- * @param printf
+ * Dump AST to file or console
+ * @param {any} apps - Array of application objects with file and content
+ * @param {any} printf - Print function for output
  */
 function dumpAST(apps: any, printf: any) {
   for (const app of apps) {
@@ -651,9 +708,13 @@ function dumpAST(apps: any, printf: any) {
 }
 
 /**
- *
- * @param findings
+ * Filter findings based on trace criteria (deprecated)
+ * @param {any} findings - Findings array to filter
+ * @returns {any} Filtered findings or null
+ * @deprecated This function is no longer used
+ * @note High complexity function - refactoring deferred per user request
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, complexity
 function filtrateFindings(findings: any) {
   if (findings && Array.isArray(findings)) {
     return findings.filter((element: any) => {
@@ -673,8 +734,9 @@ function filtrateFindings(findings: any) {
 }
 
 /**
- *
- * @param filename
+ * Detect programming language from file extension
+ * @param {any} filename - File path or name
+ * @returns {string|null} Detected language or null
  */
 function detectFileLanguage(filename: any) {
   const ext = filename.split('.').pop().toLowerCase()
@@ -695,6 +757,7 @@ function detectFileLanguage(filename: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 module.exports = {
   execute,
   initAnalyzer,

@@ -1,6 +1,7 @@
 const ChildProcess = require('child_process')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
 const FileUtil = require('../../../util/file-util')
 const { handleException } = require('../../analyzer/common/exception-handler')
 const { addNodeHash, deleteParent } = require('../../../util/ast-util')
@@ -66,7 +67,10 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
     )
     process.exit(0)
   }
-  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}" -j32`
+
+  // 并行任务数：根据 CPU 核心数自动设置
+  const numJobs = os.cpus().length
+  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${uastFilePath}" -j${numJobs}`
 
   try {
     const optionForCommand = {
@@ -181,8 +185,6 @@ function parsePackages(astManager: any, rootDir: string, options?: BuildOptions)
     }
 
   } catch (e) {
-    const logger = require('../../../util/logger')(__filename)
-    logger.error(`[python-ast-builder] parsePackage error: ${rootDir}`)
     handleException(
       e,
       `[python-ast-builder] parsePackage error: ${rootDir}`,
