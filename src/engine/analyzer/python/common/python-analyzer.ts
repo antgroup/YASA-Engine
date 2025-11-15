@@ -1,4 +1,4 @@
-import SymAddress from '../../common/sym-address'
+const SymAddress = require('../../common/sym-address')
 
 const { Analyzer } = require('../../common')
 const CheckerManager = require('../../common/checker-manager')
