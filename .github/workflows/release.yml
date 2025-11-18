@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: npm-node-${{ hashFiles('package.json') }}
+          key: npm-node-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             npm-node-
 
@@ -52,7 +52,7 @@ jobs:
 
   # 2. 解析依赖版本（只需一次）
   resolve_uast_versions:
-    needs: [get_version_and_validate,run_tests]
+    needs: get_version_and_validate
     runs-on: ubuntu-latest
     outputs:
       spec_version: ${{ steps.uast.outputs.spec_version }}
@@ -90,7 +90,7 @@ jobs:
 
   # 3. 构建多平台二进制（不再重复提取版本）
   build_engine:
-    needs: [get_version_and_validate, resolve_uast_versions,run_tests]
+    needs: [get_version_and_validate, resolve_uast_versions]
     strategy:
       matrix:
         platform:
@@ -133,7 +133,10 @@ jobs:
           echo "🧪 Running TypeScript type check (no emit)..."
           npx tsc --noEmit --pretty
           echo "✅ TypeScript 类型检查通过，无编译错误"
-      
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
       - name: Compile TypeScript with tsc
         run: |
           echo "🛠️  Compiling TypeScript..."
