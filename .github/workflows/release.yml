@@ -20,35 +20,7 @@ jobs:
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "npm_tag=$( [[ "$VERSION" == *"-beta."* ]] && echo "beta" || echo "latest" )" >> $GITHUB_OUTPUT
-  run_tests:
-    needs: get_version_and_validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: 'npm'
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: npm-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            npm-node-
-
-      - name: Install tsx
-        run: npm install --save-dev tsx
-
-      - name: 🧪 Run All Tests
-        run: npm run test-all
-
-      - name: ✅ All tests passed
-        run: echo "🎉 All tests succeeded!"
 
   # 2. 解析依赖版本（只需一次）
   resolve_uast_versions:
@@ -69,6 +41,11 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
+          
       - name: Install dependencies
         run: |
           npm ci
