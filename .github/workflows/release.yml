@@ -20,11 +20,114 @@ jobs:
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "npm_tag=$( [[ "$VERSION" == *"-beta."* ]] && echo "beta" || echo "latest" )" >> $GITHUB_OUTPUT
+  # 3. 下载 YASA-UAST 的 Go 和 Python 二进制，并部署到 deps/
+  download_uast_binaries:
+    needs: get_version_and_validate
+    runs-on: ubuntu-latest
+    outputs:
+      downloaded: ${{ steps.check.outputs.downloaded }}
+      uast_version: ${{ steps.get_latest_release.outputs.tag_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update && sudo apt-get install -y gh
+
+      - name: Get Latest Stable UAST Release Tag
+        id: get_latest_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh api repos/antgroup/YASA-UAST/releases/latest --jq '.tag_name' || echo "")
+          if [ -z "$TAG" ]; then
+            echo "❌ Failed to fetch latest release tag from antgroup/YASA-UAST"
+            exit 1
+          fi
+          echo "✅ Found latest stable UAST release: $TAG"
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Download UAST Release Assets
+        env:
+          TAG: ${{ steps.get_latest_release.outputs.tag_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="antgroup/YASA-UAST"
+          mkdir -p uast_binaries
+          gh release download "$TAG" \
+            --repo "$REPO" \
+            --pattern "uast4go-*" \
+            --pattern "uast4py-*" \
+            --dir uast_binaries/
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to download UAST binaries"
+            exit 1
+          fi
+          ls -lh uast_binaries/
+
+      - name: Extract and Deploy Linux Binaries to deps/
+        run: |
+          # 创建目标目录
+          mkdir -p deps/uast4go deps/uast4py
+
+          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
+          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
+
+          if [ ! -f "$GO_BINARY" ]; then
+            echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          if [ ! -f "$PY_BINARY" ]; then
+            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          # 复制并重命名为无平台后缀的名称
+          cp "$GO_BINARY" deps/uast4go/uast4go
+          cp "$PY_BINARY" deps/uast4py/uast4py
+
+          # 添加可执行权限
+          chmod +x deps/uast4go/uast4go
+          chmod +x deps/uast4py/uast4py
+
+          echo "✅ Deployed:"
+          echo "   $GO_BINARY  --> deps/uast4go/uast4go"
+          echo "   $PY_BINARY --> deps/uast4py/uast4py"
+
+      - name: Verify files in deps/
+        run: |
+          echo "🔍 Listing deps/ contents:"
+          find deps -type f -executable | xargs ls -lh
+          # 或简单列出
+          ls -R deps/
+
+      - name: Check if downloaded
+        id: check
+        run: |
+          if [ -f "deps/uast4go/uast4go" ] && [ -f "deps/uast4py/uast4py" ]; then
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload UAST binaries (for later jobs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: uast-binaries
+          path: |
+            deps/uast4go/uast4go
+            deps/uast4py/uast4py
+          retention-days: 7
 
 
   # 2. 解析依赖版本（只需一次）
   resolve_uast_versions:
-    needs: get_version_and_validate
+    needs: download_uast_binaries
     runs-on: ubuntu-latest
     outputs:
       spec_version: ${{ steps.uast.outputs.spec_version }}
@@ -41,17 +144,17 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: 🧪 Run All Tests
-        run: |
-          npm run test-all
-          echo "✅完成所有测试"
-          
       - name: Install dependencies
         run: |
           npm ci
           npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+      
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
 
       - name: 🔍 Extract UAST package versions
         id: uast
@@ -67,7 +170,7 @@ jobs:
 
   # 3. 构建多平台二进制（不再重复提取版本）
   build_engine:
-    needs: [get_version_and_validate, resolve_uast_versions]
+    needs:  resolve_uast_versions
     strategy:
       matrix:
         platform:
@@ -110,10 +213,7 @@ jobs:
           echo "🧪 Running TypeScript type check (no emit)..."
           npx tsc --noEmit --pretty
           echo "✅ TypeScript 类型检查通过，无编译错误"
-      - name: 🧪 Run All Tests
-        run: |
-          npm run test-all
-          echo "✅完成所有测试"
+
       - name: Compile TypeScript with tsc
         run: |
           echo "🛠️  Compiling TypeScript..."
@@ -137,67 +237,9 @@ jobs:
             node_modules/
           retention-days: 7
 
-  # 3. 下载 YASA-UAST 的 Go 和 Python 二进制（可选）
-  download_uast_binaries:
-    needs: get_version_and_validate
-    runs-on: ubuntu-latest
-    outputs:
-      downloaded: ${{ steps.check.outputs.downloaded }}
-      uast_version: ${{ steps.get_latest_release.outputs.tag_name }}
-    steps:
-      - name: Install GitHub CLI
-        run: |
-          sudo apt-get update && sudo apt-get install -y gh
-
-      - name: Get Latest Stable UAST Release Tag
-        id: get_latest_release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=$(gh api repos/antgroup/YASA-UAST/releases/latest --jq '.tag_name' || echo "")
-          if [ -z "$TAG" ]; then
-            echo "❌ Failed to fetch latest release tag from antgroup/YASA-UAST"
-            exit 1
-          fi
-          echo "✅ Found latest stable UAST release: $TAG"
-          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Download UAST Release Assets
-        env:
-          TAG: ${{ steps.get_latest_release.outputs.tag_name }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          REPO="antgroup/YASA-UAST"
-          mkdir -p uast_binaries
-          gh release download "$TAG" \
-            --repo "$REPO" \
-            --pattern "uast4go-*" \
-            --pattern "uast4py-*" \
-            --dir uast_binaries/
-          if [ $? -ne 0 ]; then
-            echo "❌ Failed to download UAST binaries"
-            exit 1
-          fi
-          ls -lh uast_binaries/
-
-      - name: Check if downloaded
-        id: check
-        run: |
-          if ls uast_binaries/uast4go-* &> /dev/null; then
-            echo "downloaded=true" >> $GITHUB_OUTPUT
-          else
-            echo "downloaded=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload UAST binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: uast-binaries
-          path: uast_binaries/
-
   # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
   package_release:
-    needs: [build_engine, download_uast_binaries]
+    needs: build_engine
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
