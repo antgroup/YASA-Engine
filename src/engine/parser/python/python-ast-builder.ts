@@ -56,8 +56,8 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
     handleException(
       null,
       // eslint-disable-next-line sonarjs/no-duplicate-string
-      'no uast4py sdk file set. please set --uastSDKPath',
-      'no uast4py sdk file set. please set --uastSDKPath',
+      `uast4py not found at ${uast4pyPath}. Please set --uastSDKPath to the correct path or install the uast4py sdk under deps/uast4py/uast4py`,
+      `uast4py not found at ${uast4pyPath}. Please set --uastSDKPath to the correct path or install the uast4py sdk under deps/uast4py/uast4py`,
     )
     process.exit(0)
   }
