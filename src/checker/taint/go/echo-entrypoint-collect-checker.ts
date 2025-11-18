@@ -312,7 +312,7 @@ class EchoEntrypointCollectChecker extends Checker {
   }
 
   handleConfigObjectCollection(analyzer: any, state: any, symbol: any) {
-    const rules = ConfigObjectCollectionTable.get(symbol.expression.name);
+    const rules = ConfigObjectCollectionTable.get(symbol.expression?.name);
     if (!rules) return
     flattenUnionValues([symbol.arguments[0]]).forEach(middlewareConfig => {
       rules.forEach(rule => {
@@ -325,7 +325,7 @@ class EchoEntrypointCollectChecker extends Checker {
 
   handleKnownEchoMiddlewares(analyzer: any, state: any, symbol: any) {
     if (symbol.type !== "CallExpression") return
-    const objectQid = symbol.expression._qid;
+    const objectQid = symbol.expression?._qid;
     if (!(objectQid && MiddlewareHandlerRegistryObject.some(obj => objectQid.startsWith(obj)))) return
 
     switch (symbol.expression.name) {
