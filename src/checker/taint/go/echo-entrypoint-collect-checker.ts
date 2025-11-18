@@ -204,12 +204,6 @@ const ConfigObjectCollectionTable = new Map<string, Array<{ name: string, source
     ]
   ],
   [
-    "MiddlewareWithConfig",
-    [
-      { name: "Skipper", source: "0" }
-    ]
-  ],
-  [
     "StaticWithConfig",
     [
       { name: "Skipper", source: "0" }
@@ -366,30 +360,23 @@ class EchoEntrypointCollectChecker extends Checker {
         break;
       case "ProxyWithConfig":
         flattenUnionValues([symbol.arguments[0]]).forEach(middlewareConfig => {
-          const balancer = middlewareConfig.field["Balancer"]
-          if (balancer) {
-            const next = balancer.field["Next"]
-            if (next) {
-              processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, next, "0")
-            }
+          const balancerNext = middlewareConfig.field?.Balancer?.field?.Next;
+          if (balancerNext) {
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, balancerNext, "0");
           }
-          const transport = middlewareConfig.field["Transport"]
-          if (transport) {
-            const roundTrip = transport.field["RoundTrip"]
-            if (roundTrip) {
-              processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, roundTrip, "0")
-            }
+          const transportRoundTrip = middlewareConfig.field?.Transport?.field?.RoundTrip;
+          if (transportRoundTrip) {
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, transportRoundTrip, "0");
           }
         })
         this.handleConfigObjectCollection(analyzer, state, symbol)
         break;
       case "RateLimiterWithConfig":
         flattenUnionValues([symbol.arguments[0]]).forEach(middlewareConfig => {
-          const store = middlewareConfig.field["Store"]
-          if (!store) return;
-          const allow = store.field["Allow"]
-          if (!allow) return;
-          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, allow, "0")
+          const allow = middlewareConfig.field?.Store?.field?.Allow;
+          if (allow) {
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, allow, "0");
+          }
         })
         this.handleConfigObjectCollection(analyzer, state, symbol)
         break;
@@ -405,9 +392,10 @@ class EchoEntrypointCollectChecker extends Checker {
         break;
       case "StaticWithConfig":
         flattenUnionValues([symbol.arguments[0]]).forEach(middlewareConfig => {
-          const filesystem = middlewareConfig.field["Filesystem"]
-          if (!filesystem) return;
-          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, filesystem.field["Open"], "0")
+          const open = middlewareConfig.field?.Filesystem?.field?.Open;
+          if (open) {
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, open, "0");
+          }
         })
         this.handleConfigObjectCollection(analyzer, state, symbol)
         break;
@@ -423,13 +411,14 @@ class EchoEntrypointCollectChecker extends Checker {
   }
 
   handleMiddlewareArgs(analyzer: any, scope: any, state: any, list: Array<Unit>) {
-    const flattened = flattenUnionValues(list)
-    flattened.filter(unit => unit.vtype === "symbol").forEach(symbol => {
-      this.handleKnownEchoMiddlewares(analyzer, state, symbol)
-    })
-    flattened.filter(unit => unit.vtype === "fclos").forEach(fclos => {
-      this.handleCustomMiddleware(analyzer, scope, state, fclos)
-    })
+    const flattened = flattenUnionValues(list);
+    flattened.forEach(unit => {
+      if (unit.vtype === "symbol") {
+        this.handleKnownEchoMiddlewares(analyzer, state, unit);
+      } else if (unit.vtype === "fclos") {
+        this.handleCustomMiddleware(analyzer, scope, state, unit);
+      }
+    });
   }
 }
 

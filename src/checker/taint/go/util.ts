@@ -13,7 +13,7 @@ export function flattenUnionValues(list: Array<Unit>): Array<Unit> {
       case "object":
         return [unit]
       default:
-        throw `flattenUnionValues: Unknown type ${unit.vtype}`
+        throw new Error(`flattenUnionValues: Unknown type ${unit.vtype}`)
     }
   })
 }
@@ -37,7 +37,7 @@ export function processEntryPointAndTaintSource(analyzer: any, state: any, proce
 export function fixKnownPackageName(node: VariableDeclaration, knownPackageName: Map<string, string>) {
   if (
     node.cloned !== false ||
-    node.init?.type != "ImportExpression" ||
+    node.init?.type !== "ImportExpression" ||
     node.id.type !== "Identifier"
   ) return;
 
