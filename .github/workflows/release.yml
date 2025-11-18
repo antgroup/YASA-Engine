@@ -21,6 +21,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "npm_tag=$( [[ "$VERSION" == *"-beta."* ]] && echo "beta" || echo "latest" )" >> $GITHUB_OUTPUT
 
+
   # 2. 解析依赖版本（只需一次）
   resolve_uast_versions:
     needs: get_version_and_validate
@@ -40,6 +41,11 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
+          
       - name: Install dependencies
         run: |
           npm ci
@@ -97,7 +103,17 @@ jobs:
           npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-          
+
+      # 👇 新增：TypeScript 类型检查（不生成文件）
+      - name: 🔍 Type Check with tsc --noEmit
+        run: |
+          echo "🧪 Running TypeScript type check (no emit)..."
+          npx tsc --noEmit --pretty
+          echo "✅ TypeScript 类型检查通过，无编译错误"
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
       - name: Compile TypeScript with tsc
         run: |
           echo "🛠️  Compiling TypeScript..."
