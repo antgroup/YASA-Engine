@@ -115,14 +115,11 @@ jobs:
             echo "downloaded=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload UAST binaries (for later jobs)
+      - name: Upload UAST binaries
         uses: actions/upload-artifact@v4
         with:
           name: uast-binaries
-          path: |
-            deps/uast4go/uast4go
-            deps/uast4py/uast4py
-          retention-days: 7
+          path: uast_binaries/
 
 
   # 2. 解析依赖版本（只需一次）
