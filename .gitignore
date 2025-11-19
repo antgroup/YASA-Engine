@@ -48,5 +48,3 @@ deps/uast4python
 deps/uast4py
 src/uast
 src/report
-/.eslintrc.js
-/.prettierrc
