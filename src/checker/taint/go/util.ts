@@ -1,16 +1,21 @@
-import { VariableDeclaration } from "@ant-yasa/uast-spec";
-import Unit from "../../../engine/analyzer/common/value/unit"
-const IntroduceTaint = require("../common-kit/source-util");
-const completeEntryPoint = require("../common-kit/entry-points-util")
+import type { VariableDeclaration } from '@ant-yasa/uast-spec'
+import type Unit from '../../../engine/analyzer/common/value/unit'
 
+const IntroduceTaint = require('../common-kit/source-util')
+const completeEntryPoint = require('../common-kit/entry-points-util')
+
+/**
+ *
+ * @param list
+ */
 export function flattenUnionValues(list: Array<Unit>): Array<Unit> {
-  return list.flatMap(unit => {
+  return list.flatMap((unit) => {
     switch (unit.vtype) {
-      case "union":
+      case 'union':
         return flattenUnionValues(unit.value)
-      case "fclos":
-      case "symbol":
-      case "object":
+      case 'fclos':
+      case 'symbol':
+      case 'object':
         return [unit]
       default:
         throw new Error(`flattenUnionValues: Unknown type ${unit.vtype}`)
@@ -18,10 +23,24 @@ export function flattenUnionValues(list: Array<Unit>): Array<Unit> {
   })
 }
 
-export function processEntryPointAndTaintSource(analyzer: any, state: any, processedRouteRegistry: Set<string>, entryPointUnitValue: Unit, source: string) {
+/**
+ *
+ * @param analyzer
+ * @param state
+ * @param processedRouteRegistry
+ * @param entryPointUnitValue
+ * @param source
+ */
+export function processEntryPointAndTaintSource(
+  analyzer: any,
+  state: any,
+  processedRouteRegistry: Set<string>,
+  entryPointUnitValue: Unit,
+  source: string
+) {
   flattenUnionValues([entryPointUnitValue])
-    .filter(val => val.vtype === "fclos")
-    .forEach(entryPointFuncValue => {
+    .filter((val) => val.vtype === 'fclos')
+    .forEach((entryPointFuncValue) => {
       if (entryPointFuncValue?.ast.loc) {
         const hash = JSON.stringify(entryPointFuncValue.ast.loc)
         if (!processedRouteRegistry.has(hash)) {
@@ -34,16 +53,17 @@ export function processEntryPointAndTaintSource(analyzer: any, state: any, proce
     })
 }
 
+/**
+ *
+ * @param node
+ * @param knownPackageName
+ */
 export function fixKnownPackageName(node: VariableDeclaration, knownPackageName: Map<string, string>) {
-  if (
-    node.cloned !== false ||
-    node.init?.type !== "ImportExpression" ||
-    node.id.type !== "Identifier"
-  ) return;
+  if (node.cloned !== false || node.init?.type !== 'ImportExpression' || node.id.type !== 'Identifier') return
 
   const moduleName = node.init.from.value
-  if (typeof moduleName !== "string") return;
+  if (typeof moduleName !== 'string') return
   const name = knownPackageName.get(moduleName)
-  if (!name) return;
+  if (!name) return
   node.id.name = name
 }
