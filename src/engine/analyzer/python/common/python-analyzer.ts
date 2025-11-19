@@ -311,8 +311,21 @@ class PythonAnalyzer extends (Analyzer as any) {
       else argvalues.push(argv)
     }
 
-    if (fclos.vtype === 'class' && fclos.field && Object.prototype.hasOwnProperty.call(fclos.field, '_CTOR_')) {
-      return this.buildNewObject(fclos.cdef, argvalues, fclos, state, node, scope)
+    if (argvalues && this.checkerManager) {
+      this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
+        argvalues,
+        fclos,
+        pcond: state.pcond,
+        entry_fclos: this.entry_fclos,
+        einfo: state.einfo,
+        state,
+        analyzer: this,
+        ainfo: this.ainfo,
+      })
+    }
+
+    if (fclos.vtype === 'class') {
+      return this.propagateNewObject(scope, node, state, fclos, argvalues)
     }
     // todo 待迁移到库函数建模中
     if (node.callee.type === 'MemberAccess' && node.callee.property.name === 'append' && fclos?.object?.parent) {
@@ -336,6 +349,43 @@ class PythonAnalyzer extends (Analyzer as any) {
       })
     }
 
+    return res
+  }
+
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   * @param fclos
+   * @param argvalues
+   */
+  propagateNewObject(scope: any, node: any, state: any, fclos: any, argvalues: any) {
+    if (fclos.field && Object.prototype.hasOwnProperty.call(fclos.field, '_CTOR_')) {
+      const res = this.buildNewObject(fclos.cdef, argvalues, fclos, state, node, scope)
+      if (res && (this.checkerManager as any)?.checkAtFunctionCallAfter) {
+        this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
+          fclos,
+          ret: res,
+          argvalues,
+          pcond: state.pcond,
+          einfo: state.einfo,
+          callstack: state.callstack,
+        })
+      }
+      return res
+    }
+    const res = this.processLibArgToRet(node, fclos, argvalues, scope, state)
+    if (res && (this.checkerManager as any)?.checkAtFunctionCallAfter) {
+      this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
+        fclos,
+        ret: res,
+        argvalues,
+        pcond: state.pcond,
+        einfo: state.einfo,
+        callstack: state.callstack,
+      })
+    }
     return res
   }
 
