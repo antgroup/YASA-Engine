@@ -1,0 +1,13 @@
+{
+  "threshold": 5,
+  "reporters": [
+    "html",
+    "console"
+  ],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test/**/*"
+  ],
+  "output": "./report/jscpd/"
+}
