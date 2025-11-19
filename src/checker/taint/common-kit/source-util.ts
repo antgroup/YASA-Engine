@@ -88,6 +88,11 @@ function introduceTaintAtFuncCallReturnValue(
           markTaintSource(res, { path: node, kind: tspec.kind })
           break
         }
+      } else if (call.callee?.type === 'Identifier') {
+        if (call.callee.name === tspec.fsig) {
+          markTaintSource(res, { path: node, kind: tspec.kind })
+          break
+        }
       }
     }
   }
@@ -104,16 +109,13 @@ function introduceFuncArgTaintByRuleConfig(scope: any, node: any, res: any, func
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
-  if (node?.callee?.type !== 'MemberAccess') {
-    return
-  }
   const rules = funcCallArgTaintSource
   if (rules && Array.isArray(rules) && rules.length > 0) {
     const call = node
     for (const tspec of rules) {
       if (tspec.fsig) {
         const marray = tspec.fsig.split('.')
-        if (call.callee.type === 'MemberAccess' && _.isArray(res)) {
+        if (call.callee?.type === 'MemberAccess' && _.isArray(res)) {
           if (
             (matchField(call.callee?.property, marray, marray.length - 1) ||
               matchField(call.callee, marray, marray.length - 1)) &&
@@ -123,6 +125,14 @@ function introduceFuncArgTaintByRuleConfig(scope: any, node: any, res: any, func
             for (let i = 0; i < args.length; i++) {
               markTaintSource(args[i], { path: node, kind: tspec.kind })
             }
+          }
+        } else if (call.callee?.type === 'Identifier') {
+          if (call.callee.name === tspec.fsig) {
+            const args = prepareArgs(res, undefined, tspec)
+            for (let i = 0; i < args.length; i++) {
+              markTaintSource(args[i], { path: node, kind: tspec.kind })
+            }
+            break
           }
         }
       }
