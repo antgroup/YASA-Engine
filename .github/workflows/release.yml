@@ -20,108 +20,7 @@ jobs:
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "npm_tag=$( [[ "$VERSION" == *"-beta."* ]] && echo "beta" || echo "latest" )" >> $GITHUB_OUTPUT
-
-  # 2. 解析依赖版本（只需一次）
-  resolve_uast_versions:
-    needs: get_version_and_validate
-    runs-on: ubuntu-latest
-    outputs:
-      spec_version: ${{ steps.uast.outputs.spec_version }}
-      parser_version: ${{ steps.uast.outputs.parser_version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Install dependencies
-        run: |
-          npm ci
-          npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
-          echo "🔍 Resolved UAST versions:"
-          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-
-      - name: 🔍 Extract UAST package versions
-        id: uast
-        run: |
-          SPEC_VERSION=$(npm list @ant-yasa/uast-spec --json | jq -r '.dependencies["@ant-yasa/uast-spec"].version')
-          PARSER_VERSION=$(npm list @ant-yasa/uast-parser-java-js --json | jq -r '.dependencies["@ant-yasa/uast-parser-java-js"].version')
-
-          echo "📦 UAST Spec Version: $SPEC_VERSION"
-          echo "📦 UAST Parser (Java/JS) Version: $PARSER_VERSION"
-
-          echo "spec_version=$SPEC_VERSION" >> $GITHUB_OUTPUT
-          echo "parser_version=$PARSER_VERSION" >> $GITHUB_OUTPUT
-
-  # 3. 构建多平台二进制（不再重复提取版本）
-  build_engine:
-    needs: [get_version_and_validate, resolve_uast_versions]
-    strategy:
-      matrix:
-        platform:
-          - os: ubuntu-latest
-            target: node18-linux-x64
-            goarch: amd64
-            out_name: yasa-engine-linux-x64
-          - os: macos-latest
-            target: node18-macos-x64
-            goarch: amd64
-            out_name: yasa-engine-macos-x64
-          - os: macos-latest
-            target: node18-macos-arm64
-            goarch: arm64
-            out_name: yasa-engine-macos-arm64
-          # - os: windows-latest
-          #   target: node18-win-x64
-          #   out_name: yasa-engine-windows-x64.exe
-    runs-on: ${{ matrix.platform.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: |
-          echo "📦 Installing production dependencies..."
-          npm ci
-          npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
-          echo "🔍 Resolved UAST versions:"
-          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-          
-      - name: Compile TypeScript with tsc
-        run: |
-          echo "🛠️  Compiling TypeScript..."
-          npx tsc --build
-
-          echo "✅ TypeScript compiled successfully"
-
-      - name: Build with pkg
-        run: |
-          echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
-          npx pkg . --options max-old-space-size=13312 --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
-          echo "✅ Built: dist/${{ matrix.platform.out_name }}"
-
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: engine-${{ matrix.platform.target }}
-          path: |
-            dist/
-            node_modules/
-          retention-days: 7
-
-  # 3. 下载 YASA-UAST 的 Go 和 Python 二进制（可选）
+  # 3. 下载 YASA-UAST 的 Go 和 Python 二进制，并部署到 deps/
   download_uast_binaries:
     needs: get_version_and_validate
     runs-on: ubuntu-latest
@@ -129,6 +28,9 @@ jobs:
       downloaded: ${{ steps.check.outputs.downloaded }}
       uast_version: ${{ steps.get_latest_release.outputs.tag_name }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install GitHub CLI
         run: |
           sudo apt-get update && sudo apt-get install -y gh
@@ -164,10 +66,50 @@ jobs:
           fi
           ls -lh uast_binaries/
 
+      - name: Extract and Deploy Linux Binaries to deps/
+        run: |
+          # 创建目标目录
+          mkdir -p deps/uast4go deps/uast4py
+
+          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
+          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
+
+          if [ ! -f "$GO_BINARY" ]; then
+            echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          if [ ! -f "$PY_BINARY" ]; then
+            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          # 复制并重命名为无平台后缀的名称
+          cp "$GO_BINARY" deps/uast4go/uast4go
+          cp "$PY_BINARY" deps/uast4py/uast4py
+
+          # 添加可执行权限
+          chmod +x deps/uast4go/uast4go
+          chmod +x deps/uast4py/uast4py
+
+          echo "✅ Deployed:"
+          echo "   $GO_BINARY  --> deps/uast4go/uast4go"
+          echo "   $PY_BINARY --> deps/uast4py/uast4py"
+
+      - name: Verify files in deps/
+        run: |
+          echo "🔍 Listing deps/ contents:"
+          find deps -type f -executable | xargs ls -lh
+          # 或简单列出
+          ls -R deps/
+
       - name: Check if downloaded
         id: check
         run: |
-          if ls uast_binaries/uast4go-* &> /dev/null; then
+          if [ -f "deps/uast4go/uast4go" ] && [ -f "deps/uast4py/uast4py" ]; then
             echo "downloaded=true" >> $GITHUB_OUTPUT
           else
             echo "downloaded=false" >> $GITHUB_OUTPUT
@@ -179,9 +121,122 @@ jobs:
           name: uast-binaries
           path: uast_binaries/
 
+
+  # 2. 解析依赖版本（只需一次）
+  resolve_uast_versions:
+    needs: download_uast_binaries
+    runs-on: ubuntu-latest
+    outputs:
+      spec_version: ${{ steps.uast.outputs.spec_version }}
+      parser_version: ${{ steps.uast.outputs.parser_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
+          echo "🔍 Resolved UAST versions:"
+          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+      
+      - name: 🧪 Run All Tests
+        run: |
+          npm run test-all
+          echo "✅完成所有测试"
+
+      - name: 🔍 Extract UAST package versions
+        id: uast
+        run: |
+          SPEC_VERSION=$(npm list @ant-yasa/uast-spec --json | jq -r '.dependencies["@ant-yasa/uast-spec"].version')
+          PARSER_VERSION=$(npm list @ant-yasa/uast-parser-java-js --json | jq -r '.dependencies["@ant-yasa/uast-parser-java-js"].version')
+
+          echo "📦 UAST Spec Version: $SPEC_VERSION"
+          echo "📦 UAST Parser (Java/JS) Version: $PARSER_VERSION"
+
+          echo "spec_version=$SPEC_VERSION" >> $GITHUB_OUTPUT
+          echo "parser_version=$PARSER_VERSION" >> $GITHUB_OUTPUT
+
+  # 3. 构建多平台二进制（不再重复提取版本）
+  build_engine:
+    needs:  resolve_uast_versions
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: node18-linux-x64
+            goarch: amd64
+            out_name: yasa-engine-linux-x64
+          - os: macos-latest
+            target: node18-macos-x64
+            goarch: amd64
+            out_name: yasa-engine-macos-x64
+          - os: macos-latest
+            target: node18-macos-arm64
+            goarch: arm64
+            out_name: yasa-engine-macos-arm64
+          # - os: windows-latest
+          #   target: node18-win-x64
+          #   out_name: yasa-engine-windows-x64.exe
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing production dependencies..."
+          npm ci
+          npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
+          echo "🔍 Resolved UAST versions:"
+          npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
+
+      # 👇 新增：TypeScript 类型检查（不生成文件）
+      - name: 🔍 Type Check with tsc --noEmit
+        run: |
+          echo "🧪 Running TypeScript type check (no emit)..."
+          npx tsc --noEmit --pretty
+          echo "✅ TypeScript 类型检查通过，无编译错误"
+
+      - name: Compile TypeScript with tsc
+        run: |
+          echo "🛠️  Compiling TypeScript..."
+          npx tsc --build
+
+          echo "✅ TypeScript compiled successfully"
+
+      - name: Build with pkg
+        run: |
+          echo "🛠️  Building YASA-Engine binary for ${{ matrix.platform.target }}"
+          npx pkg . --options max-old-space-size=13312 --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
+          echo "✅ Built: dist/${{ matrix.platform.out_name }}"
+
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-${{ matrix.platform.target }}
+          path: |
+            dist/
+            node_modules/
+          retention-days: 7
+
   # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
   package_release:
-    needs: [build_engine, download_uast_binaries]
+    needs: build_engine
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
