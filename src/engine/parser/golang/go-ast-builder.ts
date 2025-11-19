@@ -15,11 +15,17 @@ let uastFilePath = './uast.json'
  */
 function buildUASTGo(rootDir: any, options: Record<string, any>) {
   options = options || {}
-  if (options.language && options.language !== LanguageType.LANG_GO && options.language !== 'golang') {
+  if (
+    options.language &&
+    options.language !== LanguageType.LANG_GO &&
+    options.language !== 'golang'
+  ) {
     handleException(
-      new Error(`Go AST Builder received wrong language type: ${options.language}`),
+      new Error(
+        `Go AST Builder received wrong language type: ${options.language}`,
+      ),
       `Error: Go AST Builder received wrong language type: ${options.language}`,
-      `Error: Go AST Builder received wrong language type: ${options.language}`
+      `Error: Go AST Builder received wrong language type: ${options.language}`,
     )
     process.exit(1)
   }
@@ -28,32 +34,33 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
   if (options.single) {
     isSingle = '-single'
   }
-  let uast4go_path = path.join(__dirname, '../../../../deps/uast4go/uast4go')
-
+  // prefer user-provided SDK path if present
+  let uast4go_path = ''
   if (options.uastSDKPath && options.uastSDKPath !== '') {
     uast4go_path = options.uastSDKPath
   } else {
+    // fallback to default deps location
+    uast4go_path = path.join(__dirname, '../../../../deps/uast4go/uast4go')
+  }
+  // if uast4goPath does not exist, exit with error
+  if (!fs.existsSync(uast4go_path)) {
+    // neither user-provided path nor bundled deps found — surface a clear error
     handleException(
       null,
-      // eslint-disable-next-line sonarjs/no-duplicate-string
-      'no uast4go sdk file set. please set --uastSDKPath',
-      'no uast4go sdk file set. please set --uastSDKPath'
+      `uast4go not found at ${uast4go_path}. Please set --uastSDKPath to the correct path or install the uast4go sdk under deps/uast4go/uast4go`,
+      `uast4go not found at ${uast4go_path}. Please set --uastSDKPath to the correct path or install the uast4go sdk under deps/uast4go/uast4go`,
     )
-    process.exit(0)
+    process.exit(1)
   }
 
   if (options.ASTFileOutput) {
     uastFilePath = options.ASTFileOutput
   }
-  if (!fs.existsSync(uast4go_path)) {
-    handleException(
-      null,
-      'no uast4go sdk file set. please set --uastSDKPath',
-      'no uast4go sdk file set. please set --uastSDKPath'
-    )
-    process.exit(0)
-  }
-  const command = `${uast4go_path} ${isSingle}` + ` -rootDir=${rootDir}` + ` -output=${uastFilePath}`
+
+  const command =
+    `${uast4go_path} ${isSingle}` +
+    ` -rootDir=${rootDir}` +
+    ` -output=${uastFilePath}`
 
   try {
     const options_for_command = {
@@ -61,7 +68,11 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
     }
     ChildProcess.execSync(command, options_for_command)
   } catch (e) {
-    handleException(e, 'Error occurred in go-ast-builder.buildUAST', 'Error occurred in go-ast-builder.buildUAST')
+    handleException(
+      e,
+      'Error occurred in go-ast-builder.buildUAST',
+      'Error occurred in go-ast-builder.buildUAST',
+    )
     return null
   }
 }
@@ -81,7 +92,11 @@ async function parsePackage(rootDir: any, options: Record<string, any>) {
     try {
       return await parseLargePackage(rootDir, options)
     } catch (e1) {
-      handleException(e1, `[go-ast-builder] 解析Go AST时发生错误`, `[go-ast-builder] 解析Go AST时发生错误`)
+      handleException(
+        e1,
+        `[go-ast-builder] 解析Go AST时发生错误`,
+        `[go-ast-builder] 解析Go AST时发生错误`,
+      )
       if (fs.existsSync(uastFilePath)) {
         deleteUAST()
       }
@@ -138,7 +153,7 @@ function deleteUAST() {
         handleException(
           err,
           `[go-ast-builder] 删除uast.json文件时发生错误`,
-          `[go-ast-builder] 删除uast.json文件时发生错误`
+          `[go-ast-builder] 删除uast.json文件时发生错误`,
         )
       }
     })
