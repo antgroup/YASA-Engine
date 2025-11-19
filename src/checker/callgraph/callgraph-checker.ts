@@ -77,7 +77,11 @@ class CallgraphChecker extends CheckerCallgraph {
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { fclos, argvalues, ainfo } = info
-    if (fclos === undefined) {
+    let fdecl = fclos.fdef
+    if (fdecl?.type === 'ClassDefinition' && fclos.value?._CTOR_ && fclos.value?._CTOR_.vtype === 'fclos') {
+      fdecl = fclos?.value?._CTOR_?.fdef
+    }
+    if (fclos === undefined || fdecl?.type !== 'FunctionDefinition') {
       return
     }
     const stack = state.callstack
