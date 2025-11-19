@@ -154,21 +154,17 @@ function logDiagnostics(
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
 
-  // 处理 date1：如果传入 Date，格式化；如果传入 null，使用 null；如果未传，使用 null
-  let date1: string | null
-  if (options && 'date1' in options && options.date1 !== null && options.date1 !== undefined) {
-    date1 = formatDateTime(options.date1)
-  } else {
-    date1 = null
+  // 辅助函数：处理日期格式化，消除重复代码
+  function formatDateIfPresent(dateValue: Date | number | null | undefined): string | null {
+    if (dateValue !== null && dateValue !== undefined) {
+      return formatDateTime(dateValue)
+    }
+    return null
   }
 
-  // 处理 date2：如果传入 Date，格式化；如果传入 null，使用 null；如果未传，使用 null
-  let date2: string | null
-  if (options && 'date2' in options && options.date2 !== null && options.date2 !== undefined) {
-    date2 = formatDateTime(options.date2)
-  } else {
-    date2 = null
-  }
+  // 处理 date1 和 date2
+  const date1 = formatDateIfPresent(options?.date1)
+  const date2 = formatDateIfPresent(options?.date2)
 
   // 记录当前时间作为 log_time
   const log_time = formatDateTime(new Date())
