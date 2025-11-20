@@ -83,6 +83,7 @@
   },
   "scripts": {
     "test-js": "npx mocha --require tsx/cjs test/javascript/test-js-benchmark.ts",
+    "test-egg": "npx mocha --require tsx/cjs test/javascript/test-egg-benchmark.ts",
     "test-java": "npx mocha --require tsx/cjs test/java/test-java-benchmark.ts",
     "test-go": "npx mocha --require tsx/cjs test/go/test-go-benchmark.ts",
     "test-python": "npx mocha --require tsx/cjs test/python/test-python-benchmark.ts",
