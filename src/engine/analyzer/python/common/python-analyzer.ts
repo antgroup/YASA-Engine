@@ -906,7 +906,6 @@ class PythonAnalyzer extends (Analyzer as any) {
           if (left.name === undefined && left.sid !== undefined) {
             left.name = left.sid
           }
-          tmpVal = SourceLine.addSrcLineInfo(tmpVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', left.name)
           this.saveVarInScope(scope, left, tmpVal, state, oldVal)
         }
         return tmpVal
