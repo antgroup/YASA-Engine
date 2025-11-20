@@ -38,6 +38,7 @@ module.exports = {
     // Import 规则
     'import/no-commonjs': 'warn', // 推荐改成ES6
     'import/no-extraneous-dependencies': ['error', { devDependencies: true }], // 允许 devDependencies
+    'import/no-unresolved': ['error', { commonjs: true, caseSensitive: true }], // 检查 require() 的模块解析
 
     // Prettier 配置
     'prettier/prettier': ['error', { semi: false, singleQuote: true }], // 与 Prettier 配置同步

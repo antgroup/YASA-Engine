@@ -846,14 +846,8 @@ class PerformanceTracker {
     const avgInstructionExecutionCount =
       totalInstructionLocations > 0 ? totalInstructions / totalInstructionLocations : 0
 
-    logDiagnostics('symbolInterpretDetail1', {
-      string1: 'avgExecutionTimePerInstruction',
-      string2: 'avgInstructionExecutionCount',
-      string3: 'n/a',
-      number1: avgExecutionTimePerInstruction,
-      number2: avgInstructionExecutionCount,
-      number3: null,
-    })
+    // 注意：不再在这里输出日志，避免与 logPerformance 中的输出重复
+    // 日志输出统一在 logPerformance 方法中处理
 
     // 计算所有指令执行时间的分位数（基于净执行时间）
     const allExecutionTimes: number[] = []
@@ -867,15 +861,6 @@ class PerformanceTracker {
     const executionTime99Percent = this.calculatePercentile(allExecutionTimes, 99)
     const executionTime100Percent = this.calculatePercentile(allExecutionTimes, 100)
 
-    logDiagnostics('symbolInterpretDetail2', {
-      string1: 'executionTime70Percent',
-      string2: 'executionTime99Percent',
-      string3: 'executionTime100Percent',
-      number1: executionTime70Percent,
-      number2: executionTime99Percent,
-      number3: executionTime100Percent,
-    })
-
     const allExecutionCounts: number[] = []
     for (const count of this.instructionStats.instructionCounts.values()) {
       allExecutionCounts.push(count)
@@ -884,15 +869,6 @@ class PerformanceTracker {
     const executionTimes70Percent = this.calculatePercentile(allExecutionCounts, 70)
     const executionTimes99Percent = this.calculatePercentile(allExecutionCounts, 99)
     const executionTimes100Percent = this.calculatePercentile(allExecutionCounts, 100)
-
-    logDiagnostics('symbolInterpretDetail3', {
-      string1: 'executionTimes70Percent',
-      string2: 'executionTimes99Percent',
-      string3: 'executionTimes100Percent',
-      number1: executionTimes70Percent,
-      number2: executionTimes99Percent,
-      number3: executionTimes100Percent,
-    })
 
     return {
       avgExecutionTimePerInstruction,
