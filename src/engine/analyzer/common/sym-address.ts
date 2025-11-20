@@ -161,10 +161,13 @@ function isSameValueSymAddress(val1: any, val2: any): any {
 
 // ***
 
-module.exports = {
+const symAddress = {
   toStringID(node: any) {
     return toStringIDCached(node, new Map())
   },
 
   isSameValue: isSameValueSymAddress,
 }
+
+module.exports = symAddress
+export default symAddress
