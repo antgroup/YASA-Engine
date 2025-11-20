@@ -163,7 +163,7 @@ function outputAnalyzerResult(analyzer: any, checker: any, printf?: PrintFunctio
     const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
     outputStrategyAutoRegister.autoRegisterAllStrategies()
 
-    const { yasaSeparator } = require('../util/format-util')
+    const { yasaSeparator } = require('./util/format-util')
     yasaSeparator('outputFindings')
     for (const outputStrategyId of checker.getStrategyId()) {
       const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
