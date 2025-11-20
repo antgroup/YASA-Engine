@@ -29,7 +29,6 @@ const { matchSinkAtFuncCallWithCalleeType } = require('../../../checker/taint/co
 const { moveExistElementsToBuffer } = require('../java/common/builtins/buffer')
 const { PerformanceTracker } = require('../../../util/performance-tracker')
 
-
 /**
  * The main AST analyzer with checker invoking
  * @param checker
@@ -1634,6 +1633,11 @@ class Analyzer extends MemSpace {
     if (node.body) {
       // TODO: handle function declaration better
       fclos = this.createFuncScope(node, scope)
+      for (const body of node?.body?.body) {
+        if (body.type === 'FunctionDefinition') {
+          this.processInstruction(fclos, body, state)
+        }
+      }
     } else {
       fclos = UndefinedValue()
     }

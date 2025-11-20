@@ -114,10 +114,10 @@ function convertNode2Range(node: any): RangePosition[] {
   let endCharacter = -1
   let startLine = 0
   let endLine = 0
-  if (typeof node.loc.start.column !== 'undefined') startCharacter = node.loc.start.column
-  if (typeof node.loc.end.column !== 'undefined') endCharacter = node.loc.end.column
-  if (typeof node.loc.start.line !== 'undefined' && node.loc.start.line > 0) startLine = node.loc.start.line
-  if (typeof node.loc.end.line !== 'undefined' && node.loc.end.line > 0) endLine = node.loc.end.line
+  if (typeof node.loc?.start?.column !== 'undefined') startCharacter = node.loc.start.column
+  if (typeof node.loc?.end?.column !== 'undefined') endCharacter = node.loc.end.column
+  if (typeof node.loc?.start?.line !== 'undefined' && node.loc?.start?.line > 0) startLine = node.loc.start.line
+  if (typeof node.loc?.end?.line !== 'undefined' && node.loc?.end?.line > 0) endLine = node.loc.end.line
   return [
     {
       character: startCharacter,
