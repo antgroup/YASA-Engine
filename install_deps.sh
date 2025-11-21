@@ -27,7 +27,7 @@ detect_platform() {
 
 # Check if current directory is YASA-Engine root
 check_directory() {
-  if [ ! -f "package.json" ] || [ ! -d "deps" ]; then
+  if [ ! -f "package.json" ]; then
     echo "[ERROR] This script must be run from the root directory of the YASA-Engine repository."
     echo "Please navigate to the YASA-Engine directory and try again."
     exit 1
@@ -37,31 +37,30 @@ check_directory() {
 # Download binary files
 download_binaries() {
   PLATFORM=$1
-  RELEASE_URL="https://api.github.com/repos/antgroup/YASA-UAST/releases/latest"
-  
-  echo "[INFO] Fetching latest release info from GitHub..."
-  TAG=$(curl -s "$RELEASE_URL" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf-8')).tag_name")
-  
-  if [ -z "$TAG" ]; then
-    echo "[ERROR] Failed to fetch release info. Please check your network."
-    exit 1
-  fi
 
-  echo "[INFO] Latest version: $TAG"
+  echo "[INFO] Downloading latest release binaries for platform: $PLATFORM..."
 
   # Create target directories
   mkdir -p deps/uast4go deps/uast4py
 
-  # Download corresponding binaries and place them in specified paths
+  # Define binaries and target paths
   BINARIES=("uast4go-$PLATFORM" "uast4py-$PLATFORM")
   TARGET_PATHS=("deps/uast4go/uast4go" "deps/uast4py/uast4py")
 
   for i in "${!BINARIES[@]}"; do
     BINARY=${BINARIES[$i]}
     TARGET=${TARGET_PATHS[$i]}
-    DOWNLOAD_URL="https://github.com/antgroup/YASA-UAST/releases/download/${TAG}/${BINARY}"
+    DOWNLOAD_URL="https://github.com/antgroup/YASA-UAST/releases/latest/download/${BINARY}"
+
     echo "[INFO] Downloading $BINARY to $TARGET..."
-    curl -L -f -o "$TARGET" "$DOWNLOAD_URL" || { echo "[ERROR] Failed to download $BINARY"; exit 1; }
+
+    # Download the binary
+    curl -L -f -o "$TARGET" "$DOWNLOAD_URL" || {
+      echo "[ERROR] Failed to download $BINARY"; 
+      exit 1;
+    }
+
+    # Make the binary executable
     chmod +x "$TARGET"
   done
 }
