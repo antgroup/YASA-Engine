@@ -1,3 +1,6 @@
+import type TypeRelatedInfoResolver from '../../resolver/common/type-related-info-resolver'
+import symAddressCallgraph from '../../engine/analyzer/common/sym-address'
+
 const config = require('../../config')
 const EntryPoint = require('../../engine/analyzer/common/entrypoint')
 const constValue = require('../../util/constant')
@@ -10,20 +13,95 @@ const logger = require('../../util/logger')(__filename)
 const sourceLine = require('../../engine/analyzer/common/source-line')
 
 /**
+ *
+ * @param ast
+ */
+function printLoc(ast: any): string {
+  let sourcefile: string
+  sourcefile = ast?.loc?.sourcefile
+  if (sourcefile) {
+    const splits = sourcefile.split('/')
+    sourcefile = splits[splits.length - 1]
+  }
+  const startLine = ast && ast.loc.start.line
+  const endLine = ast && ast.loc.end.line
+
+  return ` \\n[${sourcefile} : ${startLine}_${endLine}]`
+}
+
+/**
+ *
+ * @param fclos fclos
+ * @param fdef function definition
+ * @param callSiteNode call site node
+ * @param callSiteLiteral
+ * @param calleeType
+ * @param fsig
+ */
+function prettyPrint(
+  fclos: any,
+  fdef: any,
+  callSiteNode: any,
+  callSiteLiteral: string,
+  calleeType: string,
+  fsig: string
+): string {
+  let ret: string = ''
+  let name: string
+  if (!fdef || !fdef.name || fdef.name === '<anonymous>') {
+    if (calleeType !== '' && fsig !== '') {
+      ret = `${calleeType}.${fsig}`
+    } else if (callSiteLiteral !== '') {
+      ret = callSiteLiteral
+    } else {
+      ret = symAddressCallgraph.toStringID(callSiteNode) || ''
+    }
+  } else {
+    // pretty print fdef
+    name = fdef.name || '<anonymous>'
+    // try to attach namespace
+    if (fclos && fclos.__proto__.constructor.name !== 'BVT') {
+      if (fclos.vtype === 'class') {
+        // e.g. javascript function class
+        name = `new ${name}`
+      } else if (fclos.parent?.vtype === 'class' || fclos.parent?.fdef?.type === 'ClassDefinition') {
+        const nsDef = fclos.parent.fdef
+        const nsName = nsDef?.name || '<anonymous>'
+        if (name === '_CTOR_') {
+          name = `new ${nsName}`
+        } else {
+          name = `${nsName} :: ${name}`
+        }
+      }
+    }
+
+    ret = name
+  }
+  if (!ret) {
+    ret = 'undefined'
+  }
+  ret = ret.split('\n')[0]
+  ret = ret.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+  if (ret.length > 500) {
+    ret = `${ret.slice(0, 500)}...`
+  }
+  // attach loc
+  if (fdef) {
+    ret += printLoc(fdef)
+  }
+  return ret
+}
+
+/**
  * generate full callGraph by funcSymbolTable
  * @param analyzer
  */
 function makeFullCallGraph(analyzer: any): void {
+  analyzer.performanceTracker.start(`makeFullCallGraph(BySymbolInterpret)`)
   config.loadDefaultRule = false
   config.loadExternalRule = false
   config.makeAllCG = true
-  const newCheckerManager = new CheckerManager(
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    BasicRuleHandler
-  )
+  const newCheckerManager = new CheckerManager(undefined, undefined, undefined, undefined, BasicRuleHandler)
   newCheckerManager.doRegister(callGraphRule, newCheckerManager)
   config.loadDefaultRule = true
   config.loadExternalRule = true
@@ -89,6 +167,64 @@ function makeFullCallGraph(analyzer: any): void {
   }
   analyzer.checkerManager = backupCheckerManager
   config.makeAllCG = false
+  analyzer.performanceTracker.end(`makeFullCallGraph(BySymbolInterpret)`)
+}
+
+/**
+ * generate full callGraph by funcSymbolTable without symbol interpret
+ * @param analyzer
+ * @param resolver
+ */
+function makeFullCallGraphByType(analyzer: any, resolver: TypeRelatedInfoResolver) {
+  if (!resolver) {
+    return
+  }
+
+  analyzer.performanceTracker.start('makeFullCallGraphByType')
+
+  if (!resolver.resolveFinish) {
+    resolver.resolve(analyzer)
+  }
+
+  const graph = new Graph()
+  Object.entries(analyzer.funcSymbolTable).forEach(([, funcSymbol]) => {
+    const funcSymbolAny = funcSymbol as any
+    if (funcSymbolAny.invocationMap instanceof Map) {
+      for (const invocationArray of funcSymbolAny.invocationMap.values()) {
+        for (const invocation of invocationArray) {
+          const fromNode = graph.addNode(
+            prettyPrint(
+              invocation.fromScope,
+              invocation.fromScopeAst,
+              invocation.callSite,
+              invocation.callSiteLiteral,
+              invocation.calleeType,
+              invocation.fsig
+            ),
+            { funcDef: invocation.fromScopeAst, funcSymbol: invocation.fromScope }
+          )
+          const toNode = graph.addNode(
+            prettyPrint(
+              invocation.toScope,
+              invocation.toScopeAst,
+              invocation.callSite,
+              invocation.callSiteLiteral,
+              invocation.calleeType,
+              invocation.fsig
+            ),
+            {
+              funcDef: invocation.toScopeAst,
+              funcSymbol: invocation.toScope,
+            }
+          )
+          graph.addEdge(fromNode, toNode, { callSite: invocation.callSite })
+        }
+      }
+    }
+  })
+  analyzer.ainfo.callgraph = graph
+
+  analyzer.performanceTracker.end('makeFullCallGraphByType')
 }
 
 /**
@@ -363,9 +499,9 @@ function getNodeInCallGraphByLoc(loc: any, nodes: any): any {
       const startLine = nodes.get(key)?.opts?.funcDef?.loc?.start?.line
       const endLine = nodes.get(key)?.opts?.funcDef?.loc?.end?.line
       if (loc.sourcefile === filename && loc.start.line >= startLine && loc.end.line <= endLine) {
-        if (loc.start.line > tempStartLine && loc.end.line < tempEndLine) {
-          tempStartLine = loc.start.line
-          tempEndLine = loc.end.line
+        if (startLine > tempStartLine && endLine < tempEndLine) {
+          tempStartLine = startLine
+          tempEndLine = endLine
           tempKey = key
         }
       }
@@ -401,9 +537,11 @@ function getNodeInCallGraphByKeyword(keyword: string, nodes: any): any[] {
 
 module.exports = {
   makeFullCallGraph,
+  makeFullCallGraphByType,
   getAllEntryPointsUsingCallGraph,
   getAllFileEntryPointsUsingFileManager,
   getEntryPointsUsingCallGraphByLoc,
   getFclosEntryPointsUsingCallGraphByTargetNode,
   getEntryPointsUsingCallGraphByKeyWords,
+  prettyPrint,
 }
