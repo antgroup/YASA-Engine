@@ -88,6 +88,9 @@ class CallgraphChecker extends CheckerCallgraph {
 
     const from = stack[stack.length - 1] || { name: '<__entry_point__>', sid: '<__entry_point__>', vtype: 'fclos' }
     const fromAST = from.fdef
+    if (fromAST && fromAST.type !== 'FunctionDefinition' && from.vtype !== 'fclos') {
+      return
+    }
     const callgraph = (ainfo.callgraph = ainfo.callgraph || new this.kit.Graph())
     const fromNode = callgraph.addNode(this.prettyPrint(from, fromAST, call_site_node), {
       funcDef: fromAST,
