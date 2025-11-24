@@ -339,7 +339,7 @@ class Scope {
    */
   formatScope(scope: any, delimit: any): string {
     //		return JSON.stringify(scope, JSON_scope_replacer_scope, 2);
-    return ((cache = []), JSON.stringify(scope, JSON_scope_replacer_scope, delimit))
+    return (cache = []), JSON.stringify(scope, JSON_scope_replacer_scope, delimit)
   }
 
   /**

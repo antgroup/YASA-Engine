@@ -77,10 +77,7 @@ class CallgraphChecker extends CheckerCallgraph {
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { fclos, argvalues, ainfo } = info
-    let fdecl = fclos.fdef
-    if (fdecl?.type === 'ClassDefinition' && fclos.value?._CTOR_ && fclos.value?._CTOR_.vtype === 'fclos') {
-      fdecl = fclos?.value?._CTOR_?.fdef
-    }
+    const fdecl = fclos.fdef
     if (fclos === undefined || fdecl?.type !== 'FunctionDefinition') {
       return
     }
@@ -91,6 +88,9 @@ class CallgraphChecker extends CheckerCallgraph {
 
     const from = stack[stack.length - 1] || { name: '<__entry_point__>', sid: '<__entry_point__>', vtype: 'fclos' }
     const fromAST = from.fdef
+    if (fromAST && fromAST.type !== 'FunctionDefinition' && from.vtype !== 'fclos') {
+      return
+    }
     const callgraph = (ainfo.callgraph = ainfo.callgraph || new this.kit.Graph())
     const fromNode = callgraph.addNode(this.prettyPrint(from, fromAST, call_site_node), {
       funcDef: fromAST,
