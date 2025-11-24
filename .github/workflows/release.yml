@@ -168,9 +168,9 @@ jobs:
         id: test_js
         run: |
           echo "Running JavaScript tests..."
-          OUTPUT_JS=$(npm run test-js 2>&1)
-          echo "$OUTPUT_JS"
-          if echo "$OUTPUT_JS" | grep -q "------------- 1: taint_flow_test-------------"; then
+          npm run test-js > test-js-output.log 2>&1
+          cat test-js-output.log
+          if grep -q "------------- 1: taint_flow_test-------------" test-js-output.log; then
             echo "✅ JavaScript tests passed"
             echo "js_result=success" >> $GITHUB_OUTPUT
           else
@@ -182,9 +182,9 @@ jobs:
         id: test_java
         run: |
           echo "Running Java tests..."
-          OUTPUT_JAVA=$(npm run test-java 2>&1)
-          echo "$OUTPUT_JAVA"
-          if echo "$OUTPUT_JAVA" | grep -q "------------- 1: taint_flow_test-------------"; then
+          npm run test-java > test-java-output.log 2>&1
+          cat test-java-output.log
+          if grep -q "------------- 1: taint_flow_test-------------" test-java-output.log; then
             echo "✅ Java tests passed"
             echo "java_result=success" >> $GITHUB_OUTPUT
           else
@@ -196,9 +196,9 @@ jobs:
         id: test_go
         run: |
           echo "Running Go tests..."
-          OUTPUT_GO=$(npm run test-go 2>&1)
-          echo "$OUTPUT_GO"
-          if echo "$OUTPUT_GO" | grep -q "------------- 1: taint_flow_test-------------"; then
+          npm run test-go > test-go-output.log 2>&1
+          cat test-go-output.log
+          if grep -q "------------- 1: taint_flow_test-------------" test-go-output.log; then
             echo "✅ Go tests passed"
             echo "go_result=success" >> $GITHUB_OUTPUT
           else
@@ -210,9 +210,9 @@ jobs:
         id: test_python
         run: |
           echo "Running Python tests..."
-          OUTPUT_PYTHON=$(npm run test-python 2>&1)
-          echo "$OUTPUT_PYTHON"
-          if echo "$OUTPUT_PYTHON" | grep -q "------------- 1: taint_flow_test-------------"; then
+          npm run test-python > test-python-output.log 2>&1
+          cat test-python-output.log
+          if grep -q "------------- 1: taint_flow_test-------------" test-python-output.log; then
             echo "✅ Python tests passed"
             echo "python_result=success" >> $GITHUB_OUTPUT
           else
