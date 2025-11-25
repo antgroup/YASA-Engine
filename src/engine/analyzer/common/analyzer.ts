@@ -1633,9 +1633,11 @@ class Analyzer extends MemSpace {
     if (node.body) {
       // TODO: handle function declaration better
       fclos = this.createFuncScope(node, scope)
-      for (const body of node?.body?.body) {
-        if (body.type === 'FunctionDefinition') {
-          this.processInstruction(fclos, body, state)
+      if (node.body.body && Array.isArray(node?.body?.body)) {
+        for (const body of node.body.body) {
+          if (body.type === 'FunctionDefinition') {
+            this.processInstruction(fclos, body, state)
+          }
         }
       }
     } else {

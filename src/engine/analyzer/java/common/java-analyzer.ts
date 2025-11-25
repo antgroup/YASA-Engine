@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars, @typescript-eslint/no-use-before-define */
+import JavaTypeRelatedInfoResolver from '../../../../resolver/java/java-type-related-info-resolver'
+
 const _ = require('lodash')
 const fs = require('fs')
 const path = require('path')
@@ -41,6 +43,7 @@ class JavaAnalyzer extends (Analyzer as any) {
     )
     super(checkerManager, options)
     this.classMap = new Map()
+    this.typeResolver = new JavaTypeRelatedInfoResolver()
   }
 
   /**

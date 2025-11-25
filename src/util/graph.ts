@@ -80,20 +80,30 @@ class GraphClass {
   dumpGraph(): { nodes: Record<string, any>; edges: Record<string, any> } {
     const newEdges = [...this.edges.entries()]
       .filter(([key, value]) => !key.includes('entry_point'))
-      .reduce((acc, [key, value]) => {
-        const { opts, ...otherField } = value
-        const { callSite, ...rest } = opts
-        acc[key] = { ...otherField, callSite: { loc: callSite?.loc }, ...rest }
-        return acc
-      }, {} as Record<string, any>)
+      .reduce(
+        (acc, [key, value]) => {
+          const { opts, ...otherField } = value
+          const { callSite, ...rest } = opts
+          acc[key] = { ...otherField, callSite: { loc: callSite?.loc }, ...rest }
+          return acc
+        },
+        {} as Record<string, any>
+      )
     const newNodes = [...this.nodes.entries()]
       .filter(([key, value]) => !key.includes('entry_point'))
-      .reduce((acc, [key, value]) => {
-        const { opts, ...otherField } = value
-        const { funcDef, funcSymbol } = opts
-        acc[key] = { ...otherField, funcDef: { loc: funcDef?.loc, name: funcDef?.name }, fullName: funcSymbol?._qid }
-        return acc
-      }, {} as Record<string, any>)
+      .reduce(
+        (acc, [key, value]) => {
+          const { opts, ...otherField } = value
+          const { funcDef, funcSymbol } = opts
+          acc[key] = {
+            ...otherField,
+            funcDef: { loc: funcDef?.loc, name: funcDef?.name },
+            fullName: funcSymbol?._qid ? funcSymbol?._qid : key,
+          }
+          return acc
+        },
+        {} as Record<string, any>
+      )
     return {
       nodes: newNodes,
       edges: newEdges,

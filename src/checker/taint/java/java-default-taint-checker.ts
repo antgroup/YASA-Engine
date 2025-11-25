@@ -81,7 +81,11 @@ class JavaDefaultTaintChecker extends JavaTaintAbstractChecker {
         })
       }
 
-      FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      if (Config.cgAlgo === 'CHA' && analyzer.typeResolver) {
+        FullCallGraphFileEntryPoint.makeFullCallGraphByType(analyzer, analyzer.typeResolver)
+      } else {
+        FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      }
       const fullCallGraphEntrypoint = FullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
         analyzer.ainfo?.callgraph
       )
