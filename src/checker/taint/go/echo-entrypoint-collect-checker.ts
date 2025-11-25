@@ -1,12 +1,13 @@
 import type Unit from '../../../engine/analyzer/common/value/unit'
-import { fixKnownPackageName, flattenUnionValues, processEntryPointAndTaintSource } from './util'
+import { flattenUnionValues, processEntryPointAndTaintSource } from './util'
 
 const config = require('../../../config')
+const GoAnalyzer = require('../../../engine/analyzer/golang/common/go-analyzer')
 
-const KnownPackageName = new Map<string, string>([
-  ['github.com/labstack/echo/v4', 'echo'],
-  ['github.com/labstack/echo-jwt/v4', 'echojwt'],
-])
+const KnownPackageName = {
+  'github.com/labstack/echo/v4': 'echo',
+  'github.com/labstack/echo-jwt/v4': 'echojwt',
+}
 
 const RouteRegistryObject = ['github.com/labstack/echo/v4.New()']
 
@@ -182,6 +183,7 @@ class EchoEntrypointCollectChecker extends Checker {
    */
   constructor(resultManager: any) {
     super(resultManager, 'echo-entrypoint-collect-checker')
+    GoAnalyzer.registerKnownPackageNames(KnownPackageName)
   }
 
   /**
@@ -236,6 +238,8 @@ class EchoEntrypointCollectChecker extends Checker {
       case 'Group':
         this.handleMiddlewareArgs(analyzer, scope, state, argvalues.slice(1))
         break
+      default:
+        break
     }
   }
 
@@ -249,18 +253,6 @@ class EchoEntrypointCollectChecker extends Checker {
    */
   triggerAtSymbolInterpretOfEntryPointAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
     if (info?.entryPoint.functionName === 'main') processedRouteRegistry.clear()
-  }
-
-  /**
-   *
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param state
-   * @param info
-   */
-  triggerAtPreDeclaration(analyzer: any, scope: any, node: any, state: any, info: any) {
-    fixKnownPackageName(node, KnownPackageName)
   }
 
   /**

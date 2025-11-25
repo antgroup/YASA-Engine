@@ -1,4 +1,3 @@
-import type { VariableDeclaration } from '@ant-yasa/uast-spec'
 import type Unit from '../../../engine/analyzer/common/value/unit'
 
 const IntroduceTaint = require('../common-kit/source-util')
@@ -51,19 +50,4 @@ export function processEntryPointAndTaintSource(
         }
       }
     })
-}
-
-/**
- *
- * @param node
- * @param knownPackageName
- */
-export function fixKnownPackageName(node: VariableDeclaration, knownPackageName: Map<string, string>) {
-  if (node.cloned !== false || node.init?.type !== 'ImportExpression' || node.id.type !== 'Identifier') return
-
-  const moduleName = node.init.from.value
-  if (typeof moduleName !== 'string') return
-  const name = knownPackageName.get(moduleName)
-  if (!name) return
-  node.id.name = name
 }
