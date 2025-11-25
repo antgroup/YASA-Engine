@@ -141,10 +141,11 @@ class MemSpace extends Scope {
    * @param scope
    * @param node  node value, this should not be raw uast node
    * @param state
+   * @param limit
    * @returns {{type, object, property}|*}
    */
-  getMemberValueNoCreate(scope: any, node: any, state: any): any {
-    return this._getMemberValue(scope, node, state, false)
+  getMemberValueNoCreate(scope: any, node: any, state: any, limit?: number): any {
+    return this._getMemberValue(scope, node, state, false, limit)
   }
 
   /**
