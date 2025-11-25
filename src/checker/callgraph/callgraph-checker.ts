@@ -1,5 +1,6 @@
 // used for dump call graph
 import type { IConfig } from '../../config'
+import type TypeRelatedInfoResolver from '../../resolver/common/type-related-info-resolver'
 
 const _ = require('lodash')
 const symAddressCallgraph = require('../../engine/analyzer/common/sym-address')
@@ -51,7 +52,12 @@ class CallgraphChecker extends CheckerCallgraph {
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
     if (configCallgraph.dumpAllCG) {
       const fullCallGraphFileEntryPoint = require('../common/full-callgraph-file-entrypoint')
-      fullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      const typeResolver: TypeRelatedInfoResolver | undefined = this.getTypeResolver(analyzer)
+      if (typeResolver) {
+        fullCallGraphFileEntryPoint.makeFullCallGraphByType(analyzer, typeResolver)
+      } else {
+        fullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      }
     }
   }
 
@@ -217,6 +223,19 @@ class CallgraphChecker extends CheckerCallgraph {
     const endLine = ast && ast.loc.end.line
 
     return ` \\n[${sourcefile} : ${startLine}_${endLine}]`
+  }
+
+  /**
+   * get type resolver
+   * @param analyzer
+   * @returns {TypeRelatedInfoResolver|undefined}
+   */
+  getTypeResolver(analyzer: any): TypeRelatedInfoResolver | undefined {
+    let resolver: TypeRelatedInfoResolver | undefined
+    if (configCallgraph.cgAlgo === 'CHA') {
+      resolver = analyzer.typeResolver
+    }
+    return resolver
   }
 }
 
