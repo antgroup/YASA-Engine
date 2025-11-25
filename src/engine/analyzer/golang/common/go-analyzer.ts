@@ -345,7 +345,7 @@ class GoAnalyzer extends Analyzer {
           ainfo: this.ainfo,
         })
       }
-      ret = super.processCallExpression(scope, node, state)
+      ret = super.processCallExpression(scope, node, state, fclos)
       if (ret && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
           fclos,
