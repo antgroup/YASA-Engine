@@ -74,7 +74,11 @@ class GoDefaultTaintChecker extends TaintChecker {
 
     // 使用callGraph边界作为entrypoint
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
-      FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      if (Config.cgAlgo === 'CHA' && analyzer.typeResolver) {
+        FullCallGraphFileEntryPoint.makeFullCallGraphByType(analyzer, analyzer.typeResolver)
+      } else {
+        FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
+      }
       const fullCallGraphEntrypoint = FullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
         analyzer.ainfo?.callgraph
       )
