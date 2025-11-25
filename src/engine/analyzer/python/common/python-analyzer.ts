@@ -10,9 +10,8 @@ const {
 const logger = require('../../../../util/logger')(__filename)
 const Config = require('../../../../config')
 const { ErrorCode, Errors } = require('../../../../util/error-code')
-const { normalizeAndJoin, assembleFullPath } = require('../../../../util/file-util')
+const { assembleFullPath } = require('../../../../util/file-util')
 const path = require('path')
-const fs = require('fs-extra')
 const SourceLine = require('../../common/source-line')
 const Uuid = require('node-uuid')
 const Scope = require('../../common/scope')
@@ -27,6 +26,7 @@ const globby = require('fast-glob')
 const _ = require('lodash')
 const { getSourceNameList } = require('./entrypoint-collector/python-entrypoint')
 const { handleException } = require('../../common/exception-handler')
+const { resolveImportPath } = require('./python-import-resolver')
 
 /**
  *
@@ -48,6 +48,9 @@ class PythonAnalyzer extends (Analyzer as any) {
 
     this.fileList = []
     this.astManager = {}
+    // 搜索路径列表（类似 Python 的 sys.path）
+    // 用于解析绝对导入，按优先级排序
+    this.searchPaths = []
   }
 
   /**
@@ -402,19 +405,19 @@ class PythonAnalyzer extends (Analyzer as any) {
   }
 
   /**
+   * 处理 Python import 语句
    *
    * @param scope
    * @param node
    * @param state
    */
   processImportDirect(scope: any, node: any, state: any) {
-    const { options } = this
     let { from, imported } = node
     let sourcefile
     while (imported) {
       sourcefile = imported.loc.sourcefile
       if (sourcefile) break
-      imported = from.parent
+      imported = from?.parent
     }
     if (!sourcefile) {
       handleException(
@@ -422,141 +425,120 @@ class PythonAnalyzer extends (Analyzer as any) {
         'Error occurred in PythonAnalyzer.processImportDirect: failed to sourcefile in ast',
         'Error occurred in PythonAnalyzer.processImportDirect: failed to sourcefile in ast'
       )
-      return
-    }
-    const importName = imported.value?.replaceAll('.', '/') || imported.name?.replaceAll('.', '/')
-    const parts = Config.maindir.split('/')
-    const appName = parts[parts.length - 1]
-    if (!from) {
-      let pathname = normalizeAndJoin(path.dirname(sourcefile.toString()), importName)
-      if (this.fileList.includes(`${pathname}.py`)) {
-        pathname = `${pathname}.py`
-        const m = this.moduleManager.field[pathname]
-        if (m) return m
-        try {
-          const ast = this.astManager[pathname]
-          if (ast) return this.processModule(ast, pathname, false as any)
-        } catch (e) {
-          handleException(
-            e,
-            `Error: PythonAnalyzer.processImportDirect: failed to loading: ${pathname}`,
-            `Error: PythonAnalyzer.processImportDirect: failed to loading: ${pathname}`
-          )
-        }
-      } else if (fs.existsSync(pathname) && fs.statSync(pathname) && fs.statSync(pathname).isDirectory()) {
-        const index = pathname?.indexOf(appName)
-        const packageNames = pathname.substring(index).split('/')
-        let packageValue = this.packageManager
-        let packageName
-        for (packageName of packageNames) {
-          packageValue = packageValue?.field[packageName]
-        }
-        if (packageValue) return packageValue
-        const initFilePath = `${pathname}/__init__.py`
-        if (this.fileList.includes(initFilePath)) {
-          try {
-            const ast = this.astManager[initFilePath]
-            if (ast) return this.processModule(ast, initFilePath, false as any)
-          } catch (e) {
-            handleException(
-              e,
-              `Error: PythonAnalyzer.processImportDirect: failed to loading: ${initFilePath}`,
-              `Error: PythonAnalyzer.processImportDirect: failed to loading: ${initFilePath}`
-            )
-          }
-        }
-      } else {
-        return this.loadPredefinedModule(scope, importName, 'syslib_from')
-      }
       return UndefinedValue()
     }
-    const fname = from?.value.replace(/(?<=[^.])\./g, '/')
-    let pathname = normalizeAndJoin(path.dirname(sourcefile.toString()), fname)
-    if (this.fileList.includes(`${pathname}.py`)) {
-      pathname = `${pathname}.py`
-      let m = this.moduleManager.field[pathname]
-      if (m) {
-        if (imported && imported.name !== '*') {
-          const field = m.field[imported.name]
-          if (field) return field
-        }
-        return m
-      }
-      try {
-        const ast = this.astManager[pathname]
-        if (ast) {
-          m = this.processModule(ast, pathname, false as any)
-          if (m) {
-            if (imported && imported.name !== '*') {
-              const field = m.field[imported.name]
-              if (field) return field
-            }
-            return m
-          }
-        }
-      } catch (e) {
-        handleException(
-          e,
-          `Error: PythonAnalyzer.processImportDirect: failed to loading: ${pathname}`,
-          `Error: PythonAnalyzer.processImportDirect: failed to loading: ${pathname}`
-        )
-      }
-    } else if (fs.existsSync(pathname) && fs.statSync(pathname) && fs.statSync(pathname).isDirectory()) {
-      const importPath = `${pathname}/${importName}.py`
-      if (this.fileList.includes(importPath)) {
-        const m = this.moduleManager.field[importPath]
-        if (m) return m
-        try {
-          const ast = this.astManager[importPath]
-          if (ast) return this.processModule(ast, importPath, false as any)
-        } catch (e) {
-          handleException(
-            e,
-            `Error: PythonAnalyzer.processImportDirect: failed to loading: ${importPath}`,
-            `Error: PythonAnalyzer.processImportDirect: failed to loading: ${importPath}`
-          )
-        }
-      } else {
-        const index = pathname?.indexOf(appName)
-        const packageNames = pathname.substring(index).split('/')
-        let packageValue = this.packageManager
-        let packageName
-        for (packageName of packageNames) {
-          packageValue = packageValue?.field[packageName]
-        }
-        if (packageValue) {
-          if (imported && imported.name !== '*') {
-            const field = packageValue.field[imported.name]
-            if (field) return field
-          }
-          return packageValue
-        }
-        for (const file of this.fileList) {
-          if (file.startsWith(pathname) && path.basename(file) === '__init__.py') {
-            try {
-              const ast = this.astManager[file]
-              if (ast) {
-                packageValue = this.processModule(ast, file, false as any)
-                if (imported && imported.name !== '*') {
-                  const field = packageValue.field[imported.name]
-                  if (field) return field
-                }
-                return packageValue
-              }
-            } catch (e) {
-              handleException(
-                e,
-                `Error: PythonAnalyzer.processImportDirect: failed to loading: ${file}`,
-                `Error: PythonAnalyzer.processImportDirect: failed to loading: ${file}`
-              )
-            }
-          }
-        }
+    const sourceFileAbs = path.resolve(sourcefile.toString())
+    const projectRoot = Config.maindir?.replace(/\/$/, '') || path.dirname(sourceFileAbs)
+
+    let importPath: string | null = null
+    let modulePath: string | null = null
+
+    if (!from) {
+      // 处理 "import module" 形式的导入
+      const importName = imported.value || imported.name
+      if (importName) {
+        importPath = resolveImportPath(importName, sourceFileAbs, this.fileList, projectRoot)
       }
     } else {
-      // 三方库
-      return this.loadPredefinedModule(scope, imported?.name, from?.value)
+      // 处理 "from module import ..." 形式的导入
+      const fromValue = from.value
+      if (fromValue) {
+        if (fromValue.startsWith('.')) {
+          // 相对导入，需要区分两种情况：
+          // 1. "from .. import moduleName" - 导入整个模块，fromValue 只有点号（如 ".."）
+          // 2. "from ..moduleName import fieldName" - 从模块中导入字段，fromValue 包含点号和模块名（如 "..moduleName"）
+          const onlyDots = /^\.+$/.test(fromValue)
+          if (onlyDots) {
+            const moduleName = imported?.name && imported.name !== '*' ? imported.name : null
+            const { resolveRelativeImport } = require('./python-import-resolver')
+            importPath = resolveRelativeImport(fromValue, sourceFileAbs, this.fileList, moduleName || undefined)
+            // 不设置 modulePath，因为这是导入整个模块，应该返回整个模块对象
+          } else {
+            importPath = resolveImportPath(fromValue, sourceFileAbs, this.fileList, projectRoot)
+            if (imported && imported.name && imported.name !== '*') {
+              modulePath = imported.name
+            }
+          }
+        } else {
+          // 绝对导入
+          importPath = resolveImportPath(fromValue, sourceFileAbs, this.fileList, projectRoot)
+          if (imported && imported.name && imported.name !== '*') {
+            modulePath = imported.name
+          }
+        }
+      }
     }
+
+    // 如果 resolver 找到了路径，加载模块
+    if (importPath) {
+      const normalizedPath = path.normalize(importPath)
+
+      let targetPath = normalizedPath
+      if (!targetPath.endsWith('.py')) {
+        // 可能是包目录，检查是否有 __init__.py
+        const initFile = path.join(targetPath, '__init__.py')
+        if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(initFile))) {
+          targetPath = initFile
+        } else {
+          // 尝试添加 .py 扩展名
+          const pyFile = `${targetPath}.py`
+          if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(pyFile))) {
+            targetPath = pyFile
+          }
+        }
+      }
+
+      const cachedModule = this.moduleManager.field[targetPath]
+      if (cachedModule) {
+        if (modulePath) {
+          const field = cachedModule.field?.[modulePath]
+          if (field) return field
+        }
+        return cachedModule
+      }
+
+      // 加载并处理模块
+      // 检查是否已经在处理中，防止循环导入导致的无限递归
+      const processingKey = `processing_${targetPath}`
+      if ((this as any)[processingKey]) {
+        logger.warn(`Circular import detected for: ${targetPath}`)
+        return UndefinedValue()
+      }
+
+      try {
+        ;(this as any)[processingKey] = true
+        const ast = this.astManager[targetPath]
+        if (ast) {
+          const module = this.processModule(ast, targetPath, false as any)
+          if (module) {
+            if (modulePath) {
+              const field = module.field?.[modulePath]
+              if (field) {
+                delete (this as any)[processingKey]
+                return field
+              }
+            }
+            delete (this as any)[processingKey]
+            return module
+          }
+        }
+        delete (this as any)[processingKey]
+      } catch (e) {
+        delete (this as any)[processingKey]
+        handleException(
+          e,
+          `Error: PythonAnalyzer.processImportDirect: failed to loading: ${targetPath}`,
+          `Error: PythonAnalyzer.processImportDirect: failed to loading: ${targetPath}`
+        )
+      }
+    }
+
+    // 如果找不到，尝试作为三方库处理
+    const importName = from?.value || imported?.value || imported?.name
+    if (importName) {
+      return this.loadPredefinedModule(scope, imported?.name || importName, from?.value || 'syslib_from')
+    }
+
     return UndefinedValue()
   }
 
