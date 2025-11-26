@@ -11,33 +11,34 @@ const { findSourceOfFuncParam } = PythonEntrypointSource;
 const EntryPointClass = require("../../../common/entrypoint");
 
 interface ASTObject {
-    body?: any[];
-    [key: string]: any;
+  body?: any[];
+
+  [key: string]: any;
 }
 
 interface FilenameAstMap {
-    [filename: string]: ASTObject;
+  [filename: string]: ASTObject;
 }
 
 interface ValidInstances {
-    validFastApiInstances: Set<string>;
-    validRouterInstances: Set<string>;
+  validFastApiInstances: Set<string>;
+  validRouterInstances: Set<string>;
 }
 
 interface EntryPointResult {
-    fastApiEntryPointArray: EntryPoint[];
-    fastApiEntryPointSourceArray: any[];
+  fastApiEntryPointArray: EntryPoint[];
+  fastApiEntryPointSourceArray: any[];
 }
 
 const ROUTE_DECORATORS = new Set([
-    "get",
-    "post",
-    "put",
-    "delete",
-    "patch",
-    "options",
-    "head",
-    "route",
+  "get",
+  "post",
+  "put",
+  "delete",
+  "patch",
+  "options",
+  "head",
+  "route",
 ]);
 
 /**
@@ -46,11 +47,11 @@ const ROUTE_DECORATORS = new Set([
  * @returns
  */
 function extractLiteralString(node: any): string | null {
-    if (!node) return null;
-    if (node.type === "Literal" && typeof node.value === "string") {
-        return node.value;
-    }
-    return null;
+  if (!node) return null;
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+  return null;
 }
 
 /**
@@ -59,15 +60,15 @@ function extractLiteralString(node: any): string | null {
  * @returns
  */
 function extractRouteParams(route: string | null): string[] {
-    if (!route) return [];
-    const regex = /\{(.*?)\}/g;
-    const params: string[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(route)) !== null) {
-        const name = match[1].split(":").pop();
-        if (name) params.push(name);
-    }
-    return params;
+  if (!route) return [];
+  const regex = /\{(.*?)\}/g;
+  const params: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(route)) !== null) {
+    const name = match[1].split(":").pop();
+    if (name) params.push(name);
+  }
+  return params;
 }
 
 /**
@@ -76,16 +77,16 @@ function extractRouteParams(route: string | null): string[] {
  * @returns
  */
 function extractVarNameAndInit(
-    obj: any,
+  obj: any,
 ): { varName?: string; init?: any } | null {
-    try {
-        if (obj.type === "AssignmentExpression" && obj.operator === "=") {
-            if (obj.left?.type === "Identifier") {
-                return { varName: obj.left.name, init: obj.right };
-            }
-        }
-    } catch (error) { }
-    return null;
+  try {
+    if (obj.type === "AssignmentExpression" && obj.operator === "=") {
+      if (obj.left?.type === "Identifier") {
+        return { varName: obj.left.name, init: obj.right };
+      }
+    }
+  } catch (error) {}
+  return null;
 }
 
 /**
@@ -94,51 +95,51 @@ function extractVarNameAndInit(
  * @returns
  */
 function analyzeImports(body: any[]): Map<string, string> {
-    const map = new Map<string, string>();
-    if (!Array.isArray(body)) return map;
+  const map = new Map<string, string>();
+  if (!Array.isArray(body)) return map;
 
-    for (const obj of body) {
-        if (!obj || typeof obj !== "object") continue;
+  for (const obj of body) {
+    if (!obj || typeof obj !== "object") continue;
 
-        if (
-            obj.type === "VariableDeclaration" &&
-            obj.init?.type === "ImportExpression"
-        ) {
-            const importExpr = obj.init;
-            const localName = obj.id?.name;
-            if (!localName) continue;
+    if (
+      obj.type === "VariableDeclaration" &&
+      obj.init?.type === "ImportExpression"
+    ) {
+      const importExpr = obj.init;
+      const localName = obj.id?.name;
+      if (!localName) continue;
 
-            const fromValue = extractLiteralString(importExpr.from);
-            const importedName = importExpr.imported?.name; // Identifier
+      const fromValue = extractLiteralString(importExpr.from);
+      const importedName = importExpr.imported?.name; // Identifier
 
-            if (fromValue) {
-                // from ... import ...
-                if (fromValue === "fastapi" || fromValue.startsWith("fastapi.")) {
-                    if (importedName) {
-                        // Map 'FastAPI' or 'APIRouter' to 'fastapi.FastAPI' / 'fastapi.APIRouter'
-                        //  (case: fastapi.applications)
-                        map.set(localName, `fastapi.${importedName}`);
-                    }
-                }
-            } else if (
-                importedName === "fastapi" ||
-                importedName === "fastapi.applications" ||
-                importedName === "fastapi.routing" ||
-                importedName?.startsWith("fastapi.")
-            ) {
-                // import fastapi or import fastapi.applications
-                if (
-                    importedName === localName ||
-                    importedName.startsWith(`${localName}.`)
-                ) {
-                    map.set(localName, localName);
-                } else {
-                    map.set(localName, importedName);
-                }
-            }
+      if (fromValue) {
+        // from ... import ...
+        if (fromValue === "fastapi" || fromValue.startsWith("fastapi.")) {
+          if (importedName) {
+            // Map 'FastAPI' or 'APIRouter' to 'fastapi.FastAPI' / 'fastapi.APIRouter'
+            //  (case: fastapi.applications)
+            map.set(localName, `fastapi.${importedName}`);
+          }
         }
+      } else if (
+        importedName === "fastapi" ||
+        importedName === "fastapi.applications" ||
+        importedName === "fastapi.routing" ||
+        importedName?.startsWith("fastapi.")
+      ) {
+        // import fastapi or import fastapi.applications
+        if (
+          importedName === localName ||
+          importedName.startsWith(`${localName}.`)
+        ) {
+          map.set(localName, localName);
+        } else {
+          map.set(localName, importedName);
+        }
+      }
     }
-    return map;
+  }
+  return map;
 }
 
 /**
@@ -148,21 +149,21 @@ function analyzeImports(body: any[]): Map<string, string> {
  * @returns
  */
 function resolveCanonicalName(
-    node: any,
-    importMap: Map<string, string>,
+  node: any,
+  importMap: Map<string, string>,
 ): string | null {
-    if (!node) return null;
-    if (node.type === "Identifier") {
-        return importMap.get(node.name) || null;
+  if (!node) return null;
+  if (node.type === "Identifier") {
+    return importMap.get(node.name) || null;
+  }
+  if (node.type === "MemberAccess") {
+    const objectCanonical = resolveCanonicalName(node.object, importMap);
+    const propertyName = node.property?.name;
+    if (objectCanonical && propertyName) {
+      return `${objectCanonical}.${propertyName}`;
     }
-    if (node.type === "MemberAccess") {
-        const objectCanonical = resolveCanonicalName(node.object, importMap);
-        const propertyName = node.property?.name;
-        if (objectCanonical && propertyName) {
-            return `${objectCanonical}.${propertyName}`;
-        }
-    }
-    return null;
+  }
+  return null;
 }
 
 /**
@@ -172,37 +173,37 @@ function resolveCanonicalName(
  * @returns
  */
 function collectValidInstances(
-    body: any[],
-    importMap: Map<string, string>,
+  body: any[],
+  importMap: Map<string, string>,
 ): ValidInstances {
-    const validFastApiInstances = new Set<string>();
-    const validRouterInstances = new Set<string>();
+  const validFastApiInstances = new Set<string>();
+  const validRouterInstances = new Set<string>();
 
-    for (const obj of body) {
-        if (!obj || typeof obj !== "object") continue;
+  for (const obj of body) {
+    if (!obj || typeof obj !== "object") continue;
 
-        // Only process AssignmentExpression
-        if (obj.type === "AssignmentExpression" && obj.operator === "=") {
-            const varInfo = extractVarNameAndInit(obj);
-            if (!varInfo?.varName || !varInfo.init) continue;
+    // Only process AssignmentExpression
+    if (obj.type === "AssignmentExpression" && obj.operator === "=") {
+      const varInfo = extractVarNameAndInit(obj);
+      if (!varInfo?.varName || !varInfo.init) continue;
 
-            if (varInfo.init.type === "CallExpression") {
-                const canonical = resolveCanonicalName(varInfo.init.callee, importMap);
-                if (
-                    canonical === "fastapi.FastAPI" ||
-                    canonical === "fastapi.applications.FastAPI"
-                ) {
-                    validFastApiInstances.add(varInfo.varName);
-                } else if (
-                    canonical === "fastapi.APIRouter" ||
-                    canonical === "fastapi.routing.APIRouter"
-                ) {
-                    validRouterInstances.add(varInfo.varName);
-                }
-            }
+      if (varInfo.init.type === "CallExpression") {
+        const canonical = resolveCanonicalName(varInfo.init.callee, importMap);
+        if (
+          canonical === "fastapi.FastAPI" ||
+          canonical === "fastapi.applications.FastAPI"
+        ) {
+          validFastApiInstances.add(varInfo.varName);
+        } else if (
+          canonical === "fastapi.APIRouter" ||
+          canonical === "fastapi.routing.APIRouter"
+        ) {
+          validRouterInstances.add(varInfo.varName);
         }
+      }
     }
-    return { validFastApiInstances, validRouterInstances };
+  }
+  return { validFastApiInstances, validRouterInstances };
 }
 
 /**
@@ -217,83 +218,83 @@ function collectValidInstances(
  * @param entryPointSources
  */
 function processDecorator(
-    deco: any,
-    funcName: string,
-    obj: any,
-    relativeFile: string,
-    filename: string,
-    validInstances: ValidInstances,
-    entryPoints: EntryPoint[],
-    entryPointSources: any[],
+  deco: any,
+  funcName: string,
+  obj: any,
+  relativeFile: string,
+  filename: string,
+  validInstances: ValidInstances,
+  entryPoints: EntryPoint[],
+  entryPointSources: any[],
 ): void {
-    if (!deco || deco.type !== "CallExpression") return;
-    const { callee } = deco;
+  if (!deco || deco.type !== "CallExpression") return;
+  const { callee } = deco;
 
-    if (!callee || callee.type !== "MemberAccess") return;
+  if (!callee || callee.type !== "MemberAccess") return;
 
-    const methodName = callee.property?.name;
-    if (!methodName || !ROUTE_DECORATORS.has(methodName)) return;
+  const methodName = callee.property?.name;
+  if (!methodName || !ROUTE_DECORATORS.has(methodName)) return;
 
-    // Get router or app name
-    let routerName = "";
-    if (callee.object?.type === "Identifier") {
-        routerName = callee.object.name;
+  // Get router or app name
+  let routerName = "";
+  if (callee.object?.type === "Identifier") {
+    routerName = callee.object.name;
+  }
+
+  // Validate router/app
+  const { validFastApiInstances, validRouterInstances } = validInstances;
+  const isValidRouter =
+    validFastApiInstances.has(routerName) ||
+    validRouterInstances.has(routerName);
+
+  if (!isValidRouter) return;
+
+  // Create entrypoint
+  const routePath = extractLiteralString(deco.arguments?.[0]);
+  const params = extractRouteParams(routePath);
+
+  const entryPoint = new EntryPointClass(Constant.ENGIN_START_FUNCALL);
+  entryPoint.filePath = relativeFile;
+  entryPoint.functionName = funcName;
+  entryPoint.attribute = "HTTP";
+
+  entryPoints.push(entryPoint);
+
+  if (entryPointAndSourceAtSameTime) {
+    const paramSources = findSourceOfFuncParam(
+      relativeFile,
+      funcName,
+      obj,
+      undefined,
+    );
+
+    if (paramSources) {
+      const allScopeSources = paramSources.map((s: any) => ({
+        ...s,
+        scopeFile: "all",
+      }));
+      entryPointSources.push(...allScopeSources);
     }
 
-    // Validate router/app
-    const { validFastApiInstances, validRouterInstances } = validInstances;
-    const isValidRouter =
-        validFastApiInstances.has(routerName) ||
-        validRouterInstances.has(routerName);
-
-    if (!isValidRouter) return;
-
-    // Create entrypoint
-    const routePath = extractLiteralString(deco.arguments?.[0]);
-    const params = extractRouteParams(routePath);
-
-    const entryPoint = new EntryPointClass(Constant.ENGIN_START_FUNCALL);
-    entryPoint.filePath = relativeFile;
-    entryPoint.functionName = funcName;
-    entryPoint.attribute = "HTTP";
-
-    entryPoints.push(entryPoint);
-
-    if (entryPointAndSourceAtSameTime) {
-        const paramSources = findSourceOfFuncParam(
-            relativeFile,
-            funcName,
-            obj,
-            undefined,
-        );
-
-        if (paramSources) {
-            const allScopeSources = paramSources.map((s: any) => ({
-                ...s,
-                scopeFile: "all",
-            }));
-            entryPointSources.push(...allScopeSources);
+    if (params.length && Array.isArray(obj.parameters)) {
+      for (const p of obj.parameters) {
+        const pn = p.id?.name;
+        if (pn && params.includes(pn)) {
+          entryPointSources.push({
+            introPoint: 4,
+            kind: "PYTHON_INPUT",
+            path: pn,
+            scopeFile: "all",
+            scopeFunc: funcName,
+            locStart: p.loc?.start?.line,
+            locEnd: p.loc?.end?.line,
+            locColumnStart: p.loc?.start?.column,
+            locColumnEnd: p.loc?.end?.column,
+          });
         }
-
-        if (params.length && Array.isArray(obj.parameters)) {
-            for (const p of obj.parameters) {
-                const pn = p.id?.name;
-                if (pn && params.includes(pn)) {
-                    entryPointSources.push({
-                        introPoint: 4,
-                        kind: "PYTHON_INPUT",
-                        path: pn,
-                        scopeFile: "all",
-                        scopeFunc: funcName,
-                        locStart: p.loc?.start?.line,
-                        locEnd: p.loc?.end?.line,
-                        locColumnStart: p.loc?.start?.column,
-                        locColumnEnd: p.loc?.end?.column,
-                    });
-                }
-            }
-        }
+      }
     }
+  }
 }
 
 /**
@@ -303,77 +304,77 @@ function processDecorator(
  * @returns
  */
 function findFastApiEntryPointAndSource(
-    filenameAstObj: FilenameAstMap,
-    dir: string,
+  filenameAstObj: FilenameAstMap,
+  dir: string,
 ): EntryPointResult {
-    const entryPoints: EntryPoint[] = [];
-    const entryPointSources: any[] = [];
+  const entryPoints: EntryPoint[] = [];
+  const entryPointSources: any[] = [];
 
-    for (const filename in filenameAstObj) {
-        if (!Object.prototype.hasOwnProperty.call(filenameAstObj, filename))
-            continue;
-        const fileObj = filenameAstObj[filename];
-        if (!fileObj?.body) continue;
+  for (const filename in filenameAstObj) {
+    if (!Object.prototype.hasOwnProperty.call(filenameAstObj, filename))
+      continue;
+    const fileObj = filenameAstObj[filename];
+    if (!fileObj?.body) continue;
 
-        // Calculate relative path
-        const { body } = fileObj;
-        const relativeFile = filename.startsWith(dir)
-            ? extractRelativePath(filename, dir)
-            : filename;
+    // Calculate relative path
+    const { body } = fileObj;
+    const relativeFile = filename.startsWith(dir)
+      ? extractRelativePath(filename, dir)
+      : filename;
 
-        if (!relativeFile) continue;
+    if (!relativeFile) continue;
 
-        const importMap = analyzeImports(body);
+    const importMap = analyzeImports(body);
 
-        const validImports = new Set([
-            "fastapi",
-            "fastapi.FastAPI",
-            "fastapi.APIRouter",
-            "fastapi.applications",
-            "fastapi.routing",
-        ]);
-        let hasFastApiImport = false;
-        for (const val of importMap.values()) {
-            if (validImports.has(val)) {
-                hasFastApiImport = true;
-                break;
-            }
-        }
-        if (!hasFastApiImport) continue;
-
-        const validInstances = collectValidInstances(body, importMap);
-
-        for (const obj of body) {
-            if (!obj || typeof obj !== "object") continue;
-
-            if (
-                obj.type === "FunctionDefinition" &&
-                obj._meta?.decorators &&
-                obj.id?.name
-            ) {
-                const funcName = obj.id.name;
-                const { decorators } = obj._meta;
-
-                for (const deco of decorators) {
-                    processDecorator(
-                        deco,
-                        funcName,
-                        obj,
-                        relativeFile,
-                        filename,
-                        validInstances,
-                        entryPoints,
-                        entryPointSources,
-                    );
-                }
-            }
-        }
+    const validImports = new Set([
+      "fastapi",
+      "fastapi.FastAPI",
+      "fastapi.APIRouter",
+      "fastapi.applications",
+      "fastapi.routing",
+    ]);
+    let hasFastApiImport = false;
+    for (const val of importMap.values()) {
+      if (validImports.has(val)) {
+        hasFastApiImport = true;
+        break;
+      }
     }
+    if (!hasFastApiImport) continue;
 
-    return {
-        fastApiEntryPointArray: entryPoints,
-        fastApiEntryPointSourceArray: entryPointSources,
-    };
+    const validInstances = collectValidInstances(body, importMap);
+
+    for (const obj of body) {
+      if (!obj || typeof obj !== "object") continue;
+
+      if (
+        obj.type === "FunctionDefinition" &&
+        obj._meta?.decorators &&
+        obj.id?.name
+      ) {
+        const funcName = obj.id.name;
+        const { decorators } = obj._meta;
+
+        for (const deco of decorators) {
+          processDecorator(
+            deco,
+            funcName,
+            obj,
+            relativeFile,
+            filename,
+            validInstances,
+            entryPoints,
+            entryPointSources,
+          );
+        }
+      }
+    }
+  }
+
+  return {
+    fastApiEntryPointArray: entryPoints,
+    fastApiEntryPointSourceArray: entryPointSources,
+  };
 }
 
 export = { findFastApiEntryPointAndSource };
