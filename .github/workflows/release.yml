@@ -196,6 +196,45 @@ jobs:
             echo "java_result=failure" >> $GITHUB_OUTPUT
           fi
 
+      - name: Download UAST binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: uast-binaries
+          path: uast_binaries/
+
+      - name: Extract and Deploy Linux Binaries to deps/
+        run: |
+          # 创建目标目录
+          mkdir -p deps/uast4go deps/uast4py
+
+          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
+          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
+
+          if [ ! -f "$GO_BINARY" ]; then
+            echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          if [ ! -f "$PY_BINARY" ]; then
+            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          # 复制并重命名为无平台后缀的名称
+          cp "$GO_BINARY" deps/uast4go/uast4go
+          cp "$PY_BINARY" deps/uast4py/uast4py
+
+          # 添加可执行权限
+          chmod +x deps/uast4go/uast4go
+          chmod +x deps/uast4py/uast4py
+
+          echo "✅ Deployed:"
+          echo "   $GO_BINARY  --> deps/uast4go/uast4go"
+          echo "   $PY_BINARY --> deps/uast4py/uast4py"
+
       - name: Check UAST Release Assets
         run: |
           tree -L 3
