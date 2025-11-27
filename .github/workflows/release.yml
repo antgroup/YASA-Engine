@@ -176,6 +176,8 @@ jobs:
           else
             echo "❌ JavaScript tests failed"
             echo "js_result=failure" >> $GITHUB_OUTPUT
+
+            cat test/javascript/test-report/*.log
           fi
 
       - name: 🧪 Run Java Tests
