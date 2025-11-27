@@ -130,7 +130,8 @@ function moveSrcDirectoryForJs(directory: string): void {
   const childAaaPath = path.join(directory, 'sast-js')
   const srcPath = path.join(childAaaPath, 'case')
   if (fs.existsSync(srcPath)) {
-    fs.moveSync(srcPath, directory)
+    logger.info(`srcPath exists`)
+    fs.moveSync(srcPath, directory, { overwrite: true })
   }
   fs.removeSync(childAaaPath)
 }
