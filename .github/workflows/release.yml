@@ -177,7 +177,7 @@ jobs:
             echo "❌ JavaScript tests failed"
             echo "js_result=failure" >> $GITHUB_OUTPUT
 
-            cat test/javascript/test-report/*.log
+            ls -l test/javascript/benchmarks/jsbenchmark
           fi
 
       - name: 🧪 Run Java Tests
