@@ -198,7 +198,7 @@ jobs:
 
       - name: Check UAST Release Assets
         run: |
-          tree deps
+          tree -L 3
 
       - name: 🧪 Run Go Tests
         id: test_go
