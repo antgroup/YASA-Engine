@@ -154,7 +154,7 @@ jobs:
 
       - name: Check Benchmark
         run: |
-          tree -L 3 test
+          tree -L 4 test
 
       - name: 📦 Prepare JavaScript Benchmark
         run: |
@@ -174,13 +174,13 @@ jobs:
 
       - name: Check Benchmark
         run: |
-          tree -L 3 test
+          tree -L 4 test
 
       - name: 🧪 Run JavaScript Tests
         id: test_js
         run: |
           echo "Running JavaScript tests..."
-          npm run test-js > test-js-output.log 2>&1 || true
+          npm run test-js > test-js-output.log 2>&1
           cat test-js-output.log
           if grep -q "------------- 1: taint_flow_test-------------" test-js-output.log; then
             echo "✅ JavaScript tests passed"
