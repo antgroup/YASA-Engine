@@ -148,10 +148,6 @@ jobs:
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
 
-      - name: Install tree
-        run: |
-          sudo apt-get install -y tree
-
       - name: 📦 Prepare JavaScript Benchmark
         run: |
           npx -y ts-node test/javascript/prepare-js-benchmark.ts
@@ -234,10 +230,6 @@ jobs:
           echo "✅ Deployed:"
           echo "   $GO_BINARY  --> deps/uast4go/uast4go"
           echo "   $PY_BINARY --> deps/uast4py/uast4py"
-
-      - name: Check UAST Release Assets
-        run: |
-          tree -L 3
 
       - name: 🧪 Run Go Tests
         id: test_go
