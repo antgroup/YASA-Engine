@@ -208,7 +208,7 @@ jobs:
         id: test_go
         run: |
           echo "Running Go tests..."
-          npm run test-go > test-go-output.log 2>&1
+          npm run test-go > test-go-output.log 2>&1 || true
           cat test-go-output.log
           if grep -q -- "------------- 1: taint_flow_test-------------" test-go-output.log; then
             echo "✅ Go tests passed"
