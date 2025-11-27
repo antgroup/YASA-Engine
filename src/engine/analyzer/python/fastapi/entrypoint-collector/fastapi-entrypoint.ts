@@ -167,6 +167,7 @@ function processDecorator(
   funcName: string,
   obj: any,
   relativeFile: string,
+  filename: string,
   validInstances: ValidInstances,
   entryPoints: EntryPoint[],
   entryPointSources: any[]
@@ -200,14 +201,10 @@ function processDecorator(
   entryPoints.push(entryPoint)
 
   if (entryPointAndSourceAtSameTime) {
-    const paramSources = findSourceOfFuncParam(relativeFile, funcName, obj, undefined)
+    const paramSources = findSourceOfFuncParam(filename, funcName, obj, undefined)
 
     if (paramSources) {
-      const allScopeSources = paramSources.map((s: any) => ({
-        ...s,
-        scopeFile: 'all',
-      }))
-      entryPointSources.push(...allScopeSources)
+      entryPointSources.push(...paramSources)
     }
   }
 }
@@ -260,7 +257,7 @@ function findFastApiEntryPointAndSource(filenameAstObj: FilenameAstMap, dir: str
         const { decorators } = obj._meta
 
         for (const deco of decorators) {
-          processDecorator(deco, funcName, obj, relativeFile, validInstances, entryPoints, entryPointSources)
+          processDecorator(deco, funcName, obj, relativeFile, filename, validInstances, entryPoints, entryPointSources)
         }
       }
     }
