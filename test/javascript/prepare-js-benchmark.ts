@@ -128,11 +128,8 @@ function cleanDirectoryForSastJs(directory: string): void {
 // 移动case目录到上层的aaa目录
 function moveSrcDirectoryForJs(directory: string): void {
   const childAaaPath = path.join(directory, 'sast-js')
-  logger.info(`childAaaPath: ${childAaaPath}`)
   const srcPath = path.join(childAaaPath, 'case')
-  logger.info(`srcPath: ${srcPath}`)
   if (fs.existsSync(srcPath)) {
-    logger.info(`${srcPath} to ${directory}`)
     // fs.moveSync(srcPath, directory, { overwrite: true })
     fs.copySync(srcPath, directory)
   }

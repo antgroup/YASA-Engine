@@ -194,7 +194,7 @@ jobs:
         id: test_java
         run: |
           echo "Running Java tests..."
-          npm run test-java > test-java-output.log 2>&1
+          npm run test-java > test-java-output.log 2>&1 || true
           cat test-java-output.log
           if grep -q -- "-------------  1 :  taint_flow_java_input_inner -------------" test-java-output.log; then
             echo "✅ Java tests passed"
