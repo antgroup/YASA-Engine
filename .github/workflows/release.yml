@@ -720,8 +720,8 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag: ${{ github.ref }}
+          name: Release ${{ github.ref }}
           bodyFile: RELEASE_BODY.md   # 👈 使用文件代替内联 body
           artifacts: "releases/*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
