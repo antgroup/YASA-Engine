@@ -148,6 +148,14 @@ jobs:
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
 
+      - name: Install tree
+        run: |
+          sudo apt-get install -y tree
+
+      - name: Check Benchmark
+        run: |
+          tree -L 3 test
+
       - name: 📦 Prepare JavaScript Benchmark
         run: |
           npx -y ts-node test/javascript/prepare-js-benchmark.ts
@@ -164,6 +172,10 @@ jobs:
         run: |
           npx -y ts-node test/python/prepare-python-benchmark.ts
 
+      - name: Check Benchmark
+        run: |
+          tree -L 3 test
+
       - name: 🧪 Run JavaScript Tests
         id: test_js
         run: |
@@ -176,8 +188,6 @@ jobs:
           else
             echo "❌ JavaScript tests failed"
             echo "js_result=failure" >> $GITHUB_OUTPUT
-
-            ls -l test/javascript/benchmarks/jsbenchmark
           fi
 
       - name: 🧪 Run Java Tests
