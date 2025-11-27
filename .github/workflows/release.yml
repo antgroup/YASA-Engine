@@ -152,10 +152,6 @@ jobs:
         run: |
           sudo apt-get install -y tree
 
-      - name: Check Benchmark
-        run: |
-          tree -L 4 test
-
       - name: 📦 Prepare JavaScript Benchmark
         run: |
           npx -y ts-node test/javascript/prepare-js-benchmark.ts
@@ -171,10 +167,6 @@ jobs:
       - name: 📦 Prepare Python Benchmark
         run: |
           npx -y ts-node test/python/prepare-python-benchmark.ts
-
-      - name: Check Benchmark
-        run: |
-          tree test
 
       - name: 🧪 Run JavaScript Tests
         id: test_js
@@ -203,6 +195,10 @@ jobs:
             echo "❌ Java tests failed"
             echo "java_result=failure" >> $GITHUB_OUTPUT
           fi
+
+      - name: Check UAST Release Assets
+        run: |
+          tree deps
 
       - name: 🧪 Run Go Tests
         id: test_go
