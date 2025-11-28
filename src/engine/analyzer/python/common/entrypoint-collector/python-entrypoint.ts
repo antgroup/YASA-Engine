@@ -1,4 +1,5 @@
 const { findFlaskEntryPointAndSource } = require('../../flask/entrypoint-collector/flask-default-entrypoint')
+const { findFastApiEntryPointAndSource } = require('../../fastapi/entrypoint-collector/fastapi-entrypoint')
 const {
   findInferenceAiStudioTplEntryPointAndSource,
   findInferenceTritonEntryPointAndSource,
@@ -35,6 +36,14 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager):
   }
   if (flaskEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...flaskEntryPointSourceArray)
+  }
+
+  const { fastApiEntryPointArray, fastApiEntryPointSourceArray } = findFastApiEntryPointAndSource(filenameAstObj, dir)
+  if (fastApiEntryPointArray) {
+    pyFcEntryPointArray.push(...fastApiEntryPointArray)
+  }
+  if (fastApiEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...fastApiEntryPointSourceArray)
   }
 
   const { inferenceAiStudioTplEntryPointArray, inferenceAiStudioTplEntryPointSourceArray } =
