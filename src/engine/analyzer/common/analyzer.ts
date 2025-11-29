@@ -1,5 +1,3 @@
-import { floor } from 'lodash'
-
 const _ = require('lodash')
 const Uuid = require('node-uuid')
 const chalk = require('chalk')
@@ -1486,8 +1484,9 @@ class Analyzer extends MemSpace {
    * @param scope
    * @param node
    * @param state
+   * @param cachedFclos
    */
-  processCallExpression(scope: any, node: any, state: any) {
+  processCallExpression(scope: any, node: any, state: any, cachedFclos?: any) {
     /* { callee,
         arguments,
       }
@@ -1498,7 +1497,7 @@ class Analyzer extends MemSpace {
         einfo: state.einfo,
       })
 
-    const fclos = this.processInstruction(scope, node.callee, state)
+    const fclos = cachedFclos ?? this.processInstruction(scope, node.callee, state)
     if (!fclos) return UndefinedValue()
     if (node?.callee?.type === 'MemberAccess' && fclos.fdef && node.callee?.object?.type !== 'SuperExpression') {
       fclos._this = this.processInstruction(scope, node.callee.object, state)
