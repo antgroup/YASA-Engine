@@ -147,11 +147,136 @@ jobs:
           npm install @ant-yasa/uast-parser-java-js@latest @ant-yasa/uast-spec@latest
           echo "🔍 Resolved UAST versions:"
           npm list @ant-yasa/uast-spec @ant-yasa/uast-parser-java-js
-      
-      - name: 🧪 Run All Tests
+
+      - name: 📦 Prepare JavaScript Benchmark
         run: |
-          npm run test-all
-          echo "✅完成所有测试"
+          npx -y ts-node test/javascript/prepare-js-benchmark.ts
+
+      - name: 📦 Prepare Java Benchmark
+        run: |
+          npx -y ts-node test/java/prepare-java-benchmark.ts
+
+      - name: 📦 Prepare Go Benchmark
+        run: |
+          npx -y ts-node test/go/prepare-go-benchmark.ts
+
+      - name: 📦 Prepare Python Benchmark
+        run: |
+          npx -y ts-node test/python/prepare-python-benchmark.ts
+
+      - name: 🧪 Run JavaScript Tests
+        id: test_js
+        run: |
+          echo "Running JavaScript tests..."
+          npm run test-js > test-js-output.log 2>&1
+          cat test-js-output.log
+          if grep -q -- "------------- 1: taint_flow_test-------------" test-js-output.log; then
+            echo "✅ JavaScript tests passed"
+            echo "js_result=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ JavaScript tests failed"
+            echo "js_result=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🧪 Run Java Tests
+        id: test_java
+        run: |
+          echo "Running Java tests..."
+          npm run test-java > test-java-output.log 2>&1
+          cat test-java-output.log
+          if grep -q -- "-------------  1 :  taint_flow_java_input_inner -------------" test-java-output.log; then
+            echo "✅ Java tests passed"
+            echo "java_result=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Java tests failed"
+            echo "java_result=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download UAST binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: uast-binaries
+          path: uast_binaries/
+
+      - name: Extract and Deploy Linux Binaries to deps/
+        run: |
+          # 创建目标目录
+          mkdir -p deps/uast4go deps/uast4py
+
+          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
+          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
+
+          if [ ! -f "$GO_BINARY" ]; then
+            echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          if [ ! -f "$PY_BINARY" ]; then
+            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
+            ls -lh uast_binaries/
+            exit 1
+          fi
+
+          # 复制并重命名为无平台后缀的名称
+          cp "$GO_BINARY" deps/uast4go/uast4go
+          cp "$PY_BINARY" deps/uast4py/uast4py
+
+          # 添加可执行权限
+          chmod +x deps/uast4go/uast4go
+          chmod +x deps/uast4py/uast4py
+
+          echo "✅ Deployed:"
+          echo "   $GO_BINARY  --> deps/uast4go/uast4go"
+          echo "   $PY_BINARY --> deps/uast4py/uast4py"
+
+      - name: 🧪 Run Go Tests
+        id: test_go
+        run: |
+          echo "Running Go tests..."
+          npm run test-go > test-go-output.log 2>&1
+          cat test-go-output.log
+          if grep -q -- "------------- 1: taint_flow_test-------------" test-go-output.log; then
+            echo "✅ Go tests passed"
+            echo "go_result=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Go tests failed"
+            echo "go_result=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🧪 Run Python Tests
+        id: test_python
+        run: |
+          echo "Running Python tests..."
+          npm run test-python > test-python-output.log 2>&1
+          cat test-python-output.log
+          if grep -q -- "------------- 1: taint_flow_test-------------" test-python-output.log; then
+            echo "✅ Python tests passed"
+            echo "python_result=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Python tests failed"
+            echo "python_result=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📊 Summarize Test Results
+        run: |
+          echo "📋 Test Results Summary:"
+          echo "JavaScript: ${{ steps.test_js.outputs.js_result }}"
+          echo "Java: ${{ steps.test_java.outputs.java_result }}"
+          echo "Go: ${{ steps.test_go.outputs.go_result }}"
+          echo "Python: ${{ steps.test_python.outputs.python_result }}"
+
+          # 检查是否有任何测试失败
+          if [ "${{ steps.test_js.outputs.js_result }}" = "failure" ] || \
+             [ "${{ steps.test_java.outputs.java_result }}" = "failure" ] || \
+             [ "${{ steps.test_go.outputs.go_result }}" = "failure" ] || \
+             [ "${{ steps.test_python.outputs.python_result }}" = "failure" ]; then
+            echo "❌ Some tests failed, exiting..."
+            exit 1
+          else
+            echo "✅ All tests passed"
+          fi
 
       - name: 🔍 Extract UAST package versions
         id: uast
@@ -240,7 +365,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Download Engine Binaries
         uses: actions/download-artifact@v4
@@ -378,7 +503,7 @@ jobs:
             uast_py: uast4py-linux-amd64
           - os: macos-latest
             zip: yasa-macos-x64.zip
-            engine: yasa-engine-macos-x64 
+            engine: yasa-engine-macos-x64
             uast_go: uast4go-mac-amd64
             uast_py: uast4py-mac-amd64
           - os: macos-latest
@@ -444,7 +569,7 @@ jobs:
           --analyzer JavaScriptAnalyzer \
           --checkerPackIds taint-flow-javascript-default \
           --ruleConfigFile sast-js/rule_config.json > "$OUTPUT_FILE" 2>&1
-          
+
           # 确保命令执行完成，即使输出很大也没问题
           echo "📄 First 20 lines of output:"
           head -n 20 "$OUTPUT_FILE" || echo "  (failed to read head)"
