@@ -15,6 +15,7 @@ export function flattenUnionValues(list: Array<Unit>): Array<Unit> {
       case 'fclos':
       case 'symbol':
       case 'object':
+      case 'primitive':
         return [unit]
       default:
         throw new Error(`flattenUnionValues: Unknown type ${unit.vtype}`)

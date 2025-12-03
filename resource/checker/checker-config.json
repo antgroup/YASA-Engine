@@ -152,6 +152,11 @@
     "description": "echo entrypoint采集以及框架source添加"
   },
   {
+    "checkerId": "beego-entrypoint-collect-checker",
+    "checkerPath": "checker/taint/go/beego-entrypoint-collect-checker.ts",
+    "description": "beego entrypoint采集以及框架source添加"
+  },
+  {
     "checkerId": "get_file_ast",
     "checkerPath": "checker/sdk/get-file-ast-checker.ts",
     "description": "获取文件AST"
