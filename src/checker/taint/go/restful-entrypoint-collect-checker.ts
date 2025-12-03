@@ -1,15 +1,20 @@
+import { processEntryPointAndTaintSource } from './util'
+
 const config = require('../../../config')
+const GoAnalyzer = require('../../../engine/analyzer/golang/common/go-analyzer')
 
 const RouteRegistryProperty = ['Filter', 'To', 'If']
+const KnownPackageName = {
+  'github.com/emicklei/go-restful': 'restful',
+  'github.com/emicklei/go-restful/v3': 'restful',
+}
 const RouteRegistryObject = [
-  'github.com/emicklei/go-restful/v3.WebService<instance>',
   'github.com/emicklei/go-restful.WebService<instance>',
+  'github.com/emicklei/go-restful/v3.WebService<instance>',
 ]
-const IntroduceTaint = require('../common-kit/source-util')
 const Checker = require('../../common/checker')
-const completeEntryPoint = require('../common-kit/entry-points-util')
 
-const processedRouteRegistry = new Set()
+const processedRouteRegistry = new Set<string>()
 
 /**
  *
@@ -21,6 +26,7 @@ class RestfulEntrypointCollectChecker extends Checker {
    */
   constructor(resultManager: any) {
     super(resultManager, 'go-restful-entryPoints-collect-checker')
+    GoAnalyzer.registerKnownPackageNames(KnownPackageName)
   }
 
   /**
@@ -67,20 +73,10 @@ class RestfulEntrypointCollectChecker extends Checker {
     const propertyName = property.name
     if (
       RouteRegistryObject.some((prefix) => objectQid.startsWith(prefix)) &&
-      RouteRegistryProperty.includes(propertyName)
+      RouteRegistryProperty.includes(propertyName) &&
+      argValues[0]
     ) {
-      if (argValues.length < 1) return
-      const arg0 = argValues[0]
-
-      if (arg0?.vtype === 'fclos' && arg0?.ast.loc) {
-        const hash = JSON.stringify(arg0.ast.loc)
-        if (!processedRouteRegistry.has(hash)) {
-          processedRouteRegistry.add(hash)
-          IntroduceTaint.introduceFuncArgTaintBySelfCollection(arg0, state, analyzer, '0', 'GO_INPUT')
-          const entryPoint = completeEntryPoint(arg0)
-          analyzer.entryPoints.push(entryPoint)
-        }
-      }
+      processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argValues[0], '0')
     }
   }
 }
