@@ -1,3 +1,5 @@
+import GoTypeRelatedInfoResolver from '../../../../resolver/go/go-type-related-info-resolver'
+
 const logger = require('../../../../util/logger')(__filename)
 const Scope = require('../../common/scope')
 const { Analyzer } = require('../../common')
@@ -71,6 +73,7 @@ class GoAnalyzer extends Analyzer {
     this.options = options
     this.mainEntryPoints = []
     this.ruleEntrypoints = []
+    this.typeResolver = new GoTypeRelatedInfoResolver()
   }
 
   /**

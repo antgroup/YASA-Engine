@@ -251,6 +251,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
         Config.incremental = mode === 'true' || mode === true || mode === '1' || mode === 1
       }
     })
+    .option('--cgAlgo <cgAlgo>', '指定构建CallGraph的算法', (cgAlgo: any) => {
+      Config.cgAlgo = cgAlgo
+    })
   // 处理非选项参数（如直接传入的目录）
   program.arguments('[paths...]').action((paths: any) => {
     if (paths.length > 0) {

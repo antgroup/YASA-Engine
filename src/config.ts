@@ -52,6 +52,7 @@ export interface IConfig {
   checkerPackIds?: string[]
   entryPointAndSourceAtSameTime?: boolean
   entryPointMode?: string
+  cgAlgo: string
 
   // Allow additional properties
   [key: string]: any
@@ -120,6 +121,9 @@ const configObject: IConfig = {
   checkerPackIds: [],
   entryPointAndSourceAtSameTime: true,
   entryPointMode: 'BOTH', // BOTH or ONLY_CUSTOM or SELF_COLLECT
+
+  // CallGraph
+  cgAlgo: 'DEFAULT',
 }
 
 module.exports = configObject
