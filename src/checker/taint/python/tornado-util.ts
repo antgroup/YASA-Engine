@@ -34,14 +34,7 @@ export const tornadoSourceAPIs = new Set<string>([
   'get_secure_cookie',
 ])
 
-export const passthroughFuncs = new Set<string>([
-  'decode',
-  'strip',
-  'replace',
-  'lower',
-  'upper',
-  'split',
-])
+export const passthroughFuncs = new Set<string>(['decode', 'strip', 'replace', 'lower', 'upper', 'split'])
 
 /**
  *
@@ -54,11 +47,7 @@ export function isRequestAttributeAccess(node: any): boolean {
   if (inner?.type !== 'MemberAccess') return false
   const baseName = inner.object?.name
   const requestName = inner.property?.name
-  return (
-    baseName === 'self' &&
-    requestName === 'request' &&
-    ['body', 'query', 'headers', 'cookies'].includes(propName)
-  )
+  return baseName === 'self' && requestName === 'request' && ['body', 'query', 'headers', 'cookies'].includes(propName)
 }
 
 /**
@@ -117,8 +106,7 @@ export function parseRoutePair(route: any): RoutePair | null {
     const { callee } = route
     const isUrlHelper =
       (callee.type === 'Identifier' && callee.name === 'url') ||
-      (callee.type === 'MemberAccess' &&
-        AstUtil.prettyPrint(callee).includes('url'))
+      (callee.type === 'MemberAccess' && AstUtil.prettyPrint(callee).includes('url'))
     if (isUrlHelper && Array.isArray(route.arguments)) {
       const [first, second] = route.arguments
       pathExpr = first
@@ -139,10 +127,7 @@ export function parseRoutePair(route: any): RoutePair | null {
  * @param modulePath
  * @param currentFile
  */
-export function resolveImportPath(
-  modulePath: string,
-  currentFile: string,
-): string | null {
+export function resolveImportPath(modulePath: string, currentFile: string): string | null {
   if (!modulePath) return null
   const currentDir = path.dirname(currentFile)
   const leadingDots = modulePath.match(/^\.+/)?.[0] ?? ''
@@ -160,30 +145,22 @@ export function resolveImportPath(
  *
  * @param stmt
  */
-export function extractImportEntries(
-  stmt: any,
-): Array<{ local: string; imported?: string }> {
+export function extractImportEntries(stmt: any): Array<{ local: string; imported?: string }> {
   const res: Array<{ local: string; imported?: string }> = []
   const { init } = stmt
   if (!init) return res
 
   if (Array.isArray(init?.imports) && init.imports.length > 0) {
     for (const spec of init.imports) {
-      const local =
-        spec.local?.name || spec.local?.value || spec.name || spec.value
-      const imported =
-        spec.imported?.name || spec.imported?.value || spec.name || spec.value
+      const local = spec.local?.name || spec.local?.value || spec.name || spec.value
+      const imported = spec.imported?.name || spec.imported?.value || spec.name || spec.value
       if (local) res.push({ local, imported })
     }
     return res
   }
 
   if (stmt.id?.name) {
-    const importedName =
-      init?.imported?.name ||
-      init?.imported?.value ||
-      init?.name?.name ||
-      init?.name?.value
+    const importedName = init?.imported?.name || init?.imported?.value || init?.name?.name || init?.name?.value
     res.push({ local: stmt.id.name, imported: importedName })
   }
   return res
@@ -200,22 +177,13 @@ export function extractParamsFromAst(funcNode: any): ParamMeta[] {
     : Array.isArray(funcNode?.parameters)
       ? funcNode.parameters
       : []
-  const fallbackLine =
-    typeof funcNode?.loc?.start?.line === 'number'
-      ? funcNode.loc.start.line
-      : 'all'
+  const fallbackLine = typeof funcNode?.loc?.start?.line === 'number' ? funcNode.loc.start.line : 'all'
   const result: ParamMeta[] = []
   for (const param of rawParams) {
     const name = param?.id?.name || param?.name
     if (!name) continue
-    const locStart =
-      typeof param?.loc?.start?.line === 'number'
-        ? param.loc.start.line
-        : fallbackLine
-    const locEnd =
-      typeof param?.loc?.end?.line === 'number'
-        ? param.loc.end.line
-        : fallbackLine
+    const locStart = typeof param?.loc?.start?.line === 'number' ? param.loc.start.line : fallbackLine
+    const locEnd = typeof param?.loc?.end?.line === 'number' ? param.loc.end.line : fallbackLine
     result.push({ name, locStart, locEnd })
   }
   return result

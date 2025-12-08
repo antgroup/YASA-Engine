@@ -52,13 +52,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtStartOfAnalyze(
-    analyzer: any,
-    scope: any,
-    node: any,
-    state: any,
-    info: any,
-  ): void {
+  triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
     // 重新加载规则配置（因为可能在构造函数时还没有设置 ruleConfigFile）
     const BasicRuleHandler = require('../../common/rules-basic-handler')
     // 尝试从命令行参数获取 ruleConfigFile
@@ -69,9 +63,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (ruleConfigIndex >= 0 && ruleConfigIndex < args.length - 1) {
         ruleConfigFile = args[ruleConfigIndex + 1]
         const path = require('path')
-        ruleConfigFile = path.isAbsolute(ruleConfigFile)
-          ? ruleConfigFile
-          : path.resolve(process.cwd(), ruleConfigFile)
+        ruleConfigFile = path.isAbsolute(ruleConfigFile) ? ruleConfigFile : path.resolve(process.cwd(), ruleConfigFile)
       }
     }
     try {
@@ -102,10 +94,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // 注册 sourceScope 中的 source
     this.addSourceTagForSourceScope('PYTHON_INPUT', this.sourceScope.value)
     // 注册规则配置中的 source
-    this.addSourceTagForcheckerRuleConfigContent(
-      'PYTHON_INPUT',
-      this.checkerRuleConfigContent,
-    )
+    this.addSourceTagForcheckerRuleConfigContent('PYTHON_INPUT', this.checkerRuleConfigContent)
   }
 
   /**
@@ -116,13 +105,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param _state
    * @param _info
    */
-  triggerAtCompileUnit(
-    analyzer: any,
-    scope: any,
-    node: any,
-    _state: any,
-    _info: any,
-  ): boolean | undefined {
+  triggerAtCompileUnit(analyzer: any, scope: any, node: any, _state: any, _info: any): boolean | undefined {
     const fileName = node.loc?.sourcefile
     if (!fileName) return
 
@@ -182,13 +165,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param _info
    */
-  triggerAtFuncCallSyntax(
-    analyzer: any,
-    scope: any,
-    node: any,
-    state: any,
-    _info: any,
-  ): boolean | undefined {
+  triggerAtFuncCallSyntax(analyzer: any, scope: any, node: any, state: any, _info: any): boolean | undefined {
     const fileName = node.loc?.sourcefile
     if (!fileName) return
 
@@ -196,13 +173,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (isTornadoCall(node, 'Application')) {
       const routeList = node.arguments?.[0]
       if (routeList) {
-        this.collectTornadoEntrypointAndSource(
-          analyzer,
-          scope,
-          state,
-          routeList,
-          fileName,
-        )
+        this.collectTornadoEntrypointAndSource(analyzer, scope, state, routeList, fileName)
       }
     }
 
@@ -210,13 +181,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (isTornadoCall(node, 'add_handlers')) {
       const routeList = node.arguments?.[1]
       if (routeList) {
-        this.collectTornadoEntrypointAndSource(
-          analyzer,
-          scope,
-          state,
-          routeList,
-          fileName,
-        )
+        this.collectTornadoEntrypointAndSource(analyzer, scope, state, routeList, fileName)
       }
     }
   }
@@ -229,36 +194,21 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtIdentifier(
-    analyzer: any,
-    scope: any,
-    node: any,
-    state: any,
-    info: any,
-  ): void {
+  triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any): void {
     // 先调用基类方法
     super.triggerAtIdentifier(analyzer, scope, node, state, info)
     // 如果基类方法没有标记（因为 preprocessReady=false），直接标记
     const { res } = info
     if (res && this.sourceScope.value && this.sourceScope.value.length > 0) {
       for (const val of this.sourceScope.value) {
-        if (
-          val.path === node.name ||
-          res._sid === val.path ||
-          res._qid === val.path
-        ) {
+        if (val.path === node.name || res._sid === val.path || res._qid === val.path) {
           // 检查作用域匹配
           const nodeStart = node.loc?.start?.line
           const nodeEnd = node.loc?.end?.line
           const valStart = val.locStart
           const valEnd = val.locEnd
           let shouldMark = false
-          if (
-            valStart === 'all' &&
-            valEnd === 'all' &&
-            val.scopeFile === 'all' &&
-            val.scopeFunc === 'all'
-          ) {
+          if (valStart === 'all' && valEnd === 'all' && val.scopeFile === 'all' && val.scopeFunc === 'all') {
             shouldMark = true
           } else if (
             valStart === 'all' &&
@@ -313,11 +263,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // 检查是否有匹配的规则（支持部分匹配）
     const matchedRule = rules.find((rule: any) => {
       if (typeof rule.fsig !== 'string') return false
-      return (
-        rule.fsig === callFull ||
-        callFull.endsWith(`.${rule.fsig}`) ||
-        callFull.endsWith(rule.fsig)
-      )
+      return rule.fsig === callFull || callFull.endsWith(`.${rule.fsig}`) || callFull.endsWith(rule.fsig)
     })
     // 如果有匹配的规则，调用基类方法处理
     if (matchedRule) {
@@ -333,13 +279,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtFunctionCallAfter(
-    analyzer: any,
-    scope: any,
-    node: any,
-    state: any,
-    info: any,
-  ): void {
+  triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     // 先调用基类方法处理规则配置中的 source
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
 
@@ -384,12 +324,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       }
       // 检查 receiver 是否被污染
       const receiver = fclos?.object || fclos?._this
-      if (
-        receiver &&
-        (receiver.taint ||
-          receiver.hasTagRec ||
-          receiver._tags?.has('PYTHON_INPUT'))
-      ) {
+      if (receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))) {
         this.markAsTainted(ret)
       }
     }
@@ -404,13 +339,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtMemberAccess(
-    analyzer: any,
-    scope: any,
-    node: any,
-    state: any,
-    info: any,
-  ): void {
+  triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { res } = info
 
     if (node.type === 'MemberAccess' && node.object?.type === 'MemberAccess') {
@@ -489,24 +418,16 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     if (node.type === 'ListExpression' || node.type === 'ArrayExpression') {
       const elements = node.elements || []
-      return elements.flatMap((element: any) =>
-        this.normalizeRoutes(element, currentFile),
-      )
+      return elements.flatMap((element: any) => this.normalizeRoutes(element, currentFile))
     }
 
     if (node.type === 'BinaryExpression') {
-      return [
-        ...this.normalizeRoutes(node.left, currentFile),
-        ...this.normalizeRoutes(node.right, currentFile),
-      ]
+      return [...this.normalizeRoutes(node.left, currentFile), ...this.normalizeRoutes(node.right, currentFile)]
     }
 
     if (node.type === 'ObjectExpression') {
-      const values =
-        node.properties?.map((prop: any) => prop.value).filter(Boolean) || []
-      return values.flatMap((value: any) =>
-        this.normalizeRoutes(value, node.loc?.sourcefile || currentFile),
-      )
+      const values = node.properties?.map((prop: any) => prop.value).filter(Boolean) || []
+      return values.flatMap((value: any) => this.normalizeRoutes(value, node.loc?.sourcefile || currentFile))
     }
 
     if (node.type === 'Identifier') {
@@ -533,7 +454,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     scope: any,
     state: any,
     routeList: any,
-    currentFile: string,
+    currentFile: string
   ) {
     const processed = new Set<string>()
     const normalizedRoutes = this.normalizeRoutes(routeList, currentFile)
@@ -546,10 +467,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         continue
       }
       processed.add(dedupKey)
-      const classAst = this.resolveSymbol(
-        pair.handlerName,
-        pair.file || currentFile,
-      )
+      const classAst = this.resolveSymbol(pair.handlerName, pair.file || currentFile)
       if (!classAst || classAst.type !== 'ClassDefinition') {
         continue
       }
@@ -571,21 +489,10 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         }
       }
       // 确保 handlerSymVal 有 field 结构
-      if (
-        handlerSymVal &&
-        handlerSymVal.vtype === 'class' &&
-        !handlerSymVal.field
-      ) {
+      if (handlerSymVal && handlerSymVal.vtype === 'class' && !handlerSymVal.field) {
         handlerSymVal.field = {}
       }
-      this.emitHandlerEntrypoints(
-        analyzer,
-        handlerSymVal,
-        pair.path,
-        classAst,
-        scope,
-        state,
-      )
+      this.emitHandlerEntrypoints(analyzer, handlerSymVal, pair.path, classAst, scope, state)
     }
   }
 
@@ -605,25 +512,14 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     urlPattern: string,
     classAst: any,
     scope?: any,
-    state?: any,
+    state?: any
   ) {
     if (!handlerSymVal || handlerSymVal.vtype !== 'class') {
       return
     }
-    const httpMethods = new Set([
-      'get',
-      'post',
-      'put',
-      'delete',
-      'patch',
-      'head',
-      'options',
-    ])
+    const httpMethods = new Set(['get', 'post', 'put', 'delete', 'patch', 'head', 'options'])
     const entrypoints = Object.entries(handlerSymVal.value)
-      .filter(
-        ([key, value]: [string, any]) =>
-          httpMethods.has(key) && value.vtype === 'fclos',
-      )
+      .filter(([key, value]: [string, any]) => httpMethods.has(key) && value.vtype === 'fclos')
       .map(([, value]: [string, any]) => value)
 
     for (const ep of entrypoints as any[]) {
@@ -636,11 +532,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       let finalEp = ep
       if (scope && state && ep.fdef) {
         try {
-          const processedFclos = analyzer.processInstruction(
-            scope,
-            ep.fdef,
-            state,
-          )
+          const processedFclos = analyzer.processInstruction(scope, ep.fdef, state)
           if (processedFclos && processedFclos.vtype === 'fclos') {
             processedFclos.parent = handlerSymVal
             processedFclos.params = ep.params || extractParamsFromAst(ep.fdef)
@@ -672,21 +564,14 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           finalEp.ast = finalEp.fdef
         }
         if (!finalEp.functionName) {
-          finalEp.functionName =
-            finalEp.fdef?.name?.name ||
-            finalEp.fdef?.id?.name ||
-            finalEp.name ||
-            ''
+          finalEp.functionName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
         }
         // 确保 finalEp 有 filePath
         if (!finalEp.filePath && finalEp.fdef?.loc?.sourcefile) {
           const FileUtil = require('../../../util/file-util')
           const { sourcefile } = finalEp.fdef.loc
           if (Config.maindir && typeof Config.maindir === 'string') {
-            finalEp.filePath = FileUtil.extractRelativePath(
-              sourcefile,
-              Config.maindir,
-            )
+            finalEp.filePath = FileUtil.extractRelativePath(sourcefile, Config.maindir)
           } else {
             finalEp.filePath = sourcefile
           }
@@ -706,10 +591,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         continue
       }
       // 注册参数为 source
-      const funcName =
-        finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
-      const sourceFile =
-        finalEp.fdef?.loc?.sourcefile || classAst?.loc?.sourcefile || ''
+      const funcName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
+      const sourceFile = finalEp.fdef?.loc?.sourcefile || classAst?.loc?.sourcefile || ''
       let scopeFile: string | null = null
       if (sourceFile) {
         if (Config.maindir && typeof Config.maindir === 'string') {
@@ -720,8 +603,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       }
 
       const paramMetas =
-        (Array.isArray((finalEp as any).params) &&
-        (finalEp as any).params.length
+        (Array.isArray((finalEp as any).params) && (finalEp as any).params.length
           ? (finalEp as any).params
           : extractParamsFromAst(finalEp.fdef)) || []
       if (paramMetas.length > 0) {
@@ -750,8 +632,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const members = classNode.body || []
     members.forEach((member: any) => {
       if (member.type !== 'FunctionDefinition') return
-      const memberName =
-        member.name?.name || member.name?.id?.name || member.id?.name
+      const memberName = member.name?.name || member.name?.id?.name || member.id?.name
       if (memberName) {
         value[memberName] = {
           vtype: 'fclos',
