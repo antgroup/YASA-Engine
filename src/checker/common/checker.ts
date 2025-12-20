@@ -40,7 +40,10 @@ class CheckerBase {
    */
   loadRuleConfig(checker: any): void {
     const checkerId = checker.getCheckerId()
-    const ruleConfigContent = BasicRuleHandler.getRules()
+    // 路径从 checker/common 回到项目根的 config
+    const Config = require('../../config')
+    // 传入 Config.ruleConfigFile，如果为空则让 getRules 从 Config 读取
+    const ruleConfigContent = BasicRuleHandler.getRules(Config.ruleConfigFile)
     if (Array.isArray(ruleConfigContent) && ruleConfigContent.length > 0) {
       for (const ruleConfig of ruleConfigContent) {
         if (

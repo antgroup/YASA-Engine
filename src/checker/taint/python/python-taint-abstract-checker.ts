@@ -21,7 +21,36 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param info
    */
   triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any) {
+    // Try normal matching first
     IntroduceTaint.introduceTaintAtIdentifier(node, info.res, this.sourceScope.value)
+
+    // If preprocess is not ready, still mark parameters that are in sourceScope
+    const BasicRuleHandler = require('../../common/rules-basic-handler')
+    if (!BasicRuleHandler.getPreprocessReady() && this.sourceScope.value && this.sourceScope.value.length > 0) {
+      for (const source of this.sourceScope.value) {
+        // Check if kind matches (could be string or array)
+        const kindMatches =
+          source.kind === 'PYTHON_INPUT' || (Array.isArray(source.kind) && source.kind.includes('PYTHON_INPUT'))
+
+        if (source.path === node.name && kindMatches) {
+          // For path parameters, we use 'all' for all scope conditions, so always match
+          const shouldMatch =
+            (source.scopeFile === 'all' || !source.scopeFile) &&
+            (source.scopeFunc === 'all' || !source.scopeFunc) &&
+            (source.locStart === 'all' || !source.locStart) &&
+            (source.locEnd === 'all' || !source.locEnd)
+
+          if (shouldMatch && (!info.res._tags || info.res._tags.size === 0)) {
+            if (!info.res._tags) {
+              info.res._tags = new Set()
+            }
+            info.res._tags.add('PYTHON_INPUT')
+            info.res.hasTagRec = true
+            break
+          }
+        }
+      }
+    }
   }
 
   /**

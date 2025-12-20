@@ -105,19 +105,53 @@ class PythonAnalyzer extends (Analyzer as any) {
       return true
     }
     const hasAnalysised: any[] = []
-    for (const entryPoint of entryPoints) {
+    for (let i = 0; i < entryPoints.length; i++) {
+      const entryPoint = entryPoints[i]
       if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        if (
-          hasAnalysised.includes(
-            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
-          )
-        ) {
+        // Serialize parameters properly to avoid [object Object] issue
+        // Use a custom serializer to handle circular references
+        const params = entryPoint.entryPointSymVal?.ast?.parameters
+        let paramsStr = ''
+        if (params) {
+          try {
+            // Try to serialize only the essential parts to avoid circular references
+            if (Array.isArray(params)) {
+              paramsStr = JSON.stringify(
+                params.map((p: any) => ({
+                  id: p?.id?.name || p?.id,
+                  name: p?.name,
+                }))
+              )
+            } else if (typeof params === 'object') {
+              // Extract only non-circular fields
+              const keys = Object.keys(params)
+              const simpleParams: any = {}
+              for (const key of keys) {
+                const val = params[key]
+                if (val && typeof val === 'object' && val.id) {
+                  simpleParams[key] = { id: val.id?.name || val.id }
+                } else if (typeof val !== 'object' || val === null) {
+                  simpleParams[key] = val
+                }
+              }
+              paramsStr = JSON.stringify(simpleParams)
+            } else {
+              paramsStr = String(params)
+            }
+          } catch (e) {
+            // Fallback: use a simple string representation
+            paramsStr = params.toString ? params.toString() : String(params)
+          }
+        }
+        // Include parent class name in key to distinguish handlers with same method name
+        const parentName = entryPoint?.entryPointSymVal?.parent?.id || entryPoint?.entryPointSymVal?.parent?.name || ''
+        const qid = entryPoint?.entryPointSymVal?._qid || ''
+        const entryKey = `${entryPoint.filePath}.${entryPoint.functionName}/${parentName}/${qid}#${paramsStr}.${entryPoint.attribute}`
+        if (hasAnalysised.includes(entryKey)) {
           continue
         }
 
-        hasAnalysised.push(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
-        )
+        hasAnalysised.push(entryKey)
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info(
           'EntryPoint [%s.%s] is executing',
@@ -176,11 +210,13 @@ class PythonAnalyzer extends (Analyzer as any) {
             entryPoint.entryPointSymVal?.parent
           )
         } catch (e) {
+          console.error(`[DEBUG] Error executing entrypoint [${i}]: ${e}`)
           handleException(
             e,
             `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
             `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`
           )
+          // Continue to next entrypoint instead of breaking
         }
         this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
       } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {

@@ -171,7 +171,12 @@ function introduceTaintAtIdentifier(node: any, res: any, sourceScopeVal: any): a
                 markTaintSource(res, { path: node, kind: val.kind })
               }
             }
-          } else if (node.loc.sourcefile.includes(val.scopeFile) && nodeStart >= valStart && nodeEnd <= valEnd) {
+          } else if (
+            node.loc.sourcefile &&
+            node.loc.sourcefile.includes(val.scopeFile) &&
+            nodeStart >= valStart &&
+            nodeEnd <= valEnd
+          ) {
             markTaintSource(res, { path: node, kind: val.kind })
           }
         }

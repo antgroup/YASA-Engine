@@ -64,7 +64,7 @@ export function isRequestAttributeExpression(expr: any): boolean {
 }
 
 /**
- *
+ * 用来判断是否是Tornado的请求函数,例如
  * @param node
  * @param targetName
  */
@@ -104,9 +104,26 @@ export function parseRoutePair(route: any): RoutePair | null {
     handlerNode = second
   } else if (route.type === 'CallExpression' && route.callee) {
     const { callee } = route
-    const isUrlHelper =
-      (callee.type === 'Identifier' && callee.name === 'url') ||
-      (callee.type === 'MemberAccess' && AstUtil.prettyPrint(callee).includes('url'))
+
+    /**
+     * Check if callee is a URL helper function using AST node matching
+     * Supports:
+     * - url(...) - simple identifier
+     * - something.url(...) - member access
+     * - tornado.web.url(...) - nested member access chain
+     * This avoids unreliable string-based matching via prettyPrint
+     */
+    const isIdentifierUrlHelper = callee.type === 'Identifier' && callee.name === 'url'
+
+    const isMemberAccessUrlHelper =
+      callee.type === 'MemberAccess' &&
+      // Check if the final property/member is 'url'
+      // Supports both 'property' and 'member' fields for different AST representations
+      ((callee.property && callee.property.type === 'Identifier' && callee.property.name === 'url') ||
+        (callee.member && callee.member.type === 'Identifier' && callee.member.name === 'url'))
+
+    const isUrlHelper = isIdentifierUrlHelper || isMemberAccessUrlHelper
+
     if (isUrlHelper && Array.isArray(route.arguments)) {
       const [first, second] = route.arguments
       pathExpr = first
@@ -123,21 +140,42 @@ export function parseRoutePair(route: any): RoutePair | null {
 }
 
 /**
- *
- * @param modulePath
- * @param currentFile
+ * Resolve Python import path to file path
+ * @param modulePath - The import path (e.g., "handlers.user_handler" or ".handlers.user_handler")
+ * @param currentFile - The current file path
+ * @param mainDir - Optional project root directory for absolute imports
+ * @returns Resolved file path or null
  */
-export function resolveImportPath(modulePath: string, currentFile: string): string | null {
+export function resolveImportPath(modulePath: string, currentFile: string, mainDir?: string): string | null {
   if (!modulePath) return null
+
   const currentDir = path.dirname(currentFile)
   const leadingDots = modulePath.match(/^\.+/)?.[0] ?? ''
-  let baseDir = currentDir
+  let baseDir: string
+
   if (leadingDots.length > 0) {
+    // Relative import: resolve from current file's directory
     baseDir = path.resolve(currentDir, '../'.repeat(leadingDots.length - 1))
+  } else if (mainDir) {
+    // Absolute import: resolve from project root (mainDir)
+    baseDir = mainDir
+  } else {
+    // Fallback for absolute imports when mainDir is not provided.
+    // This is the original behavior and is likely incorrect.
+    baseDir = currentDir
   }
+
   const remainder = modulePath.slice(leadingDots.length)
   const normalized = remainder ? remainder.split('.').join(path.sep) : ''
   const resolved = normalized ? path.resolve(baseDir, normalized) : baseDir
+
+  // Check if it's a package (directory with __init__.py)
+  const fs = require('fs')
+  if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+    return path.join(resolved, '__init__.py')
+  }
+
+  // Regular module file
   return `${resolved}.py`
 }
 
