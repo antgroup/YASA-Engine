@@ -60,6 +60,9 @@ YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目
 
 ## 资源链接
 [官方文档](https://www.yuque.com/u22090306/bebf6g)
+
+[教学资料](https://www.yuque.com/u22090306/bebf6g/sr0y5fqg0kcua5nf)
+
 [社区活动](https://www.yuque.com/u22090306/bebf6g/fn1rauxwtp7z0l1u)
 
 ## 开源协议

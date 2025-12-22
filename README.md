@@ -18,7 +18,7 @@ The unified multi-language analysis engine is the core component of a modern pro
 ### YASA-UQL: Unified Declarative Rule Query Language
 Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
-### YASA-MCP: Unified multi-language Program Analysis MCP 
+### YASA-MCP: Unified multi-language Program Analysis MCP
 Provides atomic analysis APIs for LLM, offering program analysis services that are LLM-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
@@ -59,6 +59,8 @@ For code contributions, please refer to [CONTRIBUTION](CONTRIBUTION.md)
 
 ## Resource Links
 [Official Documentation](https://www.yuque.com/u22090306/bebf6g)
+
+[Learning Resources](https://www.yuque.com/u22090306/bebf6g/sr0y5fqg0kcua5nf)
 
 [Community Activities](https://www.yuque.com/u22090306/bebf6g/fn1rauxwtp7z0l1u)
 
