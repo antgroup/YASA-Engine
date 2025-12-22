@@ -32,6 +32,8 @@ export const tornadoSourceAPIs = new Set<string>([
   'get_body_arguments',
   'get_cookie',
   'get_secure_cookie',
+  'get_arguments',
+  'get_json_body',
 ])
 
 export const passthroughFuncs = new Set<string>(['decode', 'strip', 'replace', 'lower', 'upper', 'split'])

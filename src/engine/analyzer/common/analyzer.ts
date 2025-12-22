@@ -312,10 +312,6 @@ class Analyzer extends MemSpace {
       }
       return this.recordCheckerFindings()
     } catch (e) {
-      console.error(`[DEBUG] Error in analyzeProjectAsync: ${e}`)
-      if (e && typeof e === 'object' && 'stack' in e) {
-        console.error(`[DEBUG] Error stack: ${(e as any).stack}`)
-      }
       handleException(
         e,
         'Error occurred in analyzer analyzeProjectAsync',

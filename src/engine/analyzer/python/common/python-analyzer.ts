@@ -210,7 +210,6 @@ class PythonAnalyzer extends (Analyzer as any) {
             entryPoint.entryPointSymVal?.parent
           )
         } catch (e) {
-          console.error(`[DEBUG] Error executing entrypoint [${i}]: ${e}`)
           handleException(
             e,
             `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`,

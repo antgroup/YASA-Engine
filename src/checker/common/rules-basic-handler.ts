@@ -18,10 +18,8 @@ let preprocessReady: boolean = false
  *
  * @param ruleConfigPath
  */
-function getRules(ruleConfigPath?: string): any[] {
-  // 如果传入了 ruleConfigPath，或者 config.ruleConfigFile 已设置但 rules 未加载，则重新加载
-  const currentRuleConfigFile = ruleConfigPath || config.ruleConfigFile
-  if (!rules || (currentRuleConfigFile && !rules)) {
+function getRules(ruleConfigPath: string): any[] {
+  if (!rules) {
     try {
       if (ruleConfigPath) {
         rules = FileUtil.loadJSONfile(ruleConfigPath)

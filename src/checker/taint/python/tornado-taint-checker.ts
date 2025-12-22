@@ -161,6 +161,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param _info
    */
   triggerAtCompileUnit(analyzer: any, scope: any, node: any, _state: any, _info: any): boolean | undefined {
+    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const fileName = node.loc?.sourcefile
     if (!fileName) return
 
@@ -232,6 +233,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const { fclos, argvalues } = info
     if (!fclos || !argvalues) return
 
+    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const fileName = node.loc?.sourcefile
     if (!fileName) return
 
