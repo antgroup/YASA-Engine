@@ -531,6 +531,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
+    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const { res } = info
 
     // 重用 isRequestAttributeAccess 工具函数，避免重复逻辑并保持行为一致
