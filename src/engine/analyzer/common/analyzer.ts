@@ -317,8 +317,6 @@ class Analyzer extends MemSpace {
         'Error occurred in analyzer analyzeProjectAsync',
         'Error occurred in analyzer analyzeProjectAsync'
       )
-      // Still return findings even if there was an error
-      return this.recordCheckerFindings()
     }
   }
 
