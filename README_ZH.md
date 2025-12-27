@@ -2,7 +2,7 @@
 
 #### [简体中文](README_ZH.md) / [English](README.md)
 
-YASA（Yet Another Static Analyzer ）是一个开源的静态程序分析项目。其核心是定义了一种多语言通用的中间表达——统一抽象语法树（Unified Abstract Syntax Tree，简称UAST），基于UAST实现了一套高精度的静态程序分析框架。用户可通过编写检查器（Checker）的方式，灵活实现诸如AST查询、数据流分析、函数调用图分析等多种程序分析任务，并通过SDK/自研统一声明式查询语言UQL/MCP等方式对外开放能力。
+YASA（Yet Another Static Analyzer, 读作“亚萨” ）是一个开源的静态程序分析项目。其核心是定义了一种多语言通用的中间表达——统一抽象语法树（Unified Abstract Syntax Tree，简称UAST），基于UAST实现了一套高精度的静态程序分析框架。用户可通过编写检查器（Checker）的方式，灵活实现诸如AST查询、数据流分析、函数调用图分析等多种程序分析任务，并通过SDK/自研统一声明式查询语言UQL/MCP等方式对外开放能力。
 
 作为诞生于安全团队的开源项目，YASA也以Checker的形式内置了安全领域最重要的污点分析能力，用于安全漏洞的检测。
 
