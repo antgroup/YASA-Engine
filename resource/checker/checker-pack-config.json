@@ -86,6 +86,7 @@
     "checkerIds": [
       "taint_flow_python_input",
       "taint_flow_python_django_input",
+      "taint_flow_python_tornado_input",
       "callgraph",
       "sanitizer"
     ],
@@ -96,6 +97,7 @@
     "checkerIds": [
       "taint_flow_python_input_inner",
       "taint_flow_python_django_input",
+      "taint_flow_python_tornado_input",
       "callgraph",
       "sanitizer"
     ],
