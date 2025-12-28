@@ -19,7 +19,9 @@ const {
   passthroughFuncs,
   isRequestAttributeExpression,
   isRequestAttributeAccess,
+  extractTornadoParams,
 } = require('./tornado-util')
+const { markTaintSource } = require('../common-kit/source-util')
 
 // Type definitions (moved from import to avoid module resolution issues)
 interface FileCache {
@@ -47,14 +49,11 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   /**
    * Helper function to mark a value as tainted
    * @param value
+   * @param node Optional node for trace
    */
-  private markAsTainted(value: any): void {
+  private markAsTainted(value: any, node?: any): void {
     if (!value) return
-    if (!value._tags) {
-      value._tags = new Set()
-    }
-    value._tags.add('PYTHON_INPUT')
-    value.hasTagRec = true
+    markTaintSource(value, { path: node || value.ast || {}, kind: 'PYTHON_INPUT' })
   }
 
   /**
@@ -77,10 +76,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const ruleConfigFile: string | null = null
-    let ruleConfigContent: any[] | null = null
-
-    const currentRuleConfigFile = Config.ruleConfigFile || this.getRuleConfigFileFromArgs()
+    const currentRuleConfigFile = Config.ruleConfigFile
+    let ruleConfigContent: any[] = []
 
     if (currentRuleConfigFile && currentRuleConfigFile !== '') {
       try {
@@ -119,12 +116,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
         if (matches) {
           mergeAToB(ruleConfig, this.checkerRuleConfigContent)
-
-          // 强制确保sinks被正确设置
-          if (ruleConfig.sinks?.FuncCallTaintSink) {
-            this.checkerRuleConfigContent.sinks = this.checkerRuleConfigContent.sinks || {}
-            this.checkerRuleConfigContent.sinks.FuncCallTaintSink = ruleConfig.sinks.FuncCallTaintSink
-          }
         }
       }
     }
@@ -135,22 +126,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     this.addSourceTagForcheckerRuleConfigContent('PYTHON_INPUT', this.checkerRuleConfigContent)
   }
 
-  /**
-   * Get ruleConfigFile from command line arguments (cached)
-   * @returns The resolved ruleConfigFile path or empty string
-   */
-  private getRuleConfigFileFromArgs(): string {
-    let { ruleConfigFile } = Config
-    if (!ruleConfigFile || ruleConfigFile === '') {
-      const args = process.argv
-      const ruleConfigIndex = args.indexOf('--ruleConfigFile')
-      if (ruleConfigIndex >= 0 && ruleConfigIndex < args.length - 1) {
-        ruleConfigFile = args[ruleConfigIndex + 1]
-        ruleConfigFile = path.isAbsolute(ruleConfigFile) ? ruleConfigFile : path.resolve(process.cwd(), ruleConfigFile)
-      }
-    }
-    return ruleConfigFile || ''
-  }
 
   /**
    * Build a light-weight file cache for quick lookup.
@@ -160,7 +135,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param _state
    * @param _info
    */
-  triggerAtCompileUnit(analyzer: any, scope: any, node: any, _state: any, _info: any): boolean | undefined {
+  triggerAtCompileUnit(analyzer: any, scope: any, node: any, state: any, _info: any): boolean | undefined {
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const fileName = node.loc?.sourcefile
     if (!fileName) return
@@ -171,10 +146,15 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       importedSymbols: new Map(),
     }
 
+    // First pass: collect all variables, classes, and assignments
+    const allAssignments: Map<string, any> = new Map()
+    const applicationCalls: any[] = []
+
     AstUtil.visit(node, {
       AssignmentExpression: (n: any) => {
         if (n.left?.type === 'Identifier' && n.left.name) {
           cache.vars.set(n.left.name, { value: n.right, file: fileName })
+          allAssignments.set(n.left.name, n.right)
         }
         return true
       },
@@ -198,6 +178,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         }
         if (n.init) {
           cache.vars.set(localName, { value: n.init, file: fileName })
+          allAssignments.set(localName, n.init)
         }
         return true
       },
@@ -208,10 +189,184 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         }
         return true
       },
+      // Collect Tornado Application calls
+      CallExpression: (n: any) => {
+        if (this.isTornadoApplicationCallAst(n)) {
+          applicationCalls.push(n)
+        }
+        return true
+      },
     })
 
     this.fileCache.set(fileName, cache)
+
+    // Second pass: process Application calls with fully populated variable map
+    const routesByHandler: Map<string, { classAst: any; urlPattern: string }[]> = new Map()
+
+    for (const callNode of applicationCalls) {
+      // Extract handlers argument
+      const handlersArg = this.extractHandlersArgFromCallAst(callNode)
+      if (!handlersArg) continue
+
+      // Parse routes from handlers list, using allAssignments for variable resolution
+      const routes = this.parseRoutesFromAstWithAssignments(handlersArg, fileName, allAssignments)
+      
+      for (const route of routes) {
+        if (!routesByHandler.has(route.handlerName)) {
+          routesByHandler.set(route.handlerName, [])
+        }
+        const classAst = cache.classes.get(route.handlerName)?.value
+        if (classAst) {
+          routesByHandler.get(route.handlerName)!.push({
+            classAst,
+            urlPattern: route.path,
+          })
+        }
+      }
+    }
+
+    // Register entrypoints from detected routes
+    for (const [handlerName, routeInfos] of routesByHandler) {
+      for (const routeInfo of routeInfos) {
+        const handlerSymVal = this.buildClassSymbol(routeInfo.classAst)
+        this.emitHandlerEntrypoints(analyzer, handlerSymVal, routeInfo.urlPattern, routeInfo.classAst, scope, state)
+      }
+    }
   }
+
+  /**
+   * Parse routes from handlers list AST with assignment map for variable resolution
+   * @param handlersAst - AST node for handlers
+   * @param fileName - Current file name
+   * @param assignments - Map of variable name to value AST
+   */
+  private parseRoutesFromAstWithAssignments(
+    handlersAst: any,
+    fileName: string,
+    assignments: Map<string, any>
+  ): RoutePair[] {
+    const routes: RoutePair[] = []
+    if (!handlersAst) return routes
+
+    // Handle identifier reference to a variable
+    if (handlersAst.type === 'Identifier') {
+      const valueAst = assignments.get(handlersAst.name)
+      if (valueAst) {
+        return this.parseRoutesFromAstWithAssignments(valueAst, fileName, assignments)
+      }
+      return routes
+    }
+
+    // Handle ObjectExpression (Python list parsed as object with numeric keys)
+    if (handlersAst.type === 'ObjectExpression') {
+      const properties = handlersAst.properties || []
+      for (const prop of properties) {
+        const valueNode = prop.value
+        if (valueNode?.type === 'TupleExpression') {
+          const pair = this.parseRouteTuple(valueNode)
+          if (pair) {
+            routes.push({ ...pair, file: fileName })
+          }
+        }
+      }
+      return routes
+    }
+
+    // Handle list/array expression
+    if (handlersAst.type === 'ArrayExpression' || handlersAst.type === 'ListExpression') {
+      const elements = handlersAst.elements || []
+      for (const element of elements) {
+        const pair = parseRoutePair(element)
+        if (pair) {
+          routes.push({ ...pair, file: fileName })
+        }
+      }
+    }
+
+    return routes
+  }
+
+  /**
+   * Parse a route tuple AST into a RoutePair
+   * @param tupleAst - TupleExpression AST node
+   */
+  private parseRouteTuple(tupleAst: any): RoutePair | null {
+    if (!tupleAst || tupleAst.type !== 'TupleExpression') return null
+    const elements = tupleAst.elements || []
+    if (elements.length < 2) return null
+
+    const pathNode = elements[0]
+    const handlerNode = elements[1]
+
+    const pathValue = pathNode?.type === 'Literal' ? pathNode.value : null
+    const handlerName = handlerNode?.type === 'Identifier' ? handlerNode.name : null
+
+    if (typeof pathValue === 'string' && handlerName) {
+      return { path: pathValue, handlerName }
+    }
+    return null
+  }
+
+  /**
+   * Check if a CallExpression AST node is a Tornado Application call
+   * Supports patterns:
+   * - tornado.web.Application.__init__(self, handlers, ...)
+   * - Application.__init__(self, handlers, ...)
+   * - tornado.web.Application(handlers, ...)
+   * - Application(handlers, ...)
+   * @param node - CallExpression AST node
+   */
+  private isTornadoApplicationCallAst(node: any): boolean {
+    if (!node || node.type !== 'CallExpression' || !node.callee) return false
+    const { callee } = node
+    // logger.info(`Checking CallExpression for Tornado Application: ${AstUtil.prettyPrint(callee)}`)
+
+    // Pattern 1: Direct Application call - Application(...)
+    if (callee.type === 'Identifier' && callee.name === 'Application') {
+      return true
+    }
+
+    // Pattern 2: MemberAccess ending with Application - tornado.web.Application(...)
+    if (callee.type === 'MemberAccess' && callee.property?.name === 'Application') {
+      return true
+    }
+
+    // Pattern 3: __init__ call on Application - tornado.web.Application.__init__(...)
+    if (callee.type === 'MemberAccess' && callee.property?.name === '__init__') {
+      let current = callee.object
+      while (current) {
+        if (current.type === 'Identifier' && current.name === 'Application') {
+          return true
+        }
+        if (current.type === 'MemberAccess' && current.property?.name === 'Application') {
+          return true
+        }
+        current = current.type === 'MemberAccess' ? current.object : null
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Extract handlers argument from Tornado Application call AST
+   * @param node - CallExpression AST node
+   */
+  private extractHandlersArgFromCallAst(node: any): any {
+    if (!node.arguments || node.arguments.length === 0) return null
+    const { callee } = node
+
+    // Check if this is an __init__ call (first arg is self)
+    const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
+    
+    if (isInitCall && node.arguments.length >= 2) {
+      // __init__(self, handlers, ...) -> handlers is at index 1
+      return node.arguments[1]
+    }
+    // Application(handlers, ...) -> handlers is at index 0
+    return node.arguments[0]
+  }
+
 
   /**
    * On function call before execution, use argvalues to get resolved symbol values
@@ -243,8 +398,17 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const isAddHandlers = isTornadoCall(node, 'add_handlers')
 
     if (isApp) {
-      // Application(...) -> first arg is routes
-      ;[routeListArgValue] = argvalues
+      // Check if this is an __init__ call pattern: Application.__init__(self, handlers, ...)
+      // In this case, handlers is the second argument (index 1)
+      const callee = node.callee
+      const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
+      if (isInitCall) {
+        // __init__(self, handlers, ...) -> handlers is at index 1
+        routeListArgValue = argvalues[1]
+      } else {
+        // Application(handlers, ...) -> handlers is at index 0
+        ;[routeListArgValue] = argvalues
+      }
     } else if (isAddHandlers) {
       // add_handlers(host, routes) -> second arg is routes
       ;[, routeListArgValue] = argvalues
@@ -349,80 +513,49 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   }
 
   /**
-   * Override checkByNameMatch to support partial matching (e.g., os.system matches syslib_from.os.system)
-   * @param node
-   * @param fclos
-   * @param argvalues
+   * Proactive Sink Matching
+   * Overrides base class to add flexible matching for common Python sinks (DB, Shell)
+   * that might be missed due to incomplete type resolution.
    */
-  checkByNameMatch(node: any, fclos: any, argvalues: any) {
-    // 如果sinks配置为空，尝试从规则配置文件加载（延迟加载）
-    if (!this.checkerRuleConfigContent.sinks?.FuncCallTaintSink) {
-      const Config = require('../../../config')
-      const FileUtil = require('../../../util/file-util')
-      const path = require('path')
-      const { mergeAToB } = require('../../../util/common-util')
+  checkByNameMatch(node: any, fclos: any, argvalues: any): void {
+    // 1. Try standard matching first
+    super.checkByNameMatch(node, fclos, argvalues)
 
-      let currentRuleConfigFile = Config.ruleConfigFile
-      if (!currentRuleConfigFile || currentRuleConfigFile === '') {
-        const args = process.argv
-        const ruleConfigIndex = args.indexOf('--ruleConfigFile')
-        if (ruleConfigIndex >= 0 && ruleConfigIndex < args.length - 1) {
-          currentRuleConfigFile = args[ruleConfigIndex + 1]
-          currentRuleConfigFile = path.isAbsolute(currentRuleConfigFile)
-            ? currentRuleConfigFile
-            : path.resolve(process.cwd(), currentRuleConfigFile)
+    // 2. Proactive matching for critical sinks if no finding was generated yet
+    // We look for common method names regardless of the receiver's inferred type
+    const funcName = node.callee?.property?.name || node.callee?.name
+    if (!funcName) return
+
+    const proactiveSinks: Record<string, string> = {
+      execute: 'PythonSqlInjection',
+      popen: 'PythonCommandInjection',
+      system: 'PythonCommandInjection',
+    }
+
+    if (proactiveSinks[funcName]) {
+      // Check if any argument is tainted
+      const taintedArg = argvalues.find((arg: any) => arg && (arg.taint || arg.hasTagRec || arg._tags?.has('PYTHON_INPUT')))
+      if (taintedArg) {
+        // Construct a manual finding if not already found
+        const attribute = proactiveSinks[funcName]
+        const ruleName = `${funcName} (Proactive Match)\nSINK Attribute: ${attribute}`
+        
+        const taintFlowFinding = this.buildTaintFinding(
+          this.getCheckerId(),
+          this.desc,
+          node,
+          taintedArg,
+          fclos,
+          'PYTHON_INPUT',
+          ruleName,
+          [] // No specific sanitizers for proactive match
+        )
+        
+        const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
+        if (TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) {
+          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
         }
       }
-
-      if (currentRuleConfigFile && currentRuleConfigFile !== '') {
-        try {
-          const ruleConfigContent = FileUtil.loadJSONfile(currentRuleConfigFile)
-          if (ruleConfigContent && Array.isArray(ruleConfigContent) && ruleConfigContent.length > 0) {
-            const checkerId = this.getCheckerId()
-            for (const ruleConfig of ruleConfigContent) {
-              const checkerIds = Array.isArray(ruleConfig.checkerIds)
-                ? ruleConfig.checkerIds
-                : ruleConfig.checkerIds
-                  ? [ruleConfig.checkerIds]
-                  : []
-              if (checkerIds.includes(checkerId)) {
-                mergeAToB(ruleConfig, this.checkerRuleConfigContent)
-                if (ruleConfig.sinks?.FuncCallTaintSink) {
-                  this.checkerRuleConfigContent.sinks = this.checkerRuleConfigContent.sinks || {}
-                  this.checkerRuleConfigContent.sinks.FuncCallTaintSink = ruleConfig.sinks.FuncCallTaintSink
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // 忽略错误
-        }
-      }
-    }
-
-    const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
-    const callFull = this.getObj(fclos)
-
-    // 如果还是没有rules，直接调用基类方法（基类可能会从其他地方获取规则）
-    if (!rules || rules.length === 0) {
-      super.checkByNameMatch(node, fclos, argvalues)
-      return
-    }
-
-    if (!callFull) {
-      super.checkByNameMatch(node, fclos, argvalues)
-      return
-    }
-    // 检查是否有匹配的规则（支持部分匹配）
-    // 只匹配精确匹配或带点分隔符的部分匹配（如 os.system 匹配 syslib_from.os.system）
-    // 移除 callFull.endsWith(rule.fsig) 以避免误报（如 "system" 匹配 "test_system"）
-    const matchedRule = rules.find((rule: any) => {
-      if (typeof rule.fsig !== 'string') return false
-      return rule.fsig === callFull || callFull.endsWith(`.${rule.fsig}`)
-    })
-    // 如果有匹配的规则，调用基类方法处理
-    if (matchedRule) {
-      super.checkByNameMatch(node, fclos, argvalues)
     }
   }
 
@@ -437,7 +570,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     // 先调用基类方法处理规则配置中的 source
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
-
+    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const { fclos, ret } = info
     if (!fclos || !ret) {
       return
@@ -453,7 +586,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     // 检查是否是 tornado source API 调用（如 get_argument）
     if (funcName && tornadoSourceAPIs.has(funcName)) {
-      this.markAsTainted(ret)
+      this.markAsTainted(ret, node)
     }
 
     // 处理 passthrough 函数（如 decode, strip 等）
@@ -466,13 +599,13 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         isRequestAttributeExpression(node.callee.object)
       ) {
         // 直接标记返回值为 source（因为 self.request.body/query/headers/cookies 等是 source）
-        this.markAsTainted(ret)
+        this.markAsTainted(ret, node)
         return // 已经标记，不需要再检查 receiver
       }
       // 检查 receiver 是否被污染
       const receiver = fclos?.object || fclos?._this
       if (receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))) {
-        this.markAsTainted(ret)
+        this.markAsTainted(ret, node)
       }
     }
   }
@@ -512,7 +645,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           // Process the parameter to get its symbol value
           const paramSymVal = analyzer.processInstruction(entryPoint.entryPointSymVal, param.id || param, state)
           if (paramSymVal) {
-            this.markAsTainted(paramSymVal)
+            this.markAsTainted(paramSymVal, param.id || param)
           }
         } catch (e) {
           // Ignore errors
@@ -536,7 +669,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     // 重用 isRequestAttributeAccess 工具函数，避免重复逻辑并保持行为一致
     if (isRequestAttributeAccess(node)) {
-      this.markAsTainted(res)
+      this.markAsTainted(res, node)
     }
   }
 
@@ -866,7 +999,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           finalEp.ast = finalEp.fdef
         }
         if (!finalEp.functionName) {
-          finalEp.functionName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
+          const rawFuncName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
+          const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
+          finalEp.functionName = handlerName ? `${handlerName}.${rawFuncName}` : rawFuncName
         }
         // 确保 finalEp 有 filePath
         if (!finalEp.filePath && finalEp.fdef?.loc?.sourcefile) {
@@ -882,6 +1017,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           finalEp.ast = finalEp.fdef
         }
         const entryPoint = completeEntryPoint(finalEp)
+        entryPoint.urlPattern = urlPattern
+        entryPoint.handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
         // 确保 entryPoint.entryPointSymVal.parent 有 field 结构
         if (
           entryPoint.entryPointSymVal?.parent &&
@@ -904,13 +1041,30 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           }
         }
 
+        const params = extractTornadoParams(urlPattern)
         const paramMetas =
           (Array.isArray((finalEp as any).params) && (finalEp as any).params.length
             ? (finalEp as any).params
             : extractParamsFromAst(finalEp.fdef)) || []
         if (paramMetas.length > 0) {
+          let positionalIdx = 0
           for (const meta of paramMetas) {
             if (meta.name === 'self') continue
+
+            let isSource = false
+            if (params.named.length > 0) {
+              if (params.named.includes(meta.name)) {
+                isSource = true
+              }
+            } else if (params.positionalCount > 0) {
+              if (positionalIdx < params.positionalCount) {
+                isSource = true
+              }
+            }
+            positionalIdx++
+
+            if (!isSource) continue
+
             // 对于路径参数，使用 'all' 以匹配所有文件和位置，因为参数可能在函数定义的不同位置
             const sourceEntry = {
               path: meta.name,
@@ -939,6 +1093,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   private buildClassSymbol(classNode: any): any {
     const value: any = {}
     const members = classNode.body || []
+    const className = classNode.name?.name || classNode.id?.name || 'UnknownClass'
     members.forEach((member: any) => {
       if (member.type !== 'FunctionDefinition') return
       const memberName = member.name?.name || member.name?.id?.name || member.id?.name
@@ -951,7 +1106,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         }
       }
     })
-    return { vtype: 'class', value }
+    return { vtype: 'class', value, ast: classNode }
   }
 }
 

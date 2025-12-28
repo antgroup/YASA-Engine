@@ -70,6 +70,7 @@ class PythonTaintAbstractChecker extends TaintChecker {
     let rule = matchSinkAtFuncCall(node, fclos, rules)
     rule = rule.length > 0 ? rule[0] : null
 
+
     if (rule) {
       this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
     }

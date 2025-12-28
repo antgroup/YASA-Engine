@@ -273,6 +273,21 @@ class PythonAnalyzer extends (Analyzer as any) {
     const has_tag = (new_left && new_left.hasTagRec) || (new_right && new_right.hasTagRec)
     if (has_tag) {
       new_node.hasTagRec = has_tag
+      // Propagate tags and trace
+      new_node._tags = new Set()
+      if (new_left?._tags) {
+        for (const t of new_left._tags) new_node._tags.add(t)
+      }
+      if (new_right?._tags) {
+        for (const t of new_right._tags) new_node._tags.add(t)
+      }
+      
+      // Merge traces if possible, or just take one if not
+      if (new_left?.trace || new_right?.trace) {
+        new_node.trace = []
+        if (new_left?.trace) new_node.trace.push(...new_left.trace)
+        if (new_right?.trace) new_node.trace.push(...new_right.trace)
+      }
     }
 
     if (this.checkerManager && (this.checkerManager as any).checkAtBinaryOperation)

@@ -49,7 +49,11 @@ export function isRequestAttributeAccess(node: any): boolean {
   if (inner?.type !== 'MemberAccess') return false
   const baseName = inner.object?.name
   const requestName = inner.property?.name
-  return baseName === 'self' && requestName === 'request' && ['body', 'query', 'headers', 'cookies'].includes(propName)
+  return (
+    baseName === 'self' &&
+    requestName === 'request' &&
+    ['body', 'query', 'headers', 'cookies', 'files', 'uri', 'path', 'arguments', 'query_arguments', 'body_arguments'].includes(propName)
+  )
 }
 
 /**
@@ -78,6 +82,22 @@ export function isTornadoCall(node: any, targetName: string): boolean {
   }
   if (callee.type === 'Identifier' && callee.name === targetName) {
     return true
+  }
+  // Handle pattern: tornado.web.Application.__init__(self, handlers, ...)
+  // In this case, we need to check if 'Application' is in the member access chain
+  // and the final property is '__init__'
+  if (callee.type === 'MemberAccess' && callee.property?.name === '__init__') {
+    // Check if any part of the member access chain matches the targetName
+    let current = callee.object
+    while (current) {
+      if (current.type === 'Identifier' && current.name === targetName) {
+        return true
+      }
+      if (current.type === 'MemberAccess' && current.property?.name === targetName) {
+        return true
+      }
+      current = current.type === 'MemberAccess' ? current.object : null
+    }
   }
   return false
 }
@@ -227,4 +247,36 @@ export function extractParamsFromAst(funcNode: any): ParamMeta[] {
     result.push({ name, locStart, locEnd })
   }
   return result
+}
+
+/**
+ * Extract named parameter names or positional count from Tornado URL patterns (regex)
+ * Supports pattern like (?P<name>...) or (...)
+ * @param pattern - Tornado URL regex pattern
+ */
+export function extractTornadoParams(pattern: string): { named: string[]; positionalCount: number } {
+  if (!pattern) return { named: [], positionalCount: 0 }
+  
+  const namedGroups: string[] = []
+  const namedRegex = /\(\?P<(\w+)>/g
+  let match: RegExpExecArray | null
+  while ((match = namedRegex.exec(pattern)) !== null) {
+    namedGroups.push(match[1])
+  }
+
+  if (namedGroups.length > 0) {
+    return { named: namedGroups, positionalCount: 0 }
+  }
+
+  // Count positional groups.
+  // Remove escaped parens first.
+  const cleaned = pattern.replace(/\\\(|\\\)/g, '')
+  let positionalCount = 0
+  // Matches '(' NOT followed by '?' (which covers (?:, (?P<, (?=, (?!, etc.)
+  const positionalRegex = /\((?!\?)/g
+  while (positionalRegex.exec(cleaned) !== null) {
+    positionalCount++
+  }
+
+  return { named: [], positionalCount }
 }
