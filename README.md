@@ -2,7 +2,7 @@
 
 #### [简体中文](README_ZH.md) / [English](README.md)
 
-YASA (Yet Another Static Analyzer) is an open-source static program analysis project. Its core innovation lies in a unified intermediate representation called the Unified Abstract Syntax Tree (UAST), designed to support multiple programming languages. Built on top of UAST, YASA provides a highly accurate static analysis framework. Users can extend its capabilities by writing custom checkers to perform various program analysis tasks—such as AST queries, data flow analysis, and function call graph analysis—and expose functionality through SDK, declarative query language (QL), or MCP.
+YASA (Yet Another Static Analyzer, pronounced “YA-sa”) is an open-source static program analysis project. Its core innovation lies in a unified intermediate representation called the Unified Abstract Syntax Tree (UAST), designed to support multiple programming languages. Built on top of UAST, YASA provides a highly accurate static analysis framework. Users can extend its capabilities by writing custom checkers to perform various program analysis tasks—such as AST queries, data flow analysis, and function call graph analysis—and expose functionality through SDK, declarative query language (QL), or MCP.
 
 As a project originally developed within a security team, YASA also comes with built-in taint analysis capabilities, implemented as a checker, to detect security vulnerabilities.
 
@@ -18,7 +18,7 @@ The unified multi-language analysis engine is the core component of a modern pro
 ### YASA-UQL: Unified Declarative Rule Query Language
 Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
-### YASA-MCP: Unified multi-language Program Analysis MCP 
+### YASA-MCP: Unified multi-language Program Analysis MCP
 Provides atomic analysis APIs for LLM, offering program analysis services that are LLM-friendly.
 
 ### YASA-SDK: Unified multi-language Program Analysis SDK
@@ -59,6 +59,8 @@ For code contributions, please refer to [CONTRIBUTION](CONTRIBUTION.md)
 
 ## Resource Links
 [Official Documentation](https://www.yuque.com/u22090306/bebf6g)
+
+[Learning Resources](https://www.yuque.com/u22090306/bebf6g/sr0y5fqg0kcua5nf)
 
 [Community Activities](https://www.yuque.com/u22090306/bebf6g/fn1rauxwtp7z0l1u)
 

@@ -348,7 +348,7 @@ class GoAnalyzer extends Analyzer {
           ainfo: this.ainfo,
         })
       }
-      ret = super.processCallExpression(scope, node, state)
+      ret = super.processCallExpression(scope, node, state, fclos)
       if (ret && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
           fclos,
@@ -517,6 +517,16 @@ class GoAnalyzer extends Analyzer {
     }
   }
 
+  private static knownPackageName: Record<string, string> = {}
+
+  /**
+   * Register known module name to package name mapping for default import variable name fix
+   * @param knownPackageName A map from module name to known package name
+   */
+  static registerKnownPackageNames(knownPackageName: Record<string, string>) {
+    GoAnalyzer.knownPackageName = { ...GoAnalyzer.knownPackageName, ...knownPackageName }
+  }
+
   /**
    *
    * @param scope
@@ -594,14 +604,15 @@ class GoAnalyzer extends Analyzer {
         }
       }
     } else {
-      // 如果是import，则定义真正的包名而非目录名
-      if (
-        initialNode?.type === 'ImportExpression' &&
-        initVal?.vtype === 'package' &&
-        initVal.name &&
-        id.name === initialNode.from?.value?.split('/').at(-1)
-      ) {
-        id.name = initVal.name
+      if (initialNode?.type === 'ImportExpression') {
+        // 处理 default import 情况
+        if (node._meta?.isDefaultImport === true && GoAnalyzer.knownPackageName[initialNode.from?.value]) {
+          id.name = GoAnalyzer.knownPackageName[initialNode.from?.value]
+        }
+        // 如果是import，则定义真正的包名而非目录名
+        if (initVal?.vtype === 'package' && initVal.name && id.name === initialNode.from?.value?.split('/').at(-1)) {
+          id.name = initVal.name
+        }
       }
       this.saveVarInCurrentScope(scope, id, initVal, state)
     }
