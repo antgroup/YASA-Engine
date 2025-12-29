@@ -7,7 +7,7 @@ YASA（Yet Another Static Analyzer, 读作“亚萨” ）是一个开源的静�
 作为诞生于安全团队的开源项目，YASA也以Checker的形式内置了安全领域最重要的污点分析能力，用于安全漏洞的检测。
 
 ## 核心组件介绍
-<img src="folder-img/Structure-ZH.png"  />
+<img src="folder-img/Structure-ZH.jpg"  />
 
 ### YASA-UAST 统一多语言抽象语法树
 [YASA-UAST](https://github.com/antgroup/YASA-UAST)（Unified Abstract Syntax Tree）是一种面向多语言程序分析的中间表示结构。UAST-Parser将不同编程语言的代码解析为统一的抽象语法格式，通过UAST，不同语言的源代码可以被转换为标准化的树形结构，从而实现多语言的统一分析和处理。
