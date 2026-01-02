@@ -357,9 +357,9 @@ jobs:
 
       - name: Compress Engine Binaries
         run: |
-          mkdir ${{ matrix.platform.target }}
-          mv dist node_modules ${{ matrix.platform.target }}
-          zip -r build_engine-${{ matrix.platform.target }}.zip ${{ matrix.platform.target }}
+          mkdir engine-${{ matrix.platform.target }}
+          mv dist node_modules engine-${{ matrix.platform.target }}
+          zip -r build_engine-${{ matrix.platform.target }}.zip engine-${{ matrix.platform.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
