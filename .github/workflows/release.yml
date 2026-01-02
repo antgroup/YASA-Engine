@@ -116,13 +116,13 @@ jobs:
           fi
 
       - name: Compress UAST binaries
-        run: zip -r uast_binaries.zip uast_binaries/
+        run: zip -r uast-binaries.zip uast_binaries/
 
       - name: Upload UAST binaries
         uses: actions/upload-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries.zip
+          path: uast-binaries.zip
 
 
   # 2. 解析依赖版本（只需一次）
