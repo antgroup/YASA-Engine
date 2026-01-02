@@ -116,7 +116,8 @@ jobs:
           fi
 
       - name: Compress UAST binaries
-        run: zip -r uast-binaries.zip uast_binaries/
+        run: zip -r ../uast-binaries.zip .
+        working-directory: uast_binaries/
 
       - name: Upload UAST binaries
         uses: actions/upload-artifact@v4
@@ -199,10 +200,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries/
       
       - name: Extract Binaries
-        run: unzip uast_binaries/uast-binaries.zip -d uast_binaries
+        run: unzip uast-binaries.zip -d uast_binaries
 
       - name: Extract and Deploy Linux Binaries to deps/
         run: |
@@ -383,13 +383,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries/
-          merge-multiple: false
 
       - name: Extract Binaries
         run: |
           for f in engine_binaries/*.zip; do unzip $f -d engine_binaries; done
-          unzip uast_binaries/uast-binaries.zip -d uast_binaries
+          unzip uast-binaries.zip -d uast_binaries
 
       - name: Debug-List all downloaded binaries
         run: |
