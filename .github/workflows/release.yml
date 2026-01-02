@@ -356,7 +356,10 @@ jobs:
           echo "✅ Built: dist/${{ matrix.platform.out_name }}"
 
       - name: Compress Engine Binaries
-        run: zip -r build_engine-${{ matrix.platform.target }}.zip dist node_modules
+        run: |
+          mkdir ${{ matrix.platform.target }}
+          mv dist node_modules ${{ matrix.platform.target }}
+          zip -r build_engine-${{ matrix.platform.target }}.zip ${{ matrix.platform.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -377,7 +380,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: engine-node18-*
-          path: engine_binaries/
+          merge-multiple: true
 
       - name: Download UAST Binaries
         uses: actions/download-artifact@v4
@@ -386,7 +389,7 @@ jobs:
 
       - name: Extract Binaries
         run: |
-          for f in engine_binaries/*.zip; do unzip $f -d engine_binaries; done
+          for f in build_engine-*.zip; do unzip $f -d engine_binaries; done
           unzip uast-binaries.zip -d uast_binaries
 
       - name: Debug-List all downloaded binaries
