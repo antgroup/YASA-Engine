@@ -359,13 +359,13 @@ jobs:
         run: |
           mkdir engine-${{ matrix.platform.target }}
           mv dist node_modules engine-${{ matrix.platform.target }}
-          zip -r build_engine-${{ matrix.platform.target }}.zip engine-${{ matrix.platform.target }}
+          zip -r engine-${{ matrix.platform.target }}.zip engine-${{ matrix.platform.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: engine-${{ matrix.platform.target }}
-          path: build_engine-${{ matrix.platform.target }}.zip
+          path: engine-${{ matrix.platform.target }}.zip
           retention-days: 7
 
   # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
@@ -389,7 +389,7 @@ jobs:
 
       - name: Extract Binaries
         run: |
-          for f in build_engine-*.zip; do unzip $f -d engine_binaries; done
+          for f in engine-*.zip; do unzip $f -d engine_binaries; done
           unzip uast-binaries.zip -d uast_binaries
 
       - name: Debug-List all downloaded binaries
