@@ -1077,7 +1077,7 @@ class GoAnalyzer extends Analyzer {
           }>`
       )
 
-      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, { entryPoint })
 
       const argValues = []
 

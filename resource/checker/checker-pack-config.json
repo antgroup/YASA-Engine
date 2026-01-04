@@ -7,6 +7,7 @@
       "cobra.Command-builtIn",
       "go-restful-entryPoints-collect-checker",
       "echo-entrypoint-collect-checker",
+      "beego-entrypoint-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
       "go-main-entryPoints-collection",
