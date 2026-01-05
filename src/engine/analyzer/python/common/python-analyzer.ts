@@ -105,53 +105,19 @@ class PythonAnalyzer extends (Analyzer as any) {
       return true
     }
     const hasAnalysised: any[] = []
-    for (let i = 0; i < entryPoints.length; i++) {
-      const entryPoint = entryPoints[i]
+    for (const entryPoint of entryPoints) {
       if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        // Serialize parameters properly to avoid [object Object] issue
-        // Use a custom serializer to handle circular references
-        const params = entryPoint.entryPointSymVal?.ast?.parameters
-        let paramsStr = ''
-        if (params) {
-          try {
-            // Try to serialize only the essential parts to avoid circular references
-            if (Array.isArray(params)) {
-              paramsStr = JSON.stringify(
-                params.map((p: any) => ({
-                  id: p?.id?.name || p?.id,
-                  name: p?.name,
-                }))
-              )
-            } else if (typeof params === 'object') {
-              // Extract only non-circular fields
-              const keys = Object.keys(params)
-              const simpleParams: any = {}
-              for (const key of keys) {
-                const val = params[key]
-                if (val && typeof val === 'object' && val.id) {
-                  simpleParams[key] = { id: val.id?.name || val.id }
-                } else if (typeof val !== 'object' || val === null) {
-                  simpleParams[key] = val
-                }
-              }
-              paramsStr = JSON.stringify(simpleParams)
-            } else {
-              paramsStr = String(params)
-            }
-          } catch (e) {
-            // Fallback: use a simple string representation
-            paramsStr = params.toString ? params.toString() : String(params)
-          }
-        }
-        // Include parent class name in key to distinguish handlers with same method name
-        const parentName = entryPoint?.entryPointSymVal?.parent?.id || entryPoint?.entryPointSymVal?.parent?.name || ''
-        const qid = entryPoint?.entryPointSymVal?._qid || ''
-        const entryKey = `${entryPoint.filePath}.${entryPoint.functionName}/${parentName}/${qid}#${paramsStr}.${entryPoint.attribute}`
-        if (hasAnalysised.includes(entryKey)) {
+        if (
+          hasAnalysised.includes(
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          )
+        ) {
           continue
         }
 
-        hasAnalysised.push(entryKey)
+        hasAnalysised.push(
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+        )
         entryPointConfig.setCurrentEntryPoint(entryPoint)
         logger.info(
           'EntryPoint [%s.%s] is executing',
@@ -215,7 +181,6 @@ class PythonAnalyzer extends (Analyzer as any) {
             `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
             `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`
           )
-          // Continue to next entrypoint instead of breaking
         }
         this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
       } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
@@ -281,7 +246,7 @@ class PythonAnalyzer extends (Analyzer as any) {
       if (new_right?._tags) {
         for (const t of new_right._tags) new_node._tags.add(t)
       }
-      
+
       // Merge traces if possible, or just take one if not
       if (new_left?.trace || new_right?.trace) {
         new_node.trace = []

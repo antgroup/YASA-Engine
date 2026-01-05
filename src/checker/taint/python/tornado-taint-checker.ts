@@ -126,13 +126,13 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     this.addSourceTagForcheckerRuleConfigContent('PYTHON_INPUT', this.checkerRuleConfigContent)
   }
 
-
   /**
    * Build a light-weight file cache for quick lookup.
    * @param analyzer
    * @param scope
    * @param node
    * @param _state
+   * @param state
    * @param _info
    */
   triggerAtCompileUnit(analyzer: any, scope: any, node: any, state: any, _info: any): boolean | undefined {
@@ -210,7 +210,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
       // Parse routes from handlers list, using allAssignments for variable resolution
       const routes = this.parseRoutesFromAstWithAssignments(handlersArg, fileName, allAssignments)
-      
+
       for (const route of routes) {
         if (!routesByHandler.has(route.handlerName)) {
           routesByHandler.set(route.handlerName, [])
@@ -358,7 +358,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     // Check if this is an __init__ call (first arg is self)
     const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
-    
+
     if (isInitCall && node.arguments.length >= 2) {
       // __init__(self, handlers, ...) -> handlers is at index 1
       return node.arguments[1]
@@ -366,7 +366,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // Application(handlers, ...) -> handlers is at index 0
     return node.arguments[0]
   }
-
 
   /**
    * On function call before execution, use argvalues to get resolved symbol values
@@ -400,7 +399,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (isApp) {
       // Check if this is an __init__ call pattern: Application.__init__(self, handlers, ...)
       // In this case, handlers is the second argument (index 1)
-      const callee = node.callee
+      const { callee } = node
       const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
       if (isInitCall) {
         // __init__(self, handlers, ...) -> handlers is at index 1
@@ -516,6 +515,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * Proactive Sink Matching
    * Overrides base class to add flexible matching for common Python sinks (DB, Shell)
    * that might be missed due to incomplete type resolution.
+   * @param node
+   * @param fclos
+   * @param argvalues
    */
   checkByNameMatch(node: any, fclos: any, argvalues: any): void {
     // 1. Try standard matching first
@@ -534,12 +536,14 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     if (proactiveSinks[funcName]) {
       // Check if any argument is tainted
-      const taintedArg = argvalues.find((arg: any) => arg && (arg.taint || arg.hasTagRec || arg._tags?.has('PYTHON_INPUT')))
+      const taintedArg = argvalues.find(
+        (arg: any) => arg && (arg.taint || arg.hasTagRec || arg._tags?.has('PYTHON_INPUT'))
+      )
       if (taintedArg) {
         // Construct a manual finding if not already found
         const attribute = proactiveSinks[funcName]
         const ruleName = `${funcName} (Proactive Match)\nSINK Attribute: ${attribute}`
-        
+
         const taintFlowFinding = this.buildTaintFinding(
           this.getCheckerId(),
           this.desc,
@@ -550,7 +554,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           ruleName,
           [] // No specific sanitizers for proactive match
         )
-        
+
         const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
         if (TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) {
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)

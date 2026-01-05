@@ -52,7 +52,18 @@ export function isRequestAttributeAccess(node: any): boolean {
   return (
     baseName === 'self' &&
     requestName === 'request' &&
-    ['body', 'query', 'headers', 'cookies', 'files', 'uri', 'path', 'arguments', 'query_arguments', 'body_arguments'].includes(propName)
+    [
+      'body',
+      'query',
+      'headers',
+      'cookies',
+      'files',
+      'uri',
+      'path',
+      'arguments',
+      'query_arguments',
+      'body_arguments',
+    ].includes(propName)
   )
 }
 
@@ -256,7 +267,7 @@ export function extractParamsFromAst(funcNode: any): ParamMeta[] {
  */
 export function extractTornadoParams(pattern: string): { named: string[]; positionalCount: number } {
   if (!pattern) return { named: [], positionalCount: 0 }
-  
+
   const namedGroups: string[] = []
   const namedRegex = /\(\?P<(\w+)>/g
   let match: RegExpExecArray | null
