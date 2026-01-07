@@ -64,6 +64,7 @@ jobs:
             echo "❌ Failed to download UAST binaries"
             exit 1
           fi
+          chmod +x uast_binaries/*
           ls -lh uast_binaries/
 
       - name: Extract and Deploy Linux Binaries to deps/
