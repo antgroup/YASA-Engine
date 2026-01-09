@@ -1,8 +1,6 @@
 const path = require('path')
 const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
 const FileUtil = require('../../../util/file-util')
-
-const { extractRelativePath } = FileUtil
 const AstUtil = require('../../../util/ast-util')
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
@@ -10,11 +8,8 @@ const logger = require('../../../util/logger')(__filename)
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const { mergeAToB } = require('../../../util/common-util')
 const {
-  isTornadoCall,
-  parseRoutePair,
-  resolveImportPath,
-  extractImportEntries,
   extractParamsFromAst,
+  isTornadoCall,
   tornadoSourceAPIs,
   passthroughFuncs,
   isRequestAttributeExpression,
@@ -23,25 +18,17 @@ const {
 } = require('./tornado-util')
 const { markTaintSource } = require('../common-kit/source-util')
 
-// Type definitions (moved from import to avoid module resolution issues)
-interface FileCache {
-  vars: Map<string, any>
-  classes: Map<string, any>
-  importedSymbols: Map<string, any>
-}
-
 interface RoutePair {
   path: string
   handlerName: string
   file?: string
+  handlerSymVal?: any
 }
 
 /**
  * Tornado Taint Checker Base Class
  */
 class TornadoTaintChecker extends PythonTaintAbstractChecker {
-  private fileCache = new Map<string, FileCache>()
-
   private cachedRuleConfigFile: string | null = null
 
   private cachedRuleConfigContent: any[] | null = null
@@ -51,10 +38,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param value
    * @param node Optional node for trace
    */
-  private markAsTainted(value: any, node?: any): void {
-    if (!value) return
-    markTaintSource(value, { path: node || value.ast || {}, kind: 'PYTHON_INPUT' })
-  }
 
   /**
    *
@@ -127,247 +110,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   }
 
   /**
-   * Build a light-weight file cache for quick lookup.
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param _state
-   * @param state
-   * @param _info
-   */
-  triggerAtCompileUnit(analyzer: any, scope: any, node: any, state: any, _info: any): boolean | undefined {
-    if (Config.entryPointMode === 'ONLY_CUSTOM') return
-    const fileName = node.loc?.sourcefile
-    if (!fileName) return
-
-    const cache: FileCache = {
-      vars: new Map(),
-      classes: new Map(),
-      importedSymbols: new Map(),
-    }
-
-    // First pass: collect all variables, classes, and assignments
-    const allAssignments: Map<string, any> = new Map()
-    const applicationCalls: any[] = []
-
-    AstUtil.visit(node, {
-      AssignmentExpression: (n: any) => {
-        if (n.left?.type === 'Identifier' && n.left.name) {
-          cache.vars.set(n.left.name, { value: n.right, file: fileName })
-          allAssignments.set(n.left.name, n.right)
-        }
-        return true
-      },
-      VariableDeclaration: (n: any) => {
-        const localName = n.id?.name
-        if (!localName) return true
-        if (n.init?.type === 'ImportExpression') {
-          const modulePath = n.init.from?.value || n.init.from?.name
-          if (!modulePath) return true
-          const resolved = resolveImportPath(modulePath, fileName, Config.maindir)
-          if (!resolved) return true
-          const entries = extractImportEntries(n)
-          for (const entry of entries) {
-            if (!entry.local) continue
-            cache.importedSymbols.set(entry.local, {
-              file: resolved,
-              originalName: entry.imported,
-            })
-          }
-          return true
-        }
-        if (n.init) {
-          cache.vars.set(localName, { value: n.init, file: fileName })
-          allAssignments.set(localName, n.init)
-        }
-        return true
-      },
-      ClassDefinition: (n: any) => {
-        const name = n.name?.name || n.id?.name
-        if (name) {
-          cache.classes.set(name, { value: n, file: fileName })
-        }
-        return true
-      },
-      // Collect Tornado Application calls
-      CallExpression: (n: any) => {
-        if (this.isTornadoApplicationCallAst(n)) {
-          applicationCalls.push(n)
-        }
-        return true
-      },
-    })
-
-    this.fileCache.set(fileName, cache)
-
-    // Second pass: process Application calls with fully populated variable map
-    const routesByHandler: Map<string, { classAst: any; urlPattern: string }[]> = new Map()
-
-    for (const callNode of applicationCalls) {
-      // Extract handlers argument
-      const handlersArg = this.extractHandlersArgFromCallAst(callNode)
-      if (!handlersArg) continue
-
-      // Parse routes from handlers list, using allAssignments for variable resolution
-      const routes = this.parseRoutesFromAstWithAssignments(handlersArg, fileName, allAssignments)
-
-      for (const route of routes) {
-        if (!routesByHandler.has(route.handlerName)) {
-          routesByHandler.set(route.handlerName, [])
-        }
-        const classAst = cache.classes.get(route.handlerName)?.value
-        if (classAst) {
-          routesByHandler.get(route.handlerName)!.push({
-            classAst,
-            urlPattern: route.path,
-          })
-        }
-      }
-    }
-
-    // Register entrypoints from detected routes
-    for (const [handlerName, routeInfos] of routesByHandler) {
-      for (const routeInfo of routeInfos) {
-        const handlerSymVal = this.buildClassSymbol(routeInfo.classAst)
-        this.emitHandlerEntrypoints(analyzer, handlerSymVal, routeInfo.urlPattern, routeInfo.classAst, scope, state)
-      }
-    }
-  }
-
-  /**
-   * Parse routes from handlers list AST with assignment map for variable resolution
-   * @param handlersAst - AST node for handlers
-   * @param fileName - Current file name
-   * @param assignments - Map of variable name to value AST
-   */
-  private parseRoutesFromAstWithAssignments(
-    handlersAst: any,
-    fileName: string,
-    assignments: Map<string, any>
-  ): RoutePair[] {
-    const routes: RoutePair[] = []
-    if (!handlersAst) return routes
-
-    // Handle identifier reference to a variable
-    if (handlersAst.type === 'Identifier') {
-      const valueAst = assignments.get(handlersAst.name)
-      if (valueAst) {
-        return this.parseRoutesFromAstWithAssignments(valueAst, fileName, assignments)
-      }
-      return routes
-    }
-
-    // Handle ObjectExpression (Python list parsed as object with numeric keys)
-    if (handlersAst.type === 'ObjectExpression') {
-      const properties = handlersAst.properties || []
-      for (const prop of properties) {
-        const valueNode = prop.value
-        if (valueNode?.type === 'TupleExpression') {
-          const pair = this.parseRouteTuple(valueNode)
-          if (pair) {
-            routes.push({ ...pair, file: fileName })
-          }
-        }
-      }
-      return routes
-    }
-
-    // Handle list/array expression
-    if (handlersAst.type === 'ArrayExpression' || handlersAst.type === 'ListExpression') {
-      const elements = handlersAst.elements || []
-      for (const element of elements) {
-        const pair = parseRoutePair(element)
-        if (pair) {
-          routes.push({ ...pair, file: fileName })
-        }
-      }
-    }
-
-    return routes
-  }
-
-  /**
-   * Parse a route tuple AST into a RoutePair
-   * @param tupleAst - TupleExpression AST node
-   */
-  private parseRouteTuple(tupleAst: any): RoutePair | null {
-    if (!tupleAst || tupleAst.type !== 'TupleExpression') return null
-    const elements = tupleAst.elements || []
-    if (elements.length < 2) return null
-
-    const pathNode = elements[0]
-    const handlerNode = elements[1]
-
-    const pathValue = pathNode?.type === 'Literal' ? pathNode.value : null
-    const handlerName = handlerNode?.type === 'Identifier' ? handlerNode.name : null
-
-    if (typeof pathValue === 'string' && handlerName) {
-      return { path: pathValue, handlerName }
-    }
-    return null
-  }
-
-  /**
-   * Check if a CallExpression AST node is a Tornado Application call
-   * Supports patterns:
-   * - tornado.web.Application.__init__(self, handlers, ...)
-   * - Application.__init__(self, handlers, ...)
-   * - tornado.web.Application(handlers, ...)
-   * - Application(handlers, ...)
-   * @param node - CallExpression AST node
-   */
-  private isTornadoApplicationCallAst(node: any): boolean {
-    if (!node || node.type !== 'CallExpression' || !node.callee) return false
-    const { callee } = node
-    // logger.info(`Checking CallExpression for Tornado Application: ${AstUtil.prettyPrint(callee)}`)
-
-    // Pattern 1: Direct Application call - Application(...)
-    if (callee.type === 'Identifier' && callee.name === 'Application') {
-      return true
-    }
-
-    // Pattern 2: MemberAccess ending with Application - tornado.web.Application(...)
-    if (callee.type === 'MemberAccess' && callee.property?.name === 'Application') {
-      return true
-    }
-
-    // Pattern 3: __init__ call on Application - tornado.web.Application.__init__(...)
-    if (callee.type === 'MemberAccess' && callee.property?.name === '__init__') {
-      let current = callee.object
-      while (current) {
-        if (current.type === 'Identifier' && current.name === 'Application') {
-          return true
-        }
-        if (current.type === 'MemberAccess' && current.property?.name === 'Application') {
-          return true
-        }
-        current = current.type === 'MemberAccess' ? current.object : null
-      }
-    }
-
-    return false
-  }
-
-  /**
-   * Extract handlers argument from Tornado Application call AST
-   * @param node - CallExpression AST node
-   */
-  private extractHandlersArgFromCallAst(node: any): any {
-    if (!node.arguments || node.arguments.length === 0) return null
-    const { callee } = node
-
-    // Check if this is an __init__ call (first arg is self)
-    const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
-
-    if (isInitCall && node.arguments.length >= 2) {
-      // __init__(self, handlers, ...) -> handlers is at index 1
-      return node.arguments[1]
-    }
-    // Application(handlers, ...) -> handlers is at index 0
-    return node.arguments[0]
-  }
-
-  /**
    * On function call before execution, use argvalues to get resolved symbol values
    * This replaces the old AST-based triggerAtFuncCallSyntax approach.
    * Using symbol interpretation allows us to:
@@ -400,7 +142,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       // Check if this is an __init__ call pattern: Application.__init__(self, handlers, ...)
       // In this case, handlers is the second argument (index 1)
       const { callee } = node
-      const isInitCall = callee?.type === 'MemberAccess' && callee?.property?.name === '__init__'
+      const isInitCall =
+        callee?.type === 'MemberAccess' &&
+        (callee?.property?.name === '__init__' || callee?.property?.name === '_CTOR_')
       if (isInitCall) {
         // __init__(self, handlers, ...) -> handlers is at index 1
         routeListArgValue = argvalues[1]
@@ -481,22 +225,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         } else if (handlerSym.ast && handlerSym.ast.type === 'ClassDefinition') {
           // If we have the AST, process it to get the class symbol value
           processHandlerClass(handlerSym.ast)
-        } else {
-          // Try to resolve from identifier
-          const { handlerName } = pair
-          const handlerFile = pair.file || currentFile
-          const handlerClassAst = this.resolveSymbol(handlerName, handlerFile)
-          if (handlerClassAst && handlerClassAst.type === 'ClassDefinition') {
-            processHandlerClass(handlerClassAst)
-          }
-        }
-      } else {
-        // Fallback: resolve handler class from name
-        const { handlerName } = pair
-        const handlerFile = pair.file || currentFile
-        const handlerClassAst = this.resolveSymbol(handlerName, handlerFile)
-        if (handlerClassAst && handlerClassAst.type === 'ClassDefinition') {
-          processHandlerClass(handlerClassAst)
         }
       }
 
@@ -590,7 +318,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     // 检查是否是 tornado source API 调用（如 get_argument）
     if (funcName && tornadoSourceAPIs.has(funcName)) {
-      this.markAsTainted(ret, node)
+      // this.markAsTainted(ret, node)
+      markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
     }
 
     // 处理 passthrough 函数（如 decode, strip 等）
@@ -603,13 +332,15 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         isRequestAttributeExpression(node.callee.object)
       ) {
         // 直接标记返回值为 source（因为 self.request.body/query/headers/cookies 等是 source）
-        this.markAsTainted(ret, node)
+        // this.markAsTainted(ret, node)
+        markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
         return // 已经标记，不需要再检查 receiver
       }
       // 检查 receiver 是否被污染
       const receiver = fclos?.object || fclos?._this
       if (receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))) {
-        this.markAsTainted(ret, node)
+        // this.markAsTainted(ret, node)
+        markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
       }
     }
   }
@@ -649,7 +380,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           // Process the parameter to get its symbol value
           const paramSymVal = analyzer.processInstruction(entryPoint.entryPointSymVal, param.id || param, state)
           if (paramSymVal) {
-            this.markAsTainted(paramSymVal, param.id || param)
+            // this.markAsTainted(paramSymVal, param.id || param)
+            markTaintSource(paramSymVal, { path: param.id || param || paramSymVal.ast || {}, kind: 'PYTHON_INPUT' })
           }
         } catch (e) {
           // Ignore errors
@@ -673,59 +405,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
 
     // 重用 isRequestAttributeAccess 工具函数，避免重复逻辑并保持行为一致
     if (isRequestAttributeAccess(node)) {
-      this.markAsTainted(res, node)
+      // this.markAsTainted(res, node)
+      markTaintSource(res, { path: node || res.ast || {}, kind: 'PYTHON_INPUT' })
     }
-  }
-
-  /**
-   * Resolve symbol cross-file
-   * @param name
-   * @param currentFile
-   */
-  private resolveSymbol(name: string, currentFile: string): any | null {
-    if (!name || !currentFile) return null
-    const cache = this.fileCache.get(currentFile)
-    if (!cache) return null
-    const { vars, classes, importedSymbols } = cache
-    if (vars.has(name)) {
-      const entry = vars.get(name)
-      if (entry?.value) {
-        entry.value.loc = entry.value.loc || {}
-        entry.value.loc.sourcefile = entry.file
-        return entry.value
-      }
-    }
-    if (classes.has(name)) {
-      const entry = classes.get(name)
-      if (entry?.value) {
-        entry.value.loc = entry.value.loc || {}
-        entry.value.loc.sourcefile = entry.file
-        return entry.value
-      }
-    }
-
-    const importInfo = importedSymbols.get(name)
-    if (!importInfo) return null
-    const targetCache = this.fileCache.get(importInfo.file)
-    if (!targetCache) return null
-    const targetName = importInfo.originalName || name
-    if (targetCache.vars.has(targetName)) {
-      const entry = targetCache.vars.get(targetName)
-      if (entry?.value) {
-        entry.value.loc = entry.value.loc || {}
-        entry.value.loc.sourcefile = entry.file
-        return entry.value
-      }
-    }
-    if (targetCache.classes.has(targetName)) {
-      const entry = targetCache.classes.get(targetName)
-      if (entry?.value) {
-        entry.value.loc = entry.value.loc || {}
-        entry.value.loc.sourcefile = entry.file
-        return entry.value
-      }
-    }
-    return null
   }
 
   /**
@@ -774,7 +456,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (routeListSymVal.value.length === 2) {
         const [pathSymVal, handlerSymVal] = routeListSymVal.value
         const pathValue = this.extractStringFromSymbolValue(pathSymVal)
-        const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
+        const handlerName = 'Handler' // Placeholder name
         if (pathValue && handlerName) {
           const file =
             handlerSymVal?.ast?.loc?.sourcefile ||
@@ -849,15 +531,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         }
       } catch (e) {
         // ignore and fallback to AST parse below
-      }
-    }
-
-    // Fallback: try to parse from AST if available
-    if (routeListSymVal.ast) {
-      const pair = parseRoutePair(routeListSymVal.ast)
-      if (pair) {
-        const file = routeListSymVal.ast?.loc?.sourcefile || routeListSymVal.loc?.sourcefile || currentFile
-        return [{ ...pair, file }]
       }
     }
 
@@ -1007,14 +680,12 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
           finalEp.functionName = handlerName ? `${handlerName}.${rawFuncName}` : rawFuncName
         }
-        // 确保 finalEp 有 filePath
         if (!finalEp.filePath && finalEp.fdef?.loc?.sourcefile) {
           const { sourcefile } = finalEp.fdef.loc
-          if (Config.maindir && typeof Config.maindir === 'string') {
-            finalEp.filePath = FileUtil.extractRelativePath(sourcefile, Config.maindir)
-          } else {
-            finalEp.filePath = sourcefile
-          }
+          finalEp.filePath =
+            Config.maindir && typeof Config.maindir === 'string'
+              ? FileUtil.extractRelativePath(sourcefile, Config.maindir)
+              : sourcefile
         }
         // 确保 finalEp 有 ast，completeEntryPoint 可能需要它
         if (!finalEp.ast && finalEp.fdef) {
@@ -1023,7 +694,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         const entryPoint = completeEntryPoint(finalEp)
         entryPoint.urlPattern = urlPattern
         entryPoint.handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-        // 确保 entryPoint.entryPointSymVal.parent 有 field 结构
         if (
           entryPoint.entryPointSymVal?.parent &&
           entryPoint.entryPointSymVal.parent.vtype === 'class' &&
@@ -1032,18 +702,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           entryPoint.entryPointSymVal.parent.field = {}
         }
         analyzer.entryPoints.push(entryPoint)
-
-        // 注册参数为 source
-        const funcName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
-        const sourceFile = finalEp.fdef?.loc?.sourcefile || classAst?.loc?.sourcefile || ''
-        let scopeFile: string | null = null
-        if (sourceFile) {
-          if (Config.maindir && typeof Config.maindir === 'string') {
-            scopeFile = extractRelativePath(sourceFile, Config.maindir)
-          } else {
-            scopeFile = sourceFile
-          }
-        }
 
         const params = extractTornadoParams(urlPattern)
         const paramMetas =
