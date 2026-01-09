@@ -29,24 +29,12 @@ interface RoutePair {
  * Tornado Taint Checker Base Class
  */
 class TornadoTaintChecker extends PythonTaintAbstractChecker {
-  private cachedRuleConfigFile: string | null = null
-
-  private cachedRuleConfigContent: any[] | null = null
-
   /**
-   * Helper function to mark a value as tainted
-   * @param value
-   * @param node Optional node for trace
-   */
-
-  /**
-   *
+   * constructor
    * @param resultManager
    */
   constructor(resultManager: any) {
     super(resultManager, 'taint_flow_python_tornado_input')
-    // 基类构造函数会调用 loadRuleConfig，但此时 Config.ruleConfigFile 可能还没有被设置
-    // 所以我们在这里不加载规则配置，而是在 triggerAtStartOfAnalyze 中加载
   }
 
   /**
@@ -59,50 +47,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const currentRuleConfigFile = Config.ruleConfigFile
-    let ruleConfigContent: any[] = []
-
-    if (currentRuleConfigFile && currentRuleConfigFile !== '') {
-      try {
-        ruleConfigContent = FileUtil.loadJSONfile(currentRuleConfigFile)
-        this.cachedRuleConfigFile = currentRuleConfigFile
-        this.cachedRuleConfigContent = ruleConfigContent
-      } catch (e: any) {
-        ruleConfigContent = []
-      }
-    } else if (this.cachedRuleConfigContent !== null) {
-      // 使用缓存的配置内容
-      ruleConfigContent = this.cachedRuleConfigContent
-    } else {
-      // 尝试从 BasicRuleHandler 获取（可能已经在构造函数中加载）
-      try {
-        ruleConfigContent = BasicRuleHandler.getRules(Config.ruleConfigFile)
-        if (ruleConfigContent && ruleConfigContent.length > 0) {
-          this.cachedRuleConfigContent = ruleConfigContent
-        }
-      } catch (e: any) {
-        ruleConfigContent = []
-      }
-    }
-
-    // 应用规则配置
-    const checkerId = this.getCheckerId()
-
-    if (ruleConfigContent && Array.isArray(ruleConfigContent) && ruleConfigContent.length > 0) {
-      for (const ruleConfig of ruleConfigContent) {
-        const checkerIds = Array.isArray(ruleConfig.checkerIds)
-          ? ruleConfig.checkerIds
-          : ruleConfig.checkerIds
-            ? [ruleConfig.checkerIds]
-            : []
-        const matches = checkerIds.length > 0 && checkerIds.includes(checkerId)
-
-        if (matches) {
-          mergeAToB(ruleConfig, this.checkerRuleConfigContent)
-        }
-      }
-    }
-
     // 注册 sourceScope 中的 source
     this.addSourceTagForSourceScope('PYTHON_INPUT', this.sourceScope.value)
     // 注册规则配置中的 source
@@ -247,49 +191,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param fclos
    * @param argvalues
    */
-  checkByNameMatch(node: any, fclos: any, argvalues: any): void {
-    // 1. Try standard matching first
-    super.checkByNameMatch(node, fclos, argvalues)
-
-    // 2. Proactive matching for critical sinks if no finding was generated yet
-    // We look for common method names regardless of the receiver's inferred type
-    const funcName = node.callee?.property?.name || node.callee?.name
-    if (!funcName) return
-
-    const proactiveSinks: Record<string, string> = {
-      execute: 'PythonSqlInjection',
-      popen: 'PythonCommandInjection',
-      system: 'PythonCommandInjection',
-    }
-
-    if (proactiveSinks[funcName]) {
-      // Check if any argument is tainted
-      const taintedArg = argvalues.find(
-        (arg: any) => arg && (arg.taint || arg.hasTagRec || arg._tags?.has('PYTHON_INPUT'))
-      )
-      if (taintedArg) {
-        // Construct a manual finding if not already found
-        const attribute = proactiveSinks[funcName]
-        const ruleName = `${funcName} (Proactive Match)\nSINK Attribute: ${attribute}`
-
-        const taintFlowFinding = this.buildTaintFinding(
-          this.getCheckerId(),
-          this.desc,
-          node,
-          taintedArg,
-          fclos,
-          'PYTHON_INPUT',
-          ruleName,
-          [] // No specific sanitizers for proactive match
-        )
-
-        const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
-        if (TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) {
-          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
-        }
-      }
-    }
-  }
 
   /**
    * Handle API calls like self.get_argument()
@@ -300,46 +201,25 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    // 先调用基类方法处理规则配置中的 source
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const { fclos, ret } = info
-    if (!fclos || !ret) {
-      return
-    }
+    if (!fclos || !ret) return
 
-    // 从 node.callee 获取方法名（对于 MemberAccess 调用，如 self.get_argument）
-    let funcName: string | null = null
-    if (node.callee?.type === 'MemberAccess') {
-      funcName = node.callee.property?.name
-    } else if (node.callee?.type === 'Identifier') {
-      funcName = node.callee.name
-    }
+    const funcName = node.callee?.property?.name || node.callee?.name
+    if (!funcName) return
 
-    // 检查是否是 tornado source API 调用（如 get_argument）
-    if (funcName && tornadoSourceAPIs.has(funcName)) {
-      // this.markAsTainted(ret, node)
+    // Mark Tornado source APIs and passthrough functions
+    if (tornadoSourceAPIs.has(funcName)) {
       markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
-    }
-
-    // 处理 passthrough 函数（如 decode, strip 等）
-    if (funcName && passthroughFuncs.has(funcName)) {
-      // 使用 isRequestAttributeExpression 统一检测 request 属性访问（如 self.request.body.decode）
-      // 这避免了重复的 AST 模式匹配逻辑，保持与 tornado-util.ts 的一致性
-      if (
-        node.callee?.type === 'MemberAccess' &&
-        node.callee.object &&
-        isRequestAttributeExpression(node.callee.object)
-      ) {
-        // 直接标记返回值为 source（因为 self.request.body/query/headers/cookies 等是 source）
-        // this.markAsTainted(ret, node)
-        markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
-        return // 已经标记，不需要再检查 receiver
-      }
-      // 检查 receiver 是否被污染
+    } else if (passthroughFuncs.has(funcName)) {
+      // Check for request attribute access like self.request.body.decode()
+      const isReqAttr = node.callee?.type === 'MemberAccess' && isRequestAttributeExpression(node.callee.object)
       const receiver = fclos?.object || fclos?._this
-      if (receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))) {
-        // this.markAsTainted(ret, node)
+      const isTaintedReceiver =
+        receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))
+
+      if (isReqAttr || isTaintedReceiver) {
         markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
       }
     }
@@ -354,41 +234,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param state
    * @param info
    */
-  triggerAtSymbolInterpretOfEntryPointBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const entryPointConfig = require('../../../engine/analyzer/common/current-entrypoint')
-    const entryPoint = entryPointConfig.getCurrentEntryPoint()
-    if (!entryPoint || !entryPoint.entryPointSymVal) return
-
-    // Check if this entrypoint has path parameters that should be marked as tainted
-    const params = entryPoint.entryPointSymVal?.ast?.parameters
-    if (!params) return
-
-    // Get parameter names from sourceScope
-    const paramNames = new Set<string>()
-    for (const source of this.sourceScope.value) {
-      if (source.path && source.kind === 'PYTHON_INPUT') {
-        paramNames.add(source.path)
-      }
-    }
-
-    // Mark matching parameters as tainted by processing them and marking the result
-    for (const key in params) {
-      const param = params[key]
-      const paramName = param?.id?.name || param?.name
-      if (paramName && paramNames.has(paramName) && paramName !== 'self') {
-        try {
-          // Process the parameter to get its symbol value
-          const paramSymVal = analyzer.processInstruction(entryPoint.entryPointSymVal, param.id || param, state)
-          if (paramSymVal) {
-            // this.markAsTainted(paramSymVal, param.id || param)
-            markTaintSource(paramSymVal, { path: param.id || param || paramSymVal.ast || {}, kind: 'PYTHON_INPUT' })
-          }
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }
-  }
 
   /**
    * Handle Member Access Sources like self.request.body
@@ -401,12 +246,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
-    const { res } = info
-
-    // 重用 isRequestAttributeAccess 工具函数，避免重复逻辑并保持行为一致
     if (isRequestAttributeAccess(node)) {
-      // this.markAsTainted(res, node)
-      markTaintSource(res, { path: node || res.ast || {}, kind: 'PYTHON_INPUT' })
+      markTaintSource(info.res, { path: node || info.res.ast || {}, kind: 'PYTHON_INPUT' })
     }
   }
 
@@ -626,124 +467,74 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     scope?: any,
     state?: any
   ) {
-    if (!handlerSymVal || handlerSymVal.vtype !== 'class') {
-      return
-    }
+    if (!handlerSymVal || handlerSymVal.vtype !== 'class') return
+
     const httpMethods = new Set(['get', 'post', 'put', 'delete', 'patch', 'head', 'options'])
-    const entrypoints = Object.entries(handlerSymVal.value)
-      .filter(([key, value]: [string, any]) => httpMethods.has(key) && value.vtype === 'fclos')
-      .map(([, value]: [string, any]) => value)
+    const handlers = Object.entries(handlerSymVal.value).filter(
+      ([key, value]: [string, any]) => httpMethods.has(key) && value.vtype === 'fclos'
+    )
 
-    for (const ep of entrypoints as any[]) {
-      // ignore init files
-      if (ep.fdef?.loc?.sourcefile?.endsWith('__init__.py')) {
-        continue
-      }
+    for (const [method, fclos] of handlers as any[]) {
+      if (fclos.fdef?.loc?.sourcefile?.endsWith('__init__.py')) continue
 
-      // 尝试使用 analyzer.processInstruction 获取正确的 fclos 对象
-      let finalEp = ep
-      if (scope && state && ep.fdef) {
+      let finalEp = fclos
+      if (scope && state && fclos.fdef) {
         try {
-          const processedFclos = analyzer.processInstruction(scope, ep.fdef, state)
-          if (processedFclos && processedFclos.vtype === 'fclos') {
-            processedFclos.parent = handlerSymVal
-            processedFclos.params = ep.params || extractParamsFromAst(ep.fdef)
-            if (!processedFclos.value) {
-              processedFclos.value = {}
-            }
-            finalEp = processedFclos
+          const processed = analyzer.processInstruction(scope, fclos.fdef, state)
+          if (processed?.vtype === 'fclos') {
+            processed.parent = handlerSymVal
+            processed.params = fclos.params || extractParamsFromAst(fclos.fdef)
+            finalEp = processed
           }
         } catch (e) {
-          // fallback to original ep
+          /* fallback */
         }
-      }
-      // 确保 ep 有 value 属性
-      if (!finalEp.value) {
-        finalEp.value = {}
       }
 
-      // 确保 finalEp.parent 正确设置，并且 handlerSymVal 有 field 结构
-      if (handlerSymVal && handlerSymVal.vtype === 'class') {
-        if (!handlerSymVal.field) {
-          handlerSymVal.field = {}
-        }
-        finalEp.parent = handlerSymVal
-      }
+      if (!finalEp.value) finalEp.value = {}
+      finalEp.parent = handlerSymVal
+      if (handlerSymVal.vtype === 'class' && !handlerSymVal.field) handlerSymVal.field = {}
 
       try {
-        // 确保 finalEp 有 completeEntryPoint 需要的属性
-        if (!finalEp.ast && finalEp.fdef) {
-          finalEp.ast = finalEp.fdef
-        }
+        if (!finalEp.ast) finalEp.ast = finalEp.fdef
         if (!finalEp.functionName) {
-          const rawFuncName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
+          const rawName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
           const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-          finalEp.functionName = handlerName ? `${handlerName}.${rawFuncName}` : rawFuncName
+          finalEp.functionName = handlerName ? `${handlerName}.${rawName}` : rawName
         }
         if (!finalEp.filePath && finalEp.fdef?.loc?.sourcefile) {
-          const { sourcefile } = finalEp.fdef.loc
-          finalEp.filePath =
-            Config.maindir && typeof Config.maindir === 'string'
-              ? FileUtil.extractRelativePath(sourcefile, Config.maindir)
-              : sourcefile
+          finalEp.filePath = Config.maindir
+            ? FileUtil.extractRelativePath(finalEp.fdef.loc.sourcefile, Config.maindir)
+            : finalEp.fdef.loc.sourcefile
         }
-        // 确保 finalEp 有 ast，completeEntryPoint 可能需要它
-        if (!finalEp.ast && finalEp.fdef) {
-          finalEp.ast = finalEp.fdef
-        }
+
         const entryPoint = completeEntryPoint(finalEp)
         entryPoint.urlPattern = urlPattern
         entryPoint.handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-        if (
-          entryPoint.entryPointSymVal?.parent &&
-          entryPoint.entryPointSymVal.parent.vtype === 'class' &&
-          !entryPoint.entryPointSymVal.parent.field
-        ) {
-          entryPoint.entryPointSymVal.parent.field = {}
-        }
         analyzer.entryPoints.push(entryPoint)
 
+        // Register path parameters as sources
         const params = extractTornadoParams(urlPattern)
-        const paramMetas =
-          (Array.isArray((finalEp as any).params) && (finalEp as any).params.length
-            ? (finalEp as any).params
-            : extractParamsFromAst(finalEp.fdef)) || []
-        if (paramMetas.length > 0) {
-          let positionalIdx = 0
-          for (const meta of paramMetas) {
-            if (meta.name === 'self') continue
-
-            let isSource = false
-            if (params.named.length > 0) {
-              if (params.named.includes(meta.name)) {
-                isSource = true
-              }
-            } else if (params.positionalCount > 0) {
-              if (positionalIdx < params.positionalCount) {
-                isSource = true
-              }
-            }
-            positionalIdx++
-
-            if (!isSource) continue
-
-            // 对于路径参数，使用 'all' 以匹配所有文件和位置，因为参数可能在函数定义的不同位置
+        const paramMetas = finalEp.params || extractParamsFromAst(finalEp.fdef) || []
+        paramMetas.forEach((meta: any, idx: number) => {
+          if (meta.name === 'self') return
+          const isSource =
+            params.named.includes(meta.name) || (params.named.length === 0 && idx <= params.positionalCount)
+          if (isSource) {
             const sourceEntry = {
               path: meta.name,
               kind: 'PYTHON_INPUT',
-              scopeFile: 'all', // 使用 'all' 以匹配所有文件
-              scopeFunc: 'all', // 使用 'all' 以匹配所有函数，因为 handler 方法可能在嵌套作用域中
-              locStart: 'all', // 使用 'all' 以匹配所有行号
-              locEnd: 'all', // 使用 'all' 以匹配所有行号
+              scopeFile: 'all',
+              scopeFunc: 'all',
+              locStart: 'all',
+              locEnd: 'all',
             }
             this.sourceScope.value.push(sourceEntry)
-            // 立即注册 source，因为 triggerAtStartOfAnalyze 可能在 entrypoints 收集之前被调用
             this.addSourceTagForSourceScope('PYTHON_INPUT', [sourceEntry])
           }
-        }
+        })
       } catch (e: any) {
-        logger.warn(`Error in completeEntryPoint: ${e?.message || e}`)
-        continue
+        logger.warn(`Error in entrypoint collection: ${e?.message || e}`)
       }
     }
   }
