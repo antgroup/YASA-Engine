@@ -373,7 +373,7 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
           }]
         } else {
           value.logicMethod.push({
-            fclso: res,
+            fclos: res,
             logic: aopLogicTag
           })
         }
