@@ -5,6 +5,7 @@ const Initializer = require('./spring-initializer')
 const _ = require('lodash')
 const entryPointConfig = require('../../common/current-entrypoint')
 const constValue = require('../../../../util/constant')
+const UndefinedValue = require('../../common/value/undefine')
 const { handleException } = require('../../common/exception-handler')
 
 /**
@@ -21,6 +22,8 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
     this.beanReferenceAnnotationByClass = ['@Autowired', '@Resource', '@TestBean']
     this.beanServiceAnnotationOnClass = ['@Component', '@Service', '@Repository']
     this.beanServiceAnnotationOnFunction = ['@Bean']
+    this.AOPPointCutAnnotationOnFunction = ['@Pointcut']
+    this.AOPLogicAnnotationOnFunction = ['@Around', '@Before', '@After', '@AfterReturning', '@AfterThrowing']
   }
 
   /**
@@ -36,6 +39,8 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
     ;(this as any).prevIterationTime = new Date().getTime()
 
     await Initializer.initBeans(this.topScope, dir)
+
+    await Initializer.initAop(this.topScope)
 
     await this.scanPackages(dir)
 
@@ -268,6 +273,60 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
         }
       }
     }
+
+    // 处理AOP切点@Pointcut
+    let isPointCut = false
+    let cutMethod = node.id?.name
+    let cutTargetClass = ''
+    let cutTargetMethod = ''
+    let cutType = 'unknown'
+    if (node._meta?.modifiers && Array.isArray(node._meta?.modifiers)) {
+      for (const modifier of node._meta?.modifiers) {
+        if (
+          typeof modifier === 'string' &&
+          this.AOPPointCutAnnotationOnFunction.some((anno: string) => modifier.includes(anno))
+        ) {
+          isPointCut = true
+          let curTargetInfo = extractCutTargetInfoFromAnnotation(modifier)
+          if (curTargetInfo && Object.keys(curTargetInfo).length > 0) {
+            cutTargetClass = curTargetInfo['cutClass'] ?? ''
+            cutTargetMethod = curTargetInfo['cutMethod'] ?? ''
+            cutType = curTargetInfo['type']
+          }
+        }
+      }
+    }
+
+    // 处理AOP具体处理逻辑
+    let isCutLogic = false
+    let cutAnnoMethod = ''
+    let aopLogicTag: string | null = null
+    if (node._meta?.modifiers && Array.isArray(node._meta?.modifiers)) {
+      for (const modifier of node._meta?.modifiers) {
+        const hasAopLogic = this.AOPLogicAnnotationOnFunction.some((anno: string) => {
+          if (modifier.includes(anno)) {
+            aopLogicTag = anno; 
+            return true;
+          }
+          return false;
+        });
+
+        if (typeof modifier === 'string' && hasAopLogic) {
+          isCutLogic = true
+          let cutAnnoInfo = extractCutMethodOrTargetFromAnnotation(modifier)
+          if (cutAnnoInfo.targetInfo) {
+            isPointCut = true
+            cutTargetClass = cutAnnoInfo.targetInfo['cutClass'] ?? ''
+            cutTargetMethod = cutAnnoInfo.targetInfo['cutMethod'] ?? ''
+            cutType = cutAnnoInfo.targetInfo['type']
+            cutAnnoMethod = cutMethod
+          } else if (cutAnnoInfo.cutMethod) {
+            cutAnnoMethod = cutAnnoInfo.cutMethod
+          }
+        }
+      }
+    }
+
     const res = super.processFunctionDefinition(scope, node, state)
     if (isBeanService && beanName && beanName !== '') {
       let returnType = ''
@@ -281,6 +340,45 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
         className: returnType,
         isPrimary,
       })
+    }
+    if (isPointCut && cutTargetClass !== '' && cutTargetMethod !== '') {
+      const value = this.topScope.aopMap.get(cutMethod);
+      if (!value) {
+        this.topScope.aopMap.set(cutMethod, {
+          targetClass: cutTargetClass,
+          targetMethod: cutTargetMethod,
+          cutType: cutType
+        })
+      } else {
+        value.targetClass = cutTargetClass
+        value.targetMethod = cutTargetMethod
+        value.cutType = cutType
+        this.topScope.aopMap.set(cutMethod, value);
+      }
+    }
+    if (isCutLogic && cutAnnoMethod !== '' && aopLogicTag) {
+      const value = this.topScope.aopMap.get(cutAnnoMethod);
+      if (!value) {
+        this.topScope.aopMap.set(cutAnnoMethod, {
+          logicMethod: [{
+            fclos: res,
+            logic: aopLogicTag
+          }]
+        })
+      } else {
+        if (value.logicMethod === undefined) {
+          value.logicMethod = [{
+            fclos: res,
+            logic: aopLogicTag
+          }]
+        } else {
+          value.logicMethod.push({
+            fclos: res,
+            logic: aopLogicTag
+          })
+        }
+        this.topScope.aopMap.set(cutAnnoMethod, value);
+      }
     }
     return res
   }
@@ -327,6 +425,122 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
       })
     }
     return res
+  }
+
+  /**
+   * 检测是否存在AOP相关调用
+   * @param scope - 作用域
+   * @param node - AST 节点
+   * @param state - 状态
+   */
+  processCallExpression(scope: any, node: any, state: any) {
+    if (!this.topScope.aopMap || this.topScope.aopMap.size === 0) {
+      return super.processCallExpression(scope, node, state)
+    }
+    
+    const fclos = this.processInstruction(scope, node.callee, state)
+    if (!fclos) return UndefinedValue()
+
+    for (const [key, value] of this.topScope.aopMap.entries()) {
+      const sig = value.targetClass + '.' + value.targetMethod
+      if (sig === fclos._qid) {
+        return this.processAop(scope, node, state, value, fclos)
+      } else if (sig.includes('*')) {
+        const escaped = sig.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+        const reg = new RegExp("^" + escaped.replace(/\*/g, ".*") + "$");
+        if (reg.test(fclos._qid)) {
+          return this.processAop(scope, node, state, value, fclos)
+        }
+      }
+    }
+
+    if (fclos._sid === 'proceed') { // 返回原有执行逻辑
+      let proceedKey = fclos._qid.substring(0, fclos._qid.lastIndexOf("."))
+      if (this.topScope.proceedMap.has(proceedKey)) {
+        const originFclos = this.topScope.proceedMap.get(proceedKey)
+        let argvalues: any[] = this.prepareArgValues(scope, node, state, fclos)
+        return this.processCall(node, originFclos, argvalues, state, scope)
+      }
+    }
+
+    return super.processCallExpression(scope, node, state)
+  }
+
+  /**
+   * 处理AOP
+   * @param scope - 作用域
+   * @param node - AST 节点
+   * @param state - 状态
+   * @param aopLogic - AOP逻辑tag
+   * @param current_fclos 当前fclos
+   */
+  processAop(scope: any, node: any, state: any, aopLogic: any, current_fclos: any) {
+    let argvalues: any[] = []
+    let fclos
+    for (const logicM of aopLogic.logicMethod) {
+      fclos = logicM.fclos
+      argvalues = this.prepareArgValues(scope, node, state, fclos)
+      switch (logicM.logic) {
+        case '@After':
+          super.processCallExpression(scope, node, state)
+          break
+        case '@Before':
+        case '@Around':
+          let isNeedProcessARg = this.needProceedArg(fclos.fdef?.parameters)
+          if (isNeedProcessARg) {
+            argvalues.unshift(current_fclos)
+            this.topScope.proceedMap.set(current_fclos._qid, current_fclos)
+          }
+          break
+        default:
+          logger.warn(`AOP logic type: ${logicM.logic} need to be supported`)
+          break
+      }
+    }
+
+    return this.processCall(node, fclos, argvalues, state, scope)
+  }
+
+  /**
+   * 简单处理调用
+   * @fclos - 函数闭包
+   * @argvalues - 参数值列表
+   * @param node - AST 节点
+   * @param state - 状态
+   * @param scope - 作用域
+   */
+  processCall(node: any, fclos: any, argvalues: any, state: any, scope: any) {
+    const res = this.executeCall(node, fclos, argvalues, state, scope)
+    if (res) {
+      res.rtype = fclos.rtype
+    }
+    if (res && argvalues && this.checkerManager?.checkAtFunctionCallAfter) {
+      this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
+        argvalues,
+        fclos,
+        ret: res,
+        pcond: state.pcond,
+        einfo: state.einfo,
+        callstack: state.callstack,
+      })
+    }
+
+    return res
+  }
+
+  /**
+   * 判断是否需要ProceedingJoinPoint参数
+   * @param parameters
+   * @returns boolean
+   */
+  needProceedArg(parameters: any) {
+    if (parameters && parameters.length > 0) {
+      const param = parameters[0]
+      if (param.varType?.id?.name === 'ProceedingJoinPoint') {
+        return true
+      }
+    }
+    return false
   }
 
   /**
@@ -474,6 +688,83 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
 
     // 如果不是以大写字母开头，直接返回原变量
     return variable
+  }
+}
+
+/**
+ * 从 AOP 表达式中提取目标类和方法信息
+ * @param annotation AOP 切点表达式字符串
+ * @returns { cutClass?: string; cutMethod?: string; type: string }
+ */
+function extractCutTargetInfoFromAnnotation(annotation: string): {
+  cutClass?: string
+  cutMethod?: string
+  type: 'execution' | 'annotation' | 'within' | 'unknown'
+} {
+  const targetInfo: {
+    cutClass?: string
+    cutMethod?: string
+    type: 'execution' | 'annotation' | 'within' | 'unknown'
+  } = { type: 'unknown' }
+  const cleanAnnotation = annotation.replace(/\s+/g, ' ').trim()
+
+  // 处理execution
+  if (cleanAnnotation.includes('execution')) {
+    targetInfo.type = 'execution'
+    const executionReg = /execution\s*\(\s*(?:.*?\s+)+([a-zA-Z0-9_$.*]+)\.([a-zA-Z0-9_$*]+)\s*\(/
+    const m = cleanAnnotation.match(executionReg)
+    if (m) {
+      targetInfo.cutClass = m[1]
+      targetInfo.cutMethod = m[2]
+    }
+  }
+
+  // 处理within
+  else if (cleanAnnotation.includes('within')) {
+    targetInfo.type = 'within'
+    const withinReg = /within\s*\(\s*([a-zA-Z0-9_$.*]+)\s*\)/
+    const m = cleanAnnotation.match(withinReg)
+    if (m) {
+      targetInfo.cutClass = m[1]
+      targetInfo.cutMethod = '*' // 通常是类下所有方法
+    }
+  }
+
+  // 处理annotation
+  else if (cleanAnnotation.includes('annotation')) {
+    targetInfo.type = 'annotation'
+    const reg = /@annotation\s*\(\s*([A-Za-z0-9_$.]+)\s*\)/
+    const m = cleanAnnotation.match(reg)
+
+    if (m) {
+      targetInfo.cutClass = m[1]
+      targetInfo.cutMethod = undefined
+    }
+  }
+
+  return targetInfo
+}
+
+
+/**
+ * 提取方法名或直接设置aop映射
+ * @param annotation
+ */
+function extractCutMethodOrTargetFromAnnotation(annotation: string): { targetInfo?: any, cutMethod?: string } {
+  if (annotation.includes('execution') || annotation.includes('within') || annotation.includes('annotation')) {
+    const targetInfo = extractCutTargetInfoFromAnnotation(annotation)
+
+    return { targetInfo }
+  } else {
+    let method = ''
+
+    const reg = /"([A-Za-z0-9_]+)\s*\(/
+    const m = annotation.match(reg)
+    if (m) {
+      method = m[1]
+    }
+
+    return { cutMethod: method }
   }
 }
 

@@ -12,6 +12,17 @@ class SpringInitializer extends (JavaInitializer as any) {
   }
 
   /**
+   * 初始化 AOP 相关映射储存结构
+   * @param topScope
+   */
+  static async initAop(topScope: any) {
+    const aopMap = new Map()
+    topScope.aopMap = aopMap
+    const proceedMap = new Map()
+    topScope.proceedMap = proceedMap
+  }
+
+  /**
    *
    * @param topScope
    * @param dir
