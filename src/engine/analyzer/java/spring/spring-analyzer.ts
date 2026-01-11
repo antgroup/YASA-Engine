@@ -750,11 +750,11 @@ function extractCutTargetInfoFromAnnotation(annotation: string): {
  * 提取方法名或直接设置aop映射
  * @param annotation
  */
-function extractCutMethodOrTargetFromAnnotation(annotation: string) {
+function extractCutMethodOrTargetFromAnnotation(annotation: string): { targetInfo?: any, cutMethod?: string } {
   if (annotation.includes('execution') || annotation.includes('within') || annotation.includes('annotation')) {
     const targetInfo = extractCutTargetInfoFromAnnotation(annotation)
 
-    return {"targetInfo": targetInfo}
+    return { targetInfo }
   } else {
     let method = ''
 
@@ -764,7 +764,7 @@ function extractCutMethodOrTargetFromAnnotation(annotation: string) {
       method = m[1]
     }
 
-    return {"cutMethod": method}
+    return { cutMethod: method }
   }
 }
 
