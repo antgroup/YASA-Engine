@@ -1,0 +1,535 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_mybatis_plus_input"
+    ],
+    "sanitizers": [
+      {
+        "id": "SANITIZER_1",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.CONFIG_BY_FUNCTIONCALL",
+        "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+        "fsig": "checkSqlInjection"
+      }
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "apply",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "last",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "exists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "notExists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "having",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "orderBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "orderByAsc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "orderByDesc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "groupBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "inSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper",
+          "fsig": "notInSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "apply",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "inSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "notInSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "last",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "exists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "notExists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "having",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "orderBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "orderByAsc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "orderByDesc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper",
+          "fsig": "groupBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "apply",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "inSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "notInSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "last",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "exists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "notExists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "having",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "orderBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "orderByAsc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "orderByDesc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "groupBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper",
+          "fsig": "setSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "apply",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "inSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "1"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "notInSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "last",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "exists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "notExists",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "having",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "orderBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "orderByAsc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "orderByDesc",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "groupBy",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper",
+          "fsig": "setSql",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaSQLi",
+          "calleeType": "com.baomidou.mybatisplus.extension.plugins.pagination.Page",
+          "fsig": "addOrder"
+        }
+      ]
+    }
+  }
+]
