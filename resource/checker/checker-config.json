@@ -101,6 +101,12 @@
     "demoRuleConfigPath": ""
   },
   {
+    "checkerId": "taint_flow_spring_input",
+    "checkerPath": "checker/taint/java/spring-checker.ts",
+    "description": "Spring污点分析checker",
+    "demoRuleConfigPath": ""
+  },
+  {
     "checkerId": "taint_flow_egg_input",
     "checkerPath": "checker/taint/js/egg-taint-checker.ts",
     "description": "JavaScript Egg框架污点分析checker",
