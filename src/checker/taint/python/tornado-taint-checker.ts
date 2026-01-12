@@ -81,13 +81,13 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       return
     }
 
-    // 2. Try to extract from Object/Tuple/URLSpec
+    // 2. Try to extract from Object/URLSpec/List-like
     let path: string | undefined
     let h: any
 
-    if ((val.vtype === 'object' || val.vtype === 'tuple') && val.value) {
-      const pVal = val.value['0'] || val.value.regex || val.value._pattern
-      h = val.value['1'] || val.value.handler_class || val.value._handler_class
+    if (val.vtype === 'object' && val.value) {
+      const pVal = val.value['0'] || val.value.regex
+      h = val.value['1'] || val.value.handler_class
       path = pVal?.value || pVal?.ast?.value
     } else if (Array.isArray(val.value)) {
       const pVal = val.value[0]
@@ -118,12 +118,11 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       }
     }
 
-    // 4. Fallback: Collections
-    if (['list', 'tuple', 'object'].includes(val.vtype) || (val.vtype === 'object' && val.value)) {
+    // 4. Fallback: Collections (Recurse into lists/tuples)
+    if (val.vtype === 'object' || val.vtype === 'union') {
       const items = Array.isArray(val.value) ? val.value : Object.values(val.value || {})
       const isLikelyCollection =
-        Array.isArray(val.value) ||
-        (val.vtype === 'object' && Object.keys(val.value || {}).some((k) => /^\d+$/.test(k)))
+        Array.isArray(val.value) || Object.keys(val.value || {}).some((k) => /^\d+$/.test(k))
 
       if (isLikelyCollection && items.length > 0) {
         items.forEach((item: any) => this.processRoutes(analyzer, scope, state, item))
@@ -151,7 +150,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       }
     }
 
-    if (h?.vtype === 'class') {
+    if (path && h) {
       this.registerEntryPoints(analyzer, h, path)
     }
   }
@@ -159,6 +158,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   /**
    *
    * @param analyzer
+   * @param scope
+   * @param state
+   * @param path
    * @param cls
    * @param path
    */
@@ -170,12 +172,12 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (methods.includes(name) && fclos.vtype === 'fclos') {
         const ep = completeEntryPoint(fclos)
         ep.urlPattern = path
-        ep.handlerName = cls.ast?.id?.name || cls._sid || 'Unknown'
+        ep.handlerName = cls.ast?.id?.name || cls.sid || 'Unknown'
         analyzer.entryPoints.push(ep)
 
         const info = extractTornadoParams(path)
         let paramIdx = 0
-        const actualParams = (fclos.params || fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
+        const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
         actualParams.forEach((p: any) => {
           const pName = p.name || p.id?.name
           if (pName === 'self') return
@@ -209,7 +211,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
             vtype: 'fclos',
             fdef: m,
             ast: m,
-            params: (m.parameters?.parameters || m.parameters || []).map((p: any) => ({ name: p.id?.name || p.name })),
+            params: (m.parameters || []).map((p: any) => ({ name: p.id?.name || p.name })),
           }
         }
       }
