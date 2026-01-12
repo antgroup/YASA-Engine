@@ -1,14 +1,8 @@
-const path = require('path')
 const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
-const FileUtil = require('../../../util/file-util')
-const AstUtil = require('../../../util/ast-util')
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
-const logger = require('../../../util/logger')(__filename)
-const BasicRuleHandler = require('../../common/rules-basic-handler')
-const { mergeAToB } = require('../../../util/common-util')
+const { markTaintSource } = require('../common-kit/source-util')
 const {
-  extractParamsFromAst,
   isTornadoCall,
   tornadoSourceAPIs,
   passthroughFuncs,
@@ -16,21 +10,13 @@ const {
   isRequestAttributeAccess,
   extractTornadoParams,
 } = require('./tornado-util')
-const { markTaintSource } = require('../common-kit/source-util')
-
-interface RoutePair {
-  path: string
-  handlerName: string
-  file?: string
-  handlerSymVal?: any
-}
 
 /**
- * Tornado Taint Checker Base Class
+ * Tornado Taint Checker - Simplified
  */
 class TornadoTaintChecker extends PythonTaintAbstractChecker {
   /**
-   * constructor
+   *
    * @param resultManager
    */
   constructor(resultManager: any) {
@@ -38,8 +24,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   }
 
   /**
-   * trigger at start of analyze
-   * Register sourceScope values as sources
+   *
    * @param analyzer
    * @param scope
    * @param node
@@ -47,19 +32,12 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    // 注册 sourceScope 中的 source
     this.addSourceTagForSourceScope('PYTHON_INPUT', this.sourceScope.value)
-    // 注册规则配置中的 source
     this.addSourceTagForcheckerRuleConfigContent('PYTHON_INPUT', this.checkerRuleConfigContent)
   }
 
   /**
-   * On function call before execution, use argvalues to get resolved symbol values
-   * This replaces the old AST-based triggerAtFuncCallSyntax approach.
-   * Using symbol interpretation allows us to:
-   * 1. Get resolved symbol values for arguments (especially strings) via argvalues
-   * 2. Handle cases where route lists are obtained through function calls
-   * 3. Process route objects regardless of how they are obtained (variable, function call, etc.)
+   *
    * @param analyzer
    * @param scope
    * @param node
@@ -67,133 +45,180 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    // 先调用基类方法
     super.triggerAtFunctionCallBefore(analyzer, scope, node, state, info)
-
     const { fclos, argvalues } = info
-    if (!fclos || !argvalues) return
+    if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !argvalues) return
 
-    if (Config.entryPointMode === 'ONLY_CUSTOM') return
-    const fileName = node.loc?.sourcefile
-    if (!fileName) return
+    let routes = null
+    if (isTornadoCall(node, 'Application')) routes = argvalues[0]
+    else if (isTornadoCall(node, 'add_handlers')) routes = argvalues[1]
 
-    // 检查是否是 Application 或 add_handlers 调用
-    let routeListArgValue: any = null
-    const isApp = isTornadoCall(node, 'Application')
-    const isAddHandlers = isTornadoCall(node, 'add_handlers')
-
-    if (isApp) {
-      // Check if this is an __init__ call pattern: Application.__init__(self, handlers, ...)
-      // In this case, handlers is the second argument (index 1)
-      const { callee } = node
-      const isInitCall =
-        callee?.type === 'MemberAccess' &&
-        (callee?.property?.name === '__init__' || callee?.property?.name === '_CTOR_')
-      if (isInitCall) {
-        // __init__(self, handlers, ...) -> handlers is at index 1
-        routeListArgValue = argvalues[1]
-      } else {
-        // Application(handlers, ...) -> handlers is at index 0
-        ;[routeListArgValue] = argvalues
-      }
-    } else if (isAddHandlers) {
-      // add_handlers(host, routes) -> second arg is routes
-      ;[, routeListArgValue] = argvalues
-    }
-
-    if (routeListArgValue) {
-      this.collectTornadoEntrypointAndSourceFromArgValue(analyzer, scope, state, routeListArgValue, fileName)
-    }
+    if (routes) this.processRoutes(analyzer, scope, state, routes)
   }
 
   /**
-   * Collect entrypoints and sources from resolved symbol values (from argvalues)
+   *
    * @param analyzer
    * @param scope
    * @param state
-   * @param routeListSymVal - Resolved symbol value for route list
-   * @param currentFile
+   * @param val
    */
-  private collectTornadoEntrypointAndSourceFromArgValue(
-    analyzer: any,
-    scope: any,
-    state: any,
-    routeListSymVal: any,
-    currentFile: string
-  ): void {
-    if (!routeListSymVal) return
+  private processRoutes(analyzer: any, scope: any, state: any, val: any) {
+    if (!val) return
 
-    const processed = new Set<string>()
-    const routePairs = this.extractRoutesFromSymbolValue(routeListSymVal, currentFile, analyzer, scope, state)
+    // 1. Handle Union - Try to see if the union itself is a route (flattened tuple)
+    if (val.vtype === 'union' && Array.isArray(val.value)) {
+      const pathVal = val.value.find((v: any) => typeof (v.value || v.ast?.value) === 'string')
+      const hVal = val.value.find((v: any) => v.vtype === 'class' || v.ast?.type === 'ClassDefinition')
 
-    for (let i = 0; i < routePairs.length; i++) {
-      const pair = routePairs[i]
-      if (!pair.path || !pair.handlerName) {
-        continue
+      if (pathVal && hVal) {
+        const path = pathVal.value || pathVal.ast?.value
+        this.finishRoute(analyzer, scope, state, hVal, path)
+        return
       }
-      const dedupKey = `${pair.file || currentFile}::${pair.handlerName}::${pair.path}`
-      if (processed.has(dedupKey)) {
-        continue
-      }
-      processed.add(dedupKey)
 
-      let handlerSymVal: any = null
-      let classAst: any = null
+      val.value.forEach((v: any) => this.processRoutes(analyzer, scope, state, v))
+      return
+    }
 
-      // Helper function to process class AST and get handler symbol value
-      const processHandlerClass = (ast: any) => {
-        classAst = ast
-        try {
-          handlerSymVal = analyzer.processInstruction(scope, classAst, state)
-          if (!handlerSymVal || handlerSymVal.vtype !== 'class') {
-            handlerSymVal = this.buildClassSymbol(classAst)
-            if (!handlerSymVal.field) {
-              handlerSymVal.field = {}
-            }
-          }
-        } catch (e) {
-          handlerSymVal = this.buildClassSymbol(classAst)
-          if (!handlerSymVal.field) {
-            handlerSymVal.field = {}
+    // 2. Try to extract from Object/Tuple/URLSpec
+    let path: string | undefined
+    let h: any
+
+    if ((val.vtype === 'object' || val.vtype === 'tuple') && val.value) {
+      const pVal = val.value['0'] || val.value.regex || val.value._pattern
+      h = val.value['1'] || val.value.handler_class || val.value._handler_class
+      path = pVal?.value || pVal?.ast?.value
+    } else if (Array.isArray(val.value)) {
+      const pVal = val.value[0]
+      h = val.value[1]
+      path = pVal?.value || pVal?.ast?.value
+    }
+
+    if (typeof path === 'string' && h) {
+      this.finishRoute(analyzer, scope, state, h, path)
+      return
+    }
+
+    // 3. Handle Symbol or Call (like tornado.web.url)
+    if (val.ast?.type === 'CallExpression') {
+      const { callee } = val.ast
+      const name = callee.property?.name || callee.name
+      if (name === 'url' || name === 'URLSpec') {
+        const args = val.ast.arguments
+        if (args && args.length >= 2) {
+          const p = args[0].value
+          const hNode = args[1]
+          if (typeof p === 'string') {
+            const resolvedH = analyzer.processInstruction(scope, hNode, state)
+            this.finishRoute(analyzer, scope, state, resolvedH || { ast: hNode }, p)
+            return
           }
         }
       }
+    }
 
-      // First, try to use handler symbol value directly from the route pair
-      if (pair.handlerSymVal) {
-        const handlerSym = pair.handlerSymVal
-        // If it's already a class symbol value, use it directly
-        if (handlerSym.vtype === 'class') {
-          handlerSymVal = handlerSym
-          classAst = handlerSym.ast || handlerSym.fdef
-        } else if (handlerSym.ast && handlerSym.ast.type === 'ClassDefinition') {
-          // If we have the AST, process it to get the class symbol value
-          processHandlerClass(handlerSym.ast)
-        }
-      }
+    // 4. Fallback: Collections
+    if (['list', 'tuple', 'object'].includes(val.vtype) || (val.vtype === 'object' && val.value)) {
+      const items = Array.isArray(val.value) ? val.value : Object.values(val.value || {})
+      const isLikelyCollection =
+        Array.isArray(val.value) ||
+        (val.vtype === 'object' && Object.keys(val.value || {}).some((k) => /^\d+$/.test(k)))
 
-      // Ensure handlerSymVal has field structure
-      if (handlerSymVal && handlerSymVal.vtype === 'class' && !handlerSymVal.field) {
-        handlerSymVal.field = {}
-      }
-
-      if (handlerSymVal && classAst) {
-        this.emitHandlerEntrypoints(analyzer, handlerSymVal, pair.path, classAst, scope, state)
+      if (isLikelyCollection && items.length > 0) {
+        items.forEach((item: any) => this.processRoutes(analyzer, scope, state, item))
       }
     }
   }
 
   /**
-   * Proactive Sink Matching
-   * Overrides base class to add flexible matching for common Python sinks (DB, Shell)
-   * that might be missed due to incomplete type resolution.
-   * @param node
-   * @param fclos
-   * @param argvalues
+   *
+   * @param analyzer
+   * @param scope
+   * @param state
+   * @param h
+   * @param path
    */
+  private finishRoute(analyzer: any, scope: any, state: any, h: any, path: string) {
+    if (!h) return
+
+    if (h.vtype === 'union' && Array.isArray(h.value)) h = h.value[0]
+    if (h.vtype !== 'class' && h.ast?.type === 'ClassDefinition') {
+      try {
+        h = analyzer.processInstruction(scope, h.ast, state) || this.buildClassSymbol(h.ast)
+      } catch (e) {
+        h = this.buildClassSymbol(h.ast)
+      }
+    }
+
+    if (h?.vtype === 'class') {
+      this.registerEntryPoints(analyzer, h, path)
+    }
+  }
 
   /**
-   * Handle API calls like self.get_argument()
+   *
+   * @param analyzer
+   * @param cls
+   * @param path
+   */
+  private registerEntryPoints(analyzer: any, cls: any, path: string) {
+    const methods = ['get', 'post', 'put', 'delete', 'patch']
+    const classValue = cls.value || {}
+
+    Object.entries(classValue).forEach(([name, fclos]: [string, any]) => {
+      if (methods.includes(name) && fclos.vtype === 'fclos') {
+        const ep = completeEntryPoint(fclos)
+        ep.urlPattern = path
+        ep.handlerName = cls.ast?.id?.name || cls._sid || 'Unknown'
+        analyzer.entryPoints.push(ep)
+
+        const info = extractTornadoParams(path)
+        let paramIdx = 0
+        const actualParams = (fclos.params || fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
+        actualParams.forEach((p: any) => {
+          const pName = p.name || p.id?.name
+          if (pName === 'self') return
+          paramIdx++
+          if (info.named.includes(pName) || (info.named.length === 0 && paramIdx <= info.positionalCount)) {
+            this.sourceScope.value.push({
+              path: pName,
+              kind: 'PYTHON_INPUT',
+              scopeFile: 'all',
+              scopeFunc: 'all',
+              locStart: 'all',
+              locEnd: 'all',
+            })
+          }
+        })
+      }
+    })
+  }
+
+  /**
+   *
+   * @param node
+   */
+  private buildClassSymbol(node: any) {
+    const value: any = {}
+    node.body?.forEach((m: any) => {
+      if (m.type === 'FunctionDefinition') {
+        const name = m.name?.name || m.id?.name
+        if (name) {
+          value[name] = {
+            vtype: 'fclos',
+            fdef: m,
+            ast: m,
+            params: (m.parameters?.parameters || m.parameters || []).map((p: any) => ({ name: p.id?.name || p.name })),
+          }
+        }
+      }
+    })
+    return { vtype: 'class', value, ast: node }
+  }
+
+  /**
+   *
    * @param analyzer
    * @param scope
    * @param node
@@ -202,42 +227,20 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
-    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const { fclos, ret } = info
-    if (!fclos || !ret) return
+    if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !ret) return
 
-    const funcName = node.callee?.property?.name || node.callee?.name
-    if (!funcName) return
-
-    // Mark Tornado source APIs and passthrough functions
-    if (tornadoSourceAPIs.has(funcName)) {
-      markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
-    } else if (passthroughFuncs.has(funcName)) {
-      // Check for request attribute access like self.request.body.decode()
-      const isReqAttr = node.callee?.type === 'MemberAccess' && isRequestAttributeExpression(node.callee.object)
-      const receiver = fclos?.object || fclos?._this
-      const isTaintedReceiver =
-        receiver && (receiver.taint || receiver.hasTagRec || receiver._tags?.has('PYTHON_INPUT'))
-
-      if (isReqAttr || isTaintedReceiver) {
-        markTaintSource(ret, { path: node || ret.ast || {}, kind: 'PYTHON_INPUT' })
-      }
+    const name = node.callee?.property?.name || node.callee?.name
+    if (
+      tornadoSourceAPIs.has(name) ||
+      (passthroughFuncs.has(name) && isRequestAttributeExpression(node.callee?.object))
+    ) {
+      markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
     }
   }
 
   /**
-   * Trigger before entrypoint execution
-   * Mark path parameters as tainted sources
-   * @param analyzer
-   * @param scope
-   * @param node
-   * @param state
-   * @param info
-   */
-
-  /**
-   * Handle Member Access Sources like self.request.body
-   * Reuses isRequestAttributeAccess from tornado-util.ts to maintain consistency
+   *
    * @param analyzer
    * @param scope
    * @param node
@@ -245,321 +248,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    if (Config.entryPointMode === 'ONLY_CUSTOM') return
-    if (isRequestAttributeAccess(node)) {
-      markTaintSource(info.res, { path: node || info.res.ast || {}, kind: 'PYTHON_INPUT' })
+    if (Config.entryPointMode !== 'ONLY_CUSTOM' && isRequestAttributeAccess(node)) {
+      markTaintSource(info.res, { path: node, kind: 'PYTHON_INPUT' })
     }
-  }
-
-  /**
-   * Extract route pairs from resolved symbol values (from argvalues)
-   * @param routeListSymVal - Symbol value representing route list
-   * @param currentFile - Current file path
-   * @param analyzer
-   * @param scope
-   * @param state
-   * @returns Array of route pairs with handler symbol values
-   */
-  private extractRoutesFromSymbolValue(
-    routeListSymVal: any,
-    currentFile: string,
-    analyzer?: any,
-    scope?: any,
-    state?: any
-  ): Array<RoutePair & { handlerSymVal?: any }> {
-    if (!routeListSymVal) return []
-
-    // Handle list/tuple symbol values
-    if (routeListSymVal.vtype === 'list' || routeListSymVal.vtype === 'tuple' || routeListSymVal.vtype === 'array') {
-      const elements = routeListSymVal.value || []
-      return elements.flatMap((element: any) =>
-        this.extractRoutesFromSymbolValue(element, currentFile, analyzer, scope, state)
-      )
-    }
-
-    // Handle object type that might be a list (e.g., when symbol interpretation returns object for list literals)
-    // Check if it has numeric keys (0, 1, 2, ...) which indicates it's an array-like object
-    if (routeListSymVal.vtype === 'object' && routeListSymVal.value) {
-      const keys = Object.keys(routeListSymVal.value).filter((k) => /^\d+$/.test(k))
-      if (keys.length > 0) {
-        // It's an array-like object, extract elements by numeric keys
-        const elements = keys.map((k) => routeListSymVal.value[k])
-        return elements.flatMap((element: any) =>
-          this.extractRoutesFromSymbolValue(element, currentFile, analyzer, scope, state)
-        )
-      }
-    }
-
-    // Handle union types
-    if (routeListSymVal.vtype === 'union' && Array.isArray(routeListSymVal.value)) {
-      // Union type might represent a tuple (path, handler)
-      // Check if it has exactly 2 elements and try to extract as tuple
-      if (routeListSymVal.value.length === 2) {
-        const [pathSymVal, handlerSymVal] = routeListSymVal.value
-        const pathValue = this.extractStringFromSymbolValue(pathSymVal)
-        const handlerName = 'Handler' // Placeholder name
-        if (pathValue && handlerName) {
-          const file =
-            handlerSymVal?.ast?.loc?.sourcefile ||
-            handlerSymVal?.fdef?.loc?.sourcefile ||
-            handlerSymVal?.loc?.sourcefile ||
-            currentFile
-          return [{ path: pathValue, handlerName, file, handlerSymVal }]
-        }
-      }
-      // Otherwise, recursively process each element
-      return routeListSymVal.value.flatMap((val: any) =>
-        this.extractRoutesFromSymbolValue(val, currentFile, analyzer, scope, state)
-      )
-    }
-
-    // Handle tuple/route pair: (path, handler)
-    // Check if it's a tuple with 2 elements
-    if (
-      routeListSymVal.vtype === 'tuple' &&
-      Array.isArray(routeListSymVal.value) &&
-      routeListSymVal.value.length >= 2
-    ) {
-      const [pathSymVal, handlerSymVal] = routeListSymVal.value
-      const pathValue = this.extractStringFromSymbolValue(pathSymVal)
-      const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-      if (pathValue && handlerName) {
-        const file =
-          handlerSymVal?.ast?.loc?.sourcefile ||
-          handlerSymVal?.fdef?.loc?.sourcefile ||
-          handlerSymVal?.loc?.sourcefile ||
-          currentFile
-        return [{ path: pathValue, handlerName, file, handlerSymVal }]
-      }
-    }
-
-    // Handle object type that represents a tuple (e.g., when tuple is represented as object with 0, 1 keys)
-    if (
-      routeListSymVal.vtype === 'object' &&
-      routeListSymVal.value &&
-      routeListSymVal.value['0'] &&
-      routeListSymVal.value['1']
-    ) {
-      const pathSymVal = routeListSymVal.value['0']
-      const handlerSymVal = routeListSymVal.value['1']
-      const pathValue = this.extractStringFromSymbolValue(pathSymVal)
-      const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-      if (pathValue && handlerName) {
-        const file =
-          handlerSymVal?.ast?.loc?.sourcefile ||
-          handlerSymVal?.fdef?.loc?.sourcefile ||
-          handlerSymVal?.loc?.sourcefile ||
-          currentFile
-        return [{ path: pathValue, handlerName, file, handlerSymVal }]
-      }
-    }
-
-    // Handle list concatenation via BinaryExpression (e.g., app_routes + [...])
-    const astNode = routeListSymVal.ast
-    if (astNode && astNode.type === 'BinaryExpression' && astNode.operator === '+') {
-      try {
-        const pairs: Array<RoutePair & { handlerSymVal?: any }> = []
-        const leftVal = analyzer?.processInstruction ? analyzer.processInstruction(scope, astNode.left, state) : null
-        if (leftVal) {
-          pairs.push(...this.extractRoutesFromSymbolValue(leftVal, currentFile, analyzer, scope, state))
-        }
-        const rightVal = analyzer?.processInstruction ? analyzer.processInstruction(scope, astNode.right, state) : null
-        if (rightVal) {
-          pairs.push(...this.extractRoutesFromSymbolValue(rightVal, currentFile, analyzer, scope, state))
-        }
-        if (pairs.length > 0) {
-          return pairs
-        }
-      } catch (e) {
-        // ignore and fallback to AST parse below
-      }
-    }
-
-    return []
-  }
-
-  /**
-   * Extract string value from symbol value
-   * @param symVal - Symbol value
-   * @returns String value or null
-   */
-  private extractStringFromSymbolValue(symVal: any): string | null {
-    if (!symVal) return null
-
-    // Direct string value
-    if (symVal.vtype === 'string' || symVal.vtype === 'literal') {
-      return typeof symVal.value === 'string' ? symVal.value : null
-    }
-
-    // From AST
-    if (symVal.ast && (symVal.ast.type === 'StringLiteral' || symVal.ast.type === 'Literal')) {
-      return typeof symVal.ast.value === 'string' ? symVal.ast.value : null
-    }
-
-    return null
-  }
-
-  /**
-   * Extract handler name/class from symbol value
-   * @param handlerSymVal - Handler symbol value
-   * @returns Handler name or null
-   */
-  private extractHandlerNameFromSymbolValue(handlerSymVal: any): string | null {
-    if (!handlerSymVal) return null
-
-    // If it's a class symbol value
-    if (handlerSymVal.vtype === 'class') {
-      // Try to get class name from AST
-      if (handlerSymVal.ast?.id?.name) {
-        return handlerSymVal.ast.id.name
-      }
-      if (handlerSymVal.ast?.name?.name) {
-        return handlerSymVal.ast.name.name
-      }
-      // Try from _sid or _qid
-      if (handlerSymVal._sid) {
-        return handlerSymVal._sid
-      }
-      if (handlerSymVal._qid) {
-        const parts = handlerSymVal._qid.split('.')
-        return parts[parts.length - 1]
-      }
-    }
-
-    // If it's an identifier symbol value
-    if (handlerSymVal.vtype === 'identifier' || handlerSymVal.vtype === 'var') {
-      if (handlerSymVal._sid) {
-        return handlerSymVal._sid
-      }
-      if (handlerSymVal.ast?.name) {
-        return handlerSymVal.ast.name
-      }
-    }
-
-    // From AST
-    if (handlerSymVal.ast) {
-      if (handlerSymVal.ast.type === 'Identifier') {
-        return handlerSymVal.ast.name
-      }
-      if (handlerSymVal.ast.type === 'ClassDefinition') {
-        return handlerSymVal.ast.id?.name || handlerSymVal.ast.name?.name || null
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Register EntryPoints and Path Param Sources
-   * [Fixed]: Removed Config check to forcefully register parameters as sources
-   * @param analyzer
-   * @param handlerSymVal
-   * @param urlPattern
-   * @param classAst
-   * @param scope
-   * @param state
-   */
-  private emitHandlerEntrypoints(
-    analyzer: any,
-    handlerSymVal: any,
-    urlPattern: string,
-    classAst: any,
-    scope?: any,
-    state?: any
-  ) {
-    if (!handlerSymVal || handlerSymVal.vtype !== 'class') return
-
-    const httpMethods = new Set(['get', 'post', 'put', 'delete', 'patch', 'head', 'options'])
-    const handlers = Object.entries(handlerSymVal.value).filter(
-      ([key, value]: [string, any]) => httpMethods.has(key) && value.vtype === 'fclos'
-    )
-
-    for (const [method, fclos] of handlers as any[]) {
-      if (fclos.fdef?.loc?.sourcefile?.endsWith('__init__.py')) continue
-
-      let finalEp = fclos
-      if (scope && state && fclos.fdef) {
-        try {
-          const processed = analyzer.processInstruction(scope, fclos.fdef, state)
-          if (processed?.vtype === 'fclos') {
-            processed.parent = handlerSymVal
-            processed.params = fclos.params || extractParamsFromAst(fclos.fdef)
-            finalEp = processed
-          }
-        } catch (e) {
-          /* fallback */
-        }
-      }
-
-      if (!finalEp.value) finalEp.value = {}
-      finalEp.parent = handlerSymVal
-      if (handlerSymVal.vtype === 'class' && !handlerSymVal.field) handlerSymVal.field = {}
-
-      try {
-        if (!finalEp.ast) finalEp.ast = finalEp.fdef
-        if (!finalEp.functionName) {
-          const rawName = finalEp.fdef?.name?.name || finalEp.fdef?.id?.name || finalEp.name || ''
-          const handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-          finalEp.functionName = handlerName ? `${handlerName}.${rawName}` : rawName
-        }
-        if (!finalEp.filePath && finalEp.fdef?.loc?.sourcefile) {
-          finalEp.filePath = Config.maindir
-            ? FileUtil.extractRelativePath(finalEp.fdef.loc.sourcefile, Config.maindir)
-            : finalEp.fdef.loc.sourcefile
-        }
-
-        const entryPoint = completeEntryPoint(finalEp)
-        entryPoint.urlPattern = urlPattern
-        entryPoint.handlerName = this.extractHandlerNameFromSymbolValue(handlerSymVal)
-        analyzer.entryPoints.push(entryPoint)
-
-        // Register path parameters as sources
-        const params = extractTornadoParams(urlPattern)
-        const paramMetas = finalEp.params || extractParamsFromAst(finalEp.fdef) || []
-        paramMetas.forEach((meta: any, idx: number) => {
-          if (meta.name === 'self') return
-          const isSource =
-            params.named.includes(meta.name) || (params.named.length === 0 && idx <= params.positionalCount)
-          if (isSource) {
-            const sourceEntry = {
-              path: meta.name,
-              kind: 'PYTHON_INPUT',
-              scopeFile: 'all',
-              scopeFunc: 'all',
-              locStart: 'all',
-              locEnd: 'all',
-            }
-            this.sourceScope.value.push(sourceEntry)
-            this.addSourceTagForSourceScope('PYTHON_INPUT', [sourceEntry])
-          }
-        })
-      } catch (e: any) {
-        logger.warn(`Error in entrypoint collection: ${e?.message || e}`)
-      }
-    }
-  }
-
-  /**
-   *
-   * @param classNode
-   */
-  private buildClassSymbol(classNode: any): any {
-    const value: any = {}
-    const members = classNode.body || []
-    const className = classNode.name?.name || classNode.id?.name || 'UnknownClass'
-    members.forEach((member: any) => {
-      if (member.type !== 'FunctionDefinition') return
-      const memberName = member.name?.name || member.name?.id?.name || member.id?.name
-      if (memberName) {
-        value[memberName] = {
-          vtype: 'fclos',
-          fdef: member,
-          ast: member,
-          params: extractParamsFromAst(member),
-        }
-      }
-    })
-    return { vtype: 'class', value, ast: classNode }
   }
 }
 
