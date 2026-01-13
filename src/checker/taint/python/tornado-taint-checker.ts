@@ -43,10 +43,17 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !argvalues) return
 
     let routes = null
-    if (isTornadoCall(node, 'Application')) routes = argvalues[0]
-    else if (isTornadoCall(node, 'add_handlers')) routes = argvalues[1]
-
-    if (routes) this.processRoutes(analyzer, scope, state, routes)
+    const isApp = isTornadoCall(node, 'Application')
+    const isAdd = isTornadoCall(node, 'add_handlers')
+    if (isApp) {
+      const isInit = ['__init__', '_CTOR_'].includes(node.callee?.property?.name)
+      routes = isInit ? argvalues[1] : argvalues[0]
+    } else if (isAdd) {
+      routes = argvalues[1]
+    }
+    if (routes) {
+      this.processRoutes(analyzer, scope, state, routes)
+    }
   }
 
   /**
