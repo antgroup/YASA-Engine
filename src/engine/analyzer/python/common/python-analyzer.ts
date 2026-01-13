@@ -561,7 +561,11 @@ class PythonAnalyzer extends (Analyzer as any) {
       resolved_prop.name = '_CTOR_'
     }
     if (!resolved_prop) return defscope
-    return this.getMemberValue(defscope, resolved_prop, state)
+    const res = this.getMemberValue(defscope, resolved_prop, state)
+    if (this.checkerManager && (this.checkerManager as any).checkAtMemberAccess) {
+      this.checkerManager.checkAtMemberAccess(this, defscope, node, state, { res })
+    }
+    return res
   }
 
   /**
