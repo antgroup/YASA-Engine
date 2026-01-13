@@ -2,14 +2,7 @@ const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { markTaintSource } = require('../common-kit/source-util')
-const {
-  isTornadoCall,
-  tornadoSourceAPIs,
-  passthroughFuncs,
-  isRequestAttributeExpression,
-  isRequestAttributeAccess,
-  extractTornadoParams,
-} = require('./tornado-util')
+const { isTornadoCall, tornadoSourceAPIs, isRequestAttributeAccess, extractTornadoParams } = require('./tornado-util')
 
 /**
  * Tornado Taint Checker - Simplified
@@ -121,8 +114,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // 4. Fallback: Collections (Recurse into lists/tuples)
     if (val.vtype === 'object' || val.vtype === 'union') {
       const items = Array.isArray(val.value) ? val.value : Object.values(val.value || {})
-      const isLikelyCollection =
-        Array.isArray(val.value) || Object.keys(val.value || {}).some((k) => /^\d+$/.test(k))
+      const isLikelyCollection = Array.isArray(val.value) || Object.keys(val.value || {}).some((k) => /^\d+$/.test(k))
 
       if (isLikelyCollection && items.length > 0) {
         items.forEach((item: any) => this.processRoutes(analyzer, scope, state, item))
@@ -158,9 +150,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   /**
    *
    * @param analyzer
-   * @param scope
-   * @param state
-   * @param path
    * @param cls
    * @param path
    */
@@ -233,10 +222,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !ret) return
 
     const name = node.callee?.property?.name || node.callee?.name
-    if (
-      tornadoSourceAPIs.has(name) ||
-      (passthroughFuncs.has(name) && isRequestAttributeExpression(node.callee?.object))
-    ) {
+    if (tornadoSourceAPIs.has(name)) {
       markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
     }
   }

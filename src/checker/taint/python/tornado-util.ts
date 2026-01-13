@@ -1,9 +1,3 @@
-export interface ParamMeta {
-  name: string
-  locStart: number | 'all'
-  locEnd: number | 'all'
-}
-
 /**
  * Tornado Source APIs
  */
@@ -19,8 +13,6 @@ export const tornadoSourceAPIs = new Set([
   'get_json_body',
 ])
 
-export const passthroughFuncs = new Set(['decode', 'strip', 'replace', 'lower', 'upper', 'split'])
-
 /**
  * Detect if node is an access to a Tornado request attribute
  * @param node
@@ -34,19 +26,6 @@ export function isRequestAttributeAccess(node: any): boolean {
     inner.property?.name === 'request' &&
     ['body', 'query', 'headers', 'cookies', 'files', 'uri', 'path', 'arguments'].includes(node.property?.name)
   )
-}
-
-/**
- *
- * @param expr
- */
-export function isRequestAttributeExpression(expr: any): boolean {
-  if (!expr) return false
-  if (expr.type === 'MemberAccess') return isRequestAttributeAccess(expr)
-  if (expr.type === 'CallExpression' && expr.callee?.type === 'MemberAccess') {
-    return isRequestAttributeAccess(expr.callee.object)
-  }
-  return false
 }
 
 /**
