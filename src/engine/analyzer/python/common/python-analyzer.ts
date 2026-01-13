@@ -744,7 +744,11 @@ class PythonAnalyzer extends (Analyzer as any) {
       } else {
         scopeName = `<block_${Uuid.v4()}>`
       }
-      const block_scope = Scope.createSubScope(scopeName, scope, 'scope')
+      let block_scope = scope
+      if (node.parent?.type === 'FunctionDefinition') {
+        // 只对函数体内的块语句创建子作用域，python的其他块语句不创建子作用域
+        block_scope = Scope.createSubScope(scopeName, scope, 'scope')
+      }
       node.body
         .filter((n: any) => needCompileFirst(n.type))
         .forEach((s: any) => this.processInstruction(block_scope, s, state))
