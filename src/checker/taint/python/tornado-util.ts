@@ -10,7 +10,6 @@ export const tornadoSourceAPIs = new Set([
   'get_cookie',
   'get_secure_cookie',
   'get_arguments',
-  'get_json_body',
 ])
 
 /**
@@ -22,9 +21,23 @@ export function isRequestAttributeAccess(node: any): boolean {
   const inner = node.object
   return (
     inner?.type === 'MemberAccess' &&
+    inner.object?.type === 'Identifier' &&
     inner.object?.name === 'self' &&
     inner.property?.name === 'request' &&
-    ['body', 'query', 'headers', 'cookies', 'files', 'uri', 'path', 'arguments'].includes(node.property?.name)
+    [
+      'body',
+      'query',
+      'headers',
+      'cookies',
+      'files',
+      'uri',
+      'path',
+      'arguments',
+      'remote_ip',
+      'host',
+      'query_arguments',
+      'body_arguments',
+    ].includes(node.property?.name)
   )
 }
 
@@ -36,13 +49,18 @@ export function isRequestAttributeAccess(node: any): boolean {
 export function isTornadoCall(node: any, targetName: string): boolean {
   if (!node || node.type !== 'CallExpression') return false
   const { callee } = node
-  if (callee.name === targetName || callee.property?.name === targetName) return true
+  const names = [targetName]
+  if (targetName === 'Application') {
+    names.push('RuleRouter', 'Rule')
+  }
+
+  if (names.includes(callee.name) || names.includes(callee.property?.name)) return true
 
   // Handle __init__ pattern
   if (['__init__', '_CTOR_'].includes(callee.property?.name)) {
     let current = callee.object
     while (current) {
-      if (current.name === targetName || current.property?.name === targetName) return true
+      if (names.includes(current.name) || names.includes(current.property?.name)) return true
       current = current.object || current.callee
     }
   }

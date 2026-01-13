@@ -69,7 +69,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // 1. Handle Union - Try to see if the union itself is a route (flattened tuple)
     if (val.vtype === 'union' && Array.isArray(val.value)) {
       const pathVal = val.value.find((v: any) => typeof (v.value || v.ast?.value) === 'string')
-      const hVal = val.value.find((v: any) => v.vtype === 'class' || v.ast?.type === 'ClassDefinition')
+      const hVal = val.value.find(
+        (v: any) => v.vtype === 'class' || v.ast?.type === 'ClassDefinition' || v.vtype === 'object'
+      )
 
       if (pathVal && hVal) {
         const path = pathVal.value || pathVal.ast?.value
@@ -81,39 +83,87 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       return
     }
 
-    // 2. Try to extract from Object/URLSpec/List-like
+    // 2. Try to extract from Object/URLSpec/List-like/RuleRouter/Rule
     let path: string | undefined
     let h: any
 
     if (val.vtype === 'object' && val.value) {
-      const pVal = val.value['0'] || val.value.regex
-      h = val.value['1'] || val.value.handler_class
+      // Handle RuleRouter and Rule specifically if they are objects
+      const isRouteObject = isTornadoCall(val.ast, 'RuleRouter') || isTornadoCall(val.ast, 'Rule')
+      if (isRouteObject) {
+        const rules = val.value['0'] || val.value.rules || val.value.target || val.value.handler
+        if (rules) {
+          this.processRoutes(analyzer, scope, state, rules)
+          return
+        }
+      }
+
+      const pVal = val.value['0'] || val.value.regex || val.value.matcher
+      h = val.value['1'] || val.value.handler_class || val.value.target || val.value.handler
       path = pVal?.value || pVal?.ast?.value
+
+      // If matcher is PathMatches(r"...")
+      if (
+        !path &&
+        pVal?.ast?.type === 'CallExpression' &&
+        (pVal.ast.callee.name === 'PathMatches' || pVal.ast.callee.property?.name === 'PathMatches')
+      ) {
+        path = pVal.ast.arguments?.[0]?.value
+      }
     } else if (Array.isArray(val.value)) {
       const pVal = val.value[0]
       h = val.value[1]
       path = pVal?.value || pVal?.ast?.value
     }
 
-    if (typeof path === 'string' && h) {
-      this.finishRoute(analyzer, scope, state, h, path)
-      return
+    if (h) {
+      // If h is an instance (object), we might need to look for its handlers recursively
+      if (h.vtype === 'object' && h.value) {
+        // If it's another Application or Router instance
+        // We can try to see if it has internal handlers or rules
+        const innerRoutes = h.value.handlers || h.value.rules
+        if (innerRoutes) {
+          this.processRoutes(analyzer, scope, state, innerRoutes)
+          // Note: We don't return here because finishRoute might still be needed for direct handlers
+        }
+      }
+
+      if (typeof path === 'string') {
+        this.finishRoute(analyzer, scope, state, h, path)
+        return
+      }
     }
 
-    // 3. Handle Symbol or Call (like tornado.web.url)
+    // 3. Handle Symbol or Call (like tornado.web.url, RuleRouter, Rule)
     if (val.ast?.type === 'CallExpression') {
       const { callee } = val.ast
       const name = callee.property?.name || callee.name
-      if (name === 'url' || name === 'URLSpec') {
+      if (name === 'url' || name === 'URLSpec' || name === 'Rule') {
         const args = val.ast.arguments
         if (args && args.length >= 2) {
-          const p = args[0].value
+          let p = args[0].value
+          // Handle PathMatches(r"...")
+          if (typeof p !== 'string' && args[0].type === 'CallExpression') {
+            const innerCallee = args[0].callee.property?.name || args[0].callee.name
+            if (innerCallee === 'PathMatches') {
+              p = args[0].arguments?.[0]?.value
+            }
+          }
+
           const hNode = args[1]
           if (typeof p === 'string') {
             const resolvedH = analyzer.processInstruction(scope, hNode, state)
             this.finishRoute(analyzer, scope, state, resolvedH || { ast: hNode }, p)
             return
           }
+        }
+      } else if (name === 'RuleRouter') {
+        const args = val.ast.arguments
+        if (args && args.length >= 1) {
+          const routesNode = args[0]
+          const resolvedRoutes = analyzer.processInstruction(scope, routesNode, state)
+          this.processRoutes(analyzer, scope, state, resolvedRoutes || { ast: routesNode })
+          return
         }
       }
     }
@@ -175,7 +225,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         let paramIdx = 0
         const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
         actualParams.forEach((p: any) => {
-          const pName = p.name || p.id?.name
+          const pName = p.id?.name || p.name
           if (pName === 'self') return
           paramIdx++
           if (info.named.includes(pName) || (info.named.length === 0 && paramIdx <= info.positionalCount)) {
