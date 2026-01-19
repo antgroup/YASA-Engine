@@ -41,13 +41,13 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     super.triggerAtFunctionCallBefore(analyzer, scope, node, state, info)
     const { fclos, argvalues } = info
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !argvalues) return
-
     let routes = null
     const isApp = isTornadoCall(node, 'Application')
     const isAdd = isTornadoCall(node, 'add_handlers')
-    if (isApp) {
+    const isRouter = isTornadoCall(node, 'RuleRouter')
+    if (isApp || isRouter) {
       const isInit = ['__init__', '_CTOR_'].includes(node.callee?.property?.name)
-      routes = isInit ? argvalues[1] : argvalues[0]
+      routes = (isApp || isRouter) && isInit ? argvalues[1] : argvalues[0]
     } else if (isAdd) {
       routes = argvalues[1]
     }
@@ -87,16 +87,16 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     let path: string | undefined
     let h: any
     if (val.vtype === 'object' && val.value) {
-      const isRouteObject = isTornadoCall(val.ast, 'RuleRouter') || isTornadoCall(val.ast, 'Rule')
-      // Handle RuleRouter and Rule specifically
-      if (isRouteObject) {
-        const rules = val.value['0'] || val.value.rules || val.value.target || val.value.handler
+      const isRouter = isTornadoCall(val.ast, 'RuleRouter')
+      const isRule = isTornadoCall(val.ast, 'Rule') || isTornadoCall(val.ast, 'URLSpec')
+
+      if (isRouter) {
+        const rules = val.value['0'] || val.value.rules
         if (rules) {
           this.processRoutes(analyzer, scope, state, rules)
           return
         }
       }
-
       const pVal = val.value['0'] || val.value.regex || val.value.matcher
       h = val.value['1'] || val.value.handler_class || val.value.target || val.value.handler
       path = pVal?.value || pVal?.ast?.value
@@ -125,16 +125,19 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         return
       }
     }
-    // Handle nested collections in objects (like lists of routes)
-    if (val.vtype === 'object' && val.value) {
-      const items = Array.isArray(val.value) ? val.value : Object.values(val.value)
+
+    // 3. Handle nested collections (like lists of routes)
+    const items =
+      val.vtype === 'object' && val.value ? (Array.isArray(val.value) ? val.value : Object.values(val.value)) : null
+    if (items) {
       const isLikelyCollection = Array.isArray(val.value) || Object.keys(val.value).some((k) => /^\d+$/.test(k))
       if (isLikelyCollection) {
         items.forEach((item: any) => this.processRoutes(analyzer, scope, state, item))
         return
       }
     }
-    // 3. Handle Direct Call (like tornado.web.url, RuleRouter, Rule)
+
+    // 4. Handle Direct Call (like tornado.web.url, RuleRouter, Rule)
     if (val.ast?.type === 'CallExpression') {
       const { callee } = val.ast
       const name = callee.property?.name || callee.name
@@ -183,7 +186,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         h = this.buildClassSymbol(h.ast)
       }
     }
-
     if (path && h) {
       this.registerEntryPoints(analyzer, h, path)
     }
@@ -205,7 +207,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         ep.urlPattern = path
         ep.handlerName = cls.ast?.id?.name || cls.sid || 'Unknown'
         analyzer.entryPoints.push(ep)
-
         const info = extractTornadoParams(path)
         let paramIdx = 0
         const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
@@ -261,7 +262,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
     const { fclos, ret } = info
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !ret) return
-
     const name = node.callee?.property?.name || node.callee?.name
     if (tornadoSourceAPIs.has(name)) {
       markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })

@@ -49,13 +49,13 @@ export function isRequestAttributeAccess(node: any): boolean {
 export function isTornadoCall(node: any, targetName: string): boolean {
   if (!node || node.type !== 'CallExpression') return false
   const { callee } = node
-  const names = [targetName]
-  if (names.includes(callee.name) || names.includes(callee.property?.name)) return true
+  if (callee.name === targetName || callee.property?.name === targetName) return true
   // Handle __init__ pattern
-  if (['__init__', '_CTOR_'].includes(callee.property?.name)) {
+  const funcName = callee.property?.name || callee.name
+  if (['__init__', '_CTOR_'].includes(funcName)) {
     let current = callee.object
     while (current) {
-      if (names.includes(current.name) || names.includes(current.property?.name)) return true
+      if (current.name === targetName || current.property?.name === targetName) return true
       current = current.object || current.callee
     }
   }
@@ -70,7 +70,6 @@ export function extractTornadoParams(pattern: string): { named: string[]; positi
   if (!pattern) return { named: [], positionalCount: 0 }
   const named = Array.from(pattern.matchAll(/\(\?P<(\w+)>/g)).map((m) => m[1])
   if (named.length > 0) return { named, positionalCount: 0 }
-
   const cleaned = pattern.replace(/\\\(|\\\)/g, '')
   const positionalCount = (cleaned.match(/\((?!\?)/g) || []).length
   return { named: [], positionalCount }
