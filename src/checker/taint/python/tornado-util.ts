@@ -50,12 +50,7 @@ export function isTornadoCall(node: any, targetName: string): boolean {
   if (!node || node.type !== 'CallExpression') return false
   const { callee } = node
   const names = [targetName]
-  if (targetName === 'Application') {
-    names.push('RuleRouter', 'Rule')
-  }
-
   if (names.includes(callee.name) || names.includes(callee.property?.name)) return true
-
   // Handle __init__ pattern
   if (['__init__', '_CTOR_'].includes(callee.property?.name)) {
     let current = callee.object
