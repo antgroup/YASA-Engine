@@ -46,8 +46,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const isAdd = isTornadoCall(node, 'add_handlers')
     const isRouter = isTornadoCall(node, 'RuleRouter')
     if (isApp || isRouter) {
-      const isInit = ['__init__', '_CTOR_'].includes(node.callee?.property?.name)
-      routes = (isApp || isRouter) && isInit ? argvalues[1] : argvalues[0]
+      const isInit = ['__init__', '_CTOR_'].includes(node.callee?.property?.name || node.callee?.name)
+      routes = (isApp || isRouter) && (isInit || !node.callee?.property) ? argvalues[1] : argvalues[0]
+      if (!routes && argvalues[0]) routes = argvalues[0]
     } else if (isAdd) {
       routes = argvalues[1]
     }
@@ -83,29 +84,20 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       return
     }
 
-    // 2. Try to extract from Object/URLSpec/List-like/RuleRouter/Rule
+    // 2. Try to extract from Object/URLSpec/List-like/Rule
     let path: string | undefined
     let h: any
-    if (val.vtype === 'object' && val.value) {
-      const isRouter = isTornadoCall(val.ast, 'RuleRouter')
-      const isRule = isTornadoCall(val.ast, 'Rule') || isTornadoCall(val.ast, 'URLSpec')
-
-      if (isRouter) {
-        const rules = val.value['0'] || val.value.rules
-        if (rules) {
-          this.processRoutes(analyzer, scope, state, rules)
-          return
-        }
-      }
+    if ((val.vtype === 'object' || val.vtype === 'symbol') && val.value) {
+      const isRule =
+        isTornadoCall(val.ast, 'Rule') ||
+        isTornadoCall(val.ast, 'URLSpec') ||
+        val.sid?.includes('Rule') ||
+        val.sid?.includes('URLSpec')
       const pVal = val.value['0'] || val.value.regex || val.value.matcher
       h = val.value['1'] || val.value.handler_class || val.value.target || val.value.handler
       path = pVal?.value || pVal?.ast?.value
       // If matcher is PathMatches(r"...")
-      if (
-        !path &&
-        pVal?.ast?.type === 'CallExpression' &&
-        (pVal.ast.callee.name === 'PathMatches' || pVal.ast.callee.property?.name === 'PathMatches')
-      ) {
+      if (!path && isTornadoCall(pVal?.ast, 'PathMatches')) {
         path = pVal.ast.arguments?.[0]?.value
       }
     } else if (Array.isArray(val.value)) {
@@ -130,24 +122,25 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const items =
       val.vtype === 'object' && val.value ? (Array.isArray(val.value) ? val.value : Object.values(val.value)) : null
     if (items) {
-      const isLikelyCollection = Array.isArray(val.value) || Object.keys(val.value).some((k) => /^\d+$/.test(k))
+      const isLikelyCollection =
+        Array.isArray(val.value) ||
+        (val.value && typeof val.value === 'object' && Object.keys(val.value).some((k) => /^\d+$/.test(k)))
       if (isLikelyCollection) {
         items.forEach((item: any) => this.processRoutes(analyzer, scope, state, item))
         return
       }
     }
 
-    // 4. Handle Direct Call (like tornado.web.url, RuleRouter, Rule)
+    // 4. Handle Direct Call (like tornado.web.url, URLSpec, Rule)
     if (val.ast?.type === 'CallExpression') {
-      const { callee } = val.ast
-      const name = callee.property?.name || callee.name
-      if (name === 'url' || name === 'URLSpec' || name === 'Rule') {
+      const isUrl = isTornadoCall(val.ast, 'url')
+      const isRule = isTornadoCall(val.ast, 'Rule') || isTornadoCall(val.ast, 'URLSpec')
+      if (isUrl || isRule) {
         const args = val.ast.arguments
         if (args && args.length >= 2) {
           let p = args[0].value
           if (typeof p !== 'string' && args[0].type === 'CallExpression') {
-            const innerCallee = args[0].callee.property?.name || args[0].callee.name
-            if (innerCallee === 'PathMatches') {
+            if (isTornadoCall(args[0], 'PathMatches')) {
               p = args[0].arguments?.[0]?.value
             }
           }
@@ -156,12 +149,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
             const resolvedH = analyzer.processInstruction(scope, hNode, state)
             this.finishRoute(analyzer, scope, state, resolvedH || { ast: hNode }, p)
           }
-        }
-      } else if (name === 'RuleRouter') {
-        const args = val.ast.arguments
-        if (args && args.length >= 1) {
-          const resolvedRoutes = analyzer.processInstruction(scope, args[0], state)
-          this.processRoutes(analyzer, scope, state, resolvedRoutes || { ast: args[0] })
         }
       }
     }
@@ -177,7 +164,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   private finishRoute(analyzer: any, scope: any, state: any, h: any, path: string) {
     if (!h) return
-
     if (h.vtype === 'union' && Array.isArray(h.value)) h = h.value[0]
     if (h.vtype !== 'class' && h.ast?.type === 'ClassDefinition') {
       try {
