@@ -10,6 +10,8 @@ export const tornadoSourceAPIs = new Set([
   'get_cookie',
   'get_secure_cookie',
   'get_arguments',
+  'get_json_body',
+  ,
 ])
 
 /**

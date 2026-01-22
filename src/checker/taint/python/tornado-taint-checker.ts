@@ -93,12 +93,15 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         isTornadoCall(val.ast, 'URLSpec') ||
         val.sid?.includes('Rule') ||
         val.sid?.includes('URLSpec')
-      const pVal = val.value['0'] || val.value.regex || val.value.matcher
-      h = val.value['1'] || val.value.handler_class || val.value.target || val.value.handler
-      path = pVal?.value || pVal?.ast?.value
-      // If matcher is PathMatches(r"...")
-      if (!path && isTornadoCall(pVal?.ast, 'PathMatches')) {
-        path = pVal.ast.arguments?.[0]?.value
+
+      if (isRule) {
+        const pVal = val.value['0'] || val.value.regex || val.value.matcher
+        h = val.value['1'] || val.value.handler_class || val.value.target || val.value.handler
+        path = pVal?.value || pVal?.ast?.value
+        // If matcher is PathMatches(r"...")
+        if (!path && isTornadoCall(pVal?.ast, 'PathMatches')) {
+          path = pVal.ast.arguments?.[0]?.value
+        }
       }
     } else if (Array.isArray(val.value)) {
       path = val.value[0]?.value || val.value[0]?.ast?.value
