@@ -47,7 +47,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const isRouter = isTornadoCall(node, 'RuleRouter')
     if (isApp || isRouter) {
       const isInit = ['__init__', '_CTOR_'].includes(node.callee?.property?.name || node.callee?.name)
-      routes = (isApp || isRouter) && (isInit || !node.callee?.property) ? argvalues[1] : argvalues[0]
+      routes = (isApp || isRouter) && isInit ? argvalues[1] : argvalues[0]
       if (!routes && argvalues[0]) routes = argvalues[0]
     } else if (isAdd) {
       routes = argvalues[1]

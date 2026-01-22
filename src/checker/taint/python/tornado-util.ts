@@ -11,7 +11,6 @@ export const tornadoSourceAPIs = new Set([
   'get_secure_cookie',
   'get_arguments',
   'get_json_body',
-  ,
 ])
 
 /**
@@ -53,7 +52,6 @@ export function isTornadoCall(node: any, targetName: string): boolean {
   const { callee } = node
   if (callee.name === targetName || callee.property?.name === targetName) return true
   const funcName = callee.property?.name || callee.name
-  if (funcName === targetName) return true
   if (['__init__', '_CTOR_'].includes(funcName)) {
     let current = callee.object
     while (current) {
