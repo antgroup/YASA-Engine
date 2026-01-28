@@ -110,7 +110,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (isCollection) {
         const items = Array.isArray(val.value) ? val.value : Object.values(val.value)
         items.forEach((item: any) => this.registerRoutesFromValue(analyzer, scope, state, item, prefix))
-        return
       }
     }
   }
@@ -165,7 +164,15 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         if (ep) {
           ep.urlPattern = path
           ep.handlerName = cls.ast?.id?.name || cls.sid || 'Unknown'
-          analyzer.entryPoints.push(ep)
+          const isDuplicate = analyzer.entryPoints.some(
+            (existing: any) =>
+              existing.urlPattern === ep.urlPattern &&
+              existing.functionName === ep.functionName &&
+              existing.filePath === ep.filePath
+          )
+          if (!isDuplicate) {
+            analyzer.entryPoints.push(ep)
+          }
           const info = extractTornadoParams(path)
           let paramIdx = 0
           const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
