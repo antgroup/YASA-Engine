@@ -93,7 +93,17 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       val.value.forEach((v: any) => this.registerRoutesFromValue(analyzer, scope, state, v, prefix))
       return
     }
-    // 3. Handle Collections (List/Object with numeric keys)
+    // 3. Handle raw tuple (path, handler)
+    if (val.value && typeof val.value === 'object') {
+      const pathArg = val.value['0']
+      const handler = val.value['1']
+      const path = pathArg?.tornadoPath || pathArg?.value || pathArg?.ast?.value
+      if (typeof path === 'string' && handler) {
+        this.finishRoute(analyzer, scope, state, handler, prefix + path)
+        return
+      }
+    }
+    // 4. Handle Collections (List/Object with numeric keys)
     const isObject = val.vtype === 'object' && val.value
     if (isObject) {
       const isCollection = Array.isArray(val.value) || Object.keys(val.value).some((k) => /^\d+$/.test(k))
@@ -101,18 +111,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         const items = Array.isArray(val.value) ? val.value : Object.values(val.value)
         items.forEach((item: any) => this.registerRoutesFromValue(analyzer, scope, state, item, prefix))
         return
-      }
-    }
-    // 4. Fallback for raw tuple (path, handler)
-    const isTuple =
-      (Array.isArray(val.value) && val.value.length >= 2) ||
-      (val.vtype === 'object' && val.value && val.value['0'] && val.value['1'])
-    if (isTuple) {
-      const pathArg = val.value['0'] || (Array.isArray(val.value) ? val.value[0] : null)
-      const handler = val.value['1'] || (Array.isArray(val.value) ? val.value[1] : null)
-      const path = pathArg?.tornadoPath || pathArg?.value || pathArg?.ast?.value
-      if (typeof path === 'string' && handler) {
-        this.finishRoute(analyzer, scope, state, handler, prefix + path)
       }
     }
   }
@@ -255,7 +253,6 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const isApp = isTornadoCall(node, 'Application')
     const isRouter = isTornadoCall(node, 'RuleRouter')
     if (!isInit && (isApp || isRouter)) {
-      // Direct class call returns instance
       ret.tornadoRoutes = argvalues[0]
     }
     if (tornadoSourceAPIs.has(name)) {

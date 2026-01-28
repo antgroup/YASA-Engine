@@ -52,11 +52,9 @@ export function isTornadoCall(node: any, targetName: string): boolean {
   const { callee } = node
   const funcName = callee.property?.name || callee.name
   const objectName = callee.object?.name || callee.object?.property?.name
-
   if (funcName === targetName || objectName === targetName) {
     return true
   }
-
   if (['__init__', '_CTOR_'].includes(funcName)) {
     let current = callee.object
     while (current) {
