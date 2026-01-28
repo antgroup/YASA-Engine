@@ -50,16 +50,21 @@ export function isRequestAttributeAccess(node: any): boolean {
 export function isTornadoCall(node: any, targetName: string): boolean {
   if (!node || node.type !== 'CallExpression') return false
   const { callee } = node
-  if (callee.name === targetName || callee.property?.name === targetName) return true
   const funcName = callee.property?.name || callee.name
+  const objectName = callee.object?.name || callee.object?.property?.name
+
+  if (funcName === targetName || objectName === targetName) {
+    return true
+  }
+
   if (['__init__', '_CTOR_'].includes(funcName)) {
     let current = callee.object
     while (current) {
-      if (current.name === targetName || current.property?.name === targetName) return true
+      const currentName = current.name || current.property?.name
+      if (currentName === targetName) return true
       current = current.object || current.callee
     }
   }
-
   return false
 }
 
