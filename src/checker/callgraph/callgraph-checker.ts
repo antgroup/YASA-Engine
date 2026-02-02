@@ -73,6 +73,36 @@ class CallgraphChecker extends CheckerCallgraph {
     this.triggerAtFunctionCallBefore(analyzer, scope, node, state, info)
   }
 
+    /**
+   * Returns whether this call target should be skipped (i.e., not emitted into the call graph).
+   *
+   * This is used to filter out internal/closure artifacts that show up as symbols with
+   * meaningless or implementation-specific paths.
+   *
+   * @param fclos - Callee closure/symbol.
+   * @param fclosName - Callee name (best-effort).
+   * @returns True if the call should be skipped.
+   */
+  shouldSkipCall(fclos: any, fclosName: string): boolean {
+    // 1) Skip paths with internal markers (scopes/blocks/instances, etc.)
+    const fullPath = fclos?.qid || fclos?.sid || fclos?.id || ''
+    if (typeof fullPath === 'string') {
+      if (fullPath.includes('<global>') ||
+          fullPath.includes('_scope') ||
+          fullPath.includes('<block_') ||
+          fullPath.includes('<instance>')) {
+        return true
+      }
+    }
+
+    // 2) Skip malformed/anonymous path prefixes
+    if (fclosName.startsWith('...') || fclosName.startsWith(':')) {
+      return true
+    }
+
+    return false
+  }
+
   /**
    *
    * @param analyzer
@@ -84,9 +114,24 @@ class CallgraphChecker extends CheckerCallgraph {
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { fclos, argvalues, ainfo } = info
     const fdecl = fclos.fdef
-    if (fclos === undefined || fdecl?.type !== 'FunctionDefinition') {
+    
+    if (fclos === undefined) {
       return
     }
+
+    // Best-effort callee name resolution.
+    const fclosName = fclos?.name || fclos?.id || fclos?.sid || ''
+
+    // External call: no resolvable FunctionDefinition in the analysis scope.
+    const isExternalCall = fdecl?.type !== 'FunctionDefinition'
+
+    // For external calls, filter out noisy/internal symbol paths.
+    if (isExternalCall) {
+      if (this.shouldSkipCall(fclos, fclosName)) {
+        return
+      }
+    }
+
     const stack = state.callstack
     const to = fclos
     const toAST = fclos && fclos.fdef
@@ -98,12 +143,52 @@ class CallgraphChecker extends CheckerCallgraph {
       return
     }
     const callgraph = (ainfo.callgraph = ainfo.callgraph || new this.kit.Graph())
-    const fromNode = callgraph.addNode(this.prettyPrint(from, fromAST, call_site_node), {
+    const fromNodeLabel = this.prettyPrint(from, fromAST, call_site_node)
+    
+    // Compute the callee node label. For external calls, use a simplified `<external>` label.
+    let toNodeLabel: string
+    if (isExternalCall) {
+      toNodeLabel = this.generateExternalLabel(fclos, fclosName)
+    } else {
+      toNodeLabel = this.prettyPrint(to, toAST, call_site_node)
+    }
+
+    const fromNode = callgraph.addNode(fromNodeLabel, {
       funcDef: fromAST,
       funcSymbol: from,
     })
-    const toNode = callgraph.addNode(this.prettyPrint(to, toAST, call_site_node), { funcDef: toAST, funcSymbol: to })
+    const toNode = callgraph.addNode(toNodeLabel, { funcDef: toAST, funcSymbol: to })
     callgraph.addEdge(fromNode, toNode, { callSite: call_site_node })
+  }
+
+  /**
+   * Builds a readable label for an external call target.
+   *
+   * We derive a best-effort module path from the parent chain and emit:
+   * `<external> module.submodule.function`.
+   */
+  generateExternalLabel(fclos: any, fclosName: string): string {
+    // Build a best-effort module path from the parent chain.
+    const pathParts: string[] = []
+    let current = fclos.parent
+    while (current) {
+      const partName = current.name || current.id || current.sid
+      if (partName && typeof partName === 'string') {
+        // Filter out internal markers and local implementation details.
+        if (!partName.includes('<') && !partName.includes('>') && 
+            !partName.includes('./') && !partName.includes('_scope') &&
+            !partName.includes('<block_')) {
+          pathParts.unshift(partName)
+        }
+      }
+      current = current.parent
+    }
+
+    if (pathParts.length > 0) {
+      return `<external> ${pathParts.join('.')}.${fclosName}`
+    } else {
+      return `<external> ${fclosName}`
+    }
   }
 
   /**
