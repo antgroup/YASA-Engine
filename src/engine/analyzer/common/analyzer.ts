@@ -2023,6 +2023,12 @@ class Analyzer extends MemSpace {
    */
   executeCall(node: any, fclos: any, argvalues: any, state: any, scope: any): any {
     if (Config.makeAllCG && fclos?.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
+      const funcKey = `${fclos.fdef?.loc?.sourcefile}:${fclos.fdef?.loc?.start?.line}-${fclos.fdef?.loc?.end?.line}`
+      
+      if (!this.ainfo.analyzedFunctionBodies) {
+        this.ainfo.analyzedFunctionBodies = new Set()
+      }
+
       for (const callgraphnode of this.ainfo?.callgraph?.nodes.values()) {
         if (
           callgraphnode.opts?.funcDef?.loc?.start?.line &&
@@ -2031,6 +2037,9 @@ class Analyzer extends MemSpace {
           callgraphnode.opts?.funcDef?.loc?.start?.line === fclos.fdef?.loc?.start?.line &&
           callgraphnode.opts?.funcDef?.loc?.end?.line === fclos.fdef?.loc?.end?.line
         ) {
+          const alreadyAnalyzed = this.ainfo.analyzedFunctionBodies.has(funcKey)
+
+          // add call edge
           this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
             argvalues,
             fclos,
@@ -2041,12 +2050,18 @@ class Analyzer extends MemSpace {
             analyzer: this,
             ainfo: this.ainfo,
           })
-          return SymbolValue({
-            type: 'FunctionCall',
-            expression: fclos,
-            arguments: argvalues,
-            ast: node,
-          })
+
+           if (alreadyAnalyzed) {
+            return SymbolValue({
+              type: 'FunctionCall',
+              expression: fclos,
+              arguments: argvalues,
+              ast: node,
+            })
+          } else {
+            this.ainfo.analyzedFunctionBodies.add(funcKey)
+            break
+          }
         }
       }
     }
@@ -2504,13 +2519,14 @@ class Analyzer extends MemSpace {
 
     if (logger.isTraceEnabled()) logger.trace(`\nprocessCall: function: ${this.formatScope(fdecl?.id?.name)}`)
 
-    // avoid infinite loops,the re-entry should only less than 3
-    if (
-      fdecl &&
-      state.callstack.reduce((previousValue: any, currentValue: any) => {
-        return currentValue.fdef === fdecl ? previousValue + 1 : previousValue
-      }, 0) > 0
-    ) {
+    // avoid infinite loops, the re-entry should only less than 3
+    const recursionCount = fdecl
+      ? state.callstack.reduce((previousValue: any, currentValue: any) => {
+          return currentValue.fdef === fdecl ? previousValue + 1 : previousValue
+        }, 0)
+      : 0
+
+    if (fdecl && recursionCount > 0) {
       return SymbolValue({
         type: 'FunctionCall',
         expression: fclos,
