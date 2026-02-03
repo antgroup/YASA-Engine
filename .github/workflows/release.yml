@@ -64,6 +64,7 @@ jobs:
             echo "❌ Failed to download UAST binaries"
             exit 1
           fi
+          chmod +x uast_binaries/*
           ls -lh uast_binaries/
 
       - name: Extract and Deploy Linux Binaries to deps/
@@ -115,11 +116,15 @@ jobs:
             echo "downloaded=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Compress UAST binaries
+        run: zip -r ../uast-binaries.zip .
+        working-directory: uast_binaries/
+
       - name: Upload UAST binaries
         uses: actions/upload-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries/
+          path: uast-binaries.zip
 
 
   # 2. 解析依赖版本（只需一次）
@@ -196,7 +201,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries/
+      
+      - name: Extract Binaries
+        run: unzip uast-binaries.zip -d uast_binaries
 
       - name: Extract and Deploy Linux Binaries to deps/
         run: |
@@ -349,14 +356,17 @@ jobs:
           npx pkg . --options max-old-space-size=13312 --target ${{ matrix.platform.target }} --output dist/${{ matrix.platform.out_name }}
           echo "✅ Built: dist/${{ matrix.platform.out_name }}"
 
+      - name: Compress Engine Binaries
+        run: |
+          mkdir engine-${{ matrix.platform.target }}
+          mv dist node_modules engine-${{ matrix.platform.target }}
+          zip -r engine-${{ matrix.platform.target }}.zip engine-${{ matrix.platform.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: engine-${{ matrix.platform.target }}
-          path: |
-            dist/
-            node_modules/
+          path: engine-${{ matrix.platform.target }}.zip
           retention-days: 7
 
   # 4. 按平台合并 Engine + node_modules + (可选) UAST 二进制
@@ -371,14 +381,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: engine-node18-*
-          path: engine_binaries/
+          merge-multiple: true
 
       - name: Download UAST Binaries
         uses: actions/download-artifact@v4
         with:
           name: uast-binaries
-          path: uast_binaries/
-          merge-multiple: false
+
+      - name: Extract Binaries
+        run: |
+          for f in engine-*.zip; do unzip $f -d engine_binaries; done
+          unzip uast-binaries.zip -d uast_binaries
 
       - name: Debug-List all downloaded binaries
         run: |
