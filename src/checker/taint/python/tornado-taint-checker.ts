@@ -97,6 +97,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     }
 
     const ast = val.ast || val.node
+    // 1. Handle CallExpressions (Rule/URLSpec/url)
     if (ast?.type === 'CallExpression') {
       const name = ast.callee?.property?.name || ast.callee?.name
       if (isTornadoCall(ast, 'Rule') || isTornadoCall(ast, 'URLSpec') || name === 'url') {
