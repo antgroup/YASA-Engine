@@ -1047,27 +1047,14 @@ class JavaAnalyzer extends (Analyzer as any) {
   }
 
   /**
-   * 处理函数调用表达式
+   * 获取函数调用参数值
    * @param scope - 作用域
    * @param node - AST 节点
    * @param state - 状态
-   * @returns {any} 调用结果
+   * @param fclos
+   * @returns {any} 参数值列表
    */
-  // eslint-disable-next-line complexity
-  processCallExpression(scope: any, node: any, state: any) {
-    /* { callee,
-        arguments,
-      }
-   */
-    if (this.checkerManager && this.checkerManager.checkAtFuncCallSyntax)
-      this.checkerManager.checkAtFuncCallSyntax(node, {
-        pcond: state.pcond,
-        einfo: state.einfo,
-      })
-
-    const fclos = this.processInstruction(scope, node.callee, state)
-    if (!fclos) return UndefinedValue()
-
+  prepareArgValues(scope: any, node: any, state: any, fclos: any) {
     // prepare the function arguments
     let argvalues: any[] = []
     let sameArgs = true // minor optimization to save memory
@@ -1089,6 +1076,32 @@ class JavaAnalyzer extends (Analyzer as any) {
       }
     }
     if (sameArgs) argvalues = node.arguments
+    return argvalues
+  }
+
+  /**
+   * 处理函数调用表达式
+   * @param scope - 作用域
+   * @param node - AST 节点
+   * @param state - 状态
+   * @returns {any} 调用结果
+   */
+  // eslint-disable-next-line complexity
+  processCallExpression(scope: any, node: any, state: any) {
+    /* { callee,
+        arguments,
+      }
+   */
+    if (this.checkerManager && this.checkerManager.checkAtFuncCallSyntax)
+      this.checkerManager.checkAtFuncCallSyntax(node, {
+        pcond: state.pcond,
+        einfo: state.einfo,
+      })
+
+    const fclos = this.processInstruction(scope, node.callee, state)
+    if (!fclos) return UndefinedValue()
+
+    let argvalues: any[] = this.prepareArgValues(scope, node, state, fclos)
 
     // analyze the resolved function closure and the function arguments
     let res = this.executeCall(node, fclos, argvalues, state, scope)

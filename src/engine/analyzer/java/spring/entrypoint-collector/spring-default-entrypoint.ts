@@ -14,6 +14,8 @@ const defaultSpringAnnotations = [
   'Path',
 ]
 
+const interceptorMethods = ['preHandle', 'postHandle', 'afterCompletion']
+
 /**
  *
  * @param packageManager
@@ -38,6 +40,22 @@ function getSpringEntryPointAndSource(packageManager: any) {
   } else if (!Array.isArray(entryPoints)) {
     entryPoints = [entryPoints]
   }
+
+  let interceptorEntryPoints = AstUtil.satisfy(
+    packageManager,
+    (n: any) => n.vtype === 'fclos' && interceptorMethods.some((method: any) => n.sid === method),
+    (node: any, prop: any) => prop === 'field',
+    null,
+    true
+  )
+
+  if (interceptorEntryPoints) {
+    if (!Array.isArray(interceptorEntryPoints)) {
+      interceptorEntryPoints = [interceptorEntryPoints]
+    }
+    entryPoints = entryPoints.concat(interceptorEntryPoints)
+  }
+
   for (const entrypoint of entryPoints) {
     if (entrypoint.vtype === 'fclos' && entrypoint.ast?.loc?.sourcefile) {
       const mainDirPrefix = Config.maindirPrefix
@@ -52,6 +70,9 @@ function getSpringEntryPointAndSource(packageManager: any) {
     if (entryPointAndSourceAtSameTime && entrypoint.ast?.parameters && entrypoint.ast?.id.type === 'Identifier') {
       for (const param of entrypoint.ast.parameters) {
         if (param.type === 'VariableDeclaration' && param.id?.type === 'Identifier') {
+          if (interceptorMethods.includes(entrypoint._sid) && param.id.name != 'request') {
+            continue
+          }
           TaintSource.push({
             introPoint: 4,
             path: param.id.name,
