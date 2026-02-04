@@ -248,6 +248,21 @@ class PythonAnalyzer extends (Analyzer as any) {
 
   /**
    *
+   * @param fclos
+   * @param argvalues
+   * @param state
+   * @param node
+   * @param scope
+   */
+  executeSingleCall(fclos: any, argvalues: any, state: any, node: any, scope: any) {
+    if (fclos.decorators?.some((d: any) => d.name === 'classmethod') && argvalues[0]?.vtype === 'undefine') {
+      argvalues[0] = fclos._this
+    }
+    return super.executeSingleCall(fclos, argvalues, state, node, scope)
+  }
+
+  /**
+   *
    * @param scope
    * @param node
    * @param state
