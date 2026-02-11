@@ -113,14 +113,6 @@ class PickleDeserializationChecker extends TaintChecker {
    */
   isSource(node: any): boolean {
     const callee = node?.callee
-    // if (!callee || callee.type !== 'MemberAccess') return false
-
-    // // method name must be recv
-    // if (callee.property?.name !== 'recv') return false
-
-    // object must be self.remote_socket
-    // const obj = callee.object
-    // return obj?.type === 'MemberAccess' && obj.object?.name === 'self' && obj.property?.name === 'remote_socket'
     return callee?.type === 'MemberAccess' && callee?.property?.name === 'socket'
   }
 
