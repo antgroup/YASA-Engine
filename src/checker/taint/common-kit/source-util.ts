@@ -134,6 +134,12 @@ function introduceFuncArgTaintByRuleConfig(scope: any, node: any, res: any, func
             }
             break
           }
+        } else if (call.name === tspec.fsig) {
+          const args = prepareArgs(res, undefined, tspec)
+          for (let i = 0; i < args.length; i++) {
+            markTaintSource(args[i], { path: node, kind: tspec.kind })
+          }
+          break
         }
       }
     }

@@ -475,9 +475,15 @@ class PythonAnalyzer extends (Analyzer as any) {
 
       let targetPath = normalizedPath
       if (!targetPath.endsWith('.py')) {
+        const mouduleFile = `${targetPath}/${modulePath}.py`
+        const moduleInitFile = path.join(`${targetPath}/${modulePath}`, '__init__.py')
         // 可能是包目录，检查是否有 __init__.py
         const initFile = path.join(targetPath, '__init__.py')
-        if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(initFile))) {
+        if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(mouduleFile))) {
+          targetPath = mouduleFile
+        } else if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(moduleInitFile))) {
+          targetPath = moduleInitFile
+        } else if (this.fileList.some((f: string) => path.normalize(f) === path.normalize(initFile))) {
           targetPath = initFile
         } else {
           // 尝试添加 .py 扩展名
@@ -557,7 +563,7 @@ class PythonAnalyzer extends (Analyzer as any) {
     } else if (prop.type !== 'Identifier' && prop.type !== 'Literal') {
       resolved_prop = this.processInstruction(scope, prop, state)
     }
-    if (prop.type === 'Identifier' && prop.name === '__init__' && prop.parent?.parent?.type === 'CallExpression') {
+    if (prop.type === 'Identifier' && (prop.name === '__init__' || prop.name === '__class__') && prop.parent?.parent?.type === 'CallExpression') {
       resolved_prop.name = '_CTOR_'
     }
     if (!resolved_prop) return defscope
