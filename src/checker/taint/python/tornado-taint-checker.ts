@@ -2,7 +2,7 @@ const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { markTaintSource } = require('../common-kit/source-util')
-const { isTornadoCall, tornadoSourceAPIs, isRequestAttributeAccess, extractTornadoParams } = require('./tornado-util')
+const { isTornadoCall, tornadoSourceAPIs, isRequestAttributeAccess } = require('./tornado-util')
 const { extractRelativePath } = require('../../../util/file-util')
 
 // Metadata storage

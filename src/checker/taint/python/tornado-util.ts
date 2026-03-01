@@ -65,16 +65,3 @@ export function isTornadoCall(node: any, targetName: string): boolean {
   }
   return false
 }
-
-/**
- * Extract parameter info from URL regex patterns
- * @param pattern
- */
-export function extractTornadoParams(pattern: string): { named: string[]; positionalCount: number } {
-  if (!pattern) return { named: [], positionalCount: 0 }
-  const named = Array.from(pattern.matchAll(/\(\?P<(\w+)>/g)).map((m) => m[1])
-  if (named.length > 0) return { named, positionalCount: 0 }
-  const cleaned = pattern.replace(/\\\(|\\\)/g, '')
-  const positionalCount = (cleaned.match(/\((?!\?)/g) || []).length
-  return { named: [], positionalCount }
-}
