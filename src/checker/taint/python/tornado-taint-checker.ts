@@ -7,8 +7,7 @@ const { extractRelativePath } = require('../../../util/file-util')
 
 // Metadata storage
 const tornadoRoutesMap = new WeakMap<any, any>()
-const tornadoRouteMap = new WeakMap<any, { path: string; handler: any }>()
-const tornadoPathMap = new WeakMap<any, string>()
+const tornadoRouteMap = new WeakMap<any, any>()
 
 /**
  * Tornado Taint Checker - Simplified
@@ -69,52 +68,50 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param scope
    * @param state
    * @param val
-   * @param prefix
    */
-  private registerRoutesFromValue(analyzer: any, scope: any, state: any, val: any, prefix = '') {
+  private registerRoutesFromValue(analyzer: any, scope: any, state: any, val: any) {
     if (!val) return
     // 1. Handle recording optimization (tornadoRoute)
     if (tornadoRouteMap.has(val)) {
-      const { path, handler } = tornadoRouteMap.get(val)!
-      if (path && handler) {
-        this.finishRoute(analyzer, scope, state, handler, prefix + path)
+      const handler = tornadoRouteMap.get(val)
+      if (handler) {
+        this.finishRoute(analyzer, scope, state, handler)
         return
       }
     }
-    // 2. Handle Union
+    // 2. Handle Union (often represents a flattened tuple)
     if (val.vtype === 'union' && Array.isArray(val.value)) {
-      // Small optimization: if this union contains exactly a string and something else, it might be a flattened tuple
-      const pathVal = val.value.find(
-        (v: any) => tornadoPathMap.has(v) || typeof v.value === 'string' || typeof v.ast?.value === 'string'
-      )
-      const hVal = val.value.find((v: any) => v.vtype === 'class' || v.vtype === 'symbol' || v.vtype === 'object')
-      if (pathVal && hVal) {
-        const path = tornadoPathMap.get(pathVal) || pathVal.value || pathVal.ast?.value
-        if (typeof path === 'string') {
-          this.finishRoute(analyzer, scope, state, hVal, prefix + path)
-          return
-        }
+      const handler = val.value.find((v: any) => v.vtype === 'class' || v.vtype === 'symbol' || v.vtype === 'fclos')
+      if (handler) {
+        this.finishRoute(analyzer, scope, state, handler)
       }
-      val.value.forEach((v: any) => this.registerRoutesFromValue(analyzer, scope, state, v, prefix))
+      val.value.forEach((v: any) => this.registerRoutesFromValue(analyzer, scope, state, v))
       return
     }
     // 3. Handle raw tuple (path, handler)
     if (val.value && typeof val.value === 'object') {
-      const pathArg = val.value['0']
       const handler = val.value['1']
-      const path = (pathArg && tornadoPathMap.get(pathArg)) || pathArg?.value || pathArg?.ast?.value
-      if (typeof path === 'string' && handler) {
-        this.finishRoute(analyzer, scope, state, handler, prefix + path)
-        return
+      if (handler) {
+        const pathArg = val.value['0']
+        const path = pathArg?.value || pathArg?.ast?.value
+        if (typeof path === 'string') {
+          this.finishRoute(analyzer, scope, state, handler)
+          return
+        }
       }
     }
-    // 4. Handle Collections (List/Object with numeric keys)
-    const isObject = val.vtype === 'object' && val.value
+    // 4. Handle direct class/symbol (likely a result of recursion or flattened tuple)
+    if (val.vtype === 'class' || val.vtype === 'symbol' || val.vtype === 'fclos') {
+      this.finishRoute(analyzer, scope, state, val)
+      return
+    }
+    // 5. Handle Collections (List/Object with numeric keys)
+    const isObject = (val.vtype === 'object' || !val.vtype) && val.value
     if (isObject) {
-      const isCollection = Array.isArray(val.value) || Object.keys(val.value).some((k) => /^\d+$/.test(k))
-      if (isCollection) {
-        const items = Array.isArray(val.value) ? val.value : Object.values(val.value)
-        items.forEach((item: any) => this.registerRoutesFromValue(analyzer, scope, state, item, prefix))
+      const items = Array.isArray(val.value) ? val.value : Object.values(val.value)
+      const isLikelyCollection = Array.isArray(val.value) || Object.keys(val.value).some((k) => /^\d+$/.test(k))
+      if (isLikelyCollection) {
+        items.forEach((item: any) => this.registerRoutesFromValue(analyzer, scope, state, item))
       }
     }
   }
@@ -125,15 +122,14 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param scope
    * @param state
    * @param h
-   * @param path
    */
-  private finishRoute(analyzer: any, scope: any, state: any, h: any, path: string) {
+  private finishRoute(analyzer: any, scope: any, state: any, h: any) {
     if (!h) return
     if (h.vtype === 'union' && Array.isArray(h.value)) h = h.value[0]
     // 1. Check for recorded nested routes (Application/Router instances)
     const innerRoutes = tornadoRoutesMap.get(h) || (h.value && tornadoRoutesMap.get(h.value))
     if (innerRoutes) {
-      this.registerRoutesFromValue(analyzer, scope, state, innerRoutes, path)
+      this.registerRoutesFromValue(analyzer, scope, state, innerRoutes)
       return
     }
     // 2. Handle Class Definition (Handler classes)
@@ -148,8 +144,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       // If it's an instance symbol, get its class definition
       cls = cls.cdef
     }
-    if (path && cls && (cls.vtype === 'class' || cls.vtype === 'symbol')) {
-      this.registerEntryPoints(analyzer, cls, path)
+    if (cls && (cls.vtype === 'class' || cls.vtype === 'symbol')) {
+      this.registerEntryPoints(analyzer, cls)
     }
   }
 
@@ -157,9 +153,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    *
    * @param analyzer
    * @param cls
-   * @param path
    */
-  private registerEntryPoints(analyzer: any, cls: any, path: string) {
+  private registerEntryPoints(analyzer: any, cls: any) {
     const methods = ['get', 'post', 'put', 'delete', 'patch']
     // Look for methods in cls.value, cls.field, or cls.value.field (Python specificity)
     const classValue = cls.value?.field || cls.field || cls.value || {}
@@ -177,24 +172,19 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
           if (!isDuplicate) {
             analyzer.entryPoints.push(ep)
           }
-          const info = extractTornadoParams(path)
-          let paramIdx = 0
           const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
           actualParams.forEach((p: any) => {
             const pName = p.id?.name || p.name
             if (pName === 'self') return
-            paramIdx++
-            // Add source scope for parameters based on URL pattern
-            if (info.named.includes(pName) || (info.named.length === 0 && paramIdx <= info.positionalCount)) {
-              this.sourceScope.value.push({
-                path: pName,
-                kind: 'PYTHON_INPUT',
-                scopeFile: extractRelativePath(fclos?.ast?.loc?.sourcefile || ep.filePath, Config.maindir),
-                scopeFunc: ep.functionName,
-                locStart: p.loc?.start?.line,
-                locEnd: p.loc?.end?.line,
-              })
-            }
+            // Add source scope for all non-self parameters
+            this.sourceScope.value.push({
+              path: pName,
+              kind: 'PYTHON_INPUT',
+              scopeFile: extractRelativePath(fclos?.ast?.loc?.sourcefile || ep.filePath, Config.maindir),
+              scopeFunc: ep.functionName,
+              locStart: p.loc?.start?.line,
+              locEnd: p.loc?.end?.line,
+            })
           })
         }
       }
@@ -238,19 +228,10 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     // 1. Record route info for Rule, URLSpec, url (Recording phase)
     const isRuleCall = isTornadoCall(node, 'Rule') || isTornadoCall(node, 'URLSpec') || name === 'url'
     if (isRuleCall && argvalues && argvalues.length >= 2) {
-      const pArg = argvalues[0]
-      const path = (pArg && tornadoPathMap.get(pArg)) || pArg?.value
       const handler = argvalues[1]
-      tornadoRouteMap.set(ret, { path, handler })
+      tornadoRouteMap.set(ret, handler)
     }
-    // 2. Record path for PathMatches
-    if (isTornadoCall(node, 'PathMatches') && argvalues && argvalues.length >= 1) {
-      const path = argvalues[0]?.value
-      if (typeof path === 'string') {
-        tornadoPathMap.set(ret, path)
-      }
-    }
-    // 3. Record internal routes for Application/RuleRouter instances
+    // 2. Record internal routes for Application/RuleRouter instances
     const isInit = ['__init__', '_CTOR_'].includes(name)
     if (isInit && argvalues && argvalues.length >= 2) {
       const self = argvalues[0]
