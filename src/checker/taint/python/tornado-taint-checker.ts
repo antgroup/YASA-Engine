@@ -162,16 +162,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (methods.includes(name)) {
         const ep = completeEntryPoint(fclos)
         if (ep) {
-          ep.funcReceiverType = cls.ast?.id?.name || cls.sid || 'Unknown'
-          const isDuplicate = analyzer.entryPoints.some(
-            (existing: any) =>
-              existing.functionName === ep.functionName &&
-              existing.filePath === ep.filePath &&
-              existing.funcReceiverType === ep.funcReceiverType
-          )
-          if (!isDuplicate) {
-            analyzer.entryPoints.push(ep)
-          }
+          analyzer.entryPoints.push(ep)
           const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
           actualParams.forEach((p: any) => {
             const pName = p.id?.name || p.name
