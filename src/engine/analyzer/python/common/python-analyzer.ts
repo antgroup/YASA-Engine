@@ -255,8 +255,20 @@ class PythonAnalyzer extends (Analyzer as any) {
    * @param scope
    */
   executeSingleCall(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    if (fclos.decorators?.some((d: any) => d.name === 'classmethod') && argvalues[0]?.vtype === 'undefine') {
-      argvalues[0] = fclos._this
+    if (fclos.decorators?.some((d: any) => d.name === 'classmethod')) {
+      let cls
+      if (fclos._this.vtype === 'object' && fclos._this.__class) {
+        cls = fclos._this.__class
+      } else if (fclos._this.vtype === 'class') {
+        cls = fclos._this
+      }
+      if (cls) {
+        if (argvalues[0]?.vtype === 'undefine') {
+          argvalues[0] = cls
+        } else if (argvalues[0]) {
+          argvalues.unshift(cls)
+        }
+      }
     }
     return super.executeSingleCall(fclos, argvalues, state, node, scope)
   }
@@ -368,6 +380,23 @@ class PythonAnalyzer extends (Analyzer as any) {
     }
 
     return res
+  }
+
+  /**
+   *
+   * @param fdef
+   * @param argvalues
+   * @param fclos
+   * @param state
+   * @param node
+   * @param scope
+   */
+  buildNewObject(fdef: any, argvalues: any, fclos: any, state: any, node: any, scope: any) {
+    const result = super.buildNewObject(fdef, argvalues, fclos, state, node, scope)
+    if (fclos.vtype === 'class') {
+      result.__class = fclos
+    }
+    return result
   }
 
   /**
