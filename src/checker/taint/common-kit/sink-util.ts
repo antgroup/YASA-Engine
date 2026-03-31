@@ -19,12 +19,22 @@ interface SinkRule {
  * @param argvalues
  * @returns {Array}
  */
-function matchSinkAtFuncCall(node: any, fclos: any, sinks: SinkRule[], argvalues: any[]): SinkRule[] {
+function matchSinkAtFuncCall(
+  node: any,
+  fclos: any,
+  sinks: SinkRule[],
+  argvalues: Record<number | string, any>
+): SinkRule[] {
   const callExpr = node.callee || node
   const res: SinkRule[] = []
   if (sinks && sinks.length > 0) {
     for (const tspec of sinks) {
-      if (tspec.argNum !== undefined && tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+      if (
+        tspec.argNum !== undefined &&
+        tspec.argNum >= 0 &&
+        argvalues &&
+        tspec.argNum !== Object.keys(argvalues).length
+      ) {
         continue
       }
 
@@ -56,7 +66,7 @@ function matchSinkAtFuncCallWithCalleeType(
   fclos: any,
   rules: SinkRule[],
   scope: any,
-  argvalues: any[]
+  argvalues: Record<number | string, any>
 ): SinkRule[] {
   const callExpr = node.callee || node
   const res: SinkRule[] = []
@@ -68,7 +78,12 @@ function matchSinkAtFuncCallWithCalleeType(
       return res
     }
     for (const tspec of rules) {
-      if (tspec.argNum !== undefined && tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+      if (
+        tspec.argNum !== undefined &&
+        tspec.argNum >= 0 &&
+        argvalues &&
+        tspec.argNum !== Object.keys(argvalues).length
+      ) {
         continue
       }
 

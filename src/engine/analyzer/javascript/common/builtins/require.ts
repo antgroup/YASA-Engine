@@ -9,9 +9,9 @@ module.exports = {
    * @param node
    * @param scope
    */
-  processRequire(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    if (argvalues.length !== 1) {
-      logger.warn('require: params length [%d] is not equal to 1', argvalues.length)
+  processRequire(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
+    if (Object.keys(argvalues).length !== 1) {
+      logger.warn('require: params length [%d] is not equal to 1', Object.keys(argvalues).length)
     }
     let argNode: any
     if (node.type === 'CallExpression') {

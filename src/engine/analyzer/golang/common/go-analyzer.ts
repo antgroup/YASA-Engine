@@ -1143,8 +1143,7 @@ class GoAnalyzer extends Analyzer {
     const needInvoke = Config.invokeCallbackOnUnknownFunction
     if (needInvoke !== 1 && needInvoke !== 2) return
 
-    for (let i = 0; i < argvalues.length; i++) {
-      const arg = argvalues[i]
+    for (const arg of argvalues) {
       if (arg && arg.vtype === 'object') {
         const obj = _.clone(arg) // 浅拷贝即可
         const newState = _.clone(state)

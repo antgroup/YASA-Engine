@@ -21,7 +21,7 @@ class Queue extends Collection {
    * @param scope
    * @private
    */
-  static Queue(_this: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static Queue(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     super.Collection(_this, argvalues, state, node, scope)
     _this.setMisc('precise', true)
 
@@ -36,16 +36,16 @@ class Queue extends Collection {
    * @param node
    * @param scope
    */
-  static add(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static add(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValueQueue()
     }
     if (!_this.getMisc('precise')) {
       addElementToBufferQueue(_this, argvalues[0])
     } else {
       _this.length = _this.length ?? 0
-      if (argvalues.length === 1) {
+      if (Object.keys(argvalues).length === 1) {
         _this.value[_this.length] = argvalues[0]
         _this.length++
       } else {
@@ -67,7 +67,7 @@ class Queue extends Collection {
    * @param node
    * @param scope
    */
-  static element(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static element(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValueQueue()
@@ -87,7 +87,7 @@ class Queue extends Collection {
    * @param node
    * @param scope
    */
-  static offer(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static offer(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return Queue.add(fclos, argvalues, state, node, scope)
   }
 
@@ -100,7 +100,7 @@ class Queue extends Collection {
    * @param scope
    * @returns {*|{type, object, property}}
    */
-  static peek(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static peek(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return Queue.element(fclos, argvalues, state, node, scope)
   }
 
@@ -112,7 +112,7 @@ class Queue extends Collection {
    * @param node
    * @param scope
    */
-  static poll(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static poll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValueQueue()
@@ -152,7 +152,7 @@ class Queue extends Collection {
    * @param node
    * @param scope
    */
-  static remove(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static remove(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return Queue.poll(fclos, argvalues, state, node, scope)
   }
 
@@ -165,7 +165,13 @@ class Queue extends Collection {
    * @param scope
    * @private
    */
-  static _functionNotFoundCallback_(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+  static _functionNotFoundCallback_(
+    fclos: any,
+    argvalues: Record<number | string, any>,
+    state: any,
+    node: any,
+    scope: any
+  ): void {
     const _this = fclos.getThis()
     if (!_this) {
       return

@@ -16,12 +16,12 @@ class AtomicReference {
    * @param scope
    * @constructor
    */
-  static AtomicReference(_this: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static AtomicReference(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     if (!_this) {
       return _this
     }
 
-    if (argvalues.length > 0) {
+    if (Object.keys(argvalues).length > 0) {
       memSpaceUtilAtomic.saveVarInScope(_this, '_value', argvalues[0], state)
     }
 
@@ -36,7 +36,7 @@ class AtomicReference {
    * @param node
    * @param scope
    */
-  static set(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+  static set(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): void {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValueAtomic()

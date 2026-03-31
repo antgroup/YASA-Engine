@@ -114,7 +114,7 @@ class GRpcEntrypointCollectChecker extends Checker {
     const { fclos, argvalues } = info
     if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!(fclos._qid in registerServerPoints)) return // 处理Register_xxx_Server函数，即实现类注册点
-    if (!Array.isArray(argvalues) || argvalues.length < 1) return
+    if (!Array.isArray(argvalues) || Object.keys(argvalues).length < 1) return
     const serverName = registerServerPoints[fclos._qid]
     const implServer = argvalues[1]
     this.searchServiceEntryPoints(serverName, implServer, fclos, state, analyzer)

@@ -19,12 +19,12 @@ class CompletableFuture {
    * @returns {*}
    * @constructor
    */
-  static CompletableFuture(_this: any, argvalues: any[], state: any, node: any, scope: any) {
+  static CompletableFuture(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     if (_this) {
       return _this
     }
 
-    if (argvalues.length > 0) {
+    if (Object.keys(argvalues).length > 0) {
       memSpaceUtil.saveVarInScope(_this, '_result', argvalues[0], state)
       _this.setMisc('thenFuncsWithContext', [])
     }
@@ -40,7 +40,7 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static join(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static join(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this || !(this as any).executeCall) {
       return new UndefinedValue()
@@ -69,11 +69,11 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static runAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static runAsync(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     let instance = new UndefinedValue()
     if (
       !(this as any).processNewExpression ||
-      argvalues.length < 1 ||
+      Object.keys(argvalues).length < 1 ||
       argvalues[0].vtype !== 'fclos' ||
       !(this as any).processAndCallFuncDef
     ) {
@@ -116,11 +116,11 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static supplyAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static supplyAsync(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     let instance = new UndefinedValue()
     if (
       !(this as any).processNewExpression ||
-      argvalues.length < 1 ||
+      Object.keys(argvalues).length < 1 ||
       argvalues[0].vtype !== 'fclos' ||
       !(this as any).processAndCallFuncDef
     ) {
@@ -164,9 +164,14 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static thenRun(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenRun(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).processAndCallFuncDef) {
+    if (
+      !_this ||
+      Object.keys(argvalues).length < 1 ||
+      argvalues[0].vtype !== 'fclos' ||
+      !(this as any).processAndCallFuncDef
+    ) {
       return new UndefinedValue()
     }
 
@@ -198,7 +203,7 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static thenRunAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenRunAsync(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return CompletableFuture.thenRun(fclos, argvalues, state, node, scope)
   }
 
@@ -210,9 +215,9 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static thenApply(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenApply(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
+    if (!_this || Object.keys(argvalues).length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
       return new UndefinedValue()
     }
 
@@ -247,7 +252,7 @@ class CompletableFuture {
    * @param scope
    * @returns {UndefinedValue|*}
    */
-  static thenApplyAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenApplyAsync(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return CompletableFuture.thenApply(fclos, argvalues, state, node, scope)
   }
 
@@ -259,9 +264,9 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static thenAccept(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenAccept(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
+    if (!_this || Object.keys(argvalues).length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
       return new UndefinedValue()
     }
 
@@ -294,7 +299,7 @@ class CompletableFuture {
    * @param node
    * @param scope
    */
-  static thenAcceptAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static thenAcceptAsync(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return CompletableFuture.thenAccept(fclos, argvalues, state, node, scope)
   }
 }

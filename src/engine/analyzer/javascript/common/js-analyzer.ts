@@ -53,7 +53,7 @@ class JsAnalyzer extends Analyzer {
 
   /**
    * 单文件预处理：解析并处理单个文件
-   * 
+   *
    * @param source - 源代码内容
    * @param fileName - 文件名
    */
@@ -65,10 +65,10 @@ class JsAnalyzer extends Analyzer {
     this.performanceTracker.start('preProcess.parseCode')
     this.uast = this.parseUast(source, fileName)
     this.performanceTracker.end('preProcess.parseCode')
-    
+
     if (this.uast) {
       this.initModuleScope(this.uast, fileName)
-  
+
       // 注意：直接调用 processModule 处理已解析的 AST，避免调用 processModuleSrc 导致重复解析
       this.performanceTracker.start('preProcess.processModule')
       this.processModule(this.uast, fileName)
@@ -78,7 +78,7 @@ class JsAnalyzer extends Analyzer {
 
   /**
    * 预处理阶段：扫描模块并解析代码
-   * 
+   *
    * @param dir - 项目目录
    */
   preProcess(dir: any) {
@@ -124,7 +124,7 @@ class JsAnalyzer extends Analyzer {
 
         this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        const argValues: any[] = []
+        const argValues: Record<number | string, any> = []
         for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
           argValues.push(
             this.processInstruction(
@@ -231,7 +231,7 @@ class JsAnalyzer extends Analyzer {
 
   /**
    * 处理模块源代码：解析并处理单个模块
-   * 
+   *
    * @param source - 源代码内容
    * @param filename - 文件名
    * @returns 处理结果
@@ -734,7 +734,7 @@ class JsAnalyzer extends Analyzer {
           (res as any).value[val].vtype === 'fclos' &&
           (res as any).value[val].fdef
         ) {
-          const argvalues: any[] = []
+          const argvalues: Record<number | string, any> = []
           if ((res as any).value[val].fdef?.parameters && (res as any).value[val].fdef.parameters.length > 0) {
             for (const para of (res as any).value[val].fdef.parameters) {
               const argv = this.processInstruction(scope, para, state)

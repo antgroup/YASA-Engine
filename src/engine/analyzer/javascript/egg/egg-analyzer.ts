@@ -167,16 +167,24 @@ class EggAnalyzer extends (JsAnalyzer as any) {
    * @param valExport
    * @param state
    */
-  replaceCtxInFunctionParams(astNode: any, argValues: any[], entryPointSymVal: any, valExport: any, state: any) {
+  replaceCtxInFunctionParams(
+    astNode: any,
+    argValues: Record<number | string, any>,
+    entryPointSymVal: any,
+    valExport: any,
+    state: any
+  ) {
     if (astNode?.type === 'FunctionDefinition') {
-      if (Array.isArray(astNode.parameters) && astNode.parameters?.length > 0) {
+      if (astNode.parameters?.length > 0) {
         for (const key in astNode.parameters) {
           if (astNode.parameters[key].id?.name === 'ctx') {
             // 进一步判断有没有decorator @Context。暂时不判断
-            argValues.push(valExport.value.ctx)
+            argValues[Object.keys(argValues).length] = valExport.value.ctx
           } else {
-            argValues.push(
-              this.processInstruction(cloneWithDepth(entryPointSymVal, 2), astNode.parameters[key].id, state)
+            argValues[Object.keys(argValues).length] = this.processInstruction(
+              cloneWithDepth(entryPointSymVal, 2),
+              astNode.parameters[key].id,
+              state
             )
           }
         }

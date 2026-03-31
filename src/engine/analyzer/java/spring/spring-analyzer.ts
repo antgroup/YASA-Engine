@@ -83,7 +83,7 @@ class SpringAnalyzer extends (JavaAnalyzer as any) {
 
         this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        const argValues: any[] = []
+        const argValues: Record<number | string, any> = []
         try {
           for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
             argValues.push(

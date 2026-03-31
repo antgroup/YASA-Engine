@@ -2123,7 +2123,8 @@ class Analyzer extends MemSpace {
 
     // attach taint information if any
     // var taint;
-    for (const arg of argvalues) {
+    for (const key in argvalues) {
+      const arg = argvalues[key]
       if (arg) {
         if (arg.hasTagRec) {
           res.hasTagRec = true
@@ -2137,7 +2138,8 @@ class Analyzer extends MemSpace {
     }
 
     // e.g. XXInterface token = XXInterface(id) where id is ctor_init
-    for (const arg of argvalues) {
+    for (const key in argvalues) {
+      const arg = argvalues[key]
       if (arg && arg.ctor_init && node.expression && node.expression.value) {
         let top_scope = scope
         while (top_scope.parent) {
@@ -2159,7 +2161,7 @@ class Analyzer extends MemSpace {
     res = SymbolValue(res) // esp. for member getter function
 
     // save pass-in arguments for later use
-    if (argvalues.length > 0) {
+    if (Object.keys(argvalues).length > 0) {
       res.setMisc('pass-in', argvalues)
     }
     return res
@@ -2229,7 +2231,12 @@ class Analyzer extends MemSpace {
     scope: any,
     state: any
   ) {
-    if (!argvalues || argvalues.length < 2 || !targetIndex || targetIndex >= argvalues.length) {
+    if (
+      !argvalues ||
+      Object.keys(argvalues).length < 2 ||
+      !targetIndex ||
+      targetIndex >= Object.keys(argvalues).length
+    ) {
       return
     }
     const res = argvalues[targetIndex]
@@ -2464,14 +2471,18 @@ class Analyzer extends MemSpace {
         if (param) {
           paramLength = Array.isArray(param) ? param.length : param.parameters.length
         }
-        if (paramLength === argvalues.length) {
+        if (paramLength === Object.keys(argvalues).length) {
           let typeMatch = true
           const literalTypeList = ['String', 'string', 'int', 'Integer', 'Double', 'double', 'float', 'Float']
           for (let i = 0; i < paramLength; i++) {
+            let argv = argvalues[i]
+            if (!argv && param[i].id?.name) {
+              argv = argvalues[param[i].id.name]
+            }
             if (
-              param[i].varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
-              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param[i].varType?.id?.name}`) ||
-              (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param[i].varType?.id?.name))
+              param[i].varType?.id?.name === argv?.rtype?.definiteType?.name ||
+              argv?.rtype?.definiteType?.name?.endsWith(`.${param[i].varType?.id?.name}`) ||
+              (argv?.vtype === 'primitive' && literalTypeList.includes(param[i].varType?.id?.name))
             ) {
               continue
             }
@@ -2493,7 +2504,7 @@ class Analyzer extends MemSpace {
           if (param) {
             paramLength = Array.isArray(param) ? param.length : param.parameters.length
           }
-          if (paramLength === argvalues.length) {
+          if (paramLength === Object.keys(argvalues).length) {
             fclos = _.clone(fclos)
             fclos.ast = fclos.fdef = fdecl = f // adjust to the right function definition
             break
@@ -2557,8 +2568,14 @@ class Analyzer extends MemSpace {
 
       // this.lastReturnValue =  fclos.execute.call(this, fclos, argvalues, new_state, node, scope);
       this.lastReturnValue = null
-      for (let i = 0; i < argvalues.length; i++) {
-        argvalues[i] = SourceLine.addSrcLineInfo(argvalues[i], node, node.loc && node.loc.sourcefile, 'CALL: ', fname)
+      for (const key in argvalues) {
+        argvalues[key] = SourceLine.addSrcLineInfo(
+          argvalues[key],
+          node,
+          node.loc && node.loc.sourcefile,
+          'CALL: ',
+          fname
+        )
       }
       return_value = fclos.execute.call(this, fclos, argvalues, new_state, node, scope)
     } else {
@@ -2585,10 +2602,10 @@ class Analyzer extends MemSpace {
         this.processInstruction(fscope, param, new_state)
       })
 
-      const size = Math.min(argvalues.length, params.length)
+      const size = params.length
       let hasVariadicElement = false
       if (
-        argvalues.length > size &&
+        Object.keys(argvalues).length > size &&
         ((Config.language !== 'js' && Config.language !== 'javascript') ||
           params[params.length - 1]?._meta.isRestElement)
       ) {
@@ -2600,11 +2617,10 @@ class Analyzer extends MemSpace {
         const paramName = param.id?.name
         if (i === size - 1 && hasVariadicElement) {
           // variadic parameter processing
-          const rest_argvalues = argvalues.slice(i)
           const rest_val: any = {}
-          rest_argvalues.forEach((element: any, index: any) => {
-            rest_val[index.toString()] = element
-          })
+          for (let j = 0; argvalues[i + j]; j++) {
+            rest_val[j.toString()] = argvalues[i + j]
+          }
 
           val = ObjectValue({
             id: paramName,
@@ -2612,15 +2628,16 @@ class Analyzer extends MemSpace {
           })
         } else {
           if (!paramName) continue // unused parameters
-
           let index = i
-          if (node.names && node.names.length > 0) {
-            // handle named argument values like "f({value: 2, key: 3})"
-            const k = node.names.indexOf(param.name)
-            if (k !== -1) index = k
+          const argKeys = Object.keys(argvalues)
+          if (argKeys.includes(paramName)) {
+            index = paramName
           }
-          // if (DEBUG) logger.info('write arg:' + formatNode(param) + ' = ' + formatNode(argvalues[i]));
+
           val = argvalues[index]
+          if (!val) {
+            continue
+          }
         }
 
         // add source line information
@@ -2807,7 +2824,7 @@ class Analyzer extends MemSpace {
         this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
       }
       // save pass-in arguments for later use
-      if (argvalues.length > 0) {
+      if (Object.keys(argvalues).length > 0) {
         if (!obj.arguments || (Array.isArray(obj.arguments) && obj.arguments?.length === 0)) {
           obj.arguments = argvalues
         } else {
@@ -2861,24 +2878,25 @@ class Analyzer extends MemSpace {
     }
     if (paras) {
       if (paras.type === 'ParameterList') paras = paras.parameters
-      const len = Math.min(paras.length, argvalues.length)
-      for (let i = 0; i < len; i++) {
-        const param = paras[i]
-        let index = i
-        const names = node.names || node.arguments
-        if (names > 0) {
-          // handle named argument values like "f({value: 2, key: 3})"
-          const k = names.indexOf(param.name)
-          if (k !== -1) index = k
-        }
-        let val = argvalues[index]
-        // add source line information
-        if (param.loc) {
-          val = SourceLine.addSrcLineInfo(val, node, param.loc.sourcefile, 'CTOR ARG PASS: ', param.name)
+      const indices = Object.keys(paras)
+      for (const key in argvalues) {
+        let param
+        if (indices.includes(key)) {
+          param = paras[key]
+        } else {
+          param = paras.find((para: any) => para.id && para.id.name === key)
         }
 
-        if (fdef.type === 'StructDefinition') {
-          this.saveVarInCurrentScope(obj, param, val, state)
+        if (param) {
+          let val = argvalues[key]
+          // add source line information
+          if (param.loc) {
+            val = SourceLine.addSrcLineInfo(val, node, param.loc.sourcefile, 'CTOR ARG PASS: ', param.name)
+          }
+
+          if (fdef.type === 'StructDefinition') {
+            this.saveVarInCurrentScope(obj, param, val, state)
+          }
         }
       }
     }
@@ -2918,7 +2936,7 @@ class Analyzer extends MemSpace {
     const needInvoke = Config.invokeCallbackOnUnknownFunction
     if (needInvoke !== 1 && needInvoke !== 2) return UndefinedValue()
 
-    for (let i = 0; i < argvalues.length; i++) {
+    for (const i in argvalues) {
       const arg = argvalues[i]
       if (arg && arg.vtype === 'fclos') {
         const fclos = _.clone(arg)

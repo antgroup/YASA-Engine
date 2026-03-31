@@ -5,7 +5,7 @@ const syncOnceDoQid: string = 'sync.Once<instance>.Do'
 
 interface TriggerInfo {
   fclos: any
-  argvalues: any[]
+  argvalues: Record<number | string, any>
   [key: string]: any
 }
 
@@ -36,7 +36,7 @@ class syncOnceDoChecker extends CheckerSyncOnceDo {
     const hash: string = JSON.stringify(node.loc)
     if (done.has(hash)) return
     done.add(hash)
-    if (argvalues.length !== 1 && argvalues[0].vtype !== 'fclos') return
+    if (Object.keys(argvalues).length !== 1 && argvalues[0].vtype !== 'fclos') return
 
     const fDef = node.arguments[0]
     const fClos = argvalues[0]

@@ -13,10 +13,10 @@ class HashMap extends (Map as any) {
    * @param scope
    * @constructor
    */
-  static HashMap(_this: any, argvalues: any[], state: any, node: any, scope: any) {
+  static HashMap(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     super.Map(_this, argvalues, state, node, scope)
 
-    if (argvalues.length === 1 && argvalues[0].vtype !== 'primitive') {
+    if (Object.keys(argvalues).length === 1 && argvalues[0].vtype !== 'primitive') {
       super.putAll(_this, argvalues, state, node, scope)
     }
 

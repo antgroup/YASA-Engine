@@ -12,7 +12,14 @@ const {
  * @param node
  * @param scope
  */
-function processThen(this: any, fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processThen(
+  this: any,
+  fclos: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+): any {
   const handleFulfilled = argvalues && argvalues[0]
   const promise = fclos.parent
   if (handleFulfilled) {
@@ -38,7 +45,14 @@ function processThen(this: any, fclos: any, argvalues: any[], state: any, node: 
  * @param node
  * @param scope
  */
-function processCatch(this: any, fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processCatch(
+  this: any,
+  fclos: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+): any {
   const handleFulfilled = argvalues && argvalues[0]
   const promise = fclos.parent
   if (handleFulfilled) {
@@ -49,14 +63,14 @@ function processCatch(this: any, fclos: any, argvalues: any[], state: any, node:
         reject = PromiseUndefinedValue()
       }
       // 把catch的参数值当成 fclos 参数error替换成reject接受的参数信息
-      (this as any).executeCall(node, handleFulfilled, [reject], state, scope)
+      ;(this as any).executeCall(node, handleFulfilled, [reject], state, scope)
     }
   }
   return promise
 }
 
 module.exports = {
-  processPromise(promise: any, argvalues: any[], state: any, node: any, scope: any): void {
+  processPromise(promise: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): void {
     /**
      *
      * @param val
@@ -80,7 +94,13 @@ module.exports = {
      * @param node
      * @param scope
      */
-    function processReject(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+    function processReject(
+      fclos: any,
+      argvalues: Record<number | string, any>,
+      state: any,
+      node: any,
+      scope: any
+    ): void {
       _process(argvalues[0], 'reject')
     }
 
@@ -92,7 +112,13 @@ module.exports = {
      * @param node
      * @param scope
      */
-    function processResolve(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+    function processResolve(
+      fclos: any,
+      argvalues: Record<number | string, any>,
+      state: any,
+      node: any,
+      scope: any
+    ): void {
       _process(argvalues[0], 'resolve')
     }
 

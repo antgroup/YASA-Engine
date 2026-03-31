@@ -19,7 +19,7 @@ class List extends (Collection as any) {
    * @param scope
    * @private
    */
-  static List(_this: any, argvalues: any[], state: any, node: any, scope: any) {
+  static List(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     super.Collection(_this, argvalues, state, node, scope)
     _this.setMisc('precise', true)
 
@@ -34,9 +34,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static add(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static add(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -44,10 +44,10 @@ class List extends (Collection as any) {
       addElementToBuffer(_this, argvalues[0])
     } else {
       _this.length = _this.length ?? 0
-      if (argvalues.length === 1) {
+      if (Object.keys(argvalues).length === 1) {
         _this.value[_this.length] = argvalues[0]
         _this.length++
-      } else if (argvalues.length === 2) {
+      } else if (Object.keys(argvalues).length === 2) {
         const indexVal = argvalues[0]
         if (indexVal?.vtype === 'primitive' && indexVal?.type === 'Literal' && indexVal?.literalType === 'number') {
           const index = parseInt(indexVal.value, 10)
@@ -66,7 +66,7 @@ class List extends (Collection as any) {
       }
     }
 
-    if (argvalues.length === 1) {
+    if (Object.keys(argvalues).length === 1) {
       return new UndefinedValue()
     }
   }
@@ -79,9 +79,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static addAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static addAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -101,9 +101,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static addFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static addFirst(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return
     }
 
@@ -134,10 +134,10 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static addLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static addLast(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
 
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return
     }
 
@@ -158,7 +158,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static clear(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static clear(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return
@@ -189,7 +189,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static contains(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static contains(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -202,7 +202,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static containsAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static containsAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -214,7 +214,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static equals(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static equals(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -227,7 +227,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {{type, object, property}|*}
    */
-  static get(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static get(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -247,7 +247,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static getFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static getFirst(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -267,7 +267,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static getLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static getLast(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -290,7 +290,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static hashCode(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static hashCode(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -303,7 +303,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static indexOf(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static indexOf(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -316,7 +316,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static isEmpty(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static isEmpty(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -328,7 +328,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static iterator(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static iterator(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -358,7 +358,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static lastIndexOf(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static lastIndexOf(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -370,7 +370,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static listIterator(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static listIterator(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this || !argvalues) {
       return new UndefinedValue()
@@ -391,9 +391,9 @@ class List extends (Collection as any) {
       }
     }
 
-    if (argvalues.length === 0) {
+    if (Object.keys(argvalues).length === 0) {
       moveExistElementsToBuffer(newThis)
-    } else if (argvalues.length === 1) {
+    } else if (Object.keys(argvalues).length === 1) {
       let index: number = 0
       const indexVal = argvalues[0]
       if (indexVal?.vtype === 'primitive' && indexVal?.type === 'Literal' && indexVal?.literalType === 'number') {
@@ -413,9 +413,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static remove(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static remove(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -488,9 +488,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static removeAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static removeAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (_this || !argvalues || argvalues.length === 0) {
+    if (_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -510,7 +510,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static removeFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static removeFirst(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -550,7 +550,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static removeLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static removeLast(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -578,7 +578,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static replaceAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {}
+  static replaceAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {}
 
   /**
    * List.retainAll
@@ -588,9 +588,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static retainAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static retainAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!argvalues || argvalues.length === 0) {
+    if (!argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -608,7 +608,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static reversed(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static reversed(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -639,10 +639,10 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static set(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static set(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
 
-    if (!_this || !argvalues || argvalues.length !== 2) {
+    if (!_this || !argvalues || Object.keys(argvalues).length !== 2) {
       return new UndefinedValue()
     }
 
@@ -678,7 +678,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static size(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static size(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -690,7 +690,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static sort(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static sort(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return
@@ -709,7 +709,7 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static spliterator(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static spliterator(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return List.iterator(fclos, argvalues, state, node, scope)
   }
 
@@ -721,9 +721,9 @@ class List extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static subList(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static subList(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length !== 2) {
+    if (!_this || !argvalues || Object.keys(argvalues).length !== 2) {
       return new UndefinedValue()
     }
 
@@ -804,7 +804,7 @@ class List extends (Collection as any) {
    * @param scope
    * @returns {*}
    */
-  static toArray(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static toArray(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return fclos.getThis()
   }
 
@@ -817,7 +817,13 @@ class List extends (Collection as any) {
    * @param scope
    * @private
    */
-  static _functionNotFoundCallback_(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static _functionNotFoundCallback_(
+    fclos: any,
+    argvalues: Record<number | string, any>,
+    state: any,
+    node: any,
+    scope: any
+  ) {
     const _this = fclos.getThis()
     if (!_this) {
       return

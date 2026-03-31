@@ -149,7 +149,7 @@ class SanitizerChecker extends Checker {
     node: any,
     fclos: any,
     ret: any,
-    argvalues: any[],
+    argvalues: Record<number | string, any>,
     scope: any,
     callstack: any
   ): void {

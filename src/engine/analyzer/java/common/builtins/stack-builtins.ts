@@ -14,7 +14,7 @@ class Stack extends List {
    * @param scope
    * @constructor
    */
-  static Stack(_this: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static Stack(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     super.List(_this, argvalues, state, node, scope)
     _this.setMisc('precise', true)
 
@@ -29,7 +29,7 @@ class Stack extends List {
    * @param node
    * @param scope
    */
-  static empty(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static empty(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return new UndefinedValueStack()
   }
 
@@ -41,7 +41,7 @@ class Stack extends List {
    * @param node
    * @param scope
    */
-  static peek(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static peek(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return super.getLast(fclos, argvalues, state, node, scope)
   }
 
@@ -53,7 +53,7 @@ class Stack extends List {
    * @param node
    * @param scope
    */
-  static pop(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static pop(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     const lastElement = super.getLast(fclos, argvalues, state, node, scope)
     super.removeLast(fclos, argvalues, state, node, scope)
     return lastElement
@@ -67,10 +67,10 @@ class Stack extends List {
    * @param node
    * @param scope
    */
-  static push(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static push(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     super.add(fclos, argvalues, state, node, scope)
 
-    if (argvalues.length > 0) {
+    if (Object.keys(argvalues).length > 0) {
       return argvalues[0]
     }
     return new UndefinedValueStack()
@@ -84,7 +84,7 @@ class Stack extends List {
    * @param node
    * @param scope
    */
-  static search(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static search(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return new UndefinedValueStack()
   }
 }

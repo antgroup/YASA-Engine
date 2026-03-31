@@ -47,9 +47,9 @@ function getRules(ruleConfigPath: string): any[] {
  * @param fclos
  * @param rule
  */
-function prepareArgs(argvalues: any[], fclos: any, rule: Rule): any[] {
+function prepareArgs(argvalues: Record<number | string, any>, fclos: any, rule: Rule): any[] {
   let { args } = rule
-  let res = argvalues.concat()
+  let res = Object.values(argvalues).concat()
   args = (args || []).map((item: string | number) => {
     if (item !== '*') {
       return parseInt(String(item))
@@ -58,7 +58,7 @@ function prepareArgs(argvalues: any[], fclos: any, rule: Rule): any[] {
   })
   if (!args.some((v: string | number) => v === '*')) {
     args = args.filter((v: string | number) => typeof v === 'number')
-    res = argvalues.filter((value: any, index: number) => {
+    res = Object.values(argvalues).filter((value: any, index: number) => {
       return (args as number[]).indexOf(index) !== -1
     })
   }

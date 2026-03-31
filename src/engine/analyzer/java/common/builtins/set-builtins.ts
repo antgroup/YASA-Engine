@@ -36,7 +36,7 @@ class Set extends Collection {
    */
   static add(fclos: any, argvalues: any, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValueJava()
     }
 
@@ -55,7 +55,7 @@ class Set extends Collection {
    */
   static addAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValueJava()
     }
 
@@ -176,7 +176,7 @@ class Set extends Collection {
    */
   static remove(fclos: any, argvalues: any, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValueJava()
     }
 
@@ -195,7 +195,7 @@ class Set extends Collection {
    */
   static removeAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValueJava()
     }
 

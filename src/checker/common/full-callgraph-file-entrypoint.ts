@@ -153,7 +153,7 @@ function makeFullCallGraph(analyzer: any): void {
         funcSymbolAny2.fdef.type === 'FunctionDefinition'
       ) {
         alreadyCheckList.push(funcSymbolAny2)
-        const argValues: any[] = []
+        const argValues: Record<number | string, any> = []
         analyzer.executeCall(
           funcSymbolAny2.fdef,
           funcSymbolAny2,

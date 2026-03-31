@@ -6,7 +6,7 @@ const constant = require('../../../util/constant')
 export interface EntryPoint {
   type?: string
   scopeVal?: any
-  argValues?: any[]
+  argValues?: Record<number | string, any>
   entryPointSymVal?: {
     ast?: {
       loc?: any
@@ -28,7 +28,7 @@ class EntryPointClass implements EntryPoint {
 
   scopeVal: any
 
-  argValues: any[]
+  argValues: Record<number | string, any>
 
   entryPointSymVal: any
 

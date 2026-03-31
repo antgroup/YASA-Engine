@@ -19,7 +19,7 @@ class Map extends (Collection as any) {
    * @param scope
    * @constructor
    */
-  static Map(_this: any, argvalues: any[], state: any, node: any, scope: any) {
+  static Map(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     super.Collection(_this, argvalues, state, node, scope)
     _this.setMisc('precise', true)
 
@@ -37,7 +37,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static clear(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static clear(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.parent
     if (!_this) {
       return
@@ -65,7 +65,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static compute(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static compute(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return Map.get(fclos, argvalues, state, node, scope)
   }
 
@@ -77,7 +77,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static computeIfAbsent(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static computeIfAbsent(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -89,7 +89,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static computeIfPresent(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static computeIfPresent(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return Map.get(fclos, argvalues, state, node, scope)
   }
 
@@ -101,7 +101,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static containsKey(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static containsKey(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -113,7 +113,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static containsValue(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static containsValue(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -125,7 +125,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static entrySet(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static entrySet(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -145,7 +145,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static equals(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static equals(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -157,7 +157,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static forEach(fclos: any, argvalues: any[], state: any, node: any, scope: any) {}
+  static forEach(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {}
 
   /**
    * Map.get
@@ -167,9 +167,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static get(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static get(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return new UndefinedValue()
     }
 
@@ -196,9 +196,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static getOrDefault(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static getOrDefault(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const element = Map.get(fclos, argvalues, state, node, scope)
-    if ((!element || element.vtype === 'undefine') && argvalues.length === 2) {
+    if ((!element || element.vtype === 'undefine') && Object.keys(argvalues).length === 2) {
       return argvalues[1]
     }
     return element
@@ -213,7 +213,7 @@ class Map extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static hashCode(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static hashCode(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -226,7 +226,7 @@ class Map extends (Collection as any) {
    * @param scope
    * @returns {null}
    */
-  static isEmpty(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static isEmpty(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -238,7 +238,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static keySet(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static keySet(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()
@@ -273,9 +273,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static merge(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static merge(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length < 3) {
+    if (!_this || !argvalues || Object.keys(argvalues).length < 3) {
       return new UndefinedValue()
     }
 
@@ -292,9 +292,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static put(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static put(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length < 2) {
+    if (!_this || !argvalues || Object.keys(argvalues).length < 2) {
       return new UndefinedValue()
     }
 
@@ -328,9 +328,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static putAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static putAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return
     }
 
@@ -367,9 +367,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static putIfAbsent(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static putIfAbsent(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length < 2) {
+    if (!_this || !argvalues || Object.keys(argvalues).length < 2) {
       return new UndefinedValue()
     }
 
@@ -389,9 +389,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static remove(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static remove(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length < 1) {
+    if (!_this || !argvalues || Object.keys(argvalues).length < 1) {
       return new UndefinedValue()
     }
 
@@ -404,12 +404,12 @@ class Map extends (Collection as any) {
     const entryValue = _this.getFieldValue(keyRef)
     if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
       const value = entryValue.field[1]
-      if (argvalues.length === 1) {
+      if (Object.keys(argvalues).length === 1) {
         keyRefSet.delete(keyRef)
         delete _this.field[keyRef]
         return value
       }
-      if (argvalues.length === 2 && value?._qid === argvalues[1]._qid) {
+      if (Object.keys(argvalues).length === 2 && value?._qid === argvalues[1]._qid) {
         keyRefSet.delete(keyRef)
         delete _this.field[keyRef]
         return new UndefinedValue()
@@ -425,9 +425,9 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static replace(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static replace(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length < 2) {
+    if (!_this || !argvalues || Object.keys(argvalues).length < 2) {
       return
     }
 
@@ -440,11 +440,11 @@ class Map extends (Collection as any) {
     const entryValue = _this.getFieldValue(keyRef)
     if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
       const value = entryValue.field[1]
-      if (argvalues.length === 2) {
+      if (Object.keys(argvalues).length === 2) {
         entryValue.field[1] = argvalues[1]
         return value
       }
-      if (argvalues.length === 3 && value?._qid === argvalues[1]._qid) {
+      if (Object.keys(argvalues).length === 3 && value?._qid === argvalues[1]._qid) {
         entryValue.field[1] = argvalues[2]
         return new UndefinedValue()
       }
@@ -459,7 +459,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static replaceAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {}
+  static replaceAll(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {}
 
   /**
    * Map.size
@@ -469,7 +469,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static size(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static size(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     return new UndefinedValue()
   }
 
@@ -481,7 +481,7 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static values(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+  static values(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
     const _this = fclos.getThis()
     if (!_this) {
       return new UndefinedValue()

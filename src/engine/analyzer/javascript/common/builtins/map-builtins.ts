@@ -26,10 +26,10 @@ const SourceLine = require('../../../common/source-line')
  * @param node
  * @param scope
  */
-function processMapGet(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processMapGet(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
   let res = UndefinedValue()
-  if (!argvalues || !Array.isArray(argvalues) || argvalues.length !== 1) return res
+  if (!argvalues || Object.keys(argvalues).length !== 1) return res
   const keyRef = getSymbolRef(argvalues[0])
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   if (!keyRefSet.has(keyRef)) return res
@@ -49,9 +49,9 @@ function processMapGet(fclos: any, argvalues: any[], state: any, node: any, scop
  * @param scope
  * @returns {*}
  */
-function processMapSet(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processMapSet(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
-  if (argvalues && Array.isArray(argvalues) && argvalues.length === 2) {
+  if (argvalues && Object.keys(argvalues).length === 2) {
     const keyRef = getSymbolRef(argvalues[0])
     const keyRefSet = mapObj.getFieldValue('keyRefSet')
     // key 相同时 覆盖
@@ -83,9 +83,15 @@ function processMapSet(fclos: any, argvalues: any[], state: any, node: any, scop
  * @param node
  * @param scope
  */
-function processMapDelete(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+function processMapDelete(
+  fclos: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+): void {
   const mapObj = fclos.parent
-  if (!argvalues || !Array.isArray(argvalues) || argvalues.length !== 1) return
+  if (!argvalues || Object.keys(argvalues).length !== 1) return
   const keyRef = getSymbolRef(argvalues[0])
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   if (!keyRefSet.has(keyRef)) return
@@ -104,7 +110,7 @@ function processMapDelete(fclos: any, argvalues: any[], state: any, node: any, s
  * @param node
  * @param scope
  */
-function processMapClear(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
+function processMapClear(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): void {
   const mapObj = fclos.parent
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   for (const keyRef of keyRefSet) {
@@ -124,7 +130,7 @@ function processMapClear(fclos: any, argvalues: any[], state: any, node: any, sc
  * @param node
  * @param scope
  */
-function processMapKeys(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processMapKeys(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
   const resSet = UnionValue({
     id: `${mapObj.id}-keySet`,
@@ -150,7 +156,7 @@ function processMapKeys(fclos: any, argvalues: any[], state: any, node: any, sco
  * @param node
  * @param scope
  */
-function processMapValues(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processMapValues(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
   const resSet = UnionValue({
     id: `${mapObj.id}-valueSet`,
@@ -185,7 +191,13 @@ function processMapValues(fclos: any, argvalues: any[], state: any, node: any, s
  * @param node
  * @param scope
  */
-function processNewMapBuiltins(map: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processNewMapBuiltins(
+  map: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+): any {
   const builtinMap = {
     get: processMapGet,
     set: processMapSet,
@@ -199,7 +211,7 @@ function processNewMapBuiltins(map: any, argvalues: any[], state: any, node: any
 
   const keyRefSet = new Set()
   // 有参数初始化map
-  if (Array.isArray(argvalues) && argvalues.length > 0) {
+  if (Object.keys(argvalues).length > 0) {
     const entries = argvalues[0]?.field && Object.entries(argvalues[0]?.field)
     // map的初始化
     // 通过数组显示初始化 可能有 ObjectValue符号值

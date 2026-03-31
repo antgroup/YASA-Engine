@@ -8,8 +8,8 @@ module.exports = {
    */
   processGetter(fname: any, fieldName: any) {
     return function getter(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-      if (argvalues.length !== 0) {
-        logger.warn('getter: params length [%d] is not equal to 0', argvalues.length)
+      if (Object.keys(argvalues).length !== 0) {
+        logger.warn('getter: params length [%d] is not equal to 0', Object.keys(argvalues).length)
       }
       return fclos.getThis().getFieldValue(fieldName, true)
     }
@@ -23,8 +23,8 @@ module.exports = {
     //     }
     // 没有入参，会把符号值变为undefined
     return function setter(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-      if (argvalues.length !== 1) {
-        logger.warn('setter: params length [%d] is not equal to 1', argvalues.length)
+      if (Object.keys(argvalues).length !== 1) {
+        logger.warn('setter: params length [%d] is not equal to 1', Object.keys(argvalues).length)
       }
       fclos.getThis().setFieldValue(fieldName, argvalues[0])
       return fclos.getThis()

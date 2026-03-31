@@ -12,8 +12,8 @@ class Executor {
    * @param node
    * @param scope
    */
-  static execute(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    if (argvalues.length < 1) {
+  static execute(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
+    if (Object.keys(argvalues).length < 1) {
       return
     }
     if (argvalues[0].field?.run && _.isFunction((this as any).executeCall)) {

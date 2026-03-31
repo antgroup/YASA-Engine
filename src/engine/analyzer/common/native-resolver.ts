@@ -312,7 +312,7 @@ function simplifyArrayExpression(obj: any, index: any): any {
  * @param argvalues
  * @returns {*}
  */
-function nativeCall(obj: any, f: any, argvalues: any[]): any {
+function nativeCall(obj: any, f: any, argvalues: Record<number | string, any>): any {
   const fname = f.name
   // array operations
   if (Array.isArray(obj)) {
@@ -340,7 +340,7 @@ function nativeCall(obj: any, f: any, argvalues: any[]): any {
       //         return obj.concat(argvalues);
       //     }
       case 'push': {
-        return obj.push(argvalues)
+        return obj.push(Object.values(argvalues))
       }
       //     case 'pop':
       //     {
@@ -361,9 +361,9 @@ function nativeCall(obj: any, f: any, argvalues: any[]): any {
     const val = obj.value
 
     const args: any[] = []
-    for (let i = 0; i < argvalues.length; i++) {
-      if (argvalues[i].type === 'Literal')
-        args.push(argvalues[i].value) // not concrete value
+    for (const key in argvalues) {
+      if (argvalues[key].type === 'Literal')
+        args.push(argvalues[key].value) // not concrete value
       else return
     }
 
@@ -382,7 +382,13 @@ function nativeCall(obj: any, f: any, argvalues: any[]): any {
  * @param state
  * @returns {*}
  */
-function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[], state: any): any {
+function processNativeFunction(
+  this: any,
+  node: any,
+  fclos: any,
+  argvalues: Record<number | string, any>,
+  state: any
+): any {
   if (!fclos.id) return
 
   const { parent } = fclos
@@ -409,7 +415,7 @@ function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[
     case 'Array': {
       switch (fclos.id) {
         case 'isArray': {
-          const val = argvalues.length == 0 ? false : Array.isArray(argvalues[0])
+          const val = Object.keys(argvalues).length == 0 ? false : Array.isArray(argvalues[0])
           return PrimitiveValue({ type: 'Literal', value: val, raw: val })
         }
       }
@@ -423,7 +429,7 @@ function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[
           // if (argvalues.length > 1 && argvalues[1].type === 'Literal')
           //     logger.info(util.inspect(argvalues[0], {depth: argvalues[1].value}));
           // else {
-          for (const arg of argvalues) logger.info(util.inspect(arg, { depth: 6 }))
+          for (const arg of Object.values(argvalues)) logger.info(util.inspect(arg, { depth: 6 }))
           // }
           return true
         case 'debug':
@@ -440,7 +446,7 @@ function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[
       }
       if (fid.startsWith('print_')) {
         const fd = fid.substring(6)
-        for (const arg of argvalues) logger.info(util.inspect(arg[fd], { depth: 6 }))
+        for (const arg of Object.values(argvalues)) logger.info(util.inspect(arg[fd], { depth: 6 }))
         return true
       }
     }

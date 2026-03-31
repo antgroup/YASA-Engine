@@ -13,7 +13,7 @@ const { getSymbolRef } = require('../../../../../util/common-util')
  * @param node
  * @param scope
  */
-function processSetAdd(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processSetAdd(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const setObj = fclos.parent
   const argval = argvalues && argvalues[0]
   if (!argval) return setObj
@@ -33,7 +33,7 @@ function processSetAdd(fclos: any, argvalues: any[], state: any, node: any, scop
  * @param node
  * @param scope
  */
-function processSetDelete(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processSetDelete(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const setObj = fclos.parent
   const argval = argvalues && argvalues[0]
   if (!argval) return setObj
@@ -53,7 +53,7 @@ function processSetDelete(fclos: any, argvalues: any[], state: any, node: any, s
  * @param node
  * @param scope
  */
-function processSetClear(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processSetClear(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   const setObj = fclos.parent
   const curSet = setObj.getFieldValue('curSet')
   for (const eleRef of curSet) {
@@ -75,7 +75,7 @@ function processSetClear(fclos: any, argvalues: any[], state: any, node: any, sc
  * @param node
  * @param scope
  */
-function processSetKeys(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processSetKeys(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
   return fclos.parent
 }
 
@@ -87,7 +87,13 @@ function processSetKeys(fclos: any, argvalues: any[], state: any, node: any, sco
  * @param node
  * @param scope
  */
-function processNewSetBuiltins(set: any, argvalues: any[], state: any, node: any, scope: any): any {
+function processNewSetBuiltins(
+  set: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+): any {
   const builtinMap = {
     add: processSetAdd,
     clear: processSetClear,
@@ -99,9 +105,10 @@ function processNewSetBuiltins(set: any, argvalues: any[], state: any, node: any
   initInnerFunctionBuiltin(set, builtinMap, 'Set')
 
   const curSet = new Set()
-  if (Array.isArray(argvalues) && argvalues.length > 0) {
+  if (Object.keys(argvalues).length > 0) {
     // 去重添加
-    for (const ele of argvalues) {
+    for (const key in argvalues) {
+      const ele = argvalues[key]
       const uid = getSymbolRef(ele)
       if (!curSet.has(uid)) {
         curSet.add(uid)

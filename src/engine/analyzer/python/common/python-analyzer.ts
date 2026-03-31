@@ -136,15 +136,13 @@ class PythonAnalyzer extends (Analyzer as any) {
 
         this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        const argValues: any[] = []
+        const argValues: Record<number | string, any> = {}
         try {
           for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
-            argValues.push(
-              this.processInstruction(
-                entryPoint.entryPointSymVal,
-                entryPoint.entryPointSymVal?.ast?.parameters[key]?.id,
-                state
-              )
+            argValues[key] = this.processInstruction(
+              entryPoint.entryPointSymVal,
+              entryPoint.entryPointSymVal?.ast?.parameters[key]?.id,
+              state
             )
           }
         } catch (e) {
@@ -265,53 +263,22 @@ class PythonAnalyzer extends (Analyzer as any) {
     }
     if (!fclos) return UndefinedValue()
 
-    const argvalues: any[] = []
-    /**
-     *
-     * @param paramAST
-     * @param positionalArgs
-     * @param keywordArgs
-     * @param len
-     */
-    function collectArgsFromArray(
-      paramAST: any[],
-      positionalArgs: any[],
-      keywordArgs: Record<string, any>,
-      len: number
-    ) {
-      const paramNames = paramAST.map((n: any) => n.id.name)
-      const collectedArgs = new Array(len).fill(undefined)
-      positionalArgs.forEach((arg, index) => {
-        if (index < collectedArgs.length) collectedArgs[index] = arg
-      })
-      for (const [key, value] of Object.entries(keywordArgs)) {
-        const paramIndex = paramNames.indexOf(key)
-        if (paramIndex !== -1) collectedArgs[paramIndex] = value
-      }
-      return collectedArgs
-    }
-
-    const positionalArgs: any[] = []
-    const keywordArgs: Record<string, any> = {}
+    const argvalues: Record<string | number, any> = {}
+    let argIndex = 0
     for (const arg of node.arguments) {
       if (arg.type === 'VariableDeclaration') {
-        keywordArgs[arg.id.name] = arg
+        const argv = this.processInstruction(scope, arg.init, state)
+        if ((logger as any).isTraceEnabled()) logger.trace(`arg: ${this.formatScope(argv)}`)
+        argvalues[arg.id.name] = argv
       } else {
-        positionalArgs.push(arg)
+        const argv = this.processInstruction(scope, arg, state)
+        if ((logger as any).isTraceEnabled()) logger.trace(`arg: ${this.formatScope(argv)}`)
+        if (Array.isArray(argv)) {
+          for (let i = 0; i < argv.length; i++) {
+            argvalues[argIndex++] = argv[i]
+          }
+        } else argvalues[argIndex++] = argv
       }
-    }
-    let collectedArgs: any[]
-    if (fclos.fdef && fclos.fdef.type === 'FunctionDefinition') {
-      collectedArgs = collectArgsFromArray(fclos.ast.parameters, positionalArgs, keywordArgs, node.arguments.length)
-    } else {
-      collectedArgs = node.arguments
-    }
-
-    for (const arg of collectedArgs) {
-      const argv = this.processInstruction(scope, arg, state)
-      if ((logger as any).isTraceEnabled()) logger.trace(`arg: ${this.formatScope(argv)}`)
-      if (Array.isArray(argv)) argvalues.push(...argv)
-      else argvalues.push(argv)
     }
 
     if (argvalues && this.checkerManager) {
@@ -637,7 +604,7 @@ class PythonAnalyzer extends (Analyzer as any) {
       fclos = fclos.value[0]
     }
 
-    let argvalues: any[] = []
+    let argvalues: Record<number | string, any> = []
     if (call.arguments) {
       let same_args = true
       for (const arg of call.arguments) {

@@ -119,7 +119,12 @@ function getGinEntryPointAndSource(packageManager: any) {
  * @param scope
  * @returns {null}
  */
-function collectRouteRegistry(callExpNode: any, calleeObject: any, argValues: any[], scope: any) {
+function collectRouteRegistry(
+  callExpNode: any,
+  calleeObject: any,
+  argValues: Record<number | string, any>,
+  scope: any
+) {
   const routeFCloses: any[] = []
   const propertyName = callExpNode.callee.property?.name
   const objectQid = calleeObject._qid
@@ -128,7 +133,7 @@ function collectRouteRegistry(callExpNode: any, calleeObject: any, argValues: an
     RouteRegistryObject.some((ginPrefix) => objectQid?.startsWith(ginPrefix)) &&
     RouteRegistryProperty.includes(propertyName)
   ) {
-    for (const arg of argValues) {
+    for (const arg of Object.values(argValues)) {
       if (arg?.vtype === 'fclos' && arg.ast?.loc) {
         // 避免对同一条路由注册语句重复添加
         const hash = JSON.stringify(arg.ast.loc)

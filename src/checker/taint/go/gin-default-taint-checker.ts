@@ -227,7 +227,7 @@ class GinDefaultTaintChecker extends TaintChecker {
       !callExpNode.loc ||
       !calleeObject ||
       !argValues ||
-      argValues.length <= 0
+      Object.keys(argValues).length <= 0
     )
       return null
     const routeFCloses = GinEntryPoint.collectRouteRegistry(callExpNode, calleeObject, argValues, scope)

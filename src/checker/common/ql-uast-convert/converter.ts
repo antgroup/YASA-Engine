@@ -295,9 +295,9 @@ function calcEntryPointAndRun(options: any, fileManager: any, analyzer: any): vo
         entryPoints.forEach((main: any) => {
           const nd = AstUtilConverter.satisfy(main.ast, (n: any) => n?._meta?.isSource === true)
           if (nd) {
-            const argValues: any[] = []
+            const argValues: Record<number | string, any> = []
             for (const key in main?.ast?.parameters) {
-              argValues.push(analyzer.processInstruction(filescope, main.ast.parameters[key], state))
+              argValues[key] = analyzer.processInstruction(filescope, main.ast.parameters[key], state)
             }
             logger.info(`entryPoint ${main?.ast?.loc?.sourcefile}:${main.id}`)
             analyzer.executeCall(main.ast, main, argValues, state, filescope)

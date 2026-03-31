@@ -1069,7 +1069,7 @@ class JavaAnalyzer extends (Analyzer as any) {
     if (!fclos) return UndefinedValue()
 
     // prepare the function arguments
-    let argvalues: any[] = []
+    let argvalues: Record<number | string, any> = []
     let sameArgs = true // minor optimization to save memory
     for (const arg of node.arguments) {
       let argv = this.processInstruction(scope, arg, state)
@@ -1235,7 +1235,7 @@ class JavaAnalyzer extends (Analyzer as any) {
 
         this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        const argValues: any[] = []
+        const argValues: Record<number | string, any> = []
         try {
           for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
             argValues.push(

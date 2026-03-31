@@ -16,12 +16,19 @@ module.exports = {
    * @param node
    * @param scope
    */
-  processFunctionCall(invoke: any, argvalues: any[], state: any, node: any, scope: any) {
-    if (argvalues.length <= 0) {
-      Errors.UnexpectedValue(`argvalues.length should greater than 0`, { no_throw: true })
+  processFunctionCall(invoke: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
+    if (Object.keys(argvalues).length <= 0) {
+      Errors.UnexpectedValue(`Object.keys(argvalues).length should greater than 0`, { no_throw: true })
     }
 
-    return processFunctionInvoke.call(this, invoke, argvalues[0], argvalues.slice(1), state, node, scope)
+    const sliced = []
+    for (const key in argvalues) {
+      if (key !== '0') {
+        sliced.push(argvalues[key])
+      }
+    }
+
+    return processFunctionInvoke.call(this, invoke, argvalues[0], sliced, state, node, scope)
   },
 
   /**
@@ -32,13 +39,13 @@ module.exports = {
    * @param node
    * @param scope
    */
-  processFunctionApply(invoke: any, argvalues: any[], state: any, node: any, scope: any) {
-    if (argvalues.length <= 0) {
-      Errors.UnexpectedValue(`argvalues.length should greater than 0`, { no_throw: true })
+  processFunctionApply(invoke: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any) {
+    if (Object.keys(argvalues).length <= 0) {
+      Errors.UnexpectedValue(`Object.keys(argvalues).length should greater than 0`, { no_throw: true })
     }
-    if (argvalues.length <= 1) {
-      argvalues.push(UndefinedValue())
-      argvalues.push(UndefinedValue())
+    if (Object.keys(argvalues).length <= 1) {
+      argvalues[Object.keys(argvalues).length] = UndefinedValue()
+      argvalues[Object.keys(argvalues).length] = UndefinedValue()
     }
     return processFunctionInvoke.call(this, invoke, argvalues[0], Object.values(argvalues[1].value), state, node, scope)
   },
@@ -57,7 +64,15 @@ module.exports = {
  * @param node
  * @param scope
  */
-function processFunctionInvoke(this: any, invoke: any, _this: any, argvalues: any[], state: any, node: any, scope: any) {
+function processFunctionInvoke(
+  this: any,
+  invoke: any,
+  _this: any,
+  argvalues: Record<number | string, any>,
+  state: any,
+  node: any,
+  scope: any
+) {
   const fclos = invoke.parent
   const fscope = _.clone(fclos)
   fscope._this = _this

@@ -13,7 +13,7 @@ class StringBuffer {
    * @param scope
    * @constructor
    */
-  static StringBuffer(_this: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static StringBuffer(_this: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     return _this
   }
 
@@ -25,9 +25,9 @@ class StringBuffer {
    * @param node
    * @param scope
    */
-  static append(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+  static append(fclos: any, argvalues: Record<number | string, any>, state: any, node: any, scope: any): any {
     const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    if (!_this || !argvalues || Object.keys(argvalues).length === 0) {
       return
     }
     addElementToBufferStringBuffer(_this, argvalues[0])
