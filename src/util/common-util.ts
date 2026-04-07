@@ -1,3 +1,6 @@
+const _ = require('lodash')
+const QidUnifyUtil = require('./qid-unify-util')
+
 const varUtil = require('./variable-util')
 const config = require('../config')
 
@@ -58,21 +61,20 @@ function getTaintRec(s: any, stack: number, visited: Set<any>): Set<any> {
   let res = new Set()
   // s为空或者没有污点标志，或者污点标志为false
   // 超过递归深度
-  if (s == null || !s?.hasTagRec || stack > 5) return res
+  if (s == null || !s?.taint.isTaintedRec || stack > 5) return res
   // 如果s本身污点不为空 返回s自身的污点
   visited.add(s)
-  if (s && varUtil.isNotEmpty(s._tags)) {
-    const res = s._tags instanceof Set ? s._tags : new Set(s._tags)
-    if (res.size > 0) return res
+  if (s && s.taint?.hasTags()) {
+    return new Set(s.taint.getTags())
   }
   // 遍历s的field中的符号值，若s的field不存在直接返回
-  const fields = s && s?.field
-  if (!fields) return res
-  for (const key in fields) {
-    // 防止循环引用重复遍历
-    if (visited.has(fields[key])) continue
-    res = getTaintRec(fields[key], stack + 1, visited)
-    if (res?.size > 0) return res
+  if (s.members) {
+    for (const key of s.members.keys()) {
+      const val = s.members.get(key)
+      if (visited.has(val)) continue
+      res = getTaintRec(val, stack + 1, visited)
+      if (res?.size > 0) return res
+    }
   }
   return res
 }
@@ -200,11 +202,10 @@ function shallowEqual(objA: any, objB: any): boolean {
  * @returns {string}
  */
 function getSymbolRef(argval: any): string {
-  // TODO 维护uuid，本质是生成符号值的签名
+  // 这里不能直接用符号值uuid，因为受astnodehash影响，相同qid的uuid会不一样
   const ref: Record<string, any> = {}
-  ref.id = argval.id
   ref.sid = argval.sid
-  ref.qid = argval.qid
+  ref.qid = argval.logicalQid
   ref.vtype = argval.vtype
   ref.type = argval.type
   // raw_value 只能是原始值本身，不能是对象，union符号值中的raw_value竟然存储了对象，不可思议。。。
@@ -222,7 +223,7 @@ function getSymbolRef(argval: any): string {
  * @param f
  */
 function getDataFromScopeWithFilter(scope: any, f: any): any {
-  if (!scope?.field) return scope
+  if (!scope?.members && !scope?.value) return scope
   if (!f) return scope.getRawValue()
   return Object.values(scope.getRawValue()).filter((symVal: any) => f(symVal))
 }
@@ -240,7 +241,7 @@ function getDataFromScope(scope: any): any {
  * @param symVal
  */
 function filterDataFromScope(symVal: any): boolean {
-  return !(symVal?.vtype === 'fclos' && symVal?.execute) && symVal?.sid !== 'prototype'
+  return !(symVal?.vtype === 'fclos' && symVal?.runtime?.execute) && symVal?.sid !== 'prototype'
 }
 
 /**
@@ -256,11 +257,11 @@ function filterDataFromScope(symVal: any): boolean {
  */
 function getAnonymousFunctionName(fclos: any) {
   // 检查函数闭包是否有位置信息
-  if (fclos?.ast?.loc === undefined) return undefined
+  if (fclos?.ast?.node?.loc === undefined) return undefined
 
   // 使用函数定义的起始行和结束行生成唯一标识符
   // 格式: <anonymous_startLine_endLine>
-  return `<anonymous_${fclos.ast.loc.start.line}_${fclos.ast.loc.end.line}>`
+  return `<anonymousFunc_${fclos.ast.node.loc.start?.line}_${fclos.ast.node.loc.start?.column}_${fclos.ast.node.loc.end?.line}_${fclos.ast.node.loc.end?.column}>`
 }
 
 /**
@@ -275,7 +276,7 @@ function getAnonymousFunctionName(fclos: any) {
  */
 function getFclosFromScope(valExport: any, func: any): any {
   let valFunc
-  const fdef = valExport?.fdef || valExport?.ast
+  const fdef = valExport?.ast.fdef || valExport?.ast?.node
   if (fdef && fdef?.type === 'FunctionDefinition') {
     // 具名函数匹配
     if (fdef.id?.name === func) {
@@ -292,20 +293,22 @@ function getFclosFromScope(valExport: any, func: any): any {
     }
   } else {
     // 从作用域的字段中直接查找
-    valFunc = valExport?.field[func]
+    valFunc = valExport?.members?.get(func)
 
     // 如果直接查找失败
     if (!valFunc) {
       // 尝试在默认导出中查找
-      if (valExport?.field?.default) {
-        valFunc = getFclosFromScope(valExport.field.default, func)
+      const defaultVal = valExport?.members?.get('default')
+      if (defaultVal) {
+        valFunc = getFclosFromScope(defaultVal, func)
       } else if (!func.includes('.')) {
         // 遍历作用域字段，查找类中的方法
-        for (const i in valExport.field) {
-          if (valExport.field[i] && valExport.field[i].vtype === 'class') {
-            valFunc = getFclosFromScope(valExport.field[i], func)
-            if (valFunc) {
-              break
+        if (valExport?.members) {
+          for (const i of valExport.members.keys()) {
+            const fieldVal = valExport.members.get(i)
+            if (fieldVal && fieldVal.vtype === 'class') {
+              valFunc = getFclosFromScope(fieldVal, func)
+              if (valFunc) break
             }
           }
         }
@@ -315,7 +318,7 @@ function getFclosFromScope(valExport: any, func: any): any {
         let fieldT = valExport
         // 沿着路径逐级查找
         arr.forEach((path: any) => {
-          fieldT = fieldT?.field[path]
+          fieldT = fieldT?.members?.get(path)
         })
         if (fieldT) {
           valFunc = fieldT
@@ -339,37 +342,36 @@ function fillSourceScope(fclos: any, sourceScope: any): void {
   if (sourceScope.complete) return
 
   const scopeValue = sourceScope.value
-  let notComplete = false
 
-  // 检查是否有未完成位置信息的规则
-  for (const item of scopeValue) {
-    if (item.locStart === undefined && item.locEnd === undefined) {
-      notComplete = true
-      break
-    }
-  }
-
-  // 如果所有规则位置信息都已完善，标记为完成
-  if (!notComplete) {
-    sourceScope.complete = true
-    return
-  }
+  // let notComplete = false
+  // // 检查是否有未完成位置信息的规则
+  // for (const item of scopeValue) {
+  //   if (item.locStart === undefined && item.locEnd === undefined) {
+  //     notComplete = true
+  //     break
+  //   }
+  // }
+  // // 如果所有规则位置信息都已完善，标记为完成
+  // if (!notComplete) {
+  //   sourceScope.complete = true
+  //   return
+  // }
 
   // 确定函数名（处理匿名函数）
   let scpFunc
-  if (fclos.ast?.name === '<anonymous>') {
+  if (fclos.ast?.node?.name.includes('<anonymous')) {
     scpFunc = getAnonymousFunctionName(fclos)
   } else {
-    scpFunc = fclos.ast?.id?.name
+    scpFunc = fclos.ast?.node?.id?.name
   }
 
   // 获取函数定义位置信息
-  const scpPath = fclos.ast?.loc?.sourcefile
+  const scpPath = fclos.ast?.node?.loc?.sourcefile
   // 计算起始行（优先使用参数位置）
   const locStart =
-    fclos.ast?.parameters?.length > 0 ? fclos.ast.parameters[0].loc?.start?.line : fclos.ast?.loc?.start?.line
+    fclos.ast?.node?.parameters?.length > 0 ? fclos.ast.node.parameters[0].loc?.start?.line : fclos.ast?.node?.loc?.start?.line
   // 计算结束行（优先使用参数位置）
-  const locEnd = fclos.ast?.loc?.end?.line
+  const locEnd = fclos.ast?.node?.loc?.end?.line
 
   // 关键位置信息缺失则返回
   if (scpPath === undefined || locStart === undefined || locEnd === undefined) {
@@ -391,10 +393,17 @@ function fillSourceScope(fclos: any, sourceScope: any): void {
     if (item.scopeFile === relativePath && item.scopeFunc === scpFunc) {
       // 仅填充未完善的规则
       if (item.locStart !== undefined && item.locEnd !== undefined) {
+        if (sourceScope.fillLineValues.includes(item)) {
+          const copiedItem = _.clone(item)
+          copiedItem.locStart = locStart
+          copiedItem.locEnd = locEnd
+          sourceScope.value.push(copiedItem)
+        }
         return
       }
       item.locStart = locStart
       item.locEnd = locEnd
+      sourceScope.fillLineValues.push(item)
     }
     // 规则2：匹配整个文件
     else if (item.scopeFile === relativePath && item.scopeFunc === 'all') {

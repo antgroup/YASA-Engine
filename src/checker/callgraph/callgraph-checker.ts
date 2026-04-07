@@ -1,5 +1,4 @@
 // used for dump call graph
-import type { IConfig } from '../../config'
 import type TypeRelatedInfoResolver from '../../resolver/common/type-related-info-resolver'
 
 const _ = require('lodash')
@@ -8,9 +7,6 @@ const kitCallgraph = require('../common/checker-kit')
 const configCallgraph = require('../../config')
 const CheckerCallgraph = require('../common/checker')
 const CallgraphOutputStrategyCallgraph = require('../common/output/callgraph-output-strategy')
-
-let ConfigCallgraph: IConfig
-let loggerCallgraph: any
 /**
  * CallgraphChecker represents calling relationships between procedures.
  * CallgraphChecker has nodes and edges.
@@ -37,8 +33,6 @@ class CallgraphChecker extends CheckerCallgraph {
     super(mng, 'callgraph')
     this.mng = mng
     this.kit = kitCallgraph
-    loggerCallgraph = kitCallgraph.logger(__filename)
-    ConfigCallgraph = this.kit.Config
   }
 
   /**
@@ -82,28 +76,47 @@ class CallgraphChecker extends CheckerCallgraph {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const { fclos, argvalues, ainfo } = info
-    const fdecl = fclos.fdef
-    if (fclos === undefined || fdecl?.type !== 'FunctionDefinition') {
+    const { fclos, ainfo } = info
+    if (!fclos) {
+      return
+    }
+    const fdecl = fclos.ast?.fdef
+    if (fdecl && fdecl.type !== 'FunctionDefinition') {
       return
     }
     const stack = state.callstack
+    if (!stack) {
+      return
+    }
     const to = fclos
-    const toAST = fclos && fclos.fdef
-    const call_site_node = node
+    const toAST = fclos.ast?.fdef
+    const callSiteNode = node
 
     const from = stack[stack.length - 1] || { name: '<__entry_point__>', sid: '<__entry_point__>', vtype: 'fclos' }
-    const fromAST = from.fdef
+    const fromAST = from.ast?.fdef
     if (fromAST && fromAST.type !== 'FunctionDefinition' && from.vtype !== 'fclos') {
       return
     }
     const callgraph = (ainfo.callgraph = ainfo.callgraph || new this.kit.Graph())
-    const fromNode = callgraph.addNode(this.prettyPrint(from, fromAST, call_site_node), {
-      funcDef: fromAST,
-      funcSymbol: from,
+
+    // 获取 AST 的 nodehash 和符号值的 UUID
+    const fromASTNodehash = fromAST?._meta?.nodehash || null
+    const fromFuncSymbolUuid = from?.uuid || null
+    const toASTNodehash = toAST?._meta?.nodehash || null
+    const toFuncSymbolUuid = to?.uuid || null
+
+    const fromNode = callgraph.addNode(this.prettyPrint(from, fromAST, callSiteNode), {
+      funcDefNodehash: fromASTNodehash,
+      funcSymbolUuid: fromFuncSymbolUuid,
     })
-    const toNode = callgraph.addNode(this.prettyPrint(to, toAST, call_site_node), { funcDef: toAST, funcSymbol: to })
-    callgraph.addEdge(fromNode, toNode, { callSite: call_site_node })
+
+    // 存储 callSite 的 nodehash
+    const callSiteNodehash = callSiteNode?._meta?.nodehash || null
+    const toNode = callgraph.addNode(this.prettyPrint(to, toAST, callSiteNode), {
+      funcDefNodehash: toASTNodehash,
+      funcSymbolUuid: toFuncSymbolUuid,
+    })
+    callgraph.addEdge(fromNode, toNode, { callSiteNodehash })
   }
 
   /**
@@ -116,8 +129,13 @@ class CallgraphChecker extends CheckerCallgraph {
    */
   triggerAtEndOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const finding = analyzer.ainfo.callgraph
-    finding.type = this.getCheckerId()
-    this.mng.newFinding(finding, CallgraphOutputStrategyCallgraph.outputStrategyId)
+    if (finding) {
+      finding.type = this.getCheckerId()
+      // 在 finding 中存储 astManager 和 symbolTable 的引用，供 dumpGraph 使用
+      ;(finding as any).astManager = analyzer.astManager
+      ;(finding as any).symbolTable = analyzer.symbolTable
+      this.mng.newFinding(finding, CallgraphOutputStrategyCallgraph.outputStrategyId)
+    }
   }
 
   /**
@@ -129,33 +147,32 @@ class CallgraphChecker extends CheckerCallgraph {
   prettyPrint(fclos: any, fdef: any, callSiteNode: any): string {
     let ret: string = ''
     let name: string
-    if (!fdef || !fdef.name || fdef.name === '<anonymous>') {
+    // 临时补丁，防止stc 漏洞uk变化
+    if (!fdef || !fdef.name || fdef.name.includes('<anonymous') || fdef?.loc?.sourcefile?.endsWith('.go')) {
       if (fclos) {
         // 针对[]byte(xx)场景，fclos是一个symbol value，且fclos.qid是ArrayType这个identifier节点，而非string，因此这里if条件需做限定
         if (fclos.qid && typeof fclos.qid === 'string') {
           ret = fclos.qid
         } else if (fclos.vtype && fclos.vtype === 'union') {
-          const fclosArray = fclos.value
-          if (Array.isArray(fclosArray)) {
-            const fclos = _.find(fclosArray, (f: any) => f.id)
-            if (fclos) {
-              ret = fclos.id
-            }
+          let fclosArray = fclos.value
+          if (fclosArray && !Array.isArray(fclosArray)) {
+            fclosArray = Object.entries(fclosArray)
+          }
+          const f = _.find(fclosArray, (f1: any) => f1.sid)
+          if (f) {
+            ret = f.sid
           }
         } else if (fclos.vtype && fclos.type !== 'MemberAccess') {
           // 针对[]byte(xx)场景，fclos是一个symbol value，且fclos.qid是ArrayType这个identifier节点，而非string，因此这里if条件需做限定
           if (fclos.name) {
             ret = fclos.name
-          } else if (
-            (typeof fclos.id !== 'string' && fclos.id?.name) ||
-            (typeof fclos.sid !== 'string' && fclos.sid?.name)
-          ) {
-            ret = fclos.id?.name || fclos.sid?.name
+          } else if (typeof fclos.sid !== 'string' && fclos.sid?.name) {
+            ret = fclos.sid?.name
           }
           let { parent } = fclos
           while (parent) {
             if (['object', 'modScope', 'fclos', 'symbol'].indexOf(parent.vtype) === -1) break
-            name = parent.id || parent.name || parent.sid
+            name = parent.name || parent.sid
             if (!name) break
             ret = `${name}.${ret}`
             parent = parent.parent
@@ -174,15 +191,19 @@ class CallgraphChecker extends CheckerCallgraph {
       }
     } else {
       // pretty print fdef
-      name = fdef.name || '<anonymous>'
+      name =
+        fdef.name ||
+        `<anonymousFunc_${fdef?.loc?.start?.line}_${fdef?.loc?.start?.column}_${fdef?.loc?.end?.line}_${fdef?.loc?.end?.column}>`
       // try to attach namespace
-      if (fclos && fclos.__proto__.constructor.name !== 'BVT') {
+      if (fclos && fclos.__proto__.constructor.name !== 'BVTValue') {
         if (fclos.vtype === 'class') {
           // e.g. javascript function class
           name = `new ${name}`
-        } else if (fclos.parent?.vtype === 'class' || fclos.parent?.fdef?.type === 'ClassDefinition') {
-          const nsDef = fclos.parent.fdef
-          const nsName = nsDef?.name || '<anonymous>'
+        } else if (fclos.parent?.vtype === 'class' || fclos.parent?.ast.fdef?.type === 'ClassDefinition') {
+          const nsDef = fclos.parent.ast.fdef
+          const nsName =
+            nsDef?.name ||
+            `<anonymousFunc_${nsDef?.loc?.start?.line}_${nsDef?.loc?.start?.column}_${nsDef?.loc?.end?.line}_${nsDef?.loc?.end?.column}>`
           if (name === '_CTOR_') {
             name = `new ${nsName}`
           } else {
@@ -202,7 +223,7 @@ class CallgraphChecker extends CheckerCallgraph {
       ret = `${ret.slice(0, 500)}...`
     }
     // attach loc
-    if (fdef) {
+    if (fdef && fdef?.loc) {
       ret += this.printLoc(fdef)
     }
     return ret
@@ -219,8 +240,8 @@ class CallgraphChecker extends CheckerCallgraph {
       const splits = sourcefile.split('/')
       sourcefile = splits[splits.length - 1]
     }
-    const startLine = ast && ast.loc.start.line
-    const endLine = ast && ast.loc.end.line
+    const startLine = ast && ast?.loc?.start?.line
+    const endLine = ast && ast?.loc?.end?.line
 
     return ` \\n[${sourcefile} : ${startLine}_${endLine}]`
   }

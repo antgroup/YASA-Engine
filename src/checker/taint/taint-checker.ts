@@ -23,8 +23,11 @@ class TaintChecker extends Checker {
     this.sourceScope = {
       complete: false,
       value: [],
+      fillLineValues: [],
     }
     taintCheckerCommonUtil.initSourceScope(this.sourceScope, this.checkerRuleConfigContent.sources?.TaintSource)
+    this.sinkRuleArray = undefined
+    this.matchSinkRuleResultMap = new Map()
   }
 
   /**
@@ -37,7 +40,7 @@ class TaintChecker extends Checker {
     const callNode = finding.node
     const sinkRule = finding.ruleName
     const { fclos, matchedSanitizerTags, callstack } = finding
-    if (finding && argNode && argNode.hasTagRec) {
+    if (finding && argNode && argNode.taint?.isTaintedRec) {
       let traceStack = TaintCheckerFindingUtil.getTrace(argNode, tagName)
       const trace = TaintCheckerSourceLine.getNodeTrace(fclos, callNode)
       // 暂时统一去掉Field，不然展示出来的链路会重复
@@ -61,8 +64,10 @@ class TaintChecker extends Checker {
         sinkRule: finding.sinkRule,
         sinkAttribute: finding.sinkAttribute,
       }
+      const currentEntryPoint = entryPointConfig.getCurrentEntryPoint()
+      finding.entrypointLoc = currentEntryPoint?.entryPointSymVal?.ast?.node?.loc
       finding.entrypoint = _.pickBy(
-        _.clone(entryPointConfig.getCurrentEntryPoint()),
+        _.clone(currentEntryPoint),
         (value: any) => !_.isObject(value)
       )
       finding.trace.push(trace)

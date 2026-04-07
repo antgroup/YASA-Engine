@@ -1,12 +1,20 @@
 let sourcefile: string | null
+let skipSourcefile: boolean = false
 const _ = require('lodash')
 const UastSpec = require('@ant-yasa/uast-spec')
 const config = require('../config')
 const varUtil = require('./variable-util')
 const BasicRuleHandler = require('../checker/common/rules-basic-handler')
 const { md5 } = require('./hash-util')
+const { setGlobalASTManager, getGlobalASTManager, setGlobalSymbolTable, getGlobalSymbolTable } = require('./global-registry')
+const Unit: typeof import('../engine/analyzer/common/value/unit') = require('../engine/analyzer/common/value/unit')
 
 let getCodeByLocation: ((loc: any) => string) | null = null
+
+/**
+ * 获取 getCodeByLocation 函数
+ * @returns {Function} getCodeByLocation 函数
+ */
 function getGetCodeByLocation(): (loc: any) => string {
   if (!getCodeByLocation) {
     const sourceLine = require('../engine/analyzer/common/source-line')
@@ -18,7 +26,20 @@ function getGetCodeByLocation(): (loc: any) => string {
   return getCodeByLocation
 }
 
+/**
+ * 默认过滤器函数
+ * @param nd 节点
+ * @param prop 属性名
+ * @param from 来源节点
+ * @returns {boolean} 是否通过过滤
+ */
+// eslint-disable-next-line complexity
 const defaultFilter = (nd: any, prop: string, from: any): boolean => {
+  /**
+   * 检查对象是否有 CallExpression、BinaryExpression 或 Tag
+   * @param obj 对象
+   * @returns {boolean} 是否有相关表达式或标签
+   */
   function objHasCallExpressionOrBinaryExpressionOrTag(obj: any): boolean {
     if (!obj) {
       return false
@@ -26,9 +47,9 @@ const defaultFilter = (nd: any, prop: string, from: any): boolean => {
     if (
       (obj.type === 'CallExpression' ||
         obj.type === 'BinaryExpression' ||
-        obj._tags !== undefined ||
+        (obj instanceof Unit && obj.taint?.hasTags()) ||
         obj.vtype === 'object') &&
-      obj._has_tags
+      obj instanceof Unit && obj.taint.isTainted
     ) {
       return true
     }
@@ -38,14 +59,17 @@ const defaultFilter = (nd: any, prop: string, from: any): boolean => {
     return false
   }
 
+  // nd.taint 访问需要确认 nd 是 Unit 实例
+  const ndTainted = nd instanceof Unit && nd.taint.isTainted
+  const ndHasTags = nd instanceof Unit && nd.taint?.hasTags()
   return (
-    !(nd.type === 'MemberAccess' && prop === 'object' && nd._tags !== undefined) &&
+    !(nd.type === 'MemberAccess' && prop === 'object' && ndHasTags) &&
     !(
       nd.type === 'MemberAccess' &&
       prop === 'object' &&
-      (!nd._has_tags || from.type !== 'CallExpression') &&
-      (!nd._has_tags || from.type !== 'BinaryExpression') &&
-      (!nd._has_tags ||
+      (!ndTainted || from.type !== 'CallExpression') &&
+      (!ndTainted || from.type !== 'BinaryExpression') &&
+      (!ndTainted ||
         (nd.object.type !== 'CallExpression' &&
           nd.object.value.T === undefined &&
           nd.object.value.F === undefined &&
@@ -69,47 +93,57 @@ function adjustASTNode(sourceunit: any): void {
   const worklist = [sourceunit]
   // 使用索引访问元素，避免 shift() 的 O(n) 开销
   let index = 0
-  
+
   while (index < worklist.length) {
     const node = worklist[index++]
-    
+
     // 直接使用 for...in 遍历属性，避免 Object.keys() 创建数组的开销
     for (const prop in node) {
       // 跳过原型链上的属性
       if (!Object.prototype.hasOwnProperty.call(node, prop)) continue
-      
-      const sub_node = node[prop]
+
+      const subNode = node[prop]
       // 跳过 null、undefined、非对象类型
-      if (!sub_node || typeof sub_node !== 'object') continue
-      
-      if (sub_node.type) {
-        const nodeType = sub_node.type
+      if (!subNode || typeof subNode !== 'object') continue
+
+      if (subNode.type) {
+        const nodeType = subNode.type
         if (nodeType === 'FunctionDefinition') {
-          sub_node.name = sub_node.id?.name ?? `<anonymous>`
+          subNode.name =
+            subNode.id?.name ??
+            `<anonymousFunc_${subNode?.loc?.start?.line}_${subNode?.loc?.start?.column}_${subNode?.loc?.end?.line}_${subNode?.loc?.end?.column}>`
         } else if (nodeType === 'ClassDefinition') {
-          sub_node.name = sub_node.id?.name ?? '<anonymous>'
+          subNode.name =
+            subNode.id?.name ??
+            `<anonymousFunc_${subNode?.loc?.start?.line}_${subNode?.loc?.start?.column}_${subNode?.loc?.end?.line}_${subNode?.loc?.end?.column}>`
         }
-        
+
         // 使用 visited Set 避免重复处理已访问的节点
-        if (!visited.has(sub_node)) {
-          sub_node.parent = node
-          if (!sub_node.loc) {
-            sub_node.loc = {}
+        if (!visited.has(subNode)) {
+          subNode.parent = node
+          if (!subNode.loc) {
+            subNode.loc = {}
           }
-          sub_node.loc.sourcefile = sourcefile
-          worklist.push(sub_node)
-          visited.add(sub_node)
+          // 只在需要时设置 sourcefile（不跳过且 sourcefile 不为 null）
+          if (!skipSourcefile && sourcefile !== null) {
+            subNode.loc.sourcefile = sourcefile
+          }
+          worklist.push(subNode)
+          visited.add(subNode)
         }
-      } else if (Array.isArray(sub_node)) {
-        const arrLen = sub_node.length
+      } else if (Array.isArray(subNode)) {
+        const arrLen = subNode.length
         for (let i = 0; i < arrLen; i++) {
-          const sn = sub_node[i]
+          const sn = subNode[i]
           if (sn?.type && !visited.has(sn)) {
             sn.parent = node
             if (!sn.loc) {
               sn.loc = {}
             }
-            sn.loc.sourcefile = sourcefile
+            // 只在需要时设置 sourcefile（不跳过且 sourcefile 不为 null）
+            if (!skipSourcefile && sourcefile !== null) {
+              sn.loc.sourcefile = sourcefile
+            }
             worklist.push(sn)
             visited.add(sn)
           }
@@ -120,7 +154,8 @@ function adjustASTNode(sourceunit: any): void {
 }
 
 interface AnnotateOptions {
-  sourcefile?: string
+  sourcefile?: string | null
+  skipSourcefile?: boolean // 是否跳过设置 sourcefile（用于外部工具已设置的情况）
   [key: string]: any
 }
 
@@ -131,8 +166,10 @@ interface AnnotateOptions {
  */
 function annotateAST(node: any, options?: AnnotateOptions): void {
   sourcefile = null
+  skipSourcefile = false
   if (options) {
-    if (options.sourcefile) sourcefile = options.sourcefile
+    if (options.sourcefile !== undefined) sourcefile = options.sourcefile
+    if (options.skipSourcefile) skipSourcefile = true
   }
   adjustASTNode(node)
 }
@@ -145,14 +182,20 @@ function annotateAST(node: any, options?: AnnotateOptions): void {
  */
 function addNodeHash(obj: any, visited?: WeakSet<any>): void {
   if (!obj) return
-  
+
   if (!visited) {
     visited = new WeakSet()
   }
-  
+
   addNodeHashInternal(obj, visited)
 }
 
+/**
+ * 内部递归函数，用于计算节点 hash
+ * @param obj AST 节点
+ * @param visited 已访问节点集合
+ */
+// eslint-disable-next-line complexity
 function addNodeHashInternal(obj: any, visited: WeakSet<any>): void {
   if (Array.isArray(obj)) {
     const arrLen = obj.length
@@ -165,33 +208,34 @@ function addNodeHashInternal(obj: any, visited: WeakSet<any>): void {
     }
     return
   }
-  
+
   if (typeof obj !== 'object') return
-  
+
   // visited WeakSet 避免重复处理循环引用或共享节点
   if (visited.has(obj)) return
   visited.add(obj)
-  
+
   if (obj.type) {
-    let content = ''
-    const loc = obj.loc
-    if (loc && loc.sourcefile && loc.start && loc.end) {
-      const getCode = getGetCodeByLocation()
-      content = getCode(loc)
+    const { loc } = obj
+    let content = getRawCode(obj)
+
+    // 非常重要的性能优化，尽量保留，对于特殊程序，如（content超过4000字符），可能快 10 倍
+    const MAX_CONTENT_LENGTH = 128
+    if (content?.length > MAX_CONTENT_LENGTH) {
+      const firstTen = content.substring(0, 64)
+      const lastTen = content.substring(content.length - 64)
+      content = `${firstTen}...${lastTen}`
     }
-    if (content === '') {
-      content = prettyPrint(obj)
-    }
-    
+
     let relateFilePath = obj.loc?.sourcefile
     if (relateFilePath && config.maindirPrefix && relateFilePath.startsWith(config.maindirPrefix)) {
       relateFilePath = relateFilePath.substring(config.maindirPrefix.length)
     }
-    
+
     if (!obj._meta) {
       obj._meta = {}
     }
-    
+
     // 使用数组 join() 替代多次字符串拼接，减少中间对象创建
     const parentHash = obj.parent?._meta?.nodehash || ''
     const hashParts = [
@@ -204,21 +248,54 @@ function addNodeHashInternal(obj: any, visited: WeakSet<any>): void {
       obj.type,
       parentHash,
     ]
-    
-    obj._meta.nodehash = md5(hashParts.join('_'))
+
+    const baseNodehash = md5(hashParts.join('_'))
+    let nodehash = baseNodehash
+
+    // 如果设置了全局 AST 管理器，检查 nodehash 是否已存在
+    // 如果已存在，则通过添加后缀来生成新的 nodehash，确保不替换原有对象
+    // TODO 符号值重构todo：现在的并行方式globalASTManager获取不到
+    const astManager = getGlobalASTManager()
+    if (astManager) {
+      let suffix = 0
+      while (astManager.has(nodehash)) {
+        suffix++
+        nodehash = `${baseNodehash}_${suffix}`
+      }
+      obj._meta.nodehash = nodehash
+      astManager.register(obj)
+    } else {
+      // 如果没有全局 AST 管理器，直接使用计算出的 nodehash
+      obj._meta.nodehash = nodehash
+    }
   }
-  
+
   // 使用 for...in 直接遍历，避免 Object.keys() 创建新数组
   for (const key in obj) {
     // 跳过 parent 和 _meta
-    // _meta 对象本身没有 type 属性，不会进入 if (obj.type) 分支处理
-    if (key === 'parent' || key === '_meta') continue
-    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue
-    
-    const subObj = obj[key]
-    if (!subObj || typeof subObj !== 'object') continue
-    
-    addNodeHashInternal(subObj, visited)
+    // 注意_meta中有decorators，还不能直接跳过
+    // TODO Java需要统一到decorators
+    if (
+      key === 'parent' ||
+      (key === '_meta' &&
+        (!Array.isArray(obj._meta?.decorators) ||
+          (Array.isArray(obj._meta?.decorators) && obj._meta?.decorators?.length === 0)) &&
+        (!Array.isArray(obj._meta?.annotations) ||
+          (Array.isArray(obj._meta?.annotations) && obj._meta?.annotations?.length === 0)))
+    ) {
+      continue
+    } else if (key === '_meta' && Array.isArray(obj._meta?.annotations) && obj._meta?.annotations?.length > 0) {
+      addNodeHashInternal(obj._meta?.annotations, visited)
+    } else if (key === '_meta' && Array.isArray(obj._meta?.decorators) && obj._meta?.decorators?.length > 0) {
+      addNodeHashInternal(obj._meta?.decorators, visited)
+    } else {
+      if (!Object.prototype.hasOwnProperty.call(obj, key)) continue
+
+      const subObj = obj[key]
+      if (!subObj || typeof subObj !== 'object') continue
+
+      addNodeHashInternal(subObj, visited)
+    }
   }
 }
 
@@ -308,11 +385,16 @@ function satisfy(
   const fromlist = [node]
   const depthlist = [1]
   const parentMap = new WeakMap()
-  while (worklist.length) {
-    node = worklist.shift()
-    const from = fromlist.shift()
-    const depth = depthlist.shift()
-    if (!node || visited.has(node)) continue
+  // 使用索引替代 shift() 操作，提高性能
+  let worklistIndex = 0
+  while (worklistIndex < worklist.length) {
+    node = worklist[worklistIndex]
+    const from = fromlist[worklistIndex]
+    const depth = depthlist[worklistIndex]
+    worklistIndex++
+    if (!node || visited.has(node)) {
+      continue
+    }
     visited.add(node)
     if (Array.isArray(node)) {
       node.forEach((child: any) => {
@@ -348,28 +430,39 @@ function satisfy(
       if (
         [
           'parent',
+          '_parentRef',
+          'uuid',
           'rrefs',
           'trace',
           'updates',
           'type',
           'operator',
-          'id',
           'ast',
           'loc',
-          'sort',
-          '_tags',
+          '_owner',
           'uninit',
           'callnode',
           'names',
           '_this',
-          '__this',
+          '_thisRef',
           'cdef',
           'fdef',
           'packageScope',
+          '_packageScopeRef',
           'fileScope',
           'exports',
+          '__exportsUuid',
+          '__fileScopeUuid',
+          '_superRef',
+          '_scopeCtx',
+          'sid',
+          'qid',
+          '_declsNodehashMap',
+          '_ast',
+          'decls',
+          '_isConstructing',
+          'overloaded',
           '_sid',
-          '_id',
           '_qid',
           'vtype',
           '_meta',
@@ -377,20 +470,48 @@ function satisfy(
       ) {
         continue
       }
+      if (prop.includes('__yasa')) {
+        continue
+      }
       if (filter && !filter(node, prop, from)) continue
-      if (prop === 'field') {
+      if (prop === '_field') {
         const sub_field = node[prop]
         for (const p in sub_field) {
           if (!Object.prototype.hasOwnProperty.call(sub_field, p)) continue
-          worklist.push(sub_field[p])
+          let fieldValue = sub_field[p]
+
+          // 如果属性值是以 symuuid_ 开头的字符串，从符号表中查找对应的符号值
+          if (typeof fieldValue === 'string' && fieldValue.startsWith('symuuid_')) {
+            const symbolTable = getGlobalSymbolTable()
+            if (symbolTable) {
+              // 优化：使用单次 get 替代 has + get，减少一次哈希查找
+              const resolved = symbolTable.get(fieldValue)
+              if (resolved) {
+                fieldValue = resolved
+              }
+            }
+          }
+          worklist.push(fieldValue)
           fromlist.push(sub_field)
           depthlist.push((depth || 0) + 1)
-          if (sub_field[p] && typeof sub_field[p] === 'object') {
-            parentMap.set(sub_field[p], node)
+          if (fieldValue && typeof fieldValue === 'object') {
+            parentMap.set(fieldValue, node)
           }
         }
       } else {
-        const v = node[prop]
+        let v = node[prop]
+
+        // 如果属性值是以 symuuid_ 开头的字符串，从符号表中查找对应的符号值
+        if (typeof v === 'string' && v.startsWith('symuuid_')) {
+          const symbolTable = getGlobalSymbolTable()
+          if (symbolTable) {
+            // 优化：使用单次 get 替代 has + get，减少一次哈希查找
+            const resolved = symbolTable.get(v)
+            if (resolved) {
+              v = resolved
+            }
+          }
+        }
         worklist.push(v)
         fromlist.push(node)
         depthlist.push((depth || 0) + 1)
@@ -408,9 +529,15 @@ function satisfy(
  * @param targetAttribute
  */
 function hasTag(symVal: any, targetAttribute?: any): boolean {
-  if (config.makeAllCG || !BasicRuleHandler.getPreprocessReady()) return false
+  if (
+    config.makeAllCG ||
+    !BasicRuleHandler.getPreprocessReady() ||
+    config.saveContextEnvironment ||
+    config.miniSaveContextEnvironment
+  )
+    return false
   const checkRawProps = ['arguments', 'left', 'right', 'expression', 'object']
-  const checkFieldsProps = ['field', 'children', 'misc_']
+  const checkFieldsProps = ['_field', 'children', 'misc_']
 
   /**
    *
@@ -439,12 +566,12 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
       targetAttribute &&
       targetAttribute !== '' &&
       !Array.isArray(symVal) &&
-      symVal?._has_tags &&
+      symVal instanceof Unit && symVal.taint.isTainted &&
       varUtil.isNotEmpty(symVal)
     ) {
       return true
     }
-    if (!Array.isArray(symVal) && symVal?._has_tags) {
+    if (!Array.isArray(symVal) && symVal instanceof Unit && symVal.taint.isTainted) {
       return true
     }
 
@@ -471,8 +598,8 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
           for (const key in symVal?.[fieldProp]) {
             const eleVal = symVal?.[fieldProp][key]
             if (
-              typeof eleVal?._qid === 'string' &&
-              (eleVal?._qid?.includes('Egg.Context<instance>') || eleVal?._qid?.includes('Egg.Application.service'))
+              typeof eleVal?.qid === 'string' &&
+              (eleVal?.qid?.includes('Egg.Context<instance') || eleVal?.qid?.includes('Egg.Application.service'))
             ) {
               return false
             }
@@ -494,7 +621,7 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
               return true
             }
           }
-        } else if (symVal?.[prop]?._has_tags) {
+        } else if (symVal?.[prop] instanceof Unit && symVal[prop].taint.isTainted) {
           const tagVal = hasTagRec(symVal?.[prop], targetAttribute, stack + 1, visited)
           if (tagVal) {
             return true
@@ -507,10 +634,10 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
         }
       }
     }
-    if (targetAttribute && targetAttribute !== '' && (arrayHasTag(symVal) || symVal?._has_tags)) {
+    if (targetAttribute && targetAttribute !== '' && (arrayHasTag(symVal) || (symVal instanceof Unit && symVal.taint.isTainted))) {
       return true
     }
-    return !Array.isArray(symVal) && symVal?._has_tags
+    return !Array.isArray(symVal) && symVal instanceof Unit && symVal.taint.isTainted
   }
 
   return hasTagRec(symVal, targetAttribute, 0, new Set())
@@ -524,16 +651,16 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
 function arrayHasTag(array: any): boolean {
   let hasTag = false
   if (!Array.isArray(array) && array.raw_value === undefined) {
-    return array?._has_tags
+    return array instanceof Unit && array.taint.isTainted
   }
   if (Array.isArray(array)) {
     for (const i in array) {
-      if (array[i]?._has_tags) {
+      if (array[i] instanceof Unit && array[i].taint.isTainted) {
         hasTag = true
         break
       } else if (typeof array[i].raw_value !== 'undefined') {
         for (const r in array[i].raw_value) {
-          if (array[i].raw_value[r]?._has_tags) {
+          if (array[i].raw_value[r] instanceof Unit && array[i].raw_value[r].taint.isTainted) {
             hasTag = true
             break
           }
@@ -542,7 +669,7 @@ function arrayHasTag(array: any): boolean {
     }
   } else if (typeof array.raw_value !== 'undefined') {
     for (const r in array.raw_value) {
-      if (array.raw_value[r]?._has_tags) {
+      if (array.raw_value[r] instanceof Unit && array.raw_value[r].taint.isTainted) {
         hasTag = true
         break
       }
@@ -559,14 +686,18 @@ function arrayHasTag(array: any): boolean {
  * @returns {boolean}
  */
 function findTag(node: any, attribute: any, multiMatch?: boolean): any | any[] | null | false {
-  if (config.makeAllCG || !BasicRuleHandler.getPreprocessReady()) {
+  if (
+    config.makeAllCG ||
+    !BasicRuleHandler.getPreprocessReady() ||
+    config.saveContextEnvironment ||
+    config.miniSaveContextEnvironment
+  ) {
     return false
   }
   return satisfy(
     node,
     (nd: any) => {
-      const tags = nd?._tags
-      if (_.isFunction(tags?.has) && tags.has(attribute)) {
+      if (nd instanceof Unit && nd.taint?.containsTag(attribute)) {
         return true
       }
     },
@@ -606,9 +737,28 @@ function prettyPrintAST(node: any): string {
     }
     return res
   }
-  return prettyPrint(node.ast || node.decl || node.fdecl || node)
+  return prettyPrint(node.ast?.node || node.fdecl || node)
 }
 
+/**
+ *
+ * @param node
+ */
+function getRawCode(node: any): string {
+  let content = ''
+  if (!node) {
+    return content
+  }
+  const { loc } = node
+  if (loc && loc.sourcefile && loc.start && loc.end) {
+    const getCode = getGetCodeByLocation()
+    content = getCode(loc)
+  }
+  if (content === '') {
+    content = prettyPrint(node)
+  }
+  return content
+}
 /**
  * Pretty-print AST nodes
  * @param node
@@ -980,10 +1130,14 @@ module.exports = {
   prettyPrintAST,
   annotateAST,
   addNodeHash,
+  setGlobalASTManager,
+  getGlobalASTManager,
+  setGlobalSymbolTable,
+  getGlobalSymbolTable,
   typeToQualifiedName,
   getAncestor,
   qualifiedNameToMemberAccess,
-
+  getRawCode,
   visit,
   satisfy,
   hasTag,

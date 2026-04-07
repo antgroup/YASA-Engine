@@ -1,0 +1,41 @@
+[
+  {
+    "checkerIds": [
+      "callchain_js"
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": ["0"],
+          "attribute": "JSCommandExec",
+          "fsig": "child_process.exec"
+        },
+        {
+          "args": ["0"],
+          "attribute": "JSEvalInjection",
+          "fsig": "eval"
+        },
+        {
+          "args": ["0"],
+          "attribute": "JSSQLInjection",
+          "fsig": "connection.query"
+        }
+      ]
+    },
+    "entrypoints": [
+      {
+        "filePath": "test_callchain.js",
+        "functionName": "testSqlInjection"
+      },
+      {
+        "filePath": "test_callchain.js",
+        "functionName": "testCommandInjection"
+      },
+      {
+        "filePath": "test_callchain.js",
+        "functionName": "testEvalInjection"
+      }
+    ]
+  }
+]

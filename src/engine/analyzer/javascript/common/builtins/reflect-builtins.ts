@@ -1,10 +1,6 @@
 const {
   valueUtil: {
-    ValueUtil: {
-      PrimitiveValue: ReflectPrimitiveValue,
-      ObjectValue: ReflectObjectValue,
-      FunctionValue: ReflectFunctionValue,
-    },
+    ValueUtil: { ObjectValue },
   },
 } = require('../../../common')
 const SourceLineReflect = require('../../../common/source-line')
@@ -23,7 +19,7 @@ function processReflectGetBuiltins(fclos: any, argvalues: any, state: any, node:
     const target = argvalues[0]
     const propertyKey = argvalues[1]
     const index = propertyKey.vtype === 'primitive' ? propertyKey.raw_value : propertyKey.sid
-    return target?.field[index]
+    return target?.members?.get(String(index))
   }
 }
 
@@ -53,10 +49,8 @@ function processReflectSetBuiltins(fclos: any, argvalues: any, state: any, node:
     )
     target.setFieldValue(
       index,
-      ReflectObjectValue({
-        id: index,
+      new ObjectValue(target.qid, {
         sid: index,
-        qid: `${target}.${index}`,
         parent: target,
         value: new_value,
       })
@@ -78,8 +72,8 @@ function processReflectDeleteBuiltins(fclos: any, argvalues: any, state: any, no
     const target = argvalues[0]
     const propertyKey = argvalues[1]
     const index = propertyKey.vtype === 'primitive' ? propertyKey.raw_value : propertyKey.sid
-    if (target?.field[index]) {
-      delete target?.field[index]
+    if (target?.members?.has(String(index))) {
+      target.members.delete(String(index))
     }
   }
 }

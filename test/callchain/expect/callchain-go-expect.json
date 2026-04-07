@@ -1,0 +1,591 @@
+{
+  "version": "1.0",
+  "totalFindings": 9,
+  "findings": [
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "HTTP",
+        "isPreProcess": false
+      },
+      "sinkInfo": {
+        "sinkRule": "Query",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Query(query)",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Query",
+          "function": "Query",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestSqlInjection(\"admin\")",
+          "nodeHash": "efe72c79a72096166c0de4cee8548a75",
+          "file": "/test_callchain.go",
+          "line": 32,
+          "column": 2
+        },
+        {
+          "code": "\tdb.Query(query)",
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "HTTP",
+        "isPreProcess": false
+      },
+      "sinkInfo": {
+        "sinkRule": "Exec",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Exec(query)",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Exec",
+          "function": "Exec",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestSqlInjection(\"admin\")",
+          "nodeHash": "efe72c79a72096166c0de4cee8548a75",
+          "file": "/test_callchain.go",
+          "line": 32,
+          "column": 2
+        },
+        {
+          "code": "\tdb.Exec(query)",
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "HTTP",
+        "isPreProcess": false
+      },
+      "sinkInfo": {
+        "sinkRule": "exec.Command",
+        "sinkAttribute": "GoCommandInjection",
+        "callSite": {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "cc0d33162f6ed0524bd8e5c93c55df67",
+          "fullName": "__unknown_module__.TestCommandInjection",
+          "function": "TestCommandInjection",
+          "file": "/test_callchain.go",
+          "line": 21,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "fullName": "os/exec.Command",
+          "function": "Command",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestCommandInjection(\"ls -la\")",
+          "nodeHash": "867fdc99e03efd4a9f03e7c151222691",
+          "file": "/test_callchain.go",
+          "line": 33,
+          "column": 2
+        },
+        {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "Query",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Query(query)",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Query",
+          "function": "Query",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestSqlInjection(\"admin\")",
+          "nodeHash": "efe72c79a72096166c0de4cee8548a75",
+          "file": "/test_callchain.go",
+          "line": 32,
+          "column": 2
+        },
+        {
+          "code": "\tdb.Query(query)",
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "Exec",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Exec(query)",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Exec",
+          "function": "Exec",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestSqlInjection(\"admin\")",
+          "nodeHash": "efe72c79a72096166c0de4cee8548a75",
+          "file": "/test_callchain.go",
+          "line": 32,
+          "column": 2
+        },
+        {
+          "code": "\tdb.Exec(query)",
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "main",
+        "filePath": "/test_callchain.go",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "exec.Command",
+        "sinkAttribute": "GoCommandInjection",
+        "callSite": {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "fullName": "__unknown_module__.main",
+          "function": "main",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "type": 0,
+          "nodeHash": "cc0d33162f6ed0524bd8e5c93c55df67",
+          "fullName": "__unknown_module__.TestCommandInjection",
+          "function": "TestCommandInjection",
+          "file": "/test_callchain.go",
+          "line": 21,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "fullName": "os/exec.Command",
+          "function": "Command",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func main() {\n\tTestSqlInjection(\"admin\")\n\tTestCommandInjection(\"ls -la\")\n}",
+          "nodeHash": "c10072d6b34256e184c793600265c86f",
+          "file": "/test_callchain.go",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "code": "\tTestCommandInjection(\"ls -la\")",
+          "nodeHash": "867fdc99e03efd4a9f03e7c151222691",
+          "file": "/test_callchain.go",
+          "line": 33,
+          "column": 2
+        },
+        {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "TestSqlInjection",
+        "filePath": "test_callchain.go"
+      },
+      "sinkInfo": {
+        "sinkRule": "Query",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Query(query)",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Query",
+          "function": "Query",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func TestSqlInjection(userInput string) {\n\tdb, _ := sql.Open(\"mysql\", \"user:password@/dbname\")\n\tdefe",
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "code": "\tdb.Query(query)",
+          "nodeHash": "75c72e930bc84cb3810f1655c45924b2",
+          "file": "/test_callchain.go",
+          "line": 16,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "TestSqlInjection",
+        "filePath": "test_callchain.go"
+      },
+      "sinkInfo": {
+        "sinkRule": "Exec",
+        "sinkAttribute": "GoSQLInjection",
+        "callSite": {
+          "code": "\tdb.Exec(query)",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "fullName": "__unknown_module__.TestSqlInjection",
+          "function": "TestSqlInjection",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "fullName": "database/sql.Open(\"mysql\", \"user:password@/dbname\").Exec",
+          "function": "Exec",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func TestSqlInjection(userInput string) {\n\tdb, _ := sql.Open(\"mysql\", \"user:password@/dbname\")\n\tdefe",
+          "nodeHash": "a7a3febd7ecda24769b4056b47e02d69",
+          "file": "/test_callchain.go",
+          "line": 10,
+          "column": 1
+        },
+        {
+          "code": "\tdb.Exec(query)",
+          "nodeHash": "81e78d839150dd301eee354b73974a2a",
+          "file": "/test_callchain.go",
+          "line": 17,
+          "column": 2
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "TestCommandInjection",
+        "filePath": "test_callchain.go"
+      },
+      "sinkInfo": {
+        "sinkRule": "exec.Command",
+        "sinkAttribute": "GoCommandInjection",
+        "callSite": {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "cc0d33162f6ed0524bd8e5c93c55df67",
+          "fullName": "__unknown_module__.TestCommandInjection",
+          "function": "TestCommandInjection",
+          "file": "/test_callchain.go",
+          "line": 21,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "fullName": "os/exec.Command",
+          "function": "Command",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ],
+      "callsites": [
+        {
+          "code": "func TestCommandInjection(command string) {\n\t// This should be detected as a sink match\n\tcmd := exec",
+          "nodeHash": "cc0d33162f6ed0524bd8e5c93c55df67",
+          "file": "/test_callchain.go",
+          "line": 21,
+          "column": 1
+        },
+        {
+          "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
+          "nodeHash": "cc56e8815b5be039850a931768bffb2e",
+          "file": "/test_callchain.go",
+          "line": 23,
+          "column": 9
+        }
+      ]
+    }
+  ]
+}

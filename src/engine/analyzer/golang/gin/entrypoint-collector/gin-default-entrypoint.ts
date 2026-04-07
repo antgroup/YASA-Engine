@@ -5,7 +5,10 @@ export {}
 
 const RouteRegistryProperty = ['POST', 'GET', 'DELETE', 'PUT']
 
-const RouteRegistryObject = ['github.com/gin-gonic/gin.Default()', 'github.com/gin-gonic/gin.New()']
+const RouteRegistryObject = [
+  '<global>.packageManager.github.com/gin-gonic/gin.Default()',
+  '<global>.packageManager.github.com/gin-gonic/gin.New()',
+]
 
 const processedRouteRegistry = new Set()
 
@@ -122,16 +125,16 @@ function getGinEntryPointAndSource(packageManager: any) {
 function collectRouteRegistry(callExpNode: any, calleeObject: any, argValues: any[], scope: any) {
   const routeFCloses: any[] = []
   const propertyName = callExpNode.callee.property?.name
-  const objectQid = calleeObject._qid
+  const objectQid = calleeObject.qid
   // TODO：后续考虑用rtype判断
   if (
     RouteRegistryObject.some((ginPrefix) => objectQid?.startsWith(ginPrefix)) &&
     RouteRegistryProperty.includes(propertyName)
   ) {
     for (const arg of argValues) {
-      if (arg?.vtype === 'fclos' && arg.ast?.loc) {
+      if (arg?.vtype === 'fclos' && arg.ast?.node?.loc) {
         // 避免对同一条路由注册语句重复添加
-        const hash = JSON.stringify(arg.ast.loc)
+        const hash = JSON.stringify(arg.ast.node.loc)
         if (!processedRouteRegistry.has(hash)) {
           processedRouteRegistry.add(hash)
           routeFCloses.push(arg)
@@ -149,8 +152,8 @@ function collectRouteRegistry(callExpNode: any, calleeObject: any, argValues: an
 function getGinDefaultEntrypoint(packageManager: any) {
   const ginDefaultEntrypointSymvals = AstUtil.satisfy(
     packageManager,
-    (n: any) => n.vtype === 'fclos' && n.ast?.parameters && AstUtil.prettyPrintAST(n.ast.parameters).includes(GinType),
-    (node: any, prop: any) => prop === 'field',
+    (n: any) => n.vtype === 'fclos' && n.ast?.node?.parameters && AstUtil.prettyPrintAST(n.ast.node.parameters).includes(GinType),
+    (node: any, prop: any) => prop === '_field',
     null,
     true
   )

@@ -56,12 +56,13 @@ const defaultEggTaintSource = [
 /**
  *
  * @param fileManager
+ * @param analyzer
  */
-function getEggHttpEntryPointsAndSources(fileManager: FileManager) {
+function getEggHttpEntryPointsAndSources(fileManager: FileManager, analyzer: any) {
   const entryPoints: any[] = []
   const uastUrlInfoList: UastUrlInfo[] = []
   const TaintSource: any[] = []
-  const routerFiles = calcRouterFileList(fileManager)
+  const routerFiles = calcRouterFileList(fileManager, analyzer)
   if (routerFiles.length === 0) {
     return { entryPoints, TaintSource }
   }
@@ -70,7 +71,7 @@ function getEggHttpEntryPointsAndSources(fileManager: FileManager) {
       continue
     }
     EggRouterVisitor.routerList = []
-    astUtil.visit(fileManager[routerFile].ast, EggRouterVisitor)
+    astUtil.visit(analyzer.symbolTable.get(fileManager[routerFile]).ast?.node, EggRouterVisitor)
     uastUrlInfoList.push(...EggRouterVisitor.routerList)
   }
   if (uastUrlInfoList.length <= 0) {
@@ -86,7 +87,7 @@ function getEggHttpEntryPointsAndSources(fileManager: FileManager) {
         uastUrlInfo.relativePath =
           filePath.indexOf('/app/') !== -1 ? filePath.slice(filePath.indexOf('/app/')) : filePath
         EggMethodVisitor.uastUrlInfo = uastUrlInfo
-        astUtil.visit(fileManager[filePath].ast, EggMethodVisitor)
+        astUtil.visit(analyzer.symbolTable.get(fileManager[filePath]).ast?.node, EggMethodVisitor)
       }
     }
   }
@@ -129,12 +130,13 @@ function getEggHttpEntryPointsAndSources(fileManager: FileManager) {
 /**
  *
  * @param fileManager
+ * @param analyzer
  */
-function calcRouterFileList(fileManager: FileManager): string[] {
+function calcRouterFileList(fileManager: FileManager, analyzer: any): string[] {
   const routerFileList: string[] = []
 
   for (const file of Object.getOwnPropertyNames(fileManager)) {
-    const codeContent = astUtil.prettyPrintAST(fileManager[file].ast)
+    const codeContent = astUtil.prettyPrintAST(analyzer.symbolTable.get(fileManager[file]).ast?.node)
     for (const method of httpMethodList) {
       if (codeContent.includes(`.${method}(`)) {
         routerFileList.push(file)

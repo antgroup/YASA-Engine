@@ -1,6 +1,6 @@
 const {
   valueUtil: {
-    ValueUtil: { ObjectValue: JsObjectValue, FunctionValue: JsFunctionValue, Scoped: JsScoped },
+    ValueUtil: { ObjectValue, FunctionValue },
   },
 } = require('../../common')
 const { processRequire } = require('./builtins/require')
@@ -54,22 +54,20 @@ class JsInitializer {
   static initInnerFunctionBuiltin(scope: any, builtinMap: Record<string, any>, varType: string): void {
     scope.setFieldValue(
       'prototype',
-      JsObjectValue({
-        id: 'prototype',
+      new ObjectValue(scope.qid, {
         sid: 'prototype',
-        qid: 'prototype',
         parent: scope,
       })
     )
     for (const funcName of Object.keys(builtinMap)) {
       const qqid = varType != null ? `${varType}.${funcName}` : funcName
-      scope.field.prototype.setFieldValue(
+      scope.members.get('prototype')!.setFieldValue(
         funcName,
-        JsFunctionValue({
+        new FunctionValue('', {
           sid: funcName,
           qid: qqid,
           parent: scope,
-          execute: builtinMap[funcName],
+          runtime: { execute: builtinMap[funcName] },
         })
       )
     }
@@ -83,11 +81,11 @@ class JsInitializer {
   static initReflectBuiltin(scope: any): void {
     scope.setFieldValue(
       'Reflect',
-      JsObjectValue({
+      new ObjectValue('', {
         sid: 'Reflect',
         qid: 'Reflect',
         parent: scope,
-        execute: JsInitializer.builtin['Reflect.get'],
+        runtime: { execute: JsInitializer.builtin['Reflect.get'] },
       })
     )
 
@@ -96,13 +94,13 @@ class JsInitializer {
       if (func === 'defineProperty') {
         func = 'set'
       }
-      scope.field.Reflect.setFieldValue(
+      scope.members.get('Reflect')!.setFieldValue(
         func,
-        JsFunctionValue({
+        new FunctionValue('', {
           sid: func,
           qid: `Reflect.${func}`,
           parent: scope,
-          execute: (JsInitializer.builtin as any)[`Reflect.${func}`],
+          runtime: { execute: (JsInitializer.builtin as any)[`Reflect.${func}`] },
         })
       )
     }
@@ -130,10 +128,10 @@ class JsInitializer {
   static initSetBuiltin(scope: any): void {
     scope.setFieldValue(
       'Set',
-      JsObjectValue({
+      new ObjectValue(scope.qid, {
         sid: 'Set',
         parent: scope,
-        execute: JsInitializer.builtin.newSet,
+        runtime: { execute: JsInitializer.builtin.newSet },
       })
     )
   }
@@ -145,10 +143,10 @@ class JsInitializer {
   static initMapBuiltin(scope: any): void {
     scope.setFieldValue(
       'Map',
-      JsObjectValue({
+      new ObjectValue(scope.qid, {
         sid: 'Map',
         parent: scope,
-        execute: JsInitializer.builtin.newMap,
+        runtime: { execute: JsInitializer.builtin.newMap },
       })
     )
   }
@@ -158,15 +156,13 @@ class JsInitializer {
    * @param scope
    */
   static initVMBuiltin(scope: any): void {
-    const vm2 = JsObjectValue({
-      id: 'vm2',
+    const vm2 = new ObjectValue('', {
       sid: 'vm2',
       qid: `vm2.`,
       parent: scope,
     })
     scope.setFieldValue('vm2', vm2)
-    const VM = JsObjectValue({
-      id: 'VM',
+    const VM = new ObjectValue('', {
       sid: 'VM',
       qid: `vm2.VM`,
       parent: scope,
@@ -174,7 +170,7 @@ class JsInitializer {
     vm2.setFieldValue('VM', VM)
     VM.setFieldValue(
       'run',
-      JsFunctionValue({
+      new FunctionValue('', {
         id: 'run',
         sid: 'run',
         qid: `vm2.VM.run`,
@@ -189,38 +185,37 @@ class JsInitializer {
    */
   static introduceGlobalBuiltin(scope: any): void {
     // TODO Global builtins modeling
-    scope.setFieldValue('Object', JsObjectValue({ sid: 'Object' }))
-    scope.setFieldValue('Array', JsObjectValue({ sid: 'Array' }))
-    // scope.setFieldValue('Set', JsObjectValue({ sid: 'Set' }))
-    scope.setFieldValue('Map', JsObjectValue({ sid: 'Map' }))
-    scope.setFieldValue('JSON', JsObjectValue({ sid: 'JSON' }))
-    scope.setFieldValue('Math', JsObjectValue({ sid: 'Math' }))
-    scope.setFieldValue('Date', JsObjectValue({ sid: 'Date' }))
-    scope.setFieldValue('console', JsObjectValue({ sid: 'console' }))
-    scope.setFieldValue('__dirname', JsObjectValue({ sid: '__dirname' }))
-    scope.setFieldValue('process', JsObjectValue({ sid: 'process' }))
-    scope.setFieldValue('Symbol', JsObjectValue({ sid: 'Symbol' }))
-    const requireFuncVal = JsFunctionValue({
+    scope.setFieldValue('Object', new ObjectValue('', { sid: 'Object', qid: `${scope.qid}.Object` }))
+    scope.setFieldValue('Array', new ObjectValue('', { sid: 'Array', qid: `${scope.qid}.Array` }))
+    scope.setFieldValue('Map', new ObjectValue('', { sid: 'Map', qid: `${scope.qid}.Map` }))
+    scope.setFieldValue('JSON', new ObjectValue('', { sid: 'JSON', qid: `${scope.qid}.JSON` }))
+    scope.setFieldValue('Math', new ObjectValue('', { sid: 'Math', qid: `${scope.qid}.Math` }))
+    scope.setFieldValue('Date', new ObjectValue('', { sid: 'Date', qid: `${scope.qid}.Date` }))
+    scope.setFieldValue('console', new ObjectValue('', { sid: 'console', qid: `${scope.qid}.console` }))
+    scope.setFieldValue('__dirname', new ObjectValue('', { sid: '__dirname', qid: `${scope.qid}.__dirname` }))
+    scope.setFieldValue('process', new ObjectValue('', { sid: 'process', qid: `${scope.qid}.process` }))
+    scope.setFieldValue('Symbol', new ObjectValue('', { sid: 'Symbol', qid: `${scope.qid}.Symbol` }))
+    const requireFuncVal = new FunctionValue('', {
       sid: 'require',
-      qid: 'require',
+      qid: `${scope.qid}.require`,
       parent: scope,
-      execute: JsInitializer.builtin.require,
+      runtime: { execute: JsInitializer.builtin.require },
     })
     scope.setFieldValue('require', requireFuncVal)
-    if (scope.funcSymbolTable) {
+    if (scope.context?.funcs) {
       // eslint-disable-next-line no-param-reassign
-      scope.funcSymbolTable.require = requireFuncVal
+      scope.context.funcs.require = requireFuncVal
     }
-    const promiseFuncVal = JsFunctionValue({
+    const promiseFuncVal = new FunctionValue('', {
       sid: 'Promise',
-      qid: 'Promise',
+      qid: `${scope.qid}.Promise`,
       parent: scope,
-      execute: JsInitializer.builtin.Promise,
+      runtime: { execute: JsInitializer.builtin.Promise },
     })
     scope.setFieldValue('Promise', promiseFuncVal)
-    if (scope.funcSymbolTable) {
+    if (scope.context?.funcs) {
       // eslint-disable-next-line no-param-reassign
-      scope.funcSymbolTable.Promise = promiseFuncVal
+      scope.context.funcs.Promise = promiseFuncVal
     }
     // 新增的建模
     // Initializer.initArrayBuiltin(scope)
@@ -240,7 +235,7 @@ class JsInitializer {
   static resetInitVariables(scope: any): void {
     for (const field of Object.keys(scope.value)) {
       const v = scope.value[field]
-      if (v.trace) delete v.trace
+      if (v.taint) v.taint.clearTrace()
     }
   }
 }

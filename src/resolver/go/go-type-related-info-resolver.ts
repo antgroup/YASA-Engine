@@ -11,7 +11,7 @@ export default class GoTypeRelatedInfoResolver extends TypeRelatedInfoResolver {
    * @param state
    * @returns {Map<string, ClassHierarchy>}
    */
-  findClassHierarchy(analyzer: any, state: any): Map<string, ClassHierarchy> {
+  override findClassHierarchy(analyzer: any, state: any): Map<string, ClassHierarchy> {
     // TODO
     return new Map()
   }

@@ -9,6 +9,7 @@ const Statistics = require('../../../util/statistics').default
 const { shortenSourceFile } = require('../../../util/finding-util')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
+const { getOutputTrace } = require('./taint-trace-output')
 
 /**
  * output taint flow result to console
@@ -111,21 +112,22 @@ function formatTaintFinding(finding: TaintFinding): Record<string, any> {
   // the line of the issue
   if (finding.node) {
     const { loc } = finding.node
-    const line_str = loc.start.line == loc.end.line ? loc.start.line : `[${loc.start.line}, ${loc.end.line}]`
+    const line_str = loc.start?.line == loc.end?.line ? loc.start?.line : `[${loc.start?.line}, ${loc.end?.line}]`
     let code = AstUtil.prettyPrint(finding.node)
     if (code.startsWith('{\n "type'))
       // non-pretty-printed ast
-      code = SourceLine.formatTraces([{ file: finding.sourcefile, line: loc.start.line }])
+      code = SourceLine.formatTraces([{ file: finding.sourcefile, line: loc.start?.line }])
     res.line = `Line ${line_str}: ${code}`
   } else {
     logger.warn('finding.node is null')
   }
   // the trace of the origin of the issue
-  if (finding.trace) {
-    for (const item of finding.trace) {
+  const outputTrace = getOutputTrace(finding)
+  if (outputTrace) {
+    for (const item of outputTrace) {
       if (item.file) item.shortfile = shortenSourceFile(item.file)
     }
-    const trace = SourceLine.formatTraces(finding.trace)
+    const trace = SourceLine.formatTraces(outputTrace)
     res.trace = trace
   }
   // the trace of an example attack

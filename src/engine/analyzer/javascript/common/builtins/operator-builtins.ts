@@ -1,10 +1,9 @@
 const _ = require('lodash')
 const {
   valueUtil: {
-    ValueUtil: { FunctionValue, ObjectValue, PrimitiveValue, UndefinedValue, UnionValue, SymbolValue },
+    ValueUtil: { FunctionValue, ObjectValue, PrimitiveValue, UndefinedValue, UnionValue },
   },
 } = require('../../../common')
-const { mergeSets } = require('../../../../../util/common-util')
 
 const BINARY_OPERATOR_PROCESS_MAP: Record<string, any> = {
   '&&': processAndOperator,
@@ -31,12 +30,12 @@ function processBinaryOperator(resValue: any, scope: any, node: any, state: any)
 }
 
 /**
- * 校验resValue及其ast收否有效
+ * 校验resValue及其ast是否有效
  * @param resValue
  * @returns {boolean}
  */
 function checkLhsAndRhsValid(resValue: any) {
-  return !!(resValue?.left && resValue?.right && resValue?.ast?.left && resValue?.ast?.right)
+  return !!(resValue?.left && resValue?.right && resValue?.ast?.node?.left && resValue?.ast?.node?.right)
 }
 
 /**
@@ -53,17 +52,24 @@ function processAndOperator(resValue: any, scope: any, node: any, state: any) {
   // 此处疑似uast有问题 nan应该和undefined一样是primitive
   // 先打个补丁吧～
   if (leftValue?.vtype === 'symbol' && leftValue?.type === 'Identifier' && leftValue?.name === 'NaN') {
-    return SymbolValue(leftValue)
+    return leftValue.clone()
   }
-  // 当leftValue表示undefined时，raw_value刚好不存在，访问一个不存在的值结果就是undefined
   if (leftValue?.vtype === 'primitive') {
     if ((_.has(leftValue, 'raw_value') as any) && leftValue?.raw_value != null) {
-      return leftValue.raw_value ? SymbolValue(rightValue) : SymbolValue(leftValue)
+      return leftValue.raw_value
+        ? rightValue.clone()
+        : leftValue.clone()
     }
   }
-  if (resValue?.hasTagRec) {
-    resValue._tags = mergeSets(leftValue._tags, rightValue._tags)
-    resValue.trace = leftValue.trace || rightValue.trace
+  if (resValue?.taint.isTaintedRec) {
+    for (const t of leftValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    for (const t of rightValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    const traceVal = (leftValue.taint.getFirstTrace()?.length ? leftValue.taint.getFirstTrace() : null) || rightValue.taint.getFirstTrace()
+    if (traceVal) {
+      resValue.taint.setAllTraces(traceVal)
+    } else {
+      resValue.taint.clearTrace()
+    }
   }
   return resValue
 }
@@ -81,17 +87,24 @@ function processOrOperator(resValue: any, scope: any, node: any, state: any) {
   const rightValue = resValue.right
 
   if (leftValue?.vtype === 'symbol' && leftValue?.type === 'Identifier' && leftValue?.name === 'NaN') {
-    return SymbolValue(rightValue)
+    return rightValue.clone()
   }
-  // 当leftValue表示undefined时，raw_value刚好不存在，访问一个不存在的值结果就是undefined
   if (leftValue?.vtype === 'primitive') {
     if ((_.has(leftValue, 'raw_value') as any) && leftValue?.raw_value != null) {
-      return leftValue.raw_value ? SymbolValue(leftValue) : SymbolValue(rightValue)
+      return leftValue.raw_value
+        ? leftValue.clone()
+        : rightValue.clone()
     }
   }
-  if (resValue?.hasTagRec) {
-    resValue._tags = mergeSets(leftValue._tags, rightValue._tags)
-    resValue.trace = leftValue.trace || rightValue.trace
+  if (resValue?.taint.isTaintedRec) {
+    for (const t of leftValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    for (const t of rightValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    const traceVal = (leftValue.taint.getFirstTrace()?.length ? leftValue.taint.getFirstTrace() : null) || rightValue.taint.getFirstTrace()
+    if (traceVal) {
+      resValue.taint.setAllTraces(traceVal)
+    } else {
+      resValue.taint.clearTrace()
+    }
   }
   return resValue
 }
@@ -114,12 +127,18 @@ function processNullMergeOperator(resValue: any, scope: any, node: any, state: a
     // 还有当leftValue为false 0 NaN ‘’时leftValue转换为boolean也为false但此时leftValue本身不为空
     // 空值合并关注是否为空，而不是转换以后是否为false，因此要排除这些耦合情况
     if (leftValue.raw_value === null || leftValue.raw_value === undefined) {
-      return SymbolValue(rightValue)
+      return rightValue.clone()
     }
   }
-  if (resValue?.hasTagRec) {
-    resValue._tags = mergeSets(leftValue._tags, rightValue._tags)
-    resValue.trace = leftValue.trace || rightValue.trace
+  if (resValue?.taint.isTaintedRec) {
+    for (const t of leftValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    for (const t of rightValue.taint.getTags() ?? []) resValue.taint.addTag(t)
+    const traceVal = (leftValue.taint.getFirstTrace()?.length ? leftValue.taint.getFirstTrace() : null) || rightValue.taint.getFirstTrace()
+    if (traceVal) {
+      resValue.taint.setAllTraces(traceVal)
+    } else {
+      resValue.taint.clearTrace()
+    }
   }
   return resValue
 }

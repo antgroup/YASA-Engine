@@ -1,3 +1,5 @@
+import { getLegacyArgValues, type CallInfo } from '../../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const FileUtil = require('../../../util/file-util')
@@ -66,13 +68,13 @@ class GinTaintChecker extends TaintChecker {
    * @param topScope
    */
   prepareEntryPoints(analyzer: any, topScope: any) {
-    const { entrypoints: ruleConfigEntryPoints, sources: ruleConfigSources } = this.checkerRuleConfigContent
+    const { entrypoints: ruleConfigEntryPoints, sources: ruleConfigSources } = this.checkerRuleConfigContent || {}
 
     const {
       TaintSource: TaintSourceRules,
       FuncCallArgTaintSource: FuncCallArgTaintSourceRules,
       FuncCallReturnValueTaintSource: FuncCallReturnValueTaintSourceRules,
-    } = ruleConfigSources
+    } = ruleConfigSources || {}
 
     // 添加rule_config中的route入口
     if (!_.isEmpty(ruleConfigEntryPoints) && Config.entryPointMode !== 'SELF_COLLECT') {
@@ -80,25 +82,25 @@ class GinTaintChecker extends TaintChecker {
         let entryPointSymVal
         if (entrypoint.funcReceiverType) {
           entryPointSymVal = AstUtil.satisfy(
-            topScope.packageManager,
+            topScope.context.packages,
             (n: any) =>
               n.vtype === 'fclos' &&
-              FileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
-              n?.parent?.ast?.type === 'ClassDefinition' &&
-              n?.parent?.ast?.id?.name === entrypoint.funcReceiverType &&
-              n?.ast?.id.name === entrypoint.functionName,
-            (node: any, prop: any) => prop === 'field',
+              FileUtil.extractAfterSubstring(n?.ast?.node?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
+              n?.parent?.ast?.node?.type === 'ClassDefinition' &&
+              n?.parent?.ast?.node?.id?.name === entrypoint.funcReceiverType &&
+              n?.ast?.node?.id.name === entrypoint.functionName,
+            (node: any, prop: any) => prop === '_field',
             null,
             false
           )
         } else {
           entryPointSymVal = AstUtil.satisfy(
-            topScope.packageManager,
+            topScope.context.packages,
             (n: any) =>
               n.vtype === 'fclos' &&
-              FileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
-              n?.ast?.id.name === entrypoint.functionName,
-            (node: any, prop: any) => prop === 'field',
+              FileUtil.extractAfterSubstring(n?.ast?.node?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
+              n?.ast?.node?.id.name === entrypoint.functionName,
+            (node: any, prop: any) => prop === '_field',
             null,
             false
           )
@@ -107,7 +109,7 @@ class GinTaintChecker extends TaintChecker {
           continue
         }
         if (Array.isArray(entryPointSymVal)) {
-          entryPointSymVal = _.uniqBy(entryPointSymVal, (value: any) => value.fdef)
+          entryPointSymVal = _.uniqBy(entryPointSymVal, (value: any) => value.ast.fdef)
         } else {
           entryPointSymVal = [entryPointSymVal]
         }
@@ -127,7 +129,7 @@ class GinTaintChecker extends TaintChecker {
     // 添加source
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
       const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
-        GinEntryPoint.getGinEntryPointAndSource(topScope.packageManager)
+        GinEntryPoint.getGinEntryPointAndSource(topScope.context.packages)
 
       if (
         _.isEmpty(TaintSource) &&
@@ -197,13 +199,14 @@ class GinTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
     const calleeObject = fclos.object
-    this.checkByNameAndClassMatch(node, fclos, argvalues, scope)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, argvalues, funcCallArgTaintSource)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource)
 
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
+    const argvalues = getLegacyArgValues(callInfo)
     this.collectRouteRegistry(node, calleeObject, argvalues, scope, analyzer)
   }
 
@@ -268,19 +271,20 @@ class GinTaintChecker extends TaintChecker {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
    */
-  checkByNameAndClassMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
     if (fclos === undefined) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
-    if (!rules || !argvalues) return
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope)
+    if (!rules || !callInfo) return
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
+      const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
         node,
@@ -307,7 +311,8 @@ class GinTaintChecker extends TaintChecker {
             fclos,
             TAINT_TAG_NAME_GIN,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state?.callstack
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)

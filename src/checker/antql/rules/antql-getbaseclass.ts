@@ -1,7 +1,7 @@
 import type { Finding } from '../../../engine/analyzer/common/common-types'
 
 const LocationUtil = require('../util/location-util')
-const QidUnifyUtil = require('../util/qid-unify-util')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const Config = require('../../../config')
 const Checker = require('../../common/checker')
 const InteractiveOutputStrategy = require('../../common/output/interactive-output-strategy')
@@ -86,8 +86,8 @@ class AntqlGetBaseClass extends Checker {
       // 获取基类
       const superSymbol = info?.val?.super
       if (superSymbol && (superSymbol?.vtype === 'object' || superSymbol?.vtype === 'class')) {
-        const superClassId = QidUnifyUtil.unify(superSymbol)
-        const classId = QidUnifyUtil.unify(info?.val)
+        const superClassId = QidUnifyUtil.qidUnifyForQL(superSymbol)
+        const classId = QidUnifyUtil.qidUnifyForQL(info?.val)
 
         const nodeLoc = LocationUtil.convertUastLocationToString(node.loc, Config.prefixPath)
 

@@ -157,15 +157,17 @@
       "sun.net.www.http.KeepAliveCache"
     ]
   },
-  "java.util.concurrent.Executor": {
-    "modelingFilePath": "./builtins/executor-builtins",
+  "java.util.concurrent.ExecutorService": {
+    "modelingFilePath": "./builtins/executorservice-builtins",
     "subTypeList": [
       "java.util.concurrent.AbstractExecutorService",
-      "java.util.concurrent.ExecutorService",
       "java.util.concurrent.ForkJoinPool",
       "java.util.concurrent.ScheduledExecutorService",
       "java.util.concurrent.ScheduledThreadPoolExecutor",
-      "java.util.concurrent.ThreadPoolExecutor"
+      "java.util.concurrent.ThreadPoolExecutor",
+      "com.alipay.sofa.common.thread.SofaScheduledThreadPoolExecutor",
+      "com.alipay.sofa.common.thread.SofaThreadPoolExecutor",
+      "com.alipay.sofa.common.thread.SofaThreadPoolTaskExecutor"
     ]
   },
   "java.util.Timer": {
@@ -182,6 +184,30 @@
   },
   "java.util.concurrent.atomic.AtomicReference": {
     "modelingFilePath": "./builtins/atomicreference-builtins",
+    "subTypeList": []
+  },
+  "java.lang.Class": {
+    "modelingFilePath": "./builtins/class-builtins",
+    "subTypeList": []
+  },
+  "java.lang.Object": {
+    "modelingFilePath": "./builtins/object-builtins",
+    "subTypeList": []
+  },
+  "java.util.stream.Stream": {
+    "modelingFilePath": "./builtins/stream-builtins",
+    "subTypeList": []
+  },
+  "com.baomidou.mybatisplus.core.conditions.query.QueryWrapper": {
+    "modelingFilePath": "./builtins/querywrapper-builtins",
+    "subTypeList": []
+  },
+  "com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper": {
+    "modelingFilePath": "./builtins/lambdaquerywrapper-builtins",
+    "subTypeList": []
+  },
+  "java.util.Arrays": {
+    "modelingFilePath": "./builtins/arrays-builtins",
     "subTypeList": []
   }
 }

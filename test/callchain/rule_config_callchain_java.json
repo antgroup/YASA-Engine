@@ -1,0 +1,48 @@
+[
+  {
+    "checkerIds": [
+      "callchain_java"
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": ["0"],
+          "attribute": "JavaCommandExec",
+          "calleeType": "Runtime",
+          "fsig": "exec"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "JavaCommandExec",
+          "calleeType": "Runtime.getRuntime()",
+          "fsig": "exec"
+        },
+        {
+          "args": ["0"],
+          "attribute": "JavaSQLInjection",
+          "calleeType": "Statement",
+          "fsig": "executeQuery"
+        },
+        {
+          "args": ["0"],
+          "attribute": "JavaSQLInjection",
+          "calleeType": "Statement",
+          "fsig": "execute"
+        }
+      ]
+    },
+    "entrypoints": [
+      {
+        "filePath": "TestCallchain.java",
+        "functionName": "testSqlInjection"
+      },
+      {
+        "filePath": "TestCallchain.java",
+        "functionName": "testCommandInjection"
+      }
+    ]
+  }
+]

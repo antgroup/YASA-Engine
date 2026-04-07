@@ -1,20 +1,19 @@
-import { handleException } from '../../../engine/analyzer/common/exception-handler'
-
 const _ = require('lodash')
 
-const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
+const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker')
 const CommonUtil = require('../../../util/common-util')
 const {
   findPythonFcEntryPointAndSource,
+  buildFclosIndex,
+  lookupFclos,
 } = require('../../../engine/analyzer/python/common/entrypoint-collector/python-entrypoint')
 const Constant = require('../../../util/constant')
 const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
-const AstUtil = require('../../../util/ast-util')
 
 const Config = require('../../../config')
-const FileUtil = require('../../../util/file-util')
 const { extractRelativePath } = require('../../../util/file-util')
 const logger = require('../../../util/logger')(__filename)
+const { loadPythonDefaultRule } = require('./python-taint-abstract-checker')
 
 const TAINT_TAG_NAME_PYTHON_DEFAULT = 'PYTHON_INPUT'
 
@@ -40,7 +39,8 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { moduleManager, fileManager } = analyzer
+    const moduleManager = analyzer.topScope.context.modules
+    const fileManager = analyzer.topScope.context.files
     this.prepareEntryPoints(analyzer, Config.maindir, moduleManager, fileManager)
     analyzer.entryPoints.push(...this.entryPoints)
     this.addSourceTagForSourceScope(TAINT_TAG_NAME_PYTHON_DEFAULT, this.sourceScope.value)
@@ -60,7 +60,7 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
     const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
 
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
-      const pythonDefaultRule = this.loadPythonDefaultRule()
+      const pythonDefaultRule = loadPythonDefaultRule()
       if (pythonDefaultRule[0].checkerIds.includes(this.getCheckerId())) {
         this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
         this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
@@ -71,7 +71,11 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
           : [this.checkerRuleConfigContent.sources.TaintSource]
         this.checkerRuleConfigContent.sources.TaintSource.push(...pythonDefaultRule[0].sources.TaintSource)
       }
-      const { pyFcEntryPointArray, pyFcEntryPointSourceArray } = findPythonFcEntryPointAndSource(dir, fileManager)
+      const { pyFcEntryPointArray, pyFcEntryPointSourceArray } = findPythonFcEntryPointAndSource(
+        dir,
+        fileManager,
+        analyzer
+      )
       if (pyFcEntryPointArray) {
         funCallEntryPoints.push(...pyFcEntryPointArray)
       }
@@ -104,26 +108,20 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
       }
     }
 
+    // 构建 fclos 索引，一次遍历替代多次查找
+    const fclosIndex = buildFclosIndex(moduleManager, dir, extractRelativePath)
+
     for (const funCallEntryPoint of funCallEntryPoints) {
-      let valFuncs = AstUtil.satisfy(
-        moduleManager,
-        (n: any) =>
-          n.vtype === 'fclos' &&
-          extractRelativePath(n?.ast?.loc?.sourcefile, dir) === funCallEntryPoint.filePath &&
-          n?.ast?.id?.name === funCallEntryPoint.functionName,
-        (node: any, prop: any) => prop === 'field',
-        null,
-        true
-      )
+      // 使用索引查找，O(1) 操作
+      let valFuncs = lookupFclos(fclosIndex, funCallEntryPoint.filePath, funCallEntryPoint.functionName)
+
       if (_.isEmpty(valFuncs)) {
         logger.info('match entryPoint fail')
         continue
       }
-      if (Array.isArray(valFuncs)) {
-        valFuncs = _.uniqBy(valFuncs, (value: any) => value.fdef)
-      } else {
-        valFuncs = [valFuncs]
-      }
+
+      // 去重
+      valFuncs = _.uniqBy(valFuncs, (value: any) => value.ast.fdef)
 
       for (const valFunc of valFuncs) {
         const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
@@ -138,13 +136,14 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
 
     for (const fileEntryPoint of fileEntryPoints) {
       const fullFilePath = `${Config.maindir}${fileEntryPoint.filePath}`.replace('//', '/')
-      const file = fileManager[fullFilePath]
-      if (file?.ast?.type === 'CompileUnit') {
+      const fileUuid = fileManager[fullFilePath]
+      const file = analyzer.symbolTable.get(fileUuid)
+      if (file?.ast?.node?.type === 'CompileUnit') {
         const entryPoint = new EntryPoint(Constant.ENGIN_START_FILE_BEGIN)
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = file?.ast?.sourcefile || file?.ast?.loc?.sourcefile
+        entryPoint.filePath = file?.ast?.node?.sourcefile || file?.ast?.node?.loc?.sourcefile
         entryPoint.attribute = fileEntryPoint.attribute
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -157,28 +156,15 @@ class PythonDefaultTaintChecker extends PythonTaintAbstractChecker {
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
       fullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
       const fullCallGraphEntrypoint = fullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
-        analyzer.ainfo?.callgraph
+        analyzer.ainfo?.callgraph,
+        analyzer
       )
-      const fullFileEntrypoint = fullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer.fileManager)
+      const fullFileEntrypoint = fullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer)
       this.entryPoints.push(...fullCallGraphEntrypoint)
       this.entryPoints.push(...fullFileEntrypoint)
     }
 
     CommonUtil.initSourceScopeByTaintSourceWithLoc(this.sourceScope, this.checkerRuleConfigContent.sources?.TaintSource)
-  }
-
-  /**
-   * load python default rule
-   */
-  loadPythonDefaultRule() {
-    let pythonDefaultRule
-    try {
-      const rulePath = FileUtil.getAbsolutePath('./resource/python/python-default-rule.json')
-      pythonDefaultRule = FileUtil.loadJSONfile(rulePath)
-    } catch (e) {
-      handleException(e, 'Error occurred in load python default rule', 'Error occurred in load python default rule')
-    }
-    return pythonDefaultRule
   }
 }
 

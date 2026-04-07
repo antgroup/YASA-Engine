@@ -1,13 +1,22 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable complexity */
+/* eslint-disable sonarjs/cognitive-complexity */
+/* eslint-disable sonarjs/max-switch-cases */
+/* eslint-disable max-lines */
 const { Parser: UastParser } = require('@ant-yasa/uast-parser-java-js')
 const { Errors } = require('../../../util/error-code')
 
 const uastParser = new UastParser()
 
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 let getUid!: () => number
+let sourcefileJS: any
 
 /**
- *
- * @param loc
+ * 生成临时标识符
+ * @param loc - 位置信息
+ * @returns {any} 临时标识符节点
  */
 function getTmpIdentifier(loc: any) {
   return {
@@ -27,14 +36,16 @@ function getTmpIdentifier(loc: any) {
 }
 
 /**
- *
- * @param pattern
- * @param initId
+ * 处理对象模式
+ * @param pattern - 对象模式节点
+ * @param initId - 初始化标识符
+ * @returns {any[]} 表达式数组
  */
 function processObjectPattern(pattern: any, initId: any) {
   const expressions: any[] = []
   for (const prop of pattern.properties) {
     if (prop.type === 'ObjectProperty') {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       const sub_expr = processObjectProperty(prop, initId)
       if (Array.isArray(sub_expr)) {
         expressions.push(...sub_expr)
@@ -54,15 +65,17 @@ function processObjectPattern(pattern: any, initId: any) {
 }
 
 /**
- *
- * @param pattern
- * @param initId
+ * 处理数组模式
+ * @param pattern - 数组模式节点
+ * @param initId - 初始化标识符
+ * @returns {any[]} 表达式数组
  */
 function processArrayPattern(pattern: any, initId: any) {
   const expressions: any[] = []
   for (const i in pattern.elements) {
     const ele = pattern.elements[i]
     if (ele) {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       const sub_expr = processObjectProperty(
         {
           type: 'ObjectProperty',
@@ -87,12 +100,14 @@ function processArrayPattern(pattern: any, initId: any) {
 }
 
 /**
- *
- * @param pattern
- * @param initId
+ * 处理赋值模式
+ * @param pattern - 赋值模式节点
+ * @param initId - 初始化标识符
+ * @returns {any} 变量声明节点
  */
 function processAssignmentPattern(pattern: any, initId: any) {
   const key = pattern.left
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const default_expr = pattern.right
   return {
     type: 'VariableDeclaration',
@@ -109,9 +124,10 @@ function processAssignmentPattern(pattern: any, initId: any) {
 }
 
 /**
- *
- * @param pattern
- * @param initId
+ * 处理模式类节点
+ * @param pattern - 模式节点
+ * @param initId - 初始化标识符
+ * @returns {any} 转换后的节点
  */
 function processPatternLike(pattern: any, initId: any) {
   if (pattern.type === 'ObjectPattern') {
@@ -127,9 +143,10 @@ function processPatternLike(pattern: any, initId: any) {
 }
 
 /**
- *
- * @param prop
- * @param initId
+ * 处理对象属性
+ * @param prop - 对象属性节点
+ * @param initId - 初始化标识符
+ * @returns {any} 转换后的节点
  */
 function processObjectProperty(prop: any, initId: any) {
   const { key, value } = prop
@@ -157,9 +174,10 @@ function processObjectProperty(prop: any, initId: any) {
 
 /**
  * convert js AST nodes to Unified AST nodes
- * @param ast
- * @param node
+ * @param node - JavaScript AST 节点
+ * @returns {any} 转换后的统一 AST 节点
  */
+// eslint-disable-next-line sonarjs/max-switch-cases
 function convert2UAST(node: any): any {
   try {
     if (!node) return node
@@ -258,13 +276,14 @@ function convert2UAST(node: any): any {
         return node
       }
       case 'PrivateName': {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         const private_node: any = convert2UAST(node.id)
         private_node.name = `#${private_node.name}`
         return private_node
       }
       case 'BinaryExpression':
       case 'LogicalExpression': {
-        node.type = 'BinaryOperation'
+        node.type = 'BinaryExpression'
         node.left = convert2UAST(node.left)
         node.right = convert2UAST(node.right)
         return node
@@ -346,6 +365,7 @@ function convert2UAST(node: any): any {
       }
       case 'NewExpression': {
         node.expression = node.callee
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         const callee_name = node.callee && node.callee.name
         node.typeName = node.typeName || callee_name
         delete node.callee
@@ -402,6 +422,7 @@ function convert2UAST(node: any): any {
         break
       }
       case 'ObjectMethod': {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         const method_value = node
         node = {
           type: 'ObjectProperty',
@@ -540,7 +561,7 @@ function convert2UAST(node: any): any {
 
 /**
  * put optional properties in extra._meta for concision of UAST
- * @param node
+ * @param node - AST 节点
  */
 function assembleMeta(node: any) {
   node.loc = node.loc || {}
@@ -566,11 +587,12 @@ function assembleMeta(node: any) {
 }
 
 /**
- *
- * @param exprs
- * @param node
+ * 追加表达式到函数体
+ * @param exprs - 表达式数组
+ * @param node - 函数节点
  */
 function appendBody(exprs: any, node: any) {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const origin_body = node.body
   if (origin_body.type === 'BlockStatement') {
     const stmts = origin_body.body
@@ -584,17 +606,44 @@ function appendBody(exprs: any, node: any) {
   }
 }
 
-let sourcefileJS: any
-
 /**
- *
- * @param code
- * @param options
+ * 解析 JavaScript 代码
+ * @param code - 源代码内容
+ * @param options - 解析选项
+ * @returns {any} 解析后的 AST
  */
 function parseJS(code: any, options: any) {
   return uastParser.parse(code, options)
 }
 
+/**
+ * 解析单个文件（统一接口）
+ * @param code - 源代码内容
+ * @param options - 解析选项（包含 sourcefile 或 filepath）
+ * @returns {any} 解析后的 AST（未处理后处理）
+ */
+function parseSingleFile(code: string, options?: any): any {
+  // JavaScript JSON 文件特殊处理：包装为 module.exports
+  const filepath = options?.sourcefile || options?.filepath
+  if (filepath && filepath.endsWith('.json')) {
+    code = `module.exports = ${code}`
+  }
+  return parseJS(code, options)
+}
+
+/**
+ * 解析项目（统一接口）
+ * JavaScript 是单文件语言，项目解析由 parser.ts 统一处理
+ * @param _rootDir - 项目根目录（未使用）
+ * @param _options - 解析选项（未使用）
+ * @returns {Promise<any>} 解析结果
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function parseProject(_rootDir: string, _options?: any): Promise<any> {
+  return null
+}
+
 module.exports = {
-  parse: parseJS,
+  parseSingleFile,
+  parseProject,
 }

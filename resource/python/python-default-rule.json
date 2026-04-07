@@ -1,13 +1,15 @@
 [
   {
-    "checkerIds": [
-      "taint_flow_python_input",
-      "taint_flow_python_input_inner"
-    ],
+    "checkerIds": ["taint_flow_python_input", "taint_flow_python_input_inner"],
     "sources": {
       "TaintSource": [
         {
           "path": "flask.request",
+          "scopeFile": "all",
+          "scopeFunc": "all"
+        },
+        {
+          "path": "request",
           "scopeFile": "all",
           "scopeFunc": "all"
         }
@@ -17,9 +19,7 @@
       "FuncCallTaintSink": [
         {
           "fsig": "os.system",
-          "args": [
-            0
-          ]
+          "args": [0]
         }
       ]
     }

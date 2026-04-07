@@ -1,3 +1,5 @@
+import { buildNewCopiedWithTag } from '../../../../util/clone-util'
+
 const path = require('path')
 const fs = require('fs-extra')
 const globby = require('fast-glob')
@@ -5,7 +7,6 @@ const globby = require('fast-glob')
 const _ = require('lodash')
 const logger = require('../../../../util/logger')(__filename)
 const FileUtil = require('../../../../util/file-util')
-const { Errors } = require('../../../../util/error-code')
 const JsAnalyzer = require('../common/js-analyzer')
 const Initializer = require('./egg-initializer')
 const Loader = require('../../../../util/loader')
@@ -19,7 +20,6 @@ const {
 } = require('../../common')
 
 const constValue = require('../../../../util/constant')
-const { cloneWithDepth } = require('../../../../util/clone-util')
 const { handleException } = require('../../common/exception-handler')
 const { eggSanityCheck } = require('../../../../util/framework-util')
 
@@ -32,7 +32,7 @@ const load_mod_enum = {
 /**
  *
  */
-class EggAnalyzer extends (JsAnalyzer as any) {
+class EggAnalyzer extends JsAnalyzer {
   /**
    *
    * @param options
@@ -48,18 +48,25 @@ class EggAnalyzer extends (JsAnalyzer as any) {
   preProcess(dir: any) {
     // init global scope
     Initializer.initGlobalScope(this.topScope)
-
     // prepare state
     this.state = this.initState(this.topScope)
 
     // 1st process
     this.scanModules(dir)
-    Initializer.initEgg(this.moduleManager)
+
+    Initializer.initEgg(this.topScope.context.modules)
 
     // 让this.ctx.***能找到符号值
     this.loadToApp(dir, this.state)
-    logger.info(`ParseCode time: ${this.totalParseTime}ms`)
-    logger.info(`ProcessModule time: ${this.totalProcessTime}ms`)
+  }
+
+  /**
+   * 加载缓存后的初始化阶段，会创建一些全局builtin
+   */
+  initAfterUsingCache() {
+    Initializer.introduceGlobalBuiltin(this.topScope)
+    // prepare state
+    this.state = this.initState(this.topScope)
   }
 
   /**
@@ -74,37 +81,39 @@ class EggAnalyzer extends (JsAnalyzer as any) {
       const hasAnalysised: any[] = []
       for (const entryPoint of this.entryPoints) {
         if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
+          this.symbolTable.clear()
           if (
             hasAnalysised.includes(
-              `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+              `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
             )
           ) {
             continue
           }
           hasAnalysised.push(
-            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
           )
           EntryPointConfig.setCurrentEntryPoint(entryPoint)
           const { entryPointSymVal, argValues, scopeVal } = entryPoint
 
-          EggCommon.refreshCtx(scopeVal?.value?.ctx?.field)
+          // TODO(field-removal): refreshCtx 依赖 field proxy 的 delete trap，需配合 refreshCtx 一起迁移
+          EggCommon.refreshCtx(scopeVal?.value?.ctx?.value)
           this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
-          this.replaceCtxInFunctionParams(entryPointSymVal.ast, argValues, entryPointSymVal, scopeVal, this.state)
+          this.replaceCtxInFunctionParams(entryPointSymVal.ast.node, argValues, entryPointSymVal, scopeVal, this.state)
           try {
             logger.info(
               'EntryPoint [%s.%s] is executing ',
               entryPoint.filePath?.substring(0, entryPoint?.filePath?.lastIndexOf('.')),
               entryPoint.functionName ||
-                `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_$${
-                  entryPoint.entryPointSymVal?.ast.loc.end.line
+                `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc?.start?.line}_$${
+                  entryPoint.entryPointSymVal?.ast?.node?.loc?.end?.line
                 }>`
             )
-            this.executeCall(entryPointSymVal.ast, entryPointSymVal, argValues, this.state, scopeVal)
+            this.executeCall(entryPointSymVal.ast.node, entryPointSymVal, this.state, scopeVal, { callArgs: this.buildCallArgs(entryPointSymVal.ast.node, argValues, entryPointSymVal) })
           } catch (e) {
             handleException(
               e,
-              `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
-              `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`
+              `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
+              `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`
             )
           }
           this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
@@ -119,31 +128,31 @@ class EggAnalyzer extends (JsAnalyzer as any) {
             try {
               this.processCompileUnit(
                 entryPoint.scopeVal,
-                entryPoint.entryPointSymVal?.ast,
+                entryPoint.entryPointSymVal?.ast?.node,
                 this.initState(this.topScope)
               )
             } catch (e) {
               handleException(
                 e,
-                `[${entryPoint.entryPointSymVal?.ast?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-                `[${entryPoint.entryPointSymVal?.ast?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
               )
             }
           } else {
             const { filePath } = entryPoint
-            entryPoint.entryPointSymVal = this.fileManager[filePath]
-            entryPoint.scopeVal = this.fileManager[filePath]
+            entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath])
+            entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath])
             try {
               this.processCompileUnit(
                 entryPoint.scopeVal,
-                entryPoint.entryPointSymVal?.ast,
+                entryPoint.entryPointSymVal?.ast?.node,
                 this.initState(this.topScope)
               )
             } catch (e) {
               handleException(
                 e,
-                `[${entryPoint.entryPointSymVal?.ast?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-                `[${entryPoint.entryPointSymVal?.ast?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
               )
             }
           }
@@ -176,7 +185,11 @@ class EggAnalyzer extends (JsAnalyzer as any) {
             argValues.push(valExport.value.ctx)
           } else {
             argValues.push(
-              this.processInstruction(cloneWithDepth(entryPointSymVal, 2), astNode.parameters[key].id, state)
+              this.processInstruction(
+                buildNewCopiedWithTag(this, entryPointSymVal, 'tmp'),
+                astNode.parameters[key].id,
+                state
+              )
             )
           }
         }
@@ -190,10 +203,10 @@ class EggAnalyzer extends (JsAnalyzer as any) {
    * @param state
    */
   loadToApp(dir: any, state: any) {
-    const appclass = this.moduleManager.getFieldValue('Egg.Application')
-    const app = this.buildNewObject(appclass.fdef, [], appclass, state, appclass.fdef, this.topScope)
-    const ctxclass = this.moduleManager.getFieldValue('Egg.Context')
-    const ctx = this.buildNewObject(ctxclass.fdef, [], ctxclass, state, ctxclass.fdef, this.topScope)
+    const appclass = this.topScope.context.modules.getFieldValue('Egg.Application')
+    const app = this.buildNewObject(appclass.ast.fdef, appclass, state, appclass.ast.fdef, this.topScope)
+    const ctxclass = this.topScope.context.modules.getFieldValue('Egg.Context')
+    const ctx = this.buildNewObject(ctxclass.ast.fdef, ctxclass, state, ctxclass.ast.fdef, this.topScope)
 
     this.topScope.setFieldValue('ctx', ctx)
     this.topScope.setFieldValue('app', app)
@@ -273,7 +286,7 @@ class EggAnalyzer extends (JsAnalyzer as any) {
         for (let i = 0; i < properties.length; i++) {
           const prop = properties[i]
           if (i === properties.length - 1) {
-            const exports = this.moduleManager.field[fullpath]
+            const exports = this.topScope.context.modules.members.get(fullpath)
             if (!exports) {
               handleException(null, '', `${fullpath} module is not found`)
               continue
@@ -285,28 +298,28 @@ class EggAnalyzer extends (JsAnalyzer as any) {
               continue
             }
             let val
-            let fdef = export_value.fdef || export_value.ast
+            let fdef = export_value.ast.fdef || export_value.ast.node
             switch (opt.loadMod) {
               case load_mod_enum.INST:
                 // generator indicates fdef itself is controller method, e.g.
                 if (!fdef || fdef.generator) {
                   val = export_value
                 } else if (fdef.type === 'FunctionDefinition') {
-                  val = this.executeCall(fdef, export_value, [app], this.initState(export_value), scope)
+                  val = this.executeCall(fdef, export_value, this.initState(export_value), scope, { callArgs: this.buildCallArgs(fdef, [app], export_value) })
                   if (val && val?.vtype !== 'undefine') {
-                    fdef = val.fdef || val.ast
+                    fdef = val.ast.fdef || val.ast.node
                     if (fdef) {
-                      val = this.buildNewObject(fdef, [], val, this.initState(export_value), fdef, scope)
+                      val = this.buildNewObject(fdef, val, this.initState(export_value), fdef, scope)
                     }
                   } else {
                     val = export_value
                   }
                 } else {
-                  val = this.buildNewObject(fdef, [], export_value, this.initState(export_value), fdef, scope)
+                  val = this.buildNewObject(fdef, export_value, this.initState(export_value), fdef, scope)
                 }
                 break
               case load_mod_enum.CALL:
-                val = this.executeCall(fdef, export_value, [app], this.initState(export_value), scope)
+                val = this.executeCall(fdef, export_value, this.initState(export_value), scope, { callArgs: this.buildCallArgs(fdef, [app], export_value) })
                 break
               default:
                 val = export_value
@@ -327,10 +340,9 @@ class EggAnalyzer extends (JsAnalyzer as any) {
           } else {
             scope.value[prop] =
               scope.value[prop] ||
-              ObjectValue({
-                readonly: false,
+              new ObjectValue(scope.qid, {
+                runtime: { readonly: false },
                 sid: prop,
-                qid: `${scope.sid}.${prop}`,
                 parent: scope,
               })
             scope = scope.value[prop]
@@ -347,9 +359,8 @@ class EggAnalyzer extends (JsAnalyzer as any) {
   /**
    *
    * @param dir
-   * @param isReScan
    */
-  scanModules(dir: any, isReScan: boolean = false) {
+  scanModules(dir: any) {
     if (!eggSanityCheck(dir)) {
       handleException(null, `egg sanity check failed, dir:${dir}`, `egg sanity check failed, dir:${dir}`)
       return false
@@ -365,7 +376,7 @@ class EggAnalyzer extends (JsAnalyzer as any) {
     if (configContents && configContents.length > 0) {
       for (const conf of configContents) {
         const sourceFile = conf.file
-        const exports = this.processModuleSrc(conf.content, sourceFile, isReScan)
+        const exports = this.processModuleSrc(conf.content, sourceFile)
         // if (!exports || exports.id !== 'module.exports') {
         if (!exports) {
           handleException(null, '', `process config module failed, config:${sourceFile}`)
@@ -380,7 +391,7 @@ class EggAnalyzer extends (JsAnalyzer as any) {
           continue
         }
         if (config_val.vtype === 'fclos') {
-          config_val = this.executeCall({}, config_val, [], this.initState(config_val))
+          config_val = this.executeCall({}, config_val, this.initState(config_val), undefined)
         }
 
         Initializer.assignConfig((this as any).topScopeTem || this.topScope, config_val)
@@ -396,7 +407,7 @@ class EggAnalyzer extends (JsAnalyzer as any) {
         '**/*.(js|ts|mjs|cjs)',
         '!**/*.d.ts',
         '!**/*.d.js',
-        '!**/*.test.(js|ts|mjs|cjs|jsx)',
+        '!**/*.test.(js|ts|mjs|cjs|jsx|tsx)',
         '!**/node_modules',
         '!web',
         '!**/public/**',
@@ -417,7 +428,7 @@ class EggAnalyzer extends (JsAnalyzer as any) {
       process.exit(1)
     }
     for (const mod of modules) {
-      this.processModuleSrc(mod.content, mod.file, isReScan)
+      this.processModuleSrc(mod.content, mod.file)
     }
   }
 
@@ -468,14 +479,16 @@ class EggAnalyzer extends (JsAnalyzer as any) {
   processModuleDirect(ast: any, filename: any, modClos: any) {
     const res = super.processModuleDirect(ast, filename, modClos)
     // merge default into parent
+    const defaultVal = res?.members?.get('default')
     if (
-      res?.field?.default &&
-      typeof (res as any).field?.default !== undefined &&
-      res.field?.default?.vtype !== 'fclos'
+      defaultVal &&
+      typeof defaultVal !== 'undefined' &&
+      defaultVal?.vtype !== 'fclos'
     ) {
-      if (res?.field?.default?.field) {
-        for (const key in res.field?.default?.field) {
-          res.field[key] = res.field?.default?.field[key]
+      if (defaultVal?.members) {
+        for (const key of defaultVal.members.keys()) {
+          const val = defaultVal.members.get(key)
+          if (val) res.members.set(key, val)
         }
       }
     }

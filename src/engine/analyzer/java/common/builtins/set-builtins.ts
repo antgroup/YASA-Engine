@@ -4,8 +4,8 @@ const {
   clearBuffer: clearBufferSet,
   removeElementFromBuffer: removeElementFromBufferSet,
 } = require('./buffer')
-const { cloneWithDepth: cloneWithDepthJava } = require('../../../../../util/clone-util')
-const UndefinedValueJava = require('../../../common/value/undefine')
+const { shallowCopyValue } = require('../../../../../util/clone-util')
+import { UndefinedValue } from '../../../common/value/undefine'
 
 /**
  * java.util.Set
@@ -35,14 +35,14 @@ class Set extends Collection {
    * @param scope
    */
   static add(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValueJava()
+      return new UndefinedValue()
     }
 
     addElementToBufferSet(_this, argvalues[0])
 
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -54,14 +54,14 @@ class Set extends Collection {
    * @param scope
    */
   static addAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValueJava()
+      return new UndefinedValue()
     }
 
     addElementToBufferSet(_this, argvalues[0])
 
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -73,7 +73,7 @@ class Set extends Collection {
    * @param scope
    */
   static clear(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return
     }
@@ -91,7 +91,7 @@ class Set extends Collection {
    * @returns {null}
    */
   static contains(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -104,7 +104,7 @@ class Set extends Collection {
    * @returns {null}
    */
   static containsAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -116,7 +116,7 @@ class Set extends Collection {
    * @param scope
    */
   static equals(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -129,7 +129,7 @@ class Set extends Collection {
    * @returns {null}
    */
   static hashCode(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -142,7 +142,7 @@ class Set extends Collection {
    * @returns {null}
    */
   static isEmpty(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -155,12 +155,12 @@ class Set extends Collection {
    * @returns {*}
    */
   static iterator(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
-      return new UndefinedValueJava()
+      return new UndefinedValue()
     }
 
-    const newThis = cloneWithDepthJava(_this, 3)
+    const newThis = shallowCopyValue(_this)
     newThis._this = newThis
 
     return newThis
@@ -175,14 +175,14 @@ class Set extends Collection {
    * @param scope
    */
   static remove(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValueJava()
+      return new UndefinedValue()
     }
 
     removeElementFromBufferSet(_this, argvalues[0])
 
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -194,14 +194,14 @@ class Set extends Collection {
    * @param scope
    */
   static removeAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValueJava()
+      return new UndefinedValue()
     }
 
     removeElementFromBufferSet(_this, argvalues[0])
 
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -213,7 +213,7 @@ class Set extends Collection {
    * @param scope
    */
   static retainAll(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -226,7 +226,7 @@ class Set extends Collection {
    * @returns {null}
    */
   static size(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return new UndefinedValueJava()
+    return new UndefinedValue()
   }
 
   /**
@@ -252,7 +252,7 @@ class Set extends Collection {
    * @returns {*}
    */
   static toArray(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    return fclos.getThis()
+    return fclos.getThisObj()
   }
 }
 

@@ -1,3 +1,5 @@
+import type { CallInfo } from '../../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
 const GoEntryPoint = require('../../../engine/analyzer/golang/common/entrypoint-collector/go-default-entrypoint')
 const completeEntryPoint = require('../common-kit/entry-points-util')
@@ -55,13 +57,13 @@ class GoDefaultTaintChecker extends TaintChecker {
   prepareEntryPoints(topScope: any, analyzer: any) {
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
     // 添加main入口
-    let mainEntryPoints = GoEntryPoint.getMainEntryPoints(topScope.packageManager)
+    let mainEntryPoints = GoEntryPoint.getMainEntryPoints(topScope.context.packages)
     if (_.isEmpty(mainEntryPoints)) {
       logger.info('[go-default-taint-checker]EntryPoints are not found')
       return
     }
     if (Array.isArray(mainEntryPoints)) {
-      mainEntryPoints = _.uniqBy(mainEntryPoints, (value: any) => value.fdef)
+      mainEntryPoints = _.uniqBy(mainEntryPoints, (value: any) => value.ast.fdef)
     } else {
       mainEntryPoints = [mainEntryPoints]
     }
@@ -80,7 +82,8 @@ class GoDefaultTaintChecker extends TaintChecker {
         FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
       }
       const fullCallGraphEntrypoint = FullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
-        analyzer.ainfo?.callgraph
+        analyzer.ainfo?.callgraph,
+        analyzer
       )
       this.entryPoints.push(...fullCallGraphEntrypoint)
     }
@@ -93,25 +96,25 @@ class GoDefaultTaintChecker extends TaintChecker {
         let entryPointSymVal
         if (entrypoint.funcReceiverType) {
           entryPointSymVal = AstUtil.satisfy(
-            topScope.packageManager,
+            topScope.context.packages,
             (n: any) =>
               n.vtype === 'fclos' &&
-              FileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
-              n?.parent?.ast?.type === 'ClassDefinition' &&
-              n?.parent?.ast?.id?.name === entrypoint.funcReceiverType &&
-              n?.ast?.id.name === entrypoint.functionName,
-            (node: any, prop: any) => prop === 'field',
+              FileUtil.extractAfterSubstring(n?.ast?.node?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
+              n?.parent?.ast?.node?.type === 'ClassDefinition' &&
+              n?.parent?.ast?.node?.id?.name === entrypoint.funcReceiverType &&
+              n?.ast?.node?.id.name === entrypoint.functionName,
+            (node: any, prop: any) => prop === '_field',
             null,
             false
           )
         } else {
           entryPointSymVal = AstUtil.satisfy(
-            topScope.packageManager,
+            topScope.context.packages,
             (n: any) =>
               n.vtype === 'fclos' &&
-              FileUtil.extractAfterSubstring(n?.ast?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
-              n?.ast?.id.name === entrypoint.functionName,
-            (node: any, prop: any) => prop === 'field',
+              FileUtil.extractAfterSubstring(n?.ast?.node?.loc?.sourcefile, Config.maindirPrefix) === entrypoint.filePath &&
+              n?.ast?.node?.id.name === entrypoint.functionName,
+            (node: any, prop: any) => prop === '_field',
             null,
             false
           )
@@ -120,7 +123,7 @@ class GoDefaultTaintChecker extends TaintChecker {
           continue
         }
         if (Array.isArray(entryPointSymVal)) {
-          entryPointSymVal = _.uniqBy(entryPointSymVal, (value: any) => value.fdef)
+          entryPointSymVal = _.uniqBy(entryPointSymVal, (value: any) => value.ast.fdef)
         } else {
           entryPointSymVal = [entryPointSymVal]
         }
@@ -160,11 +163,11 @@ class GoDefaultTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
     const calleeObject = fclos?.object
-    this.checkByNameAndClassMatch(node, fclos, argvalues, scope)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, argvalues, funcCallArgTaintSource)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource)
   }
 
   /**
@@ -188,19 +191,20 @@ class GoDefaultTaintChecker extends TaintChecker {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
    */
-  checkByNameAndClassMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
     if (fclos === undefined) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
-    if (!rules || !argvalues) return
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, argvalues)
+    if (!rules || !callInfo) return
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
+      const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds((rule as any).sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
         node,
@@ -227,7 +231,8 @@ class GoDefaultTaintChecker extends TaintChecker {
             fclos,
             TAINT_TAG_NAME,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state?.callstack
           )
 
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
@@ -247,7 +252,7 @@ class GoDefaultTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any) {
-    IntroduceTaint.introduceTaintAtIdentifierDirect(node, info.res, this.sourceScope.value)
+    IntroduceTaint.introduceTaintAtIdentifierDirect(analyzer, scope, node, info.res, this.sourceScope.value)
   }
 }
 

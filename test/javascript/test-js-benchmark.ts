@@ -1,7 +1,7 @@
 import * as _ from 'lodash'
 import * as fs from 'fs'
 import * as path from 'path'
-import { describe, it } from 'mocha'
+import { describe, it, before } from 'mocha'
 import * as assert from 'assert'
 const config = require('../../src/config')
 const logger = require('../../src/util/logger')(__filename)
@@ -15,12 +15,65 @@ const taint_flow_name = ['taint_flow_test']
 
 function regressionXastJsBenchmark(): void {
   const jsBenchmarkPath = path.resolve(__dirname, BENCHMARKS_DIR, XAST_JS_BENCHMARK)
-  if (fs.existsSync(jsBenchmarkPath)) {
-    const result = runXastJsBenchmark(jsBenchmarkPath)
-    checkXastJsBenchmarkResult(result)
+  const expectResultPath = path.join(path.resolve(jsBenchmarkPath), '..', '..', 'expect', 'jsbenchmark-expect.json')
+  let expectedResult: Record<string, any> = {}
+  if (fs.existsSync(expectResultPath)) {
+    const expectedData = fs.readFileSync(expectResultPath).toString()
+    expectedResult = JSON.parse(expectedData)
   } else {
-    logger.warn(`XAST JS benchmark directory not found: ${jsBenchmarkPath}`)
+    logger.warn(`JS benchmark expectation file not found: ${expectResultPath}`)
   }
+
+  describe('YASA test Xast Js Benchmark', function () {
+    this.timeout(0)
+    let actualRes: Record<string, any> = {}
+    let actualResMap = new Map<string, any>()
+    let benchmarkReady = false
+
+    before(async function () {
+      if (!fs.existsSync(jsBenchmarkPath)) {
+        this.skip()
+        return
+      }
+      const result = await runXastJsBenchmark(jsBenchmarkPath)
+      actualRes = result.actualRes
+      actualResMap = result.actualResMap
+      benchmarkReady = true
+    })
+
+    it(`check result data directly`, function () {
+      if (!benchmarkReady) {
+        this.skip()
+        return
+      }
+      const testReport = statisticImpactArea(actualResMap, './test/javascript/test-report')
+      logger.info(testReport)
+      writeLog(testReport, './test/javascript/test-report')
+    })
+
+    let i = 1
+    if (expectedResult) {
+      for (const caseKey of Object.keys(expectedResult)) {
+        it(`${i++}-case:${caseKey}`, function () {
+          if (!benchmarkReady) {
+            this.skip()
+            return
+          }
+          logger.info('expected:\n' + expectedResult[caseKey])
+          logger.info('actual:\n' + actualRes[caseKey])
+          if (_.has(actualRes, caseKey)) {
+            assert.strictEqual(
+              actualRes[caseKey],
+              expectedResult[caseKey],
+              `链路${caseKey}实际trace或内容与预期不一致,请核对该链路`
+            )
+          } else {
+            assert.fail(`链路:${caseKey}不存在！！！需要排查原因`)
+          }
+        })
+      }
+    }
+  })
 }
 
 function getAllTestCase(filename: string): string[] {
@@ -56,7 +109,20 @@ function getAllTestCase(filename: string): string[] {
 }
 
 function recordFinding(finding: any, filename: string, findingResMap: Map<string, any>): void {
-  const keyname = filename.substring(filename.lastIndexOf('/benchmarks'))
+  // 规范化路径分隔符为 /，兼容不同操作系统（Windows 使用 \）
+  const normalizedFilename = filename.replace(/\\/g, '/')
+  // 兼容 /benchmarks 和 /jsbenchmark 两种路径格式
+  let keyname: string
+  const benchmarksIndex = normalizedFilename.lastIndexOf('/benchmarks')
+  const jsbenchmarkIndex = normalizedFilename.lastIndexOf('/jsbenchmark')
+  if (benchmarksIndex !== -1) {
+    keyname = normalizedFilename.substring(benchmarksIndex)
+  } else if (jsbenchmarkIndex !== -1) {
+    keyname = normalizedFilename.substring(jsbenchmarkIndex)
+  } else {
+    // 如果都找不到，使用整个路径
+    keyname = normalizedFilename
+  }
   for (const ruleName of taint_flow_name) {
     if (!finding || Object.keys(finding).length === 0) {
       findingResMap.set(keyname, { [ruleName]: 0 })
@@ -194,7 +260,11 @@ function getTFPN(findingResMap: Map<string, any>): {
   return { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown }
 }
 
-function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): any {
+async function runSingleTest(
+  casePath: string,
+  actualResMap: Map<string, any>,
+  outputStrategyAutoRegister: any
+): Promise<any> {
   config.ruleConfigFile = './test/javascript/rule_config.json'
   config.checkerIds = ['taint_flow_test']
   config.language = 'javascript'
@@ -203,7 +273,13 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
 
   const code = fs.readFileSync(casePath).toString()
   const recorder = recordFindingStr()
-  const filename = casePath.substring(casePath.lastIndexOf('/jsbenchmark')).replace(/\.js/g, '')
+  // 规范化路径分隔符为 /，兼容不同操作系统（Windows 使用 \），保持原有提取逻辑
+  const normalizedCasePath = casePath.replace(/\\/g, '/')
+  let filename = normalizedCasePath.substring(normalizedCasePath.lastIndexOf('/jsbenchmark')).replace(/\.js/g, '')
+  // 兼容期望结果格式：去掉 /sast-js/case 或 /case 目录（期望结果文件中不包含这些目录）
+  // 这样既兼容原有逻辑，又能匹配期望的 key 格式
+  filename = filename.replace(/^\/jsbenchmark\/sast-js\/case\//, '/jsbenchmark/')
+  filename = filename.replace(/^\/jsbenchmark\/case\//, '/jsbenchmark/')
   const analyzer = new Analyzer({
     ...config,
     language: 'javascript',
@@ -215,7 +291,7 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
     ruleConfigFile: ruleConfigFile,
   })
 
-  const findingRes = analyzer.analyzeSingleFile(code, filename)
+  const findingRes = await analyzer.analyzeSingleFile(code, filename)
   if (findingRes) {
     const { resultManager } = analyzer.getCheckerManager()
     const allFindings = resultManager.getFindings()
@@ -235,82 +311,44 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
   }
 }
 
-function runXastJsBenchmark(dir: string): {
-  actualRes: any
+async function runXastJsBenchmark(dir: string): Promise<{
+  actualRes: Record<string, any>
   actualResMap: Map<string, any>
-  expectedResult: any
-} {
-  let allCases = getAllTestCase(dir)
-  let actualRes: any = {}
-  let actualResMap = new Map<string, any>()
+}> {
+  const allCases = getAllTestCase(dir)
+  const actualRes: Record<string, any> = {}
+  const actualResMap = new Map<string, any>()
   const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
   outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
+    const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
     if (singleRes) {
       for (const [key, value] of Object.entries(singleRes)) {
-        actualRes[key] = value
+        actualRes[key as string] = value
       }
     }
   }
-  const expectResultPath = path.join(path.resolve(dir), '..', '..', 'expect', 'jsbenchmark-expect.json')
-  const expectedData = fs.readFileSync(expectResultPath).toString()
-  const expectedResult = JSON.parse(expectedData)
   return {
     actualRes,
     actualResMap,
-    expectedResult,
   }
-}
-
-function checkXastJsBenchmarkResult(result: {
-  actualRes: any
-  actualResMap: Map<string, any>
-  expectedResult: any
-}): void {
-  const { actualRes, actualResMap, expectedResult } = result
-  describe('YASA test Xast Js Benchmark', function () {
-    it(`check result data directly`, function () {
-      let testReport = statisticImpactArea(actualResMap, './test/javascript/test-report')
-      logger.info(testReport)
-      writeLog(testReport, './test/javascript/test-report')
-    })
-    let i = 1
-    if (expectedResult) {
-      for (let caseKey of Object.keys(expectedResult)) {
-        it(`${i++}-case:${caseKey}`, function () {
-          logger.info('expected:\n' + expectedResult[caseKey])
-          logger.info('actual:\n' + actualRes[caseKey])
-          if (_.has(actualRes, caseKey)) {
-            assert.strictEqual(
-              actualRes[caseKey],
-              expectedResult[caseKey],
-              `链路${caseKey}实际trace或内容与预期不一致,请核对该链路`
-            )
-          } else {
-            assert.fail(`链路:${caseKey}不存在！！！需要排查原因`)
-          }
-        })
-      }
-    }
-  })
 }
 
 regressionXastJsBenchmark()
 // const JSBENCHMARK_PATH = fileUtil.getAbsolutePath('./test/javascript/benchmarks/jsbenchmark/')
 // updateJsBenchmarkBackupfile(JSBENCHMARK_PATH)
 
-function updateJsBenchmarkBackupfile(dir: string): void {
-  let allCases = getAllTestCase(dir)
-  let actualRes: any = {}
-  let actualResMap = new Map<string, any>()
+async function updateJsBenchmarkBackupfile(dir: string): Promise<void> {
+  const allCases = getAllTestCase(dir)
+  const actualRes: Record<string, any> = {}
+  const actualResMap = new Map<string, any>()
   const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
   outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
+    const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
     if (singleRes) {
       for (const [key, value] of Object.entries(singleRes)) {
-        actualRes[key] = value
+        actualRes[key as string] = value
       }
     }
   }

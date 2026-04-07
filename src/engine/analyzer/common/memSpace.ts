@@ -1,26 +1,19 @@
 const _ = require('lodash')
 const logger = require('../../../util/logger')(__filename)
-const typeUtil = require('../../util/type-util')
 const memState = require('./memState')
 const Scope = require('./scope')
-const nativeResolver = require('./native-resolver')
 const symAddress = require('./sym-address')
-const valueFormatter = require('../../../util/value-formatter')
-const { Errors: MemSpaceErrors } = require('../../../util/error-code')
+const { Errors } = require('../../../util/error-code')
 const {
-  ValueUtil: {
-    UndefinedValue: MemSpaceUndefinedValue,
-    ObjectValue: MemSpaceObjectValue,
-    PrimitiveValue: MemSpacePrimitiveValue,
-    UnionValue: MemSpaceUnionValue,
-    SymbolValue: MemSpaceSymbolValue,
-  },
-  Unit: MemSpaceUnit,
-  ValueUtil: MemSpaceValueUtil,
+  ValueUtil: { UndefinedValue, ObjectValue, PrimitiveValue, UnionValue, SymbolValue, MemberExprValue, IdentifierRefValue },
+  Unit,
 } = require('../../util/value-util')
-const MemSpaceAstUtil = require('../../../util/ast-util')
-const memSpaceVarUtil = require('../../../util/variable-util')
-const { handleException: memSpaceHandleException } = require('./exception-handler')
+const AstUtil = require('../../../util/ast-util')
+const varUtil = require('../../../util/variable-util')
+const { handleException } = require('./exception-handler')
+
+import type UnitType from './value/unit'
+type FilterFn = ((scope: UnitType) => boolean) | null
 
 // ***
 /**
@@ -33,13 +26,13 @@ class MemSpace extends Scope {
    * @param ids
    * @param createIfNotExists
    */
-  getFieldValue(unit: any, ids: any, createIfNotExists?: boolean): any {
+  getFieldValue(unit: any, ids: any, createIfNotExists?: boolean): UnitType | null {
     if (!unit) {
       return null
     }
 
-    if (!(unit instanceof MemSpaceUnit)) {
-      unit = MemSpaceValueUtil.ObjectValue(unit)
+    if (!(unit instanceof Unit)) {
+      unit = new ObjectValue('', { sid: '<wrapped_object>', ...unit })
     }
 
     return unit.getFieldValue(ids, createIfNotExists)
@@ -50,7 +43,7 @@ class MemSpace extends Scope {
    * @param unit
    * @param ids
    */
-  getFieldValueIfNotExists(unit: any, ids: any): any {
+  getFieldValueIfNotExists(unit: any, ids: any): UnitType | null {
     return this.getFieldValue(unit, ids, true)
   }
 
@@ -63,14 +56,14 @@ class MemSpace extends Scope {
    * @param state
    * @returns {*}
    */
-  resolveIndices(scope: any, node: any, state: any): any {
+  resolveIndices(scope: UnitType, node: any, state: any): any {
     if (!node) return node
     // 针对error类型特别适配
     if (node?.rtype?.type === 'Identifier' && node?.rtype?.name === 'error') {
       return node
     }
 
-    if (typeof node === 'string') node = MemSpaceSymbolValue({ type: 'Identifier', name: node })
+    if (typeof node === 'string') node = new IdentifierRefValue(scope.qid, node, null, null)
 
     if (node.type === 'MemberAccess') {
       let index: any
@@ -82,42 +75,58 @@ class MemSpace extends Scope {
       } else {
         const prop = node.property
         index = this.processInstruction(scope, prop, state)
-        // if (!index || !(index.type === 'Literal' || index.type === 'Identifier' || index.vtype === 'union')) {
-        //    index = prop;
-        // }
-        if (!index) index = MemSpaceSymbolValue(prop)
+        if (!index) index = new SymbolValue(scope.qid, { sid: `<indice_process_prop_failed>`, ...prop })
       }
       const object = this.resolveIndices(scope, node.object, state)
       if (object === node.object && index === prop) return node
-      return MemSpaceSymbolValue({
-        type: 'MemberAccess',
-        object,
-        property: index,
+      return new MemberExprValue(object.qid, object, index, node.computed, node, node.loc)
+    }
+    if (node.type === 'Identifier' || node.type === 'Parameter') {
+      return new SymbolValue(scope.qid, { sid: `<indice_${node.name}>`, ...node })
+    }
+    if (node.type === 'Literal') {
+      return new SymbolValue(scope.qid, { sid: `<indice_${node.value}>`, ...node })
+    }
+    if (node.type === 'ThisExpression') {
+      return new SymbolValue(scope.qid, {
+        sid: `<indice_thisExpression_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+        ...node,
       })
     }
-    if (
-      node.type === 'Identifier' ||
-      node.type === 'Literal' ||
-      node.type === 'ThisExpression' ||
-      node.type === 'Parameter' ||
-      node.type === 'SuperExpression'
-    ) {
-      return MemSpaceSymbolValue(node)
+    if (node.type === 'SuperExpression') {
+      return new SymbolValue(scope.qid, {
+        sid: `<indice_superExpression_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+        ...node,
+      })
     }
     if (node.vtype === 'union') {
-      const res: any[] = []
-      for (const el of node.value) {
-        const v = this.resolveIndices(scope, el, state)
-        if (v) res.push(v)
+      const res: UnitType[] = []
+      let values = node.value
+      if (values && !Array.isArray(values)) {
+        values = Object.values(values)
       }
-      return MemSpaceUnionValue({ value: res })
+      if (Array.isArray(values)) {
+        for (const el of values) {
+          const v = this.resolveIndices(scope, el, state)
+          if (v) res.push(v)
+        }
+      }
+      return new UnionValue(res, undefined, `${scope.qid}.<union@idx:${node.loc?.start?.line}:${node.loc?.start?.column}>`, node.ast?.node)
     }
     // for Parameter and Return Parameter
     if (node.type === 'VariableDeclaration') {
-      return MemSpaceSymbolValue({ type: 'Parameter', name: node.id?.name, ast: node })
+      return new SymbolValue(scope.qid, {
+        sid: `<indice_${node.id?.name}>`,
+        type: 'Parameter',
+        name: node.id?.name,
+        ast: node,
+      })
     }
     if (node.type === 'DereferenceExpression') {
-      return MemSpaceSymbolValue(node.argument)
+      return new SymbolValue(scope.qid, {
+        sid: `<indice_DereferenceExpression_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+        ...node.argument,
+      })
     }
     return this.processInstruction(scope, node, state)
   }
@@ -131,8 +140,8 @@ class MemSpace extends Scope {
    * @param filter specify the scope to skip
    * @returns {{type, object, property}|*}
    */
-  getMemberValue(scope: any, node: any, state: any, filter: any = null): any {
-    return this._getMemberValue(scope, node, state, true, undefined, filter)
+  getMemberValue(scope: UnitType, node: any, state: any, filter: FilterFn = null): any {
+    return this._getMemberValue(scope, node, state, true, undefined, filter, false)
   }
 
   /**
@@ -144,8 +153,21 @@ class MemSpace extends Scope {
    * @param limit
    * @returns {{type, object, property}|*}
    */
-  getMemberValueNoCreate(scope: any, node: any, state: any, limit?: number): any {
-    return this._getMemberValue(scope, node, state, false, limit)
+  getMemberValueNoCreate(scope: UnitType, node: any, state: any, limit?: number): any {
+    return this._getMemberValue(scope, node, state, false, limit, undefined, false)
+  }
+
+  /**
+   * read the value of a variable from the current scope only
+   * value will be created if not existing
+   * @param scope
+   * @param node
+   * @param state
+   * @param filter
+   * @returns {{type, object, property}|*}
+   */
+  getMemberValueInCurrentScope(scope: UnitType, node: any, state: any, filter: FilterFn = null): any {
+    return this._getMemberValue(scope, node, state, true, undefined, filter, true)
   }
 
   /**
@@ -157,23 +179,37 @@ class MemSpace extends Scope {
    * @param limit
    * @param filter
    */
-  _getMemberValue(scope: any, node: any, state: any, createIfNotExists: boolean, limit?: number, filter?: any): any {
+  _getMemberValue(
+    scope: any,
+    node: any,
+    state: any,
+    createIfNotExists: boolean,
+    limit?: number,
+    filter?: FilterFn,
+    currentScopeOnly?: boolean
+  ): any {
     if (typeof node === 'string') {
       return this._getMemberValue(
         scope,
-        MemSpaceAstUtil.qualifiedNameToMemberAccess(node),
+        AstUtil.qualifiedNameToMemberAccess(node),
         state,
         createIfNotExists,
-        limit
+        limit,
+        filter,
+        currentScopeOnly
       )
     }
-    if (filter && filter(scope)) return MemSpaceUndefinedValue()
+    if (filter && filter(scope)) return new UndefinedValue()
 
     let defscope = scope
     if (scope.vtype === 'union') {
       if (!limit) limit = 30
-      const res = MemSpaceUnionValue()
-      for (const scp of scope.value) {
+      const res = new UnionValue(undefined, undefined, `${scope.qid}.<union@mem:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`, node)
+      let values = scope.value
+      if (values && !Array.isArray(scope.value)) {
+        values = Object.values(scope.value)
+      }
+      for (const scp of values) {
         if (scp && limit > 0) {
           res.appendValue(this._getMemberValue(scp, node, state, createIfNotExists, limit--, filter))
         }
@@ -181,20 +217,20 @@ class MemSpace extends Scope {
       return res
     }
     // 如果scope.vtype是object 则传入的scope就是当前obj的defscope 直接从scope中取值即可
-    if (!['object', 'symbol', 'undefine'].includes(scope.vtype)) {
+    if (!['object', 'symbol', 'undefine', 'uninitialized'].includes(scope.vtype)) {
       // find the scope defining this object (e.g. for obj.x)
-      defscope = this.getDefScope(scope, node)
+      if (!currentScopeOnly) {
+        defscope = this.getDefScope(scope, node)
+      }
     }
 
     if (state?.brs) state.br_index = 0
     const res = this._getMemberValueRec(defscope, node, state, createIfNotExists)
-    if (res && !res?.sort) {
-      res.sort = res.qid
-    }
     if (res && res.type === 'MemberAccess') {
       if (res.object) {
-        const { hasTagRec } = res.object // the property is usually tainted (e.g. user-controlled)
-        if (hasTagRec) res.hasTagRec = hasTagRec
+        // res.object 可能非 Unit，先检查 taint 存在
+        const isTainted = res.object.taint ? res.object.taint.isTainted : false
+        if (isTainted) res.taint?.propagateFrom(res.object)
       }
     }
     return res
@@ -215,7 +251,7 @@ class MemSpace extends Scope {
 
     if (node.vtype === 'union') {
       // value union
-      const res = MemSpaceUnionValue()
+      const res = new UnionValue(undefined, undefined, `${scope.qid}.<union@memR:${node.qid}>`, node.ast?.node)
       for (const el of node.value) {
         const val = this._getMemberValueRec(scope, el, state, createIfNotExists)
         if (val) res.appendValue(val)
@@ -281,20 +317,11 @@ class MemSpace extends Scope {
    * @param oldVal
    * @returns {*}
    */
-  saveVarInScope(scope: any, node: any, value: any, state: any, oldVal: any = null): any {
+  saveVarInScope(scope: UnitType, node: any, value: UnitType, state: any, oldVal: UnitType | null = null): any {
     if (!value.rtype && oldVal && oldVal.rtype) value.rtype = oldVal.rtype
     const resolvedNode = this.resolveIndices(scope, node, state)
 
-    // find the scope defining this object (e.g. for obj.x)
     const defscope = this.getDefScope(scope, node)
-    // // use the top scope if not found
-    // if (!defscope) {
-    //     defscope = scope;
-    //     let limit = 20;      // control circular pointers
-    //     while (defscope.parent && defscope.parent.id !== 'top' && (limit--)) {
-    //         defscope = defscope.parent;
-    //     }
-    // }
 
     if (state && state.brs) state.br_index = 0
     return this.saveVarInCurrentScope(defscope, resolvedNode, value, state)
@@ -308,7 +335,7 @@ class MemSpace extends Scope {
    * @param state
    * @returns {*}
    */
-  saveVarInCurrentScope(scope: any, node: any, value: any, state: any): any {
+  saveVarInCurrentScope(scope: UnitType, node: any, value: UnitType, state: any): any {
     const resolvedNode = this.resolveIndices(scope, node, state)
     if (value && resolvedNode?.rtype && !value?.rtype) {
       value.rtype = resolvedNode.rtype
@@ -342,7 +369,7 @@ class MemSpace extends Scope {
       return
     }
 
-    if (typeof node === 'string') node = MemSpaceSymbolValue({ type: 'Identifier', name: node })
+    if (typeof node === 'string') node = new IdentifierRefValue(scope.qid, node, null, null)
 
     switch (node.type) {
       case 'MemberAccess': {
@@ -424,12 +451,12 @@ class MemSpace extends Scope {
     // a short-cut from the identity to the value
     if (scope.value) {
       const sid = symAddress.toStringID(node)
-      let u_sid = sid
-      if (node.trans_dep && state.tid) {
-        u_sid = `${sid}~${state.tid}`
+      let usid = sid
+      if (node.runtime?.transDep && state.tid) {
+        usid = `${sid}~${state.tid}`
       }
 
-      if (sid) scope.value[u_sid] = value
+      if (sid) scope.value[usid] = value
     }
   }
 
@@ -443,14 +470,14 @@ class MemSpace extends Scope {
     if (!scope) return // FIXME
 
     if (scope.vtype === 'union') {
-      const res: any[] = []
-      scope.value.forEach((s: any) => {
+      const res: UnitType[] = []
+      scope.value.forEach((s: UnitType) => {
         res.push(this._removeMemberValueDirect(s, node, state))
       })
       if (res.length === 0) return undefined
       if (res.length === 1) return res[0]
 
-      return MemSpaceUnionValue({ value: res })
+      return new UnionValue(res, undefined, `${scope.qid}.<union@rm:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`, node)
     }
     if (scope.vtype === 'BVT') {
       scope = memState.loadForkedValue(scope, state)
@@ -479,15 +506,6 @@ class MemSpace extends Scope {
         const isArray = Array.isArray(scope)
         const fields = isArray ? scope : scope.value
 
-        const scopeId = scope.getQualifiedId()
-        const qid = Scope.joinQualifiedName(scopeId, index)
-        const sid = index
-        if (isArray) {
-          // interpret native members
-          const native = nativeResolver.simplifyArrayExpression(scope, index)
-          if (native) return native
-        }
-
         // if (fields && fields.hasOwnProperty(index)) {
         if (fields && _.has(fields, index)) {
           delete fields[index]
@@ -512,7 +530,7 @@ class MemSpace extends Scope {
     state: any,
     createIfNotExists: boolean,
     stack: number,
-    visited: Set<any>
+    visited: Set<UnitType>
   ): any {
     if (!scope) return // FIXME
     visited = visited || new Set()
@@ -524,14 +542,14 @@ class MemSpace extends Scope {
     }
     visited.add(scope)
     if (scope.vtype === 'union') {
-      const res: any[] = []
-      scope.value.forEach((s: any) => {
+      const res: UnitType[] = []
+      scope.value.forEach((s: UnitType) => {
         res.push(this._getMemberValueDirect(s, node, state, createIfNotExists, stack, visited))
       })
       if (res.length === 0) return undefined
       if (res.length === 1) return res[0]
 
-      return MemSpaceUnionValue({ value: res })
+      return new UnionValue(res, undefined, `${scope.qid}.<union@memD:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`, node)
     }
     if (scope.vtype === 'BVT') {
       scope = memState.loadForkedValue(scope, state)
@@ -568,26 +586,21 @@ class MemSpace extends Scope {
         }
         const qid = Scope.joinQualifiedName(scopeId, index)
         const sid = index?.toString()
-        if (isArray) {
-          // interpret native members
-          const native = nativeResolver.simplifyArrayExpression(scope, index)
-          if (native) return native
-        }
         let val: any
         if (fields && _.has(fields, index)) {
           // todo 还需要判断当前的val 是否state匹配
           val = fields[index]
-          if (Object.prototype.hasOwnProperty.call(val, 'jumpLocate')) {
-            const targetVal = val.jumpLocate(val, qid, scope)
+          if (val.func?.jumpLocate) {
+            const targetVal = val.func.jumpLocate(val, qid, scope)
             if (targetVal) {
               val = targetVal
             }
           }
-        } else if (!createIfNotExists && !scope.hasTagRec) {
+        } else if (!createIfNotExists && !scope.taint?.isTaintedRec) {
           // notice that if scope has taint, sub field will always be created
-          return MemSpaceUndefinedValue({
-            index,
-            qid: index,
+          return new UndefinedValue({
+            sid: index,
+            qid: scope.qid + index,
             parent: scope, // refer to the parent scope
           })
         } else if (fields && (!!fields.prototype || index === '__proto__' || index === 'prototype')) {
@@ -599,10 +612,8 @@ class MemSpace extends Scope {
             if (!fields.prototype) {
               scope.setFieldValue(
                 'prototype',
-                MemSpaceObjectValue({
-                  id: 'prototype',
+                new ObjectValue(scope.qid, {
                   sid: 'prototype',
-                  qid: 'prototype',
                   parent: scope,
                 })
               )
@@ -613,7 +624,6 @@ class MemSpace extends Scope {
             // 先在field找，如果没有，则看field是否有prototype的符号值 prototype如果有index则返回prototype中的index
             // prototype中如果没有，但prototype中还有prototype则递归从原型符号链查找
             val = this.getPropertyFromPrototype(fields.prototype, index)
-            // val = _.has(fields['prototype'].field ,index) ? fields['prototype'].field[index] : MemSpaceSymbolValue({ type: 'MemberAccess', object: scope, property: node, ast: node.ast, sid, qid,})
           }
         }
         if (!val) {
@@ -621,112 +631,103 @@ class MemSpace extends Scope {
           // otherwise possibly symbolic access
           if (isArray || scope.type === 'MemberAccess' || scope.vtype === 'object' || scope.vtype === 'symbol') {
             // do not create a value, instead return the "scope.index" expression
-            val = MemSpaceSymbolValue({
-              type: 'MemberAccess',
-              object: scope,
-              property: node,
-              ast: node.ast,
-              sid,
-              qid,
-            })
+            val = new MemberExprValue('', scope, node, false, node.ast?.node, node.loc)
+            val._sid = sid
+            val._qid = qid
             if (scope.value && typeof scope.value === 'object') {
               scope.value[index] = val
             }
 
-            if (scope.hasTagRec) {
-              val.hasTagRec = scope.hasTagRec
+            if (scope.taint?.isTaintedRec && val.taint) {
+              val.taint?.propagateFrom(scope)
             }
-            if (memSpaceVarUtil.isNotEmpty(scope._tags)) {
-              val._tags = _.clone(scope._tags)
+            if (scope.taint?.hasTags() && val.taint) {
+              for (const t of scope.taint.getTags()) val.taint.addTag(t)
             }
-            if (scope.trace) {
-              val.trace = _.clone(scope.trace)
+            if (scope.taint.hasTraces() && val.taint) {
+              val.taint.inheritTracesFrom(scope.taint)
             }
           } else if (scope.value && scope.type !== 'Literal') {
             try {
               val = this.createIdentifierFieldValue(node, scope)
               val.sid = sid
-              val.qid = qid
+              val._qid = qid
+              val.uuid = null
+              val.calculateAndRegisterUUID()
             } catch (e) {
-              memSpaceHandleException(e, '', 'Error occurred in Memspace.getValueDirect')
+              handleException(e, '', 'Error occurred in Memspace.getValueDirect')
             }
           }
         }
 
         if (val) {
-          if (typeof val === 'string' || typeof val === 'number') {
-            return MemSpacePrimitiveValue({ value: val, type: 'Literal' })
+          if (typeof val === 'string') {
+            return new PrimitiveValue('', val, val, null, 'Literal')
           }
-          if (!val.hasTagRec && scope.hasTagRec) {
-            val.hasTagRec = scope.hasTagRec
+          if (typeof val === 'number') {
+            return new PrimitiveValue('', `<number_${val}>`, val, null, 'Literal')
           }
-          if (memSpaceVarUtil.isEmpty(val._tags) && memSpaceVarUtil.isNotEmpty(scope._tags)) {
-            val._tags = _.clone(scope._tags)
+          if (typeof val === 'boolean') {
+            return new PrimitiveValue('', `<boolean_${val}>`, val, null, 'Literal')
           }
-          if (!val.trace && scope.trace) {
-            val.trace = _.clone(scope.trace)
+          if (val.taint && !val.taint?.isTaintedRec && scope.taint?.isTaintedRec) {
+            val.taint?.propagateFrom(scope)
+          }
+          if (val.taint && !val.taint?.hasTags() && scope.taint?.hasTags()) {
+            for (const t of scope.taint.getTags()) val.taint.addTag(t)
+          }
+          if (val.taint && !val.taint.hasTraces() && scope.taint.hasTraces()) {
+            val.taint.inheritTracesFrom(scope.taint)
           }
           val = memState.loadForkedValue(val, state) // may need to resolve branch-dependent values
           if (!val) {
             // val = Scope.createSubScope(index, scope);
-            val = MemSpaceUndefinedValue({
-              index,
-              qid: index,
+            val = new UndefinedValue({
+              sid: index,
+              qid: `${scope.qid}.${index}`,
               parent: scope, // refer to the parent scope
             })
             return val
           }
           // if (typeof val === 'string' || typeof val === 'number') {
-          //   return MemSpacePrimitiveValue({ value: val, type: 'Literal' })
+          //   return PrimitiveValue({ value: val, type: 'Literal' })
           // }
           if (val && typeof val === 'string') {
-            val = MemSpacePrimitiveValue({ type: 'Literal', value: val })
-          }
-          if (!val.sort) val.sort = typeUtil.inferType({ type: 'MemberAccess', expression: scope, property: val })
-
-          if (!val.sort && val.type === 'Literal') {
-            val.sort = typeUtil.inferType(val)
+            val = new PrimitiveValue('', val, val, null, 'Literal')
           }
 
           // set the "this" pointer for objects
           if (val.vtype === 'fclos') {
-            val._this = scope.getThis()
+            val._this = scope.getThisObj()
           }
-          if (node.hasTagRec) {
-            // 一般情况下 对象的key的符号值是不会存储到field里的，field只用来存储value的符号值
-            // 当污点在key上时，key的符号值会被转换成普通字符串，并且不会存储到field中 此时污点信息taint和trace丢失发生断链
-            // 为了解决上述问题 若key携带污点，则将key的符号值存储到misc里 只要后续worklist能遍历到misc 这条污点链路即可建立起来
+          if (node.taint && node.taint?.isTaintedRec) {
+            // 当 key 携带污点，存储到 misc 避免断链
             scope.setMisc(sid, node)
           }
           return val
         }
+        const memberExpr = new MemberExprValue('', scope, node, false, node.ast?.node, node.loc)
+        memberExpr._sid = sid
+        memberExpr._qid = qid
         const res =
           scope.vtype === 'scope'
             ? node
-            : MemSpaceSymbolValue({
-                type: 'MemberAccess',
-                object: scope,
-                property: node,
-                ast: node.ast,
-                sid,
-                qid,
-              })
-        res.sort = typeUtil.inferType(res)
+            : memberExpr
         if (scope.vtype === 'primitive') {
-          if (!res.hasTagRec && scope.hasTagRec) {
-            res.hasTagRec = scope.hasTagRec
+          if (res.taint && !res.taint?.isTaintedRec && scope.taint?.isTaintedRec) {
+            res.taint?.propagateFrom(scope)
           }
-          if (memSpaceVarUtil.isEmpty(res._tags) && memSpaceVarUtil.isNotEmpty(scope._tags)) {
-            res._tags = _.clone(scope._tags)
+          if (res.taint && !res.taint?.hasTags() && scope.taint?.hasTags()) {
+            for (const t of scope.taint.getTags()) res.taint.addTag(t)
           }
-          if (!res.trace && scope.trace) {
-            res.trace = _.clone(scope.trace)
+          if (res.taint && !res.taint.hasTraces() && scope.taint.hasTraces()) {
+            res.taint.mergeTracesFrom(scope.taint)
           }
         }
         return res
       }
       case 'ThisExpression': {
-        return scope.getThis()
+        return scope.getThisObj()
       }
       case 'UnaryOperation': {
         switch (node.operator) {
@@ -741,7 +742,7 @@ class MemSpace extends Scope {
             node = node.subExpression
             break
           default:
-            MemSpaceErrors.UnsupportedOperator(`unsupported operator:${node.operator}`)
+            Errors.UnsupportedOperator(`unsupported operator:${node.operator}`)
         }
       }
     }
@@ -751,7 +752,7 @@ class MemSpace extends Scope {
     const { updates } = scope
     if (updates) {
       // if node is transaction related, don't get from updates
-      if (!node.trans_dep) {
+      if (!node.runtime?.transDep) {
         const v = updates.get(node)
         if (v) return v
       }
@@ -760,44 +761,37 @@ class MemSpace extends Scope {
     if (scope.value) {
       const sid = symAddress.toStringID(node)
       if (sid) {
-        let u_sid = sid
-        if (node.trans_dep && state.tid) {
-          u_sid = `${sid}~${state.tid}`
+        let usid = sid
+        if (node.runtime?.transDep && state.tid) {
+          usid = `${sid}~${state.tid}`
         }
-        // if (scope.value.hasOwnProperty(u_sid))
-        if (Object.prototype.hasOwnProperty.call(scope.value, u_sid)) return scope.value[u_sid]
+        // if (scope.value.hasOwnProperty(usid))
+        if (Object.prototype.hasOwnProperty.call(scope.value, usid)) return scope.value[usid]
         // const val = Scope.createIdentifierScope({type: 'Literal', value: sid},
         //                                          scope);
-        // val.sort = typeUtil.inferType({type: 'MemberAccess', expression: scope, property: node});
+        const memberExpr3 = new MemberExprValue('', scope, node, false, node.ast?.node, node.loc)
+        memberExpr3._sid = sid
+        memberExpr3._qid = sid
         const val =
           scope.vtype === 'scope' && node.vtype
             ? node
-            : MemSpaceSymbolValue({
-                type: 'MemberAccess',
-                object: scope,
-                property: node,
-                sid,
-                qid: sid,
-              })
-        if (node.hasTagRec) {
-          // 一般情况下 对象的key的符号值是不会存储到field里的，field只用来存储value的符号值
-          // 当污点在key上时，key的符号值会被转换成普通字符串，并且不会存储到field中 此时污点信息taint和trace丢失发生断链
-          // 为了解决上述问题 若key携带污点，则将key的符号值存储到misc里 只要后续worklist能遍历到misc 这条污点链路即可建立起来
-          scope.setMisc(u_sid, node)
+            : memberExpr3
+        if (node.taint && node.taint?.isTaintedRec) {
+          // 当 key 携带污点，存储到 misc 避免断链
+          scope.setMisc(usid, node)
         }
         if (scope.type !== 'Literal' && typeof scope.value !== 'string') {
-          scope.value[u_sid] = val
+          scope.value[usid] = val
         }
-        val.sort = typeUtil.inferType(val)
         return val
       }
     }
 
     // other cases, e.g. unknown value
-    const res =
-      scope.vtype === 'scope' ? node : MemSpaceSymbolValue({ type: 'MemberAccess', object: scope, property: node })
-    res.sort = typeUtil.inferType(res)
-    return res
+    if (scope.vtype === 'scope') return node
+    const fallbackMember = new MemberExprValue(scope.qid, scope, node, false, node.ast?.node, node.loc)
+    fallbackMember._sid = AstUtil.prettyPrint(node)
+    return fallbackMember
   }
 
   /**
@@ -810,57 +804,11 @@ class MemSpace extends Scope {
    * @param node
    * @param sid
    */
-  getPropertyFromPrototype(proto: any, index: any): any {
-    if (proto && proto.field && _.has(proto.field, index)) {
-      return proto.field[index]
-    }
-    return proto?.field.prototype != null ? this.getPropertyFromPrototype(proto?.field.prototype, index) : undefined
-  }
-
-  /**
-   * for declaration/definition hoisting; consider only one block (and not the sub blocks)
-   * @param scope
-   * @param node
-   * @param state
-   */
-  recordFunctionDefinitions(scope: any, node: any, state: any): void {
-    if (logger.isTraceEnabled()) logger.trace(`recordFunctionDefinition: ${valueFormatter.formatNode(node)}\n`)
-    if (!node) return
-
-    if (Array.isArray(node)) {
-      for (const statement of node) {
-        this.recordFunctionDefinitions(scope, statement, state)
-      }
-      return
-    }
-
-    switch (node.type) {
-      case 'FunctionDefinition': {
-        // let clos = Scope.createFunctionClosure(scope, node);
-        // analysisUtil.saveOverloadedFunctionInScope(scope, node.id, clos);
-        break
-      }
-      case 'BlockStatement': {
-        this.recordFunctionDefinitions(scope, node.body, state)
-        break
-      }
-      case 'ClassDeclaration': {
-        if (logger.isTraceEnabled()) logger.trace(`allocate class members: ${valueFormatter.formatNode(node)}`)
-        const clos = this.createClassClosure(scope, node)
-        if (logger.isTraceEnabled()) logger.trace(`node.id = ${valueFormatter.formatNode(node.id)}`)
-        const id = node.id.type ? node.id : { type: 'Literal', value: node.id }
-        this.saveVarInCurrentScope(scope, id, clos, state)
-        break
-      }
-      case 'VariableDeclaration': {
-        this.recordFunctionDefinitions(scope, node.declarations, state)
-        break
-      }
-      case 'ExpressionStatement': {
-        this.recordFunctionDefinitions(scope, node.expression, state)
-        break
-      }
-    } // end switch
+  getPropertyFromPrototype(proto: UnitType | undefined, index: string): UnitType | undefined {
+    if (!proto?.members) return undefined
+    if (proto.members.has(index)) return proto.members.get(index)
+    const nextProto = proto.members.get('prototype')
+    return nextProto != null ? this.getPropertyFromPrototype(nextProto, index) : undefined
   }
 }
 
@@ -872,7 +820,7 @@ class MemSpace extends Scope {
  * @param value
  * @param state
  */
-function saveVarInScopeDirect(scope: any, id: any, value: any, state: any): void {
+function saveVarInScopeDirect(scope: any, id: string | number, value: UnitType, state: any): void {
   let fields = Array.isArray(scope) ? scope : scope.value
   if (!fields) fields = scope.value = {}
   // fields[id] = value;

@@ -1,21 +1,41 @@
-const Unit = require('./unit')
+import { SentinelValue } from './sentinel-value'
 
 interface UndefinedValueOptions {
-  [key: string]: any
+  sid?: string
+  qid?: string
+  parent?: any
 }
 
 /**
  * UndefinedValue class
+ *
+ * BVT 模式：固定构造函数签名
  */
-module.exports = class UndefinedValue extends Unit {
+export class UndefinedValue extends SentinelValue {
   /**
-   * Constructor for UndefinedValue
-   * @param opts - Options for constructing UndefinedValue
+   * 创建 UndefinedValue
+   * @param upperQid - 父作用域的 qid（可选，默认 ''）
+   * @param sid - 符号 ID（可选，默认 '<undefinedValue>'）
    */
-  constructor(opts?: UndefinedValueOptions) {
-    super({
-      vtype: 'undefine',
-      ...opts,
-    })
+  constructor(upperQid: string = '', sid: string = '<undefinedValue>') {
+    super('undefine', upperQid, { sid })
+  }
+
+  /**
+   * 从序列化的 opts 对象恢复 UndefinedValue（仅用于反序列化）
+   */
+  static fromOpts(upperQid: string, opts: UndefinedValueOptions): UndefinedValue {
+    const sid = opts?.sid || '<undefinedValue>'
+    const qid = opts?.qid
+    const parent = opts?.parent
+    const undefinedValue = new UndefinedValue(upperQid, sid)
+    // 反序列化时恢复原始属性
+    if (qid) {
+      undefinedValue._qid = qid
+    }
+    if (parent) {
+      undefinedValue.parent = parent
+    }
+    return undefinedValue
   }
 }

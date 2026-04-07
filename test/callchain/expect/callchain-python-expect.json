@@ -1,0 +1,222 @@
+{
+  "version": "1.0",
+  "totalFindings": 4,
+  "findings": [
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "cursor.execute",
+        "sinkAttribute": "PythonSQLInjection",
+        "callSite": {
+          "code": "    cursor.execute(query)",
+          "file": "/test_callchain.py",
+          "line": 12,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "6fda1970db53b647788cbea43d3e9733",
+          "fullName": "/test_callchain.test_sql_injection",
+          "function": "test_sql_injection",
+          "file": "/test_callchain.py",
+          "line": 5,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "1076abfa513d8b01b102f4f0f8baf707",
+          "fullName": "sqlite3.connect(test.db).cursor().execute",
+          "function": "execute",
+          "file": "/test_callchain.py",
+          "line": 12,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    test_sql_injection('admin')",
+          "nodeHash": "c8725dc0188e14dd3ffa58b6458f1532",
+          "file": "/test_callchain.py",
+          "line": 35,
+          "column": 5
+        },
+        {
+          "code": "    cursor.execute(query)",
+          "nodeHash": "1076abfa513d8b01b102f4f0f8baf707",
+          "file": "/test_callchain.py",
+          "line": 12,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "subprocess.call",
+        "sinkAttribute": "PythonCommandExec",
+        "callSite": {
+          "code": "    result = subprocess.call(command, shell=True)",
+          "file": "/test_callchain.py",
+          "line": 21,
+          "column": 14
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "7de4f7a9120a09f17d5b658042ad55df",
+          "fullName": "/test_callchain.test_command_injection",
+          "function": "test_command_injection",
+          "file": "/test_callchain.py",
+          "line": 18,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "6176cfcc804a61cfcce676067defab7d",
+          "fullName": "subprocess.call",
+          "function": "call",
+          "file": "/test_callchain.py",
+          "line": 21,
+          "column": 14
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    test_command_injection('ls -la')",
+          "nodeHash": "87f49f13be0816ed54137c0737248b24",
+          "file": "/test_callchain.py",
+          "line": 36,
+          "column": 5
+        },
+        {
+          "code": "    result = subprocess.call(command, shell=True)",
+          "nodeHash": "6176cfcc804a61cfcce676067defab7d",
+          "file": "/test_callchain.py",
+          "line": 21,
+          "column": 14
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "os.system",
+        "sinkAttribute": "PythonCommandExec",
+        "callSite": {
+          "code": "    os.system(command)",
+          "file": "/test_callchain.py",
+          "line": 27,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "c2cc326f3b0f3de34a2836e0376f9fe6",
+          "fullName": "/test_callchain.test_os_system",
+          "function": "test_os_system",
+          "file": "/test_callchain.py",
+          "line": 24,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "d17bd906b52cfc2c9be23dd2ec51fe17",
+          "fullName": "os.system",
+          "function": "system",
+          "file": "/test_callchain.py",
+          "line": 27,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    test_os_system('pwd')",
+          "nodeHash": "aee3febb13019a7491f1b7249531af09",
+          "file": "/test_callchain.py",
+          "line": 37,
+          "column": 5
+        },
+        {
+          "code": "    os.system(command)",
+          "nodeHash": "d17bd906b52cfc2c9be23dd2ec51fe17",
+          "file": "/test_callchain.py",
+          "line": 27,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "eval",
+        "sinkAttribute": "PythonEvalInjection",
+        "callSite": {
+          "code": "    eval(code)",
+          "file": "/test_callchain.py",
+          "line": 32,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "ee1a8a934bdab2904279179b42c45a79",
+          "fullName": "/test_callchain.test_eval_injection",
+          "function": "test_eval_injection",
+          "file": "/test_callchain.py",
+          "line": 29,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "55a5ffe66c3c571108a506ddba2b7417",
+          "fullName": "/test_callchain.test_eval_injection.eval",
+          "function": "eval",
+          "file": "/test_callchain.py",
+          "line": 32,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    test_eval_injection('print(\"test\")')",
+          "nodeHash": "a22125941d6912650dd41587d29887a9",
+          "file": "/test_callchain.py",
+          "line": 38,
+          "column": 5
+        },
+        {
+          "code": "    eval(code)",
+          "nodeHash": "55a5ffe66c3c571108a506ddba2b7417",
+          "file": "/test_callchain.py",
+          "line": 32,
+          "column": 5
+        }
+      ]
+    }
+  ]
+}

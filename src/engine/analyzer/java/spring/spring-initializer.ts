@@ -20,9 +20,16 @@ class SpringInitializer extends (JavaInitializer as any) {
     const beanMap = new Map()
     const springReferenceMap = new Map()
     const springServiceMap = new Map()
-    topScope.beanMap = beanMap
-    topScope.springServiceMap = springServiceMap
-    topScope.springReferenceMap = springReferenceMap
+    /* SOFA 服务映射：unique-id → {ref, interfaceName}，interfaceName → [{uniqueId, ref}] */
+    const sofaServiceUniqueIdMap: Map<string, {ref: string, interfaceName: string}> = new Map()
+    const sofaServiceInterfaceMap: Map<string, Array<{uniqueId: string, ref: string}>> = new Map()
+    topScope.spring = {
+      beanMap,
+      springReferenceMap,
+      springServiceMap,
+      sofaServiceUniqueIdMap,
+      sofaServiceInterfaceMap,
+    }
     const xmlFiles = FileUtil.loadAllFileTextGlobby(['**/*.xml'], dir)
     if (xmlFiles.length === 0) {
       return
@@ -73,9 +80,20 @@ class SpringInitializer extends (JavaInitializer as any) {
             springServiceArray.forEach((springService: any) => {
               const ref = springService.$?.REF || ''
               const interfaceName = springService.$?.INTERFACE || ''
+              const uniqueId = springService.$?.['UNIQUE-ID'] || ''
               springServiceMap.set(interfaceName, {
                 ref,
               })
+              /* 填充 SOFA unique-id 映射 */
+              if (uniqueId) {
+                sofaServiceUniqueIdMap.set(uniqueId, { ref, interfaceName })
+              }
+              if (interfaceName) {
+                if (!sofaServiceInterfaceMap.has(interfaceName)) {
+                  sofaServiceInterfaceMap.set(interfaceName, [])
+                }
+                sofaServiceInterfaceMap.get(interfaceName)!.push({ uniqueId, ref })
+              }
             })
           }
 

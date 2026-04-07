@@ -1,9 +1,11 @@
+import { shallowCopyValue } from '../../../util/clone-util'
+import type Unit from './value/unit'
+
 const _ = require('lodash')
 const Scope = require('./scope')
 const {
   ValueUtil: { ObjectValue, PrimitiveValue },
 } = require('../../util/value-util')
-const { cloneWithDepth } = require('../../../util/clone-util')
 
 /**
  * get the constructor function
@@ -18,7 +20,6 @@ function getConstructor(fbody: any, fname: string): any {
    * @param obj
    */
   function isIterable(obj: any): boolean {
-    // checks for null and undefined
     if (obj == null) {
       return false
     }
@@ -47,10 +48,10 @@ function getConstructor(fbody: any, fname: string): any {
  * @param res
  * @param scope
  */
-function resetInitVariables(scope: any): void {
+function resetInitVariables(scope: Unit): void {
   for (const field of Object.keys(scope.value)) {
     const v = scope.value[field]
-    if (v.trace) delete v.trace
+    if (v.taint) v.taint.clearTrace()
   }
 }
 
@@ -62,7 +63,7 @@ function resetInitVariables(scope: any): void {
  * @param source_fdef
  * @returns {{vtype: string, id: *, value: {}, ast: null, parent: *}}
  */
-function initVarScope(scope: any, node: any, should_taint: boolean, source_fdef: any): any {
+function initVarScope(scope: Unit, node: any, should_taint: boolean, source_fdef: any): Unit | undefined {
   if (!node) return
 
   switch (node.type) {
@@ -85,9 +86,9 @@ function initVarScope(scope: any, node: any, should_taint: boolean, source_fdef:
       if (!obj || !_.isObject(obj)) obj = Scope.createIdentifierFieldValue(node, scope)
 
       if (should_taint) {
-        obj.taint = new Set()
-        obj.taint.add('TOD')
-        obj.hasTagRec = true
+        obj.taint.clear()
+        obj.taint.addTag('TOD')
+        obj.taint?.markSource()
         if (!obj.hasOwnProperty('source_fdef')) {
           obj.source_fdef = new Set()
         }
@@ -95,7 +96,10 @@ function initVarScope(scope: any, node: any, should_taint: boolean, source_fdef:
         if (obj.source_fdef.size < 10)
           // be defensive
           obj.source_fdef.add(source_fdef)
-        if (node.loc) obj.trace = [{ line: node.loc.start.line, node }]
+        if (node.loc) {
+          const traceItem = { line: node.loc.start?.line, node }
+          obj.taint.setAllTraces([traceItem])
+        }
       }
       return obj
     }
@@ -107,7 +111,7 @@ function initVarScope(scope: any, node: any, should_taint: boolean, source_fdef:
  * Specifically, delete the existing values
  * @param scope
  */
-function havocSharedVariables(scope: any): void {
+function havocSharedVariables(scope: Unit): void {
   const { writes } = scope.fdata
   if (!writes) return
   for (const entry of writes.entries()) {
@@ -141,12 +145,13 @@ function havocSharedVariables(scope: any): void {
  * process class inheritance
  * @param fclos
  */
-function resolveClassInheritance(fclos: any): void {
+function resolveClassInheritance(fclos: Unit): void {
   const { fdef } = fclos
   const { supers } = fdef
   if (!supers || supers.length === 0) return
 
-  const scope = fclos.parent
+  if (!fclos.parent) return
+  const scope: Unit = fclos.parent
 
   for (const i in supers) {
     if (supers[i]) {
@@ -159,7 +164,7 @@ function resolveClassInheritance(fclos: any): void {
    * @param fclos
    * @param base_name
    */
-  function _resolveClassInheritance(fclos: any, base_name: any): void {
+  function _resolveClassInheritance(fclos: Unit, base_name: string): void {
     const base_fclos = scope.value[base_name]
     if (!base_fclos) return
     fclos.super = base_fclos
@@ -172,17 +177,18 @@ function resolveClassInheritance(fclos: any): void {
     for (const fieldName in base_fclos.value) {
       if (fieldName === 'super') continue
       const v = base_fclos.value[fieldName]
-      if (v.readonly) continue
-      const v_copy = cloneWithDepth(v)
-      v_copy.inherited = true
+      if (v.runtime?.readonly) continue
+      const v_copy = shallowCopyValue(v)
+      if (!v_copy.func) v_copy.func = {}
+      v_copy.func.inherited = true
       v_copy._this = fclos
       fclos.value[fieldName] = v_copy
 
       superValue.value[fieldName] = v_copy
       // super fclos should fill its fdef with ctor definition
       if (fieldName === '_CTOR_') {
-        superValue.fdef = v_copy.fdef
-        superValue.overloaded = superValue.overloaded || []
+        superValue.ast.node = v_copy.ast?.node
+        superValue.ast.fdef = v_copy.ast.fdef
         superValue.overloaded.push(fdef)
       }
 
@@ -190,9 +196,9 @@ function resolveClassInheritance(fclos: any): void {
     }
 
     // inherit declarations
-    for (const x in base_fclos.decls) {
-      const v = base_fclos.decls[x]
-      fclos.decls[x] = v
+    for (const x of base_fclos.ast.declKeys) {
+      const v = base_fclos.ast.getDecl(x)
+      fclos.ast.setDecl(x, v)
     }
     // inherit modifiers
     for (const x in base_fclos.modifier) {

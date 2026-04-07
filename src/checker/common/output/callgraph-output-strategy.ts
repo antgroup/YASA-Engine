@@ -2,7 +2,6 @@ import type { IResultManager } from '../../../engine/analyzer/common/result-mana
 import type { IConfig } from '../../../config'
 
 const path = require('path')
-const fs = require('fs-extra')
 const OutputStrategy = require('../../../engine/analyzer/common/output-strategy')
 const logger = require('../../../util/logger')(__filename)
 const { createWriteStream } = require('fs')
@@ -23,105 +22,101 @@ class CallgraphOutputStrategy extends OutputStrategy {
 
   /**
    * 流式写入 CG 内容到文件，避免内存溢出
-   * @param cgContent 
-   * @param filePath 
+   * 使用原生 JSON.stringify 配合 replacer 提升性能，同时保持流式写入
+   * @param cgContent - 调用图内容，包含 nodes 和 edges
+   * @param filePath - 输出文件路径
    */
-  private writeCgContentToStream(cgContent: { nodes: Record<string, any>; edges: Record<string, any> }, filePath: string): void {
-    const writeStream = createWriteStream(filePath, { encoding: 'utf8' })
-    
-    // 流式序列化单个值到流中（应用过滤器：排除 parent，将 undefined 转为 ''）
-    const writeValue = (value: any): void => {
+  private writeCgContentToStream(
+    cgContent: { nodes: Record<string, any>; edges: Record<string, any> },
+    filePath: string
+  ): void {
+    const writeStream = createWriteStream(filePath, { encoding: 'utf8', highWaterMark: 64 * 1024 })
+    const bufferSize = 1024 * 1024 // 1MB 缓冲区
+    const chunks: string[] = []
+    let currentSize = 0
+
+    // 批量写入缓冲区，减少系统调用
+    const flush = (): void => {
+      if (chunks.length > 0) {
+        writeStream.write(chunks.join(''))
+        chunks.length = 0
+        currentSize = 0
+      }
+    }
+
+    const append = (str: string): void => {
+      chunks.push(str)
+      currentSize += str.length
+      if (currentSize >= bufferSize) {
+        flush()
+      }
+    }
+
+    // JSON.stringify 的 replacer：排除 parent 属性，将 undefined 转为空字符串
+    const replacer = (key: string, value: any): any => {
+      // 排除 parent 属性
+      if (key === 'parent') {
+        return undefined
+      }
+      // 将 undefined 转为空字符串
       if (value === undefined) {
-        writeStream.write('""')
-        return
+        return ''
       }
-      if (value === null) {
-        writeStream.write('null')
-        return
-      }
-      if (typeof value === 'string') {
-        writeStream.write(JSON.stringify(value))
-        return
-      }
-      if (typeof value === 'number' || typeof value === 'boolean') {
-        writeStream.write(String(value))
-        return
-      }
-      if (Array.isArray(value)) {
-        writeStream.write('[')
-        value.forEach((item, index) => {
-          if (index > 0) {
-            writeStream.write(',')
-          }
-          writeValue(item)
-        })
-        writeStream.write(']')
-        return
-      }
-      if (typeof value === 'object') {
-        writeStream.write('{')
-        let first = true
-        for (const [key, val] of Object.entries(value)) {
-          // 排除 parent 属性
-          if (key === 'parent') {
-            continue
-          }
-          if (!first) {
-            writeStream.write(',')
-          }
-          first = false
-          writeStream.write(JSON.stringify(key))
-          writeStream.write(':')
-          // 将 undefined 转为 ''
-          writeValue(val === undefined ? '' : val)
-        }
-        writeStream.write('}')
-        return
-      }
-      writeStream.write('""')
+      return value
     }
 
     // 写入开始
-    writeStream.write('{')
+    append('{')
 
-    // 写入 nodes
-    writeStream.write('"nodes":{')
+    // 写入 nodes：使用原生 JSON.stringify 序列化每个节点，利用 V8 优化
+    append('"nodes":{')
     const nodeKeys = Object.keys(cgContent.nodes)
-    nodeKeys.forEach((key, index) => {
-      if (index > 0) {
-        writeStream.write(',')
+    if (nodeKeys.length > 0) {
+      for (let i = 0; i < nodeKeys.length; i++) {
+        if (i > 0) {
+          append(',')
+        }
+        const key = nodeKeys[i]
+        const nodeValue = cgContent.nodes[key]
+        // 使用原生 JSON.stringify，利用 V8 的原生优化
+        const serializedNode = JSON.stringify(nodeValue, replacer)
+        append(`${JSON.stringify(key)}:${serializedNode}`)
       }
-      writeStream.write(JSON.stringify(key))
-      writeStream.write(':')
-      writeValue(cgContent.nodes[key])
-    })
-    writeStream.write('}')
+    }
+    append('}')
 
-    // 写入 edges
-    writeStream.write(',"edges":{')
+    // 写入 edges：使用原生 JSON.stringify 序列化每条边
+    append(',"edges":{')
     const edgeKeys = Object.keys(cgContent.edges)
-    edgeKeys.forEach((key, index) => {
-      if (index > 0) {
-        writeStream.write(',')
+    if (edgeKeys.length > 0) {
+      for (let i = 0; i < edgeKeys.length; i++) {
+        if (i > 0) {
+          append(',')
+        }
+        const key = edgeKeys[i]
+        const edgeValue = cgContent.edges[key]
+        // 使用原生 JSON.stringify，利用 V8 的原生优化
+        const serializedEdge = JSON.stringify(edgeValue, replacer)
+        append(`${JSON.stringify(key)}:${serializedEdge}`)
       }
-      writeStream.write(JSON.stringify(key))
-      writeStream.write(':')
-      writeValue(cgContent.edges[key])
-    })
-    writeStream.write('}')
+    }
+    append('}')
 
     // 写入结束
-    writeStream.write('}')
+    append('}')
+
+    // 刷新剩余缓冲区并关闭流
+    flush()
     writeStream.end()
   }
 
   /**
    * output callgraph findings
    *
-   * @param resultManager
-   * @param outputFilePath
-   * @param config
-   * @param printf
+   * @param resultManager - 结果管理器
+   * @param outputFilePath - 输出文件路径
+   * @param config - 配置对象
+   * @param printf - 打印函数（未使用）
    */
   outputFindings(resultManager: IResultManager, outputFilePath: string, config: IConfig, printf: any): void {
     const allFindings = resultManager.getFindings()
@@ -132,7 +127,10 @@ class CallgraphOutputStrategy extends OutputStrategy {
         if (config.dumpCG || config.dumpAllCG) {
           const callgraph = findings
           if (Array.isArray(callgraph) && callgraph.length > 0) {
-            const cgContent = callgraph[0].dumpGraph()
+            // 从 finding 中获取 astManager 和 symbolTable（在 triggerAtEndOfAnalyze 中已设置）
+            const astManager = (callgraph[0] as any).astManager
+            const symbolTable = (callgraph[0] as any).symbolTable
+            const cgContent = callgraph[0].dumpGraph(astManager, symbolTable)
 
             if (cgContent) {
               const cgFilePath = path.join(config.reportDir, outputFilePath)

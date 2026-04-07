@@ -1,3 +1,4 @@
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const { markTaintSource } = require('../common-kit/source-util')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 
@@ -25,7 +26,7 @@ function _introduceTaintAtMemberAccess(res: any, sourceScopeVal: any, node: any)
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
-  if (typeof res._qid === 'undefined' || typeof res._qid !== 'string') {
+  if (typeof res.qid === 'undefined' || typeof res.qid !== 'string') {
     return res
   }
   if (markTaintAtMemberAccess(res, sourceScopeVal, node)) {
@@ -41,15 +42,15 @@ function _introduceTaintAtMemberAccess(res: any, sourceScopeVal: any, node: any)
  * @param node
  */
 function markTaintAtMemberAccess(res: any, sourceScopeVal: any, node: any): boolean {
-  if (typeof res._qid !== 'undefined') {
-    let qid = res._qid
+  if (typeof res.qid !== 'undefined') {
+    let { qid } = res
     if (typeof qid !== 'string') {
       return false
     }
+    qid = QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(qid)
     qid = qid?.replace('Egg.Context', 'this.ctx')
     qid = qid?.replace('Egg.Application', 'this.app')
     qid = qid?.replace('Egg.Request', 'this.ctx.request')
-    qid = qid?.replace('\<instance\>', '')
 
     // 适配ctx=this
     const sourceFile = node.loc?.sourcefile
@@ -63,9 +64,10 @@ function markTaintAtMemberAccess(res: any, sourceScopeVal: any, node: any): bool
           qid = qid.charAt(0).toLowerCase() + qid.slice(1)
           className = className.charAt(0).toLowerCase() + className.slice(1)
           qid = qid.replace(className, 'this.ctx')
-        } else if (qid.startsWith('module.exports')) {
-          // module.exports场景
-          qid = qid.replace('module.exports', 'this.ctx')
+        }
+        if (qid.includes('module.exports')) {
+          // module.exports场景，去掉module.exports前面的所有部分
+          qid = qid.replace(/.*module\.exports/, 'this.ctx')
         }
       }
     }

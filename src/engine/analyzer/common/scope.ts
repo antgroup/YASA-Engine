@@ -1,9 +1,16 @@
 const _ = require('lodash')
+const { lodashCloneWithTag } = require('../../../util/clone-util')
+
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const config = require('../../../config')
 const {
-  ValueUtil: { FunctionValue, Scoped, SymbolValue, UninitializedValue },
+  ValueUtil: { FunctionValue, Scoped, ClassValue, SymbolValue, UninitializedValue },
 } = require('../../util/value-util')
 const { addSrcLineInfo } = require('./source-line')
+const ASTUtil = require('../../../util/ast-util')
+
+import type Unit from './value/unit'
+import { TaintRecord } from './value/taint-record'
 
 //* *****************************  Scope Management ********************************************
 
@@ -11,14 +18,7 @@ const { addSrcLineInfo } = require('./source-line')
  *
  */
 class Scope {
-  /**
-   * create a sub-scope within the given scope
-   * @param name
-   * @param scope
-   * @param scopeName
-   * @returns {{id: string, vtype: string, value: {}, parent: *}}
-   */
-  static createSubScope(name: any, scope: any, scopeName: any): any {
+  static createSubScope(name: any, scope: Unit, scopeName: string, qid?: string): Unit {
     let id = name
     if (!id) {
       id = '_scope'
@@ -26,27 +26,27 @@ class Scope {
     if (scope.value[id]) {
       return scope.value[id]
     }
-    const subscope = Scoped({
-      sid: id,
-      qid: scope.qid ? `${scope.qid}.${id}` : id,
-      vtype: scopeName || 'scope',
-      decls: {},
-      parent: scope,
-    })
+    // scopeName='class' 时使用 ClassValue，其余用 Scoped
+    const subscope = scopeName === 'class'
+      ? new ClassValue(scope.qid, id, scope)
+      : new Scoped(scope.qid, {
+          sid: id,
+          vtype: scopeName || 'scope',
+          decls: {},
+          parent: scope,
+        })
+    if (qid) {
+      subscope._qid = qid
+      subscope.uuid = null
+      subscope.calculateAndRegisterUUID()
+    }
     if (scope) {
       scope.value[id] = subscope
     }
     return subscope
   }
 
-  /**
-   * search the scope where the variable is defined
-   * @param scope
-   * @param node
-   * @param limit
-   * @returns {*}
-   */
-  static getDefScopeRec(scope: any, node: any, limit: any): any {
+  static getDefScopeRec(scope: Unit, node: any, limit: number): Unit | undefined {
     if (!node || !limit) {
       return scope
     }
@@ -68,21 +68,9 @@ class Scope {
         if (fields) {
           const f = fields.hasOwnProperty
           if (f.vtype || f.type) return fields[node_name]
-          if (fields.hasOwnProperty(node_name))
-            // fields.__proto__.hasOwnProperty(fields, node.name)
-            return scope
+          if (fields.hasOwnProperty(node_name)) return scope
         }
-        // // 如果当前 fields 没有匹配，递归检查 fields 的内容
-        // for (let key in fields) {
-        //   if (fields.hasOwnProperty(key) && typeof fields[key] === 'object') {
-        //     // 对每个 field 递归调用
-        //     let fieldScope = this.getDefScopeRec(fields[key], node, limit - 1)
-        //     if (fieldScope) {
-        //       return fieldScope
-        //     }
-        //   }
-        // }
-        if (scope.decls && typeof scope.decls.hasOwnProperty === 'function' && scope.decls.hasOwnProperty(node_name))
+        if (scope.ast && scope.ast.hasDecl(node_name))
           return scope
         if (scope.parent && scope.parent !== scope) {
           return this.getDefScopeRec(scope.parent, node, limit - 1)
@@ -90,29 +78,12 @@ class Scope {
         return undefined
       }
       case 'ThisExpression': {
-        return scope.getThis()
+        return scope.getThisObj()
       }
     }
   }
 
-  /**
-   *
-   * @param scope
-   * @param node
-   * @param limit
-   */
-  getDefScopeRec(scope: any, node: any, limit: any): any {
-    return Scope.getDefScopeRec(scope, node, limit)
-  }
-
-  /**
-   * search the scope where the variable is defined
-   * return scope itself if def scope is not found
-   * @param scope
-   * @param node
-   * @returns {*}
-   */
-  static getDefScope(scope: any, node: any): any {
+  static getDefScope(scope: Unit, node: any): Unit | undefined {
     const defScope = this.getDefScopeRec(scope, node, 20)
     if (defScope) return defScope
     // if (![ 'object' ].some(vtype => scope.vtype === vtype)) {
@@ -124,30 +95,24 @@ class Scope {
     return defScope ?? scope
   }
 
-  /**
-   *
-   * @param scope
-   * @param node
-   */
-  getDefScope(scope: any, node: any): any {
+  getDefScope(scope: Unit, node: any): Unit | undefined {
     const res = Scope.getDefScope(scope, node)
     return res ?? scope
   }
 
-  /**
-   * create a field value for an unknown variable
-   * @param identifier
-   * @param scope
-   * @returns {{vtype: string, id: *, value: {}, ast: null, parent: *}}
-   */
-  createIdentifierFieldValue(identifier: any, scope: any): any {
-    const index =
-      identifier.type === 'Identifier' || identifier.type === 'SuperExpression'
-        ? identifier.name
-        : identifier.value.toString()
+  createIdentifierFieldValue(identifier: any, scope: Unit): Unit {
+    let index
+    if (identifier.type === 'Identifier') {
+      index = identifier.name
+    } else if (identifier.type === 'SuperExpression') {
+      index = 'super'
+    } else {
+      index = identifier.value.toString()
+    }
+
     const scopeId = scope.getQualifiedId()
     const qid = Scope.joinQualifiedName(scopeId, index)
-    let subscope = SymbolValue({
+    let subscope = new SymbolValue('', {
       sid: index,
       qid,
       ast: identifier,
@@ -164,88 +129,77 @@ class Scope {
     //     subscope.parent = scope;
     // // record type information
     // type.recordType(identifier, subscope, scope);
-    if (scope.hasTagRec) {
-      subscope.hasTagRec = true
-      subscope._tags = scope._tags
-      if (scope.trace) {
-        subscope.trace = _.clone(scope.trace)
+    if (scope._taint?.isTaintedRec) {
+      subscope.taint?.markSource()
+      subscope._taint = scope._taint._clone(subscope)
+      if (scope._taint.hasTraces()) {
         subscope = addSrcLineInfo(subscope, identifier, identifier.loc?.sourcefile, 'Field: ', index)
       }
     }
 
-    // link to the parent scope
-    scope.field[index] = subscope
+    if (scope.members) {
+      scope.members.set(index, subscope)
+    }
     return subscope
   }
 
-  /**
-   *
-   * @param decl
-   * @param scope
-   * @returns {{vtype: string, id: *, value: {}, ast: null, parent: *}}
-   */
-  createVarDeclarationScope(decl: any, scope: any): any {
+  createVarDeclarationScope(decl: any, scope: Unit): Unit {
     const id = decl.name
 
-    const subscope = UninitializedValue({
-      id,
-      qid: id,
-      ast: decl,
-      sort: decl.typeName,
-      parent: scope, // refer to the parent scope
-    })
+    const sid = typeof id === 'string' ? id : ASTUtil.prettyPrint(id)
+    const subscope = new UninitializedValue(scope.qid, sid, decl)
+    subscope.parent = scope // refer to the parent scope
     // link to the parent scope
     scope.value[id] = subscope
     return subscope
   }
 
-  /**
-   * create a function closure
-   * @param node
-   * @param scope
-   * @returns {{vtype: string, fdef: *, id: (*|string), value: {}, decls: {}, parent: *}}
-   */
-  createFuncScope(node: any, scope: any): any {
+  createFuncScope(node: any, scope: Unit): Unit {
     // new version uses keyword 'constructor' to refer to ctor, this will cause node.name being null
     // so  tweak name to _CTOR_ to facilitate following evaluating
-    let funcName = node.id?.name || `<anonymous_${node.loc?.start.line}_${node.loc?.start.column}>` // <anonymous_[line]_[column]> for anonymous function
+    let funcName =
+      node.id?.name ||
+      `<anonymousFunc_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>` // <anonymous_[line]_[column]> for anonymous function
     if (node._meta.isConstructor) {
       funcName = '_CTOR_'
     }
-    let fclos = Object.prototype.hasOwnProperty.call(scope.value, funcName) ? scope.value[funcName] : undefined
+    let fclos =
+      Object.prototype.hasOwnProperty.call(scope.value, funcName) && scope.value[funcName]?.vtype === 'fclos'
+        ? scope.value[funcName]
+        : undefined
     // do not override ctor
     if (fclos && node.parameters) {
       // overloaded functions
       // if fclos is from the super, override it
-      let cdef = fclos.fdef && fclos.fdef.parent
+      let cdef = fclos.ast.fdef && fclos.ast.fdef.parent
       while (cdef) {
         if (cdef.type === 'ClassDefinition') {
           break
         }
         cdef = cdef.parent
       }
-      if (cdef && cdef.name !== scope.id) {
-        const targetQid = scope.qid ? `${scope.qid}.${funcName}` : undefined
-        fclos = FunctionValue({
-          fdef: node, // record the function definition including its type and prototype information
+      if (cdef && cdef.name !== scope.sid) {
+        const targetQid = `${scope.qid}.${funcName}`
+        fclos = new FunctionValue('', {
           overloaded: [node],
           sid: funcName,
           qid: targetQid,
           decls: {},
-          superDef: fclos.fdef,
+          func: { superDef: fclos.ast.fdef },
           parent: scope,
           ast: node,
         })
+        fclos.ast.fdef = node
         scope.value[funcName] = fclos
         if (targetQid) {
-          let current = scope
+          let current: Unit | null = scope
           while (current) {
             if (current.sid === '<global>') {
               break
             }
             current = current.parent
           }
-          current.funcSymbolTable[targetQid] = fclos
+          if (current) current.context.funcs[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = fclos
         }
         return fclos
       }
@@ -253,17 +207,17 @@ class Scope {
       const len = Array.isArray(node.parameters) ? node.parameters.length : node.parameters.parameters.length
       const parametersType = this.getParameterType(node)
       let matched = false
-      if (!fclos.overloaded) fclos.overloaded = []
-
       if (funcName === '_CTOR_') {
         fclos.overloaded.push(node)
         return fclos
       }
 
       for (let k = 0; k < fclos.overloaded.length; k++) {
-        const param = fclos.overloaded[k].parameters
+        const resolved = fclos.overloaded.get(k)
+        if (!resolved) continue
+        const param = resolved.parameters
         const overloadedLen = Array.isArray(param) ? param.length : param.parameters.length
-        const overloadedParametersType = this.getParameterType(fclos.overloaded[k])
+        const overloadedParametersType = this.getParameterType(resolved)
         if (overloadedLen === len) {
           let typeMatch = true
           for (let i = 0; i < overloadedLen; i++) {
@@ -273,7 +227,7 @@ class Scope {
             }
           }
           if (typeMatch) {
-            fclos.overloaded[k] = node
+            fclos.overloaded.set(k, node)
             matched = true
             break
           }
@@ -282,23 +236,26 @@ class Scope {
       if (!matched) {
         fclos.overloaded.push(node)
       }
-      fclos = _.clone(fclos)
-      fclos.fdef = node
+      fclos = lodashCloneWithTag(fclos)
       fclos.ast = node
+      fclos.ast.fdef = node
       fclos.vtype = 'fclos'
     } else {
-      const targetQid = scope.qid && funcName ? `${scope.qid}.${funcName}` : undefined
-      fclos = FunctionValue({
-        fdef: node, // record the function definition including its type and prototype information
+      const sid =
+        funcName ||
+        `<anonymousFunc_${node?.loc?.start?.line}_${node?.loc?.start?.column}_${node?.loc?.end?.line}_${node?.loc?.end?.column}>`
+      const targetQid = `${scope.qid}.${sid}`
+      fclos = new FunctionValue('', {
         overloaded: [node],
-        sid: funcName || '<anonymous>',
+        sid,
         qid: targetQid,
         decls: {},
         parent: scope,
         ast: node,
       })
+      fclos.ast.fdef = node
       if (targetQid && (this as any).funcSymbolTable && typeof (this as any).funcSymbolTable === 'object') {
-        ;(this as any).funcSymbolTable[targetQid] = fclos
+        ;(this as any).funcSymbolTable[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = fclos
       }
       // 检查 scope 和 scope.value 的有效性
       if (typeof scope === 'object') {
@@ -331,15 +288,9 @@ class Scope {
     return parametersType
   }
 
-  /**
-   * for debugging
-   * @param scope
-   * @param delimit
-   * @returns {string}
-   */
-  formatScope(scope: any, delimit: any): string {
+  formatScope(scope: Unit, delimit: number): string {
     //		return JSON.stringify(scope, JSON_scope_replacer_scope, 2);
-    return (cache = []), JSON.stringify(scope, JSON_scope_replacer_scope, delimit)
+    return ((cache = []), JSON.stringify(scope, JSON_scope_replacer_scope, delimit))
   }
 
   /**

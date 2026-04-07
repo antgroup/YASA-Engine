@@ -1,7 +1,23 @@
+import { Invocation } from '../../../resolver/common/value/invocation'
+import TypeRelatedInfoResolver from '../../../resolver/common/type-related-info-resolver'
+import type { ClassHierarchy } from '../../../resolver/common/value/class-hierarchy'
+import { getExplicitArgCount, type CallInfo } from '../../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
 const { matchField: matchFieldSinkUtil } = require('../../common/rules-basic-handler')
 const AstUtilSinkUtil = require('../../../util/ast-util')
 const { handleException: handleExceptionSinkUtil } = require('../../../engine/analyzer/common/exception-handler')
+
+// 全局统计：实际匹配的 sink 数量
+let matchedSinkCount = 0
+
+function getMatchedSinkCount(): number {
+  return matchedSinkCount
+}
+
+function resetMatchedSinkCount(): void {
+  matchedSinkCount = 0
+}
 
 interface SinkRule {
   argNum?: number
@@ -16,15 +32,16 @@ interface SinkRule {
  * @param node
  * @param fclos
  * @param sinks
- * @param argvalues
+ * @param callInfo
  * @returns {Array}
  */
-function matchSinkAtFuncCall(node: any, fclos: any, sinks: SinkRule[], argvalues: any[]): SinkRule[] {
+function matchSinkAtFuncCall(node: any, fclos: any, sinks: SinkRule[], callInfo: CallInfo): SinkRule[] {
+  const argCount = getExplicitArgCount(callInfo)
   const callExpr = node.callee || node
   const res: SinkRule[] = []
   if (sinks && sinks.length > 0) {
     for (const tspec of sinks) {
-      if (tspec.argNum !== undefined && tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+      if (tspec.argNum !== undefined && tspec.argNum >= 0 && tspec.argNum !== argCount) {
         continue
       }
 
@@ -32,10 +49,12 @@ function matchSinkAtFuncCall(node: any, fclos: any, sinks: SinkRule[], argvalues
         const marray = tspec.fsig.split('.')
         if (matchFieldSinkUtil(callExpr, marray, marray.length - 1)) {
           res.push(tspec)
+          matchedSinkCount++ // 统计实际匹配的 sink
         }
       } else if (tspec.fregex) {
-        if (callExpr.type === 'MemberAccess' && matchRegex(tspec.fregex, fclos._qid)) {
+        if (callExpr.type === 'MemberAccess' && matchRegex(tspec.fregex, fclos.qid)) {
           res.push(tspec)
+          matchedSinkCount++ // 统计实际匹配的 sink
         }
       }
     }
@@ -56,19 +75,20 @@ function matchSinkAtFuncCallWithCalleeType(
   fclos: any,
   rules: SinkRule[],
   scope: any,
-  argvalues: any[]
+  callInfo: CallInfo
 ): SinkRule[] {
+  const argCount = getExplicitArgCount(callInfo)
   const callExpr = node.callee || node
   const res: SinkRule[] = []
   if (rules && rules.length > 0) {
-    if (fclos.vtype === 'union' && !_.isEmpty(fclos.field)) {
-      fclos.field.forEach((subFClos: any) => {
-        res.push(...matchSinkAtFuncCallWithCalleeType(node, subFClos, rules, scope, argvalues))
+    if (fclos.vtype === 'union' && !_.isEmpty(fclos.value)) {
+      fclos.value.forEach((subFClos: any) => {
+        res.push(...matchSinkAtFuncCallWithCalleeType(node, subFClos, rules, scope, callInfo))
       })
       return res
     }
     for (const tspec of rules) {
-      if (tspec.argNum !== undefined && tspec.argNum >= 0 && argvalues && tspec.argNum !== argvalues.length) {
+      if (tspec.argNum !== undefined && tspec.argNum >= 0 && tspec.argNum !== argCount) {
         continue
       }
 
@@ -91,7 +111,7 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
             tspec.calleeType === '*') &&
           (AstUtilSinkUtil.prettyPrint(fclos.rtype?.vagueType).replace(/"/g, '') === tspec.fsig ||
-            fclos._sid === tspec.fsig)
+            fclos.sid === tspec.fsig)
         ) {
           // import cn.hutool.http.HttpRequest; HttpRequest.post
           res.push(tspec)
@@ -112,7 +132,7 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
             tspec.calleeType === '*') &&
-          AstUtilSinkUtil.prettyPrint(fclos.ast) === tspec.fsig
+          AstUtilSinkUtil.prettyPrint(fclos.ast?.node) === tspec.fsig
         ) {
           res.push(tspec)
         }
@@ -121,7 +141,7 @@ function matchSinkAtFuncCallWithCalleeType(
           // 用于匹配形如 squirrel.Delete(*).Where形式的sink点，*为通配符
           callExpr.type === 'MemberAccess' &&
           tspec.calleeType === '' &&
-          matchRegex(tspec.fregex, fclos._qid)
+          matchRegex(tspec.fregex, fclos.qid)
         ) {
           res.push(tspec)
         }
@@ -149,8 +169,59 @@ function matchRegex(pattern: string, testStr: string): boolean {
   }
 }
 
+/**
+ * check if invocation match sink
+ * @param invocation
+ * @param sink
+ * @param typeResolver
+ */
+function checkInvocationMatchSink(invocation: Invocation, sink: SinkRule, typeResolver: TypeRelatedInfoResolver): boolean {
+  if (!invocation || !sink) {
+    return false
+  }
+
+  if (!sink.fsig || sink.fsig === '') {
+    return false
+  }
+  if (!sink.calleeType || sink.calleeType === '') {
+    if (invocation.callSiteLiteral === sink.fsig || invocation.fsig === sink.fsig) {
+      return true
+    }
+  } else {
+    if (invocation.fsig === sink.fsig && invocation.calleeType && invocation.calleeType !== '') {
+      if (invocation.calleeType === sink.calleeType || invocation.calleeType.endsWith(`.${sink.calleeType}`)) {
+        return true
+      } else if (typeResolver) {
+        const classHierarchy: ClassHierarchy | undefined = typeResolver.classHierarchyMap.get(invocation.calleeType)
+        if (classHierarchy) {
+          const baseTypes: string[] = typeResolver.findBaseTypes(classHierarchy)
+          for (const baseType of baseTypes) {
+            if (baseType === sink.calleeType || baseType?.endsWith(`.${sink.calleeType}`)) {
+              return true
+            }
+          }
+          const subTypes: string[] = typeResolver.findSubTypes(classHierarchy)
+          for (const subType of subTypes) {
+            if (subType === sink.calleeType || subType?.endsWith(`.${sink.calleeType}`)) {
+              return true
+            }
+          }
+        }
+      }
+    }
+    if (invocation.callSiteLiteral === `${sink.calleeType}.${sink.fsig}` || invocation.callSiteLiteral?.endsWith(`.${sink.calleeType}.${sink.fsig}`)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 module.exports = {
   matchSinkAtFuncCall,
   matchSinkAtFuncCallWithCalleeType,
   matchRegex,
+  checkInvocationMatchSink,
+  getMatchedSinkCount,
+  resetMatchedSinkCount,
 }

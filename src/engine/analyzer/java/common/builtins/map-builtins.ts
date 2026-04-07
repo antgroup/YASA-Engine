@@ -1,10 +1,12 @@
 const _ = require('lodash')
 const Collection = require('./collection-builtins')
 const { getSymbolRef } = require('../../../../../util/common-util')
-const UnionValue = require('../../../common/value/union')
 const { clearBuffer, addElementToBuffer, getAllElementFromBuffer } = require('./buffer')
-const { cloneWithDepth } = require('../../../../../util/clone-util')
-const UndefinedValue = require('../../../common/value/undefine')
+const { buildNewValueInstance } = require('../../../../../util/clone-util')
+const QidUnifyUtil = require('../../../../../util/qid-unify-util')
+
+import { UnionValue } from '../../../common/value/union'
+import { UndefinedValue } from '../../../common/value/undefine'
 
 /**
  * java.util.Map
@@ -40,14 +42,18 @@ class Map extends (Collection as any) {
   static clear(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
     const _this = fclos.parent
     if (!_this) {
-      return
+      return new UndefinedValue()
     }
 
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     for (const keyRef of keyRefSet) {
       const entryValue = _this.getFieldValue(keyRef)
-      if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-        delete _this.field[keyRef]
+      if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+        _this.members.delete(keyRef)
       }
     }
     keyRefSet.clear()
@@ -55,6 +61,8 @@ class Map extends (Collection as any) {
     if (!_this.getMisc('precise')) {
       clearBuffer(_this)
     }
+
+    return new UndefinedValue()
   }
 
   /**
@@ -126,12 +134,23 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static entrySet(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
 
-    const newThis = cloneWithDepth(_this, 3)
+    const newThis = buildNewValueInstance(
+      this,
+      _this,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      }
+    )
     newThis._this = newThis
 
     return newThis
@@ -157,7 +176,26 @@ class Map extends (Collection as any) {
    * @param node
    * @param scope
    */
-  static forEach(fclos: any, argvalues: any[], state: any, node: any, scope: any) {}
+  static forEach(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+    const _this = fclos.getThisObj()
+    if (!_this) {
+      return new UndefinedValue()
+    }
+
+    const keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet instanceof Set) {
+      for (const keyRef of keyRefSet) {
+        const entryValue = _this.getFieldValue(keyRef)
+        if (entryValue && Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+          ;(this as any).executeCall(node, argvalues[0], state, scope, { callArgs: (this as any).buildCallArgs(node, [entryValue.getFieldValue('0'), entryValue.getFieldValue('1')], argvalues[0]) })
+        }
+      }
+    } else {
+      ;(this as any).executeCall(node, argvalues[0], state, scope, { callArgs: (this as any).buildCallArgs(node, [_this, _this], argvalues[0]) })
+    }
+
+    return new UndefinedValue()
+  }
 
   /**
    * Map.get
@@ -168,13 +206,17 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static get(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
-    if (!_this || !argvalues || argvalues.length === 0) {
+    const _this = fclos.getThisObj()
+    if (!_this || !argvalues || argvalues.length === 0 || _this.vtype === 'primitive') {
       return new UndefinedValue()
     }
 
     const keyRef = getSymbolRef(argvalues[0])
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     if (!keyRefSet.has(keyRef)) {
       if (!_this.getMisc('precise')) {
         return _this
@@ -183,8 +225,8 @@ class Map extends (Collection as any) {
     }
 
     const entryValue = _this.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      return entryValue.field[1]
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      return entryValue.getFieldValue('1')
     }
   }
 
@@ -239,7 +281,7 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static keySet(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -248,17 +290,17 @@ class Map extends (Collection as any) {
       return _this
     }
 
-    const resSet = new UnionValue({
-      id: `${_this.id}-keySet`,
-      sid: `${_this.sid}-keySet`,
-      qid: `${_this.qid}-keySet`,
-      parent: _this,
-    })
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    const resSet = new UnionValue(undefined, `${_this.sid}-keySet`, `${_this.qid}-keySet`, node)
+    resSet.parent = _this
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     for (const keyRef of keyRefSet) {
       const entryValue = _this.getFieldValue(keyRef)
-      if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-        resSet.appendValue(entryValue.field[0])
+      if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+        resSet.appendValue(entryValue.getFieldValue('0'))
       }
     }
 
@@ -274,7 +316,7 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static merge(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length < 3) {
       return new UndefinedValue()
     }
@@ -293,24 +335,30 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static put(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length < 2) {
       return new UndefinedValue()
     }
 
     const keyRef = getSymbolRef(argvalues[0])
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     if (keyRefSet.has(keyRef)) {
       const entryValue = _this.getFieldValue(keyRef)
-      if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-        entryValue.field[1] = argvalues[1]
+      try {
+        if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+          entryValue.setFieldValue('1', argvalues[1])
+        }
+      } catch (e) {
+        // key覆盖失败，忽略
       }
     } else {
       // 否则新增
-      const kvPair = new UnionValue({
-        sid: 'key-value-pair',
-        parent: _this,
-      })
+      const kvPair = new UnionValue(undefined, 'map-key-value-pair', `${_this.qid}.map-kvp.${keyRef}`, node)
+      kvPair.parent = _this
       kvPair.appendValue(argvalues[0])
       kvPair.appendValue(argvalues[1])
       _this.setFieldValue(keyRef, kvPair)
@@ -329,22 +377,24 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static putAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return
+      return new UndefinedValue()
     }
 
     const newMap = argvalues[0]
     if (!newMap || !_.isFunction(newMap.getFieldValue) || !_.isFunction(newMap.getMisc)) {
-      return
+      _this.setMisc('precise', false)
+      addElementToBuffer(_this, newMap)
+      return new UndefinedValue()
     }
 
     const newKeyRefSet = newMap.getFieldValue('keyRefSet')
     if (newKeyRefSet) {
       for (const newKeyRef of newKeyRefSet) {
         const newEntryValue = newMap.getFieldValue(newKeyRef)
-        if (Array.isArray(newEntryValue.field) && newEntryValue.field.length === 2) {
-          const newArgValues = [newEntryValue.field[0], newEntryValue.field[1]]
+        if (Array.isArray(newEntryValue.value) && newEntryValue.value.length === 2) {
+          const newArgValues = [newEntryValue.getFieldValue('0'), newEntryValue.getFieldValue('1')]
           Map.put(fclos, newArgValues, state, node, scope)
         }
       }
@@ -357,6 +407,8 @@ class Map extends (Collection as any) {
       }
       addElementToBuffer(_this, newMap)
     }
+
+    return new UndefinedValue()
   }
 
   /**
@@ -368,7 +420,7 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static putIfAbsent(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length < 2) {
       return new UndefinedValue()
     }
@@ -390,28 +442,36 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static remove(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length < 1) {
       return new UndefinedValue()
     }
 
     const keyRef = getSymbolRef(argvalues[0])
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     if (!keyRefSet.has(keyRef)) {
-      return
+      return new UndefinedValue()
     }
 
     const entryValue = _this.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      const value = entryValue.field[1]
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      const value = entryValue.getFieldValue('1')
       if (argvalues.length === 1) {
         keyRefSet.delete(keyRef)
-        delete _this.field[keyRef]
+        _this.members.delete(keyRef)
         return value
       }
-      if (argvalues.length === 2 && value?._qid === argvalues[1]._qid) {
+      if (
+        argvalues.length === 2 &&
+        value?.logicalQid ===
+          argvalues[1].logicalQid
+      ) {
         keyRefSet.delete(keyRef)
-        delete _this.field[keyRef]
+        _this.members.delete(keyRef)
         return new UndefinedValue()
       }
     }
@@ -426,26 +486,30 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static replace(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length < 2) {
-      return
+      return new UndefinedValue()
     }
 
     const keyRef = getSymbolRef(argvalues[0])
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     if (!keyRefSet.has(keyRef)) {
-      return
+      return new UndefinedValue()
     }
 
     const entryValue = _this.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      const value = entryValue.field[1]
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      const value = entryValue.getFieldValue('1')
       if (argvalues.length === 2) {
-        entryValue.field[1] = argvalues[1]
+        entryValue.setFieldValue('1', argvalues[1])
         return value
       }
-      if (argvalues.length === 3 && value?._qid === argvalues[1]._qid) {
-        entryValue.field[1] = argvalues[2]
+      if (argvalues.length === 3 && value?.qid === argvalues[1].qid) {
+        entryValue.setFieldValue('1', argvalues[2])
         return new UndefinedValue()
       }
     }
@@ -482,7 +546,7 @@ class Map extends (Collection as any) {
    * @param scope
    */
   static values(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -491,17 +555,17 @@ class Map extends (Collection as any) {
       return _this
     }
 
-    const resSet = new UnionValue({
-      id: `${_this.id}-valueSet`,
-      sid: `${_this.sid}-valueSet`,
-      qid: `${_this.qid}-valueSet`,
-      parent: _this,
-    })
-    const keyRefSet = _this.getFieldValue('keyRefSet')
+    const resSet = new UnionValue(undefined, `${_this.sid}-valueSet`, `${_this.qid}-valueSet`, node)
+    resSet.parent = _this
+    let keyRefSet = _this.getFieldValue('keyRefSet')
+    if (keyRefSet === null || keyRefSet === undefined || keyRefSet.size === 0) {
+      keyRefSet = new Set()
+      _this.setFieldValue('keyRefSet', keyRefSet)
+    }
     for (const keyRef of keyRefSet) {
       const entryValue = _this.getFieldValue(keyRef)
-      if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-        resSet.appendValue(entryValue.field[1])
+      if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+        resSet.appendValue(entryValue.getFieldValue('1'))
       }
     }
 

@@ -41,13 +41,13 @@ class JavaDefaultTaintChecker extends JavaTaintAbstractChecker {
       const selfCollectEntryPoints: any[] = []
       const selfCollectTaintSource: any[] = []
       const { selfCollectMainEntryPoints, selfCollectMainTaintSource } = MainEntryPoint.getJavaMainEntryPointAndSource(
-        topScope.packageManager
+        topScope.context.packages
       )
       selfCollectEntryPoints.push(...selfCollectMainEntryPoints)
       selfCollectTaintSource.push(...selfCollectMainTaintSource)
 
       const { selfCollectSpringEntryPoints, selfCollectSpringTaintSource } =
-        springEntryPoint.getSpringEntryPointAndSource(topScope.packageManager)
+        springEntryPoint.getSpringEntryPointAndSource(topScope.context.packages)
       selfCollectEntryPoints.push(...selfCollectSpringEntryPoints)
       selfCollectTaintSource.push(...selfCollectSpringTaintSource)
 
@@ -87,9 +87,10 @@ class JavaDefaultTaintChecker extends JavaTaintAbstractChecker {
         FullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
       }
       const fullCallGraphEntrypoint = FullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
-        analyzer.ainfo?.callgraph
+        analyzer.ainfo?.callgraph,
+        analyzer
       )
-      const fullFileEntrypoint = FullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer.fileManager)
+      const fullFileEntrypoint = FullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer)
       this.entryPoints.push(...fullCallGraphEntrypoint)
       this.entryPoints.push(...fullFileEntrypoint)
     }
@@ -102,9 +103,9 @@ class JavaDefaultTaintChecker extends JavaTaintAbstractChecker {
         }
         targetPackage = targetPackage.startsWith('.') ? targetPackage.slice(1) : targetPackage
         const arr = Loader.getPackageNameProperties(targetPackage)
-        let packageManagerT = topScope.packageManager
+        let packageManagerT = topScope.context.packages
         arr.forEach((path: any) => {
-          packageManagerT = packageManagerT?.field[path]
+          packageManagerT = packageManagerT?.members?.get(path)
         })
         if (!packageManagerT || packageManagerT.vtype === 'undefine') {
           continue
@@ -117,23 +118,7 @@ class JavaDefaultTaintChecker extends JavaTaintAbstractChecker {
           continue
         }
 
-        const scopeVal = Scoped({
-          vtype: 'scope',
-          _sid: 'mock',
-          _id: 'mock',
-          field: {},
-          parent: null,
-        })
-
-        const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
-        entryPoint.scopeVal = scopeVal
-        entryPoint.argValues = []
-        entryPoint.functionName = entrypoint.functionName
-        entryPoint.filePath = entrypoint.filePath
-        entryPoint.attribute = entrypoint.attribute
-        entryPoint.packageName = entrypoint.packageName
-        entryPoint.entryPointSymVal = entryPointSymVal
-        this.entryPoints.push(entryPoint)
+        this.resolveAndPushEntryPoint(entryPointSymVal, entrypoint, func, analyzer, Scoped, EntryPoint, Constant)
       }
     }
   }

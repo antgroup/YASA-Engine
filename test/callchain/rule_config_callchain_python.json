@@ -1,0 +1,35 @@
+[
+  {
+    "checkerIds": [
+      "callchain_python"
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": ["0"],
+          "attribute": "PythonCommandExec",
+          "fsig": "subprocess.call"
+        },
+        {
+          "args": ["0"],
+          "attribute": "PythonCommandExec",
+          "fsig": "os.system"
+        },
+        {
+          "args": ["0"],
+          "attribute": "PythonEvalInjection",
+          "fsig": "eval"
+        },
+        {
+          "args": ["0"],
+          "attribute": "PythonSQLInjection",
+          "fsig": "cursor.execute"
+        }
+      ]
+    },
+    "entrypoints": [
+
+    ]
+  }
+]

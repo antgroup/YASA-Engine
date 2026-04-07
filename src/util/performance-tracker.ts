@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports, import/no-commonjs */
-const { logDiagnostics } = require('./diagnostics-log-util')
 const { yasaLog, yasaWarning, yasaSeparator } = require('./format-util')
-/* eslint-enable @typescript-eslint/no-require-imports, import/no-commonjs */
 
 /**
  * 性能追踪器接口
@@ -11,14 +9,15 @@ export interface IPerformanceTracker {
   start(stage?: string): void
   end(stage: string): void
   // 累加模式：如果在 start/end 之间调用，会自动转换为 record 模式
-  record(stage: string, duration: number): void
+  record(stage: string, duration?: number): void | { start: () => void; end: () => void }
 
   setEnableDetailedInstructionStats(enabled?: boolean): void
   startInstructionMonitor(): void
   startInstruction(): void
   endInstructionAndUpdateStats(node: any, getLocationKey: (node: any, instructionType: string) => string): void
 
-  logPerformance(analyzer: any): void
+  collectAnalysisData(analyzer: any): void
+  outputPerformanceReport(): void
   getTimings(): Record<string, number | null>
 }
 
@@ -30,11 +29,30 @@ export interface IPerformanceTracker {
 class PerformanceTracker {
   private static readonly OTHER_COST_LABEL = 'other cost'
 
+  private static readonly OVERVIEW_LABELS = [
+    'Language',
+    'Files analyzed',
+    'Lines of code',
+    'Total time',
+    'Total instruction',
+    'Executed instruction',
+    'Execution count',
+    'Valid entrypoints',
+    'Avg execution time per instruction',
+    'Avg instruction execution count',
+    'Execution time 70%/99%/100%',
+    'Execution times 70%/99%/100%',
+  ]
+
   private startTime: number = 0
 
   private enableDetailedInstructionStats: boolean = false
 
   private hasTotalStage: boolean = false
+
+  private hasLoggedPerformance: boolean = false
+
+  private cachedAnalysisOverview: ReturnType<typeof this.collectAnalysisOverview> | null = null
 
   private stages: {
     [key: string]: {
@@ -45,6 +63,8 @@ class PerformanceTracker {
       hasRecorded: boolean // 标记是否在 start/end 之间调用了 record
     }
   } = {}
+
+  private timers: Map<string, { start: () => void; end: () => void }> = new Map()
 
   private instructionStats: {
     instructionTimes: Map<string, number[]> // 总执行时间（包含嵌套调用）
@@ -182,18 +202,32 @@ class PerformanceTracker {
   }
 
   /**
+   * 获取内存使用情况的格式化字符串
+   * @returns {string} 格式化的内存使用字符串，如 "heap: 1024/4096 MB"
+   */
+  private getMemoryUsageString(): string {
+    const memUsage = process.memoryUsage()
+    const heapUsedMB = Math.round((memUsage.heapUsed / 1024 / 1024) * 100) / 100
+    const heapTotalMB = Math.round((memUsage.heapTotal / 1024 / 1024) * 100) / 100
+    const rssMB = Math.round((memUsage.rss / 1024 / 1024) * 100) / 100
+    const arrayBuffersMB = Math.round((memUsage.arrayBuffers / 1024 / 1024) * 100) / 100
+    return `heap: ${heapUsedMB}/${heapTotalMB} MB, rss: ${rssMB} MB, arrayBuffers: ${arrayBuffersMB} MB`
+  }
+
+  /**
    * 输出阶段结束日志
    * @param stage - 阶段名称
    * @param duration - 耗时（毫秒）
    */
   private logStageEnd(stage: string, duration: number): void {
+    const memoryInfo = this.getMemoryUsageString()
     if (stage === 'total') {
-      yasaLog(`Execution completed, cost: ${duration}ms`)
+      yasaLog(`Execution completed, cost: ${duration}ms, ${memoryInfo}`)
     } else {
       const leafName = this.getStageLeafName(stage)
       if (leafName && leafName !== 'undefined') {
         const stages = this.getStageArray(stage)
-        yasaLog(`Completed ${leafName}, cost: ${duration}ms`, stages)
+        yasaLog(`Completed ${leafName}, cost: ${duration}ms, ${memoryInfo}`, stages)
       }
     }
   }
@@ -249,23 +283,61 @@ class PerformanceTracker {
    * 记录一段时间的耗时（用于累加场景）
    * 混合模式：start() 后调用 record() 自动转换为 record 模式，end() 时使用 record 累加的 totalTime
    * @param stage - 阶段名称
-   * @param duration - 耗时（毫秒）
+   * @param duration - 可选，耗时（毫秒）。如果不传，返回一个计时器对象，可以调用 start() 和 end()
+   * @returns {void | {start: () => void; end: () => void}} 如果 duration 未提供，返回包含 start() 和 end() 方法的对象；否则返回 void
    */
-  record(stage: string, duration: number): void {
-    this.initStage(stage)
-    const stageData = this.stages[stage]
-    stageData.totalTime += duration
-    stageData.hasRecorded = true
+  record(stage: string, duration?: number): void | { start: () => void; end: () => void } {
+    // 如果提供了 duration，使用原有的记录方式
+    if (duration !== undefined) {
+      this.initStage(stage)
+      const stageData = this.stages[stage]
+      stageData.totalTime += duration
+      stageData.hasRecorded = true
 
-    // 如果正在 start/end 计时，停止计时并转换为 record 模式
-    if (stageData.currentStartTime > 0) {
-      stageData.currentStartTime = 0
+      // 如果正在 start/end 计时，停止计时并转换为 record 模式
+      if (stageData.currentStartTime > 0) {
+        stageData.currentStartTime = 0
+      }
+
+      if (stageData.startTime === 0) {
+        stageData.startTime = Date.now()
+      }
+      stageData.endTime = Date.now()
+      return
     }
 
-    if (stageData.startTime === 0) {
-      stageData.startTime = Date.now()
+    // 如果没有提供 duration，返回一个计时器对象（每个 stage 共享同一个计时器）
+    if (!this.timers.has(stage)) {
+      let startTime: number | null = null
+      const timer = {
+        start: () => {
+          startTime = Date.now()
+        },
+        end: () => {
+          if (startTime === null) {
+            return
+          }
+          const elapsed = Date.now() - startTime
+          this.initStage(stage)
+          const stageData = this.stages[stage]
+          stageData.totalTime += elapsed
+          stageData.hasRecorded = true
+
+          // 如果正在 start/end 计时，停止计时并转换为 record 模式
+          if (stageData.currentStartTime > 0) {
+            stageData.currentStartTime = 0
+          }
+
+          if (stageData.startTime === 0) {
+            stageData.startTime = startTime
+          }
+          stageData.endTime = Date.now()
+          startTime = null
+        },
+      }
+      this.timers.set(stage, timer)
     }
-    stageData.endTime = Date.now()
+    return this.timers.get(stage)!
   }
 
   /**
@@ -278,7 +350,7 @@ class PerformanceTracker {
     this.initStage(stage)
     const stageData = this.stages[stage]
 
-    // forceEnd 为 true 时，强制结束正在运行的阶段（仅在 logPerformance 时使用）
+    // forceEnd 为 true 时，强制结束正在运行的阶段（仅在 outputPerformanceReport 时使用）
     if (forceEnd && stageData.currentStartTime > 0) {
       this.end(stage)
       return this.getStageTime(stage, false)
@@ -307,7 +379,7 @@ class PerformanceTracker {
    * @returns {Object} 分析概览数据对象
    */
   // eslint-disable-next-line complexity, sonarjs/cognitive-complexity
-  private collectAnalysisOverview(
+  collectAnalysisOverview(
     analyzer: any,
     timings: Record<string, number | null>
   ): {
@@ -317,13 +389,13 @@ class PerformanceTracker {
     lineCount: number
     // summary2
     totalTime: number
-    totalInstruction: number
     executedInstruction: number
     executionCount: number
     // configure
-    sourceCount: number
-    sinkCount: number
+    markedSourceCount: number
+    matchedSinkCount: number
     entryPointCount: number
+    findingCount: number
     // symbolInterpretDetail1
     avgExecutionTimePerInstruction: number
     avgInstructionExecutionCount: number
@@ -340,14 +412,26 @@ class PerformanceTracker {
 
     const language = analyzer?.options?.language || Config.language || 'unknown'
 
-    // 获取要统计的文件列表（单文件分析时只统计匹配的文件）
-    let filesToCount: string[] = []
-    if (analyzer?.fileManager) {
+    // 使用 sourceCodeCache 获取精确的文件数量和代码行数
+    let fileCount = 0
+    let totalLines = 0
+
+    if (analyzer?.sourceCodeCache && analyzer.sourceCodeCache instanceof Map) {
+      // 直接从 sourceCodeCache 获取精确数据
+      fileCount = analyzer.sourceCodeCache.size
+      for (const lines of analyzer.sourceCodeCache.values()) {
+        if (Array.isArray(lines)) {
+          totalLines += lines.length
+        }
+      }
+    } else if (analyzer?.fileManager) {
+      // 回退到旧的统计方式
       const sourcePath =
         analyzer?.options?.sourcePath ||
         analyzer?.options?.sourceFile ||
         Config.sourcePath ||
         (Config.single && Config.maindir ? Config.maindir : null)
+      let filesToCount: string[] = []
       if (sourcePath && Config.single) {
         const sourcePathNormalized = sourcePath.replace(/\\/g, '/')
         const allFiles = Object.keys(analyzer.fileManager)
@@ -361,35 +445,16 @@ class PerformanceTracker {
       } else {
         filesToCount = Object.keys(analyzer.fileManager)
       }
-    }
 
-    let fileCount = filesToCount.length
-    if (fileCount === 0) {
-      const Statistics = require('./statistics')
-      fileCount = Statistics.numProcessedFiles || 0
-    }
-
-    let totalLines = 0
-    try {
-      const SourceLine = require('../engine/analyzer/common/source-line')
-      if (analyzer?.fileManager && SourceLine.getCodeBySourceFile) {
-        for (const filename of filesToCount) {
-          try {
-            const code = SourceLine.getCodeBySourceFile(filename)
-            if (code) {
-              totalLines += code.split('\n').length
-            }
-          } catch (e) {
-            // 忽略单个文件的错误
-          }
-        }
+      fileCount = filesToCount.length
+      if (fileCount === 0) {
+        const Statistics = require('./statistics')
+        fileCount = Statistics.numProcessedFiles || 0
       }
-    } catch (e) {
-      // SourceLine 可能不存在，使用 AST 估算作为后备
-    }
-    if (totalLines === 0 && analyzer?.fileManager) {
+
+      // 使用 AST 估算代码行数
       for (const filename of filesToCount) {
-        const { ast } = analyzer.fileManager[filename] || {}
+        const { ast } = analyzer.symbolTable.get(analyzer.fileManager[filename]) || {}
         if (ast) {
           if (ast.loc?.end?.line) {
             totalLines += ast.loc.end.line
@@ -400,15 +465,14 @@ class PerformanceTracker {
       }
     }
 
-    // 使用被执行的指令位置数量作为总指令数的近似值
+    // 统计逻辑统一：都是按节点数量统计
+    // executedInstruction: 执行过的不同指令位置数量（节点数量，通过执行时记录）
     const executedInstruction = this.instructionStats.instructionCounts.size
+    // executionCount: 所有指令执行次数的总和（同一节点可能执行多次）
     let executionCount = 0
     for (const count of this.instructionStats.instructionCounts.values()) {
       executionCount += count
     }
-    const totalInstruction = executedInstruction
-    let sourceCount = 0
-    let sinkCount = 0
     let entryPointCount = 0
     if (analyzer?.checkerManager) {
       const { checkerManager } = analyzer
@@ -422,17 +486,6 @@ class PerformanceTracker {
       if (checkerManager.registered_checkers) {
         for (const checkerId in checkerManager.registered_checkers) {
           checkers.add(checkerManager.registered_checkers[checkerId])
-        }
-      }
-
-      for (const checker of checkers) {
-        const checkerAny = checker as any
-        const { checkerRuleConfigContent } = checkerAny || {}
-        if (checkerRuleConfigContent?.sources) {
-          sourceCount += this.countConfigItems(checkerRuleConfigContent.sources)
-        }
-        if (checkerRuleConfigContent?.sinks) {
-          sinkCount += this.countConfigItems(checkerRuleConfigContent.sinks)
         }
       }
 
@@ -451,19 +504,43 @@ class PerformanceTracker {
       }
     }
 
+    // 获取 findings 数量（只统计 taintflow，不包括 callgraph）
+    let findingCount = 0
+    if (analyzer?.checkerManager?.resultManager) {
+      const findings = analyzer.checkerManager.resultManager.getFindings?.() || {}
+      // 只统计实际的 findings，排除 callgraph（callgraph 是调用图数据，不是 findings）
+      for (const key in findings) {
+        if (key !== 'callgraph' && Array.isArray(findings[key])) {
+          findingCount += findings[key].length
+        }
+      }
+    }
+
     const instructionDetails = this.getInstructionDetails()
+
+    // 获取实际标记的 source 和匹配的 sink 数量（延迟加载以避免循环依赖）
+    let markedSourceCount = 0
+    let matchedSinkCount = 0
+    try {
+      const sourceUtil = require('../checker/taint/common-kit/source-util')
+      const sinkUtil = require('../checker/taint/common-kit/sink-util')
+      markedSourceCount = sourceUtil?.getMarkedSourceCount ? sourceUtil.getMarkedSourceCount() : 0
+      matchedSinkCount = sinkUtil?.getMatchedSinkCount ? sinkUtil.getMatchedSinkCount() : 0
+    } catch (e) {
+      // 模块可能不存在或循环依赖，忽略
+    }
 
     return {
       language,
       fileCount,
       lineCount: totalLines,
       totalTime: timings.total || 0,
-      totalInstruction,
       executedInstruction,
       executionCount,
-      sourceCount,
-      sinkCount,
+      markedSourceCount,
+      matchedSinkCount,
       entryPointCount,
+      findingCount,
       avgExecutionTimePerInstruction: instructionDetails.avgExecutionTimePerInstruction,
       avgInstructionExecutionCount: instructionDetails.avgInstructionExecutionCount,
       executionTime70Percent: instructionDetails.executionTime70Percent,
@@ -476,11 +553,20 @@ class PerformanceTracker {
   }
 
   /**
-   * 记录性能数据并输出摘要
-   * @param analyzer - 可选的 analyzer 对象
+   * 从 analyzer 收集分析概览数据
+   * @param analyzer - analyzer 对象
    */
-  // eslint-disable-next-line complexity, sonarjs/cognitive-complexity
-  logPerformance(analyzer?: any): void {
+  collectAnalysisData(analyzer: any): void {
+    const timings = this.getTimings()
+    this.cachedAnalysisOverview = this.collectAnalysisOverview(analyzer, timings)
+    this.hasLoggedPerformance = true
+  }
+
+  /**
+   * 输出性能报告（包括 overview 和 summary）
+   * 如果之前执行过 collectAnalysisData(analyzer)，则输出 overview，否则只输出 summary
+   */
+  outputPerformanceReport(): void {
     if (!this.hasTotalStage) {
       this.start()
     }
@@ -496,110 +582,10 @@ class PerformanceTracker {
       this.end('total')
     }
 
-    const timings = this.getTimings()
-    const analysisOverview = analyzer ? this.collectAnalysisOverview(analyzer, timings) : null
-    if (analysisOverview) {
-      logDiagnostics('summary1', {
-        string1: analysisOverview.language,
-        string2: 'fileCount',
-        string3: 'lineCount',
-        number1: analysisOverview.fileCount,
-        number2: analysisOverview.lineCount > 0 ? analysisOverview.lineCount : null,
-        number3: null,
-      })
-
-      logDiagnostics('summary2', {
-        string1: 'totalTime',
-        string2: 'totalInstruction',
-        string3: 'executedInstruction',
-        number1: analysisOverview.totalTime,
-        number2: analysisOverview.totalInstruction,
-        number3: analysisOverview.executedInstruction,
-      })
-
-      logDiagnostics('configure', {
-        string1: 'sourceCount',
-        string2: 'sinkCount',
-        string3: 'entryPoints',
-        number1: analysisOverview.sourceCount,
-        number2: analysisOverview.sinkCount,
-        number3: analysisOverview.entryPointCount,
-      })
-    }
-
-    logDiagnostics('stageTime', {
-      string1: 'preProcessTime',
-      string2: 'preAnalyzeTime',
-      string3: 'symbolInterpretTime',
-      number1: timings.preProcess || 0,
-      number2: timings.startAnalyze || 0,
-      number3: timings.symbolInterpret || 0,
-    })
-
-    const parseCodeStage = this.stages['preProcess.parseCode']
-    const preloadStage = this.stages['preProcess.preload']
-    const processModuleStage = this.stages['preProcess.processModule']
-    logDiagnostics('preprocessDetail1', {
-      string1: 'parseTime',
-      string2: 'preloadTime',
-      string3: 'processModuleTime',
-      number1: parseCodeStage?.totalTime || 0,
-      number2: preloadStage?.totalTime || 0,
-      number3: processModuleStage?.totalTime || 0,
-    })
-
-    if (analysisOverview) {
-      logDiagnostics('symbolInterpretDetail1', {
-        string1: 'executionCount',
-        string2: 'avgExecutionTimePerInstruction',
-        string3: 'avgInstructionExecutionCount',
-        number1: analysisOverview.executionCount,
-        number2: analysisOverview.avgExecutionTimePerInstruction,
-        number3: analysisOverview.avgInstructionExecutionCount,
-      })
-
-      logDiagnostics('symbolInterpretDetail2', {
-        string1: 'executionTime70Percent',
-        string2: 'executionTime99Percent',
-        string3: 'executionTime100Percent',
-        number1: analysisOverview.executionTime70Percent,
-        number2: analysisOverview.executionTime99Percent,
-        number3: analysisOverview.executionTime100Percent,
-      })
-
-      logDiagnostics('symbolInterpretDetail3', {
-        string1: 'executionTimes70Percent',
-        string2: 'executionTimes99Percent',
-        string3: 'executionTimes100Percent',
-        number1: analysisOverview.executionTimes70Percent,
-        number2: analysisOverview.executionTimes99Percent,
-        number3: analysisOverview.executionTimes100Percent,
-      })
-    }
-
-    let unifiedMaxLabelLength = 0
-    if (analyzer && analysisOverview) {
-      const labels = [
-        'Language',
-        'Files analyzed',
-        'Lines of code',
-        'Total time',
-        'Total instruction',
-        'Executed instruction',
-        'Execution count',
-        'Sources configured',
-        'Sinks configured',
-        'Valid entrypoints',
-        'Avg execution time per instruction',
-        'Avg instruction execution count',
-        'Execution time 70%/99%/100%',
-        'Execution times 70%/99%/100%',
-      ]
-      unifiedMaxLabelLength = Math.max(...labels.map((label) => label.length)) + 1
-    }
-
-    if (analyzer && analysisOverview) {
-      this.outputOverview(analysisOverview, unifiedMaxLabelLength)
+    // 如果之前执行过 collectAnalysisData(analyzer)，则输出 overview
+    if (this.hasLoggedPerformance && this.cachedAnalysisOverview) {
+      const unifiedMaxLabelLength = Math.max(...PerformanceTracker.OVERVIEW_LABELS.map((label) => label.length)) + 1
+      this.outputOverview(this.cachedAnalysisOverview, unifiedMaxLabelLength)
     }
 
     this.outputSummary()
@@ -634,14 +620,14 @@ class PerformanceTracker {
       maxLabelLength
     )
 
-    this.outputOverviewLine('Total time', `${analysisOverview.totalTime}ms`, maxLabelLength)
-    this.outputOverviewLine('Total instruction', String(analysisOverview.totalInstruction), maxLabelLength)
+    this.outputOverviewLine('Total time', this.formatTime(analysisOverview.totalTime), maxLabelLength)
     this.outputOverviewLine('Executed instruction', String(analysisOverview.executedInstruction), maxLabelLength)
     this.outputOverviewLine('Execution count', String(analysisOverview.executionCount), maxLabelLength)
 
-    this.outputOverviewLine('Sources configured', String(analysisOverview.sourceCount), maxLabelLength)
-    this.outputOverviewLine('Sinks configured', String(analysisOverview.sinkCount), maxLabelLength)
+    this.outputOverviewLine('Sources marked', String(analysisOverview.markedSourceCount), maxLabelLength)
+    this.outputOverviewLine('Sinks matched', String(analysisOverview.matchedSinkCount), maxLabelLength)
     this.outputOverviewLine('Valid entrypoints', String(analysisOverview.entryPointCount), maxLabelLength)
+    this.outputOverviewLine('Findings', String(analysisOverview.findingCount), maxLabelLength)
 
     this.outputOverviewLine(
       'Avg execution time per instruction',
@@ -671,23 +657,30 @@ class PerformanceTracker {
 
   /** 输出性能统计（树形结构，自动计算 other cost） */
   // eslint-disable-next-line complexity
-  outputSummary(): void {
+  private outputSummary(): void {
     const timings = this.getTimings()
 
     yasaSeparator('Performance Statistics')
 
-    const rootStages = Object.keys(this.stages).filter((stage) => {
-      return !this.getParentStage(stage) && stage !== 'total'
-    })
+    const rootStages = Object.keys(this.stages)
+      .filter((stage) => {
+        return !this.getParentStage(stage) && stage !== 'total'
+      })
+      .sort((a, b) => {
+        // 按照 startTime 排序
+        return this.stages[a].startTime - this.stages[b].startTime
+      })
 
     if (this.hasTotalStage && timings.total != null) {
-      console.log(`total cost: ${timings.total}ms`)
+      console.log(`total cost: ${this.formatTime(timings.total)}`)
     }
 
     const maxDepth = Infinity
     rootStages.forEach((stage) => {
       if (timings[stage] != null) {
-        this.outputStageTree(stage, timings, 0, maxDepth)
+        // 根阶段的父时间是 total
+        const parentTime = this.hasTotalStage && timings.total != null ? timings.total : null
+        this.outputStageTree(stage, timings, 0, maxDepth, parentTime)
       }
     })
 
@@ -701,7 +694,8 @@ class PerformanceTracker {
 
       const otherTime = totalTime - allStagesTotal
       if (otherTime > 0) {
-        console.log(`${PerformanceTracker.OTHER_COST_LABEL}: ${otherTime}ms`)
+        const percentage = ((otherTime / totalTime) * 100).toFixed(1)
+        console.log(`${PerformanceTracker.OTHER_COST_LABEL}: ${this.formatTime(otherTime)} (${percentage}%)`)
       }
     }
 
@@ -718,12 +712,14 @@ class PerformanceTracker {
    * @param timings - 所有阶段的耗时数据
    * @param indent - 缩进级别
    * @param maxDepth - 最大深度
+   * @param parentTime - 父阶段的耗时（用于计算百分比）
    */
   private outputStageTree(
     stage: string,
     timings: Record<string, number | null>,
     indent: number,
-    maxDepth: number = Infinity
+    maxDepth: number = Infinity,
+    parentTime: number | null = null
   ): void {
     if (indent >= maxDepth) {
       return
@@ -735,19 +731,31 @@ class PerformanceTracker {
 
     const indentStr = '  '.repeat(indent)
     const leafName = this.getStageLeafName(stage)
-    console.log(`${indentStr}${leafName} cost: ${stageTime}ms`)
+
+    // 如果有父阶段时间，计算并显示百分比
+    let percentageStr = ''
+    if (parentTime != null && parentTime > 0) {
+      const percentage = ((stageTime / parentTime) * 100).toFixed(1)
+      percentageStr = ` (${percentage}%)`
+    }
+
+    console.log(`${indentStr}${leafName} cost: ${this.formatTime(stageTime)}${percentageStr}`)
 
     const childStages = this.getChildStages(stage)
       .filter((childStage) => {
         const childTime = timings[childStage]
         return childTime != null && childTime > 0
       })
-      .sort()
+      .sort((a, b) => {
+        // 按照 startTime 排序
+        return this.stages[a].startTime - this.stages[b].startTime
+      })
 
     if (childStages.length > 0) {
       if (indent + 1 < maxDepth) {
         childStages.forEach((childStage) => {
-          this.outputStageTree(childStage, timings, indent + 1, maxDepth)
+          // 子阶段的父时间是当前阶段的时间
+          this.outputStageTree(childStage, timings, indent + 1, maxDepth, stageTime)
         })
       }
 
@@ -759,9 +767,29 @@ class PerformanceTracker {
       // 计算 other cost（父阶段时间减去所有子阶段时间）
       const otherCost = stageTime - subTotal
       if (otherCost > 0) {
-        console.log(`${indentStr}  ${PerformanceTracker.OTHER_COST_LABEL}: ${otherCost}ms`)
+        const percentage = ((otherCost / stageTime) * 100).toFixed(1)
+        console.log(
+          `${indentStr}  ${PerformanceTracker.OTHER_COST_LABEL}: ${this.formatTime(otherCost)} (${percentage}%)`
+        )
       }
     }
+  }
+
+  /**
+   * Format milliseconds to international standard format (minutes:seconds.milliseconds)
+   * @param ms - Milliseconds
+   * @returns {string} Formatted time string, e.g. "0m12s203ms" or "12s203ms"
+   */
+  private formatTime(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    const milliseconds = ms % 1000
+
+    if (minutes > 0) {
+      return `${minutes}m${seconds}s${milliseconds}ms`
+    }
+    return `${seconds}s${milliseconds}ms`
   }
 
   /**
@@ -846,8 +874,8 @@ class PerformanceTracker {
     const avgInstructionExecutionCount =
       totalInstructionLocations > 0 ? totalInstructions / totalInstructionLocations : 0
 
-    // 注意：不再在这里输出日志，避免与 logPerformance 中的输出重复
-    // 日志输出统一在 logPerformance 方法中处理
+    // 注意：不再在这里输出日志，避免与 outputPerformanceReport 中的输出重复
+    // 日志输出统一在 outputPerformanceReport 方法中处理
 
     // 计算所有指令执行时间的分位数（基于净执行时间）
     const allExecutionTimes: number[] = []
@@ -1138,7 +1166,10 @@ class PerformanceTracker {
   }
 }
 
-// eslint-disable-next-line import/no-commonjs
+// 创建单例实例
+const performanceTrackerInstance = new PerformanceTracker()
+
 module.exports = {
   PerformanceTracker,
+  performanceTracker: performanceTrackerInstance, // 导出单例实例
 }

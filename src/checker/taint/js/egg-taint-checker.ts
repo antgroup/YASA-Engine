@@ -1,3 +1,5 @@
+import type { CallInfo } from '../../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const IntroduceTaint = require('../common-kit/source-util')
@@ -7,11 +9,6 @@ const Constant = require('../../../util/constant')
 const CommonUtil = require('../../../util/common-util')
 const Loader = require('../../../util/loader')
 const { matchSinkAtFuncCall } = require('../common-kit/sink-util')
-const {
-  valueUtil: {
-    ValueUtil: { Scoped },
-  },
-} = require('../../../engine/analyzer/common')
 const Config = require('../../../config')
 const eggHttpEgg = require('../../../engine/analyzer/javascript/egg/entrypoint-collector/egg-http')
 const SanitizerCheckerEgg = require('../../sanitizer/sanitizer-checker')
@@ -19,6 +16,7 @@ const { handleException: handleExceptionEgg } = require('../../../engine/analyze
 const logger = require('../../../util/logger')(__filename)
 const TaintCheckerEgg = require('../taint-checker')
 const TaintOutputStrategyEgg = require('../../common/output/taint-output-strategy')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 
 const TAINT_TAG_NAME_EGG = 'EGG_INPUT'
 
@@ -67,7 +65,7 @@ class EggTaintChecker extends TaintCheckerEgg {
       return
     }
     try {
-      IntroduceTaint.introduceTaintAtIdentifier(node, info.res, this.sourceScope.value)
+      IntroduceTaint.introduceTaintAtIdentifier(analyzer, scope, node, info.res, this.sourceScope.value)
     } catch (e: any) {
       handleExceptionEgg(
         e,
@@ -105,7 +103,8 @@ class EggTaintChecker extends TaintCheckerEgg {
       logger.info('YASA collecting egg source and entrypoint...')
       // eslint-disable-next-line prefer-const
       let { selfCollectEntryPoints, selfCollectTaintSource } = eggHttpEgg.getEggHttpEntryPointsAndSources(
-        topScope.fileManager
+        analyzer.fileManager,
+        analyzer
       )
 
       if (_.isEmpty(selfCollectEntryPoints) && _.isEmpty(ruleConfigEntryPoints)) {
@@ -156,12 +155,12 @@ class EggTaintChecker extends TaintCheckerEgg {
           // const arr = filepath.split("/").filter(str => str !== "").map(str => str.split(".").shift());
           let fieldT = topScope
           arr.forEach((path: any) => {
-            fieldT = fieldT?.field[path]
+            fieldT = fieldT?.members?.get(path)
           })
           if (!fieldT || fieldT.vtype === 'undefine') {
-            for (const mod in topScope.moduleManager.field) {
-              if (mod.includes(entrypoint.filePath) && topScope.moduleManager.field[mod].ast?.type === 'CompileUnit') {
-                fieldT = topScope.moduleManager.field[mod]
+            for (const mod of topScope.context.modules.members.keys()) {
+              if (mod.includes(entrypoint.filePath) && topScope.context.modules.members.get(mod)?.ast?.node?.type === 'CompileUnit') {
+                fieldT = topScope.context.modules.members.get(mod)
                 break
               }
             }
@@ -187,12 +186,12 @@ class EggTaintChecker extends TaintCheckerEgg {
             entryPoint.entryPointSymVal = entryPointSymVal
             this.entryPoints.push(entryPoint)
           } else {
-            if (!fieldT.ast || fieldT.ast.type !== 'CompileUnit') continue
+            if (!fieldT.ast.node || fieldT.ast.node.type !== 'CompileUnit') continue
             const entryPoint = new EntryPoint(Constant.ENGIN_START_FILE_BEGIN)
             entryPoint.scopeVal = fieldT
             entryPoint.argValues = undefined
             entryPoint.functionName = undefined
-            entryPoint.filePath = fieldT?.ast?.loc?.sourcefile
+            entryPoint.filePath = fieldT?.ast?.node?.loc?.sourcefile
             entryPoint.attribute = entrypoint.attribute
             entryPoint.packageName = undefined
             entryPoint.entryPointSymVal = fieldT
@@ -221,11 +220,11 @@ class EggTaintChecker extends TaintCheckerEgg {
     if (Config.analyzer !== 'EggAnalyzer') {
       return
     }
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
-    this.checkSinkAtFunctionCall(node, fclos, argvalues)
-    this.checkByFieldMatch(node, fclos, argvalues, scope)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, callInfo, funcCallArgTaintSource)
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
+    this.checkByFieldMatch(node, fclos, callInfo, scope, state)
   }
 
   /**
@@ -265,19 +264,20 @@ class EggTaintChecker extends TaintCheckerEgg {
    *
    * @param node
    * @param fclos
-   * @param argvalues
+   * @param callInfo
+   * @param state
    */
-  checkSinkAtFunctionCall(node: any, fclos: any, argvalues: any) {
+  checkSinkAtFunctionCall(node: any, fclos: any, callInfo: CallInfo | undefined, state?: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
 
-    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    let rule = matchSinkAtFuncCall(node, fclos, rules, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
+      const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerCheckerEgg.findSanitizerByIds(rule.sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerCheckerEgg.findTagAndMatchedSanitizer(
         node,
@@ -304,7 +304,8 @@ class EggTaintChecker extends TaintCheckerEgg {
             fclos,
             TAINT_TAG_NAME_EGG,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state?.callstack
           )
           if (!TaintOutputStrategyEgg.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyEgg.outputStrategyId)
@@ -319,8 +320,9 @@ class EggTaintChecker extends TaintCheckerEgg {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
    */
-  checkByFieldMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByFieldMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
@@ -388,7 +390,7 @@ class EggTaintChecker extends TaintCheckerEgg {
         create
       )
       if (matched) {
-        const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
+        const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
         const sanitizers = SanitizerCheckerEgg.findSanitizerByIds(rule.sanitizerIds)
         const ndResultWithMatchedSanitizerTagsArray = SanitizerCheckerEgg.findTagAndMatchedSanitizer(
           node,
@@ -415,7 +417,8 @@ class EggTaintChecker extends TaintCheckerEgg {
               fclos,
               TAINT_TAG_NAME_EGG,
               ruleName,
-              matchedSanitizerTags
+              matchedSanitizerTags,
+              state?.callstack
             )
 
             if (!TaintOutputStrategyEgg.isNewFinding(this.resultManager, taintFlowFinding)) continue
@@ -432,26 +435,28 @@ class EggTaintChecker extends TaintCheckerEgg {
    * @param fclos
    */
   getObj(fclos: any): any {
-    if (typeof fclos?._qid === 'undefined' && typeof fclos?._this === 'undefined') {
-      return fclos._sid?.replace('<instance>', '')
+    if (typeof fclos?.qid === 'undefined' && typeof fclos?._this === 'undefined') {
+      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fclos.sid)
     }
-    if (typeof fclos?._qid !== 'undefined') {
-      let qid = fclos?._qid?.replace('Egg.Context', 'this.ctx')
+    if (typeof fclos?.qid !== 'undefined') {
+      let qid = fclos?.qid?.replace('Egg.Context', 'this.ctx')
       qid = qid?.replace('Egg.Application', 'this.app')
       qid = qid?.replace('this.app.service', 'this.ctx.service')
       qid = qid?.replace('Egg.Request', 'this.ctx.request')
-      if (fclos.ast?.loc?.sourcefile && fclos.ast?.loc?.sourcefile.startsWith(Config.maindirPrefix)) {
-        const prefix = fclos.ast.loc.sourcefile.substring(Config.maindirPrefix.length).split('.')[0]
-        if (prefix) {
+      if (fclos.ast?.node?.loc?.sourcefile && fclos.ast?.node?.loc?.sourcefile.startsWith(Config.maindirPrefix)) {
+        const prefix = fclos.ast.node.loc.sourcefile.substring(Config.maindirPrefix.length)
+        const lastDotIndex = prefix.lastIndexOf('.')
+        const result = lastDotIndex >= 0 ? prefix.substring(0, lastDotIndex) : prefix
+        if (result) {
           qid = qid?.substring(prefix.length + 1)
         }
       }
-      return qid?.replace('<instance>', '')
+      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(qid)
     }
     if (!(fclos === fclos?._this)) {
       return this.getObj(fclos._this)
     }
-    return fclos._sid?.replace('<instance>', '')
+    return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fclos.sid)
   }
 }
 

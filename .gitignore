@@ -47,4 +47,7 @@ deps/uast4python
 /workspace/
 deps/uast4py
 src/uast
-src/report
+deps-runtime/
+.cursorrules
+test/javascript/test-report
+deps

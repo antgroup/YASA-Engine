@@ -93,7 +93,7 @@ async function update(dir: string): Promise<any> {
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4py/uast4py'),
+    path.join(__dirname, '../../deps'),
   ]
   try {
     await execute(null, args, recorder.printAndAppend)
@@ -140,7 +140,7 @@ async function getRunPythonBenchmarkResult(
     '--checkerIds',
     'taint_flow_test',
     '--uastSDKPath',
-    path.join(__dirname, '../../deps/uast4py/uast4py'),
+    path.join(__dirname, '../../deps'),
   ]
 
   try {

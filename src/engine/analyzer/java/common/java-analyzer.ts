@@ -1,34 +1,71 @@
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars, @typescript-eslint/no-use-before-define */
 import JavaTypeRelatedInfoResolver from '../../../../resolver/java/java-type-related-info-resolver'
+import type { Invocation } from '../../../../resolver/common/value/invocation'
+import type { ClassHierarchy } from '../../../../resolver/common/value/class-hierarchy'
+import { InnerFuncDefVisitor } from '../../common/ast-visitor'
+import type {
+  Scope,
+  State,
+  Value,
+  SymbolValue as SymbolValueType,
+  VoidValue as VoidValueType,
+  BinaryExprValue,
+  UnaryExprValue,
+} from '../../../../types/analyzer'
+import type {
+  CompileUnit,
+  VariableDeclaration,
+  Identifier,
+  MemberAccess,
+  ClassDefinition,
+  AssignmentExpression,
+  BinaryExpression,
+  CallExpression,
+  NewExpression,
+  UnaryExpression,
+  TryStatement,
+  RangeStatement,
+  FunctionDefinition,
+} from '../../../../types/uast'
+import type { PrimitiveValue as PrimitiveValueType } from '../../../../types/value'
 
 const _ = require('lodash')
 const fs = require('fs')
 const path = require('path')
-const flatted = require('flatted')
 const UastSpec = require('@ant-yasa/uast-spec')
+const QidUnifyUtil = require('../../../../util/qid-unify-util')
 const FileUtil = require('../../../../util/file-util')
-const logger = require('../../../../util/logger')(__filename)
-const Scope = require('../../common/scope')
-const Parsing = require('../../../parser/parsing')
+const logger: import('../../../../util/logger').Logger = require('../../../../util/logger')(__filename)
+const ScopeClass = require('../../common/scope')
+const Parser = require('../../../parser/parser')
 const JavaInitializer = require('./java-initializer')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const {
-  ValueUtil: { FunctionValue, Scoped, PackageValue, PrimitiveValue },
+  ValueUtil: { FunctionValue, Scoped, PackageValue, PrimitiveValue, SymbolValue, VoidValue },
 } = require('../../../util/value-util')
-const { Analyzer } = require('../../common')
+const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../../common/analyzer')
 const CheckerManager = require('../../common/checker-manager')
 const CurrentEntryPoint = require('../../common/current-entrypoint')
 const Constant = require('../../../../util/constant')
 const Config = require('../../../../config')
 const { handleException } = require('../../common/exception-handler')
-const UndefinedValue = require('../../common/value/undefine')
-const { md5 } = require('../../../../util/hash-util')
-const { yasaLog } = require('../../../../util/format-util')
+const {
+  ValueUtil: { UndefinedValue },
+} = require('../../../util/value-util')
+const FullCallGraphFileEntryPoint = require('../../../../checker/common/full-callgraph-file-entrypoint')
+const AstUtil = require('../../../../util/ast-util')
+const SourceLine = require('../../common/source-line')
+const { checkInvocationMatchSink } = require('../../../../checker/taint/common-kit/sink-util')
+const { filterDataFromScope } = require('../../../../util/common-util')
+import type { CallInfo } from '../../common/call-args'
+const { getLegacyArgValues } = require('../../common/call-args')
 
 /**
  * Java 代码分析器
  */
-class JavaAnalyzer extends (Analyzer as any) {
+class JavaAnalyzer extends Analyzer {
+  private unprocessedFileScopes?: Set<Scope>
+
   /**
    * 构造函数
    * @param options - 分析器选项
@@ -44,6 +81,45 @@ class JavaAnalyzer extends (Analyzer as any) {
     super(checkerManager, options)
     this.classMap = new Map()
     this.typeResolver = new JavaTypeRelatedInfoResolver()
+    this.entryPointSymValArray = []
+    this.globalState = {}
+    this.enableLibArgToThis = true
+    this.enablePruneDuringInterpret = true
+    this.pruneInfoMap = {
+      aggressiveMode: false,
+      sinkArray: [],
+      funcCallSourceSinkSanitizerArray: [],
+      otherSourceArray: [],
+      otherSanitizerArray: [],
+      matchSinkCacheMap: new Map(),
+      matchSinkNoRecurseCacheMap: new Map(),
+      matchFuncCallSourceSinkSanitizerCacheMap: new Map(),
+      dynamicClassArray: [
+        'Class',
+        'Thread',
+        'Runnable',
+        'java.util.Timer',
+        'java.util.TimerTask',
+        'org.springframework.util.ReflectionUtils',
+      ],
+      dynamicPackageArray: [
+        'java.util.concurrent',
+        'java.lang.reflect',
+        'java.util.function',
+        'org.springframework.core.task',
+        'org.springframework.scheduling',
+        'org.springframework.util.function',
+        'org.springframework.retry',
+        'org.springframework.web.reactive.function',
+        'org.springframework.web.servlet.function',
+        'org.springframework.integration.dsl',
+        'org.springframework.cloud.function',
+        'org.springframework.kafka.listener',
+        'reactor.core',
+      ],
+    }
+    this.timeoutEntryPoints = []
+    this.extraClassHierarchyByNameMap = new Map()
   }
 
   /**
@@ -52,25 +128,21 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param fileName - 文件名
    */
   preProcess4SingleFile(source: any, fileName: any) {
-    // init global scope
     JavaInitializer.initGlobalScope(this.topScope)
-
-    // time-out control
-    ;(this as any).thisIterationTime = 0
-    ;(this as any).prevIterationTime = new Date().getTime()
+    JavaInitializer.initPackageScope(this.topScope.context.packages)
 
     this.preloadFileToPackage(source, fileName)
-    for (const unprocessedFileScope of (this as any).unprocessedFileScopes) {
+    for (const unprocessedFileScope of this.unprocessedFileScopes!) {
       if (unprocessedFileScope.isProcessed) continue
       const state = this.initState(unprocessedFileScope)
-      this.processInstruction(unprocessedFileScope, unprocessedFileScope.ast, state)
+      this.processInstruction(unprocessedFileScope, unprocessedFileScope.ast?.node, state)
     }
-    ;(this as any).unprocessedFileScopes.clear()
-    delete (this as any).unprocessedFileScopes
+    this.unprocessedFileScopes?.clear()
+    this.unprocessedFileScopes = undefined
 
-    JavaInitializer.initPackageScope(this.topScope.packageManager)
+    this.assembleClassMap(this.topScope.context.packages)
 
-    this.assembleClassMap(this.topScope.packageManager)
+    JavaInitializer.addClassProto(this.classMap, this.topScope.context.packages, this)
   }
 
   /**
@@ -80,179 +152,47 @@ class JavaAnalyzer extends (Analyzer as any) {
    */
   // eslint-disable-next-line complexity
   async scanPackages(dir: any) {
-    const packageFiles = FileUtil.loadAllFileTextGlobby(['**/*.java', '!target/**', '!**/src/test/**'], dir)
-    if (packageFiles.length === 0) {
-      handleException(
-        null,
-        'find no target compileUnit of the project : no java file found in source path',
-        'find no target compileUnit of the project : no java file found in source path'
-      )
-      process.exit(1)
-    }
-    ;(this as any).unprocessedFileScopes = new Set()
+    this.unprocessedFileScopes = new Set()
     const PARSE_CODE_STAGE = 'preProcess.parseCode'
     const PRELOAD_STAGE = 'preProcess.preload'
+
+    // 开始解析阶段：解析源代码为 AST
     this.performanceTracker.start(PARSE_CODE_STAGE)
-    this.performanceTracker.start(PRELOAD_STAGE)
+    const astMap = await Parser.parseProject(dir, this.options, this.sourceCodeCache)
+    this.performanceTracker.end(PARSE_CODE_STAGE)
 
-    // 根据配置决定是否使用缓存优化
-    // incremental: true/false/force
-    // - false: 完全不生成和读取 json（禁用缓存，默认值）
-    // - true: 正常流程（读取缓存，如果变化则重新解析并更新）
-    // - force: 无论有无变化，都重新生成然后存储 json（强制重新解析但保存缓存）
-    const incremental = Config.incremental !== false && Config.incremental !== 'false' // 需要显式配置为 true 或 force 才启用
-    const forceReparse = Config.incremental === 'force' // 强制重新解析
-    const disableCache = Config.incremental === false || Config.incremental === 'false' // 禁用缓存
-
-    // 加载缓存 list 文件（只有在启用缓存且不是 force 模式时才加载）
-    const cacheList = !disableCache && !forceReparse ? await this.loadCacheList() : new Map()
-
-    if (disableCache) {
-      // 禁用缓存模式：完全不生成和读取 json
-      for (const packageFile of packageFiles) {
-        this.preloadFileToPackage(packageFile.content, packageFile.file, null)
-      }
-    } else if (forceReparse) {
-      // force 模式：无论有无变化，都重新生成然后存储 json
-      const cacheEntries: Array<{ path: string; jsonFile: string; crc: string; time?: string }> = []
-      const savePromises: Array<
-        Promise<{ relativePath: string; jsonFile: string; crc: string; time?: string } | null>
-      > = []
-
-      for (const packageFile of packageFiles) {
-        // 强制重新解析，但保存缓存
-        const savePromise = this.preloadFileToPackageAsync(packageFile.content, packageFile.file)
-        savePromises.push(savePromise)
-      }
-
-      // 等待所有保存完成后再更新 list 文件
-      if (savePromises.length > 0) {
-        Promise.all(savePromises)
-          .then((savedInfos) => {
-            for (const info of savedInfos) {
-              if (info) {
-                cacheEntries.push({
-                  path: info.relativePath,
-                  jsonFile: info.jsonFile,
-                  crc: info.crc,
-                  time: info.time,
-                })
-              }
-            }
-            if (cacheEntries.length > 0) {
-              return this.saveCacheList(cacheEntries)
-            }
-          })
-          .catch((err) => {
-            logger.warn(`Failed to save cache list: ${err.message}`)
-          })
-      }
-    } else if (incremental) {
-      // 并发加载所有文件的缓存（优化模式）
-      const cacheLoadStart = Date.now()
-      const cacheLoadPromises = packageFiles.map((packageFile: any) =>
-        this.loadAstFromCache(packageFile.content, packageFile.file, cacheList)
+    // 防御性检查：确保 astMap 不为 null 或 undefined
+    if (!astMap) {
+      handleException(
+        null,
+        'JavaAnalyzer.scanPackages: parseProject returned null or undefined',
+        'JavaAnalyzer.scanPackages: parseProject returned null or undefined'
       )
-      const cacheResults = await Promise.all(cacheLoadPromises)
-      const cacheLoadTime = Date.now() - cacheLoadStart
-
-      // 统计从缓存加载的文件数量
-      const cachedCount = cacheResults.filter((r) => r.loadedFromCache).length
-      const totalCount = packageFiles.length
-
-      // 记录缓存加载时间作为 parseCode 的子步骤
-      if (cacheLoadTime > 0) {
-        this.performanceTracker.record('preProcess.parseCode.loadCache', cacheLoadTime)
-      }
-
-      // 处理所有文件（使用缓存的 AST 或重新解析）
-      // 同时收集需要保存的缓存信息
-      const cacheEntries: Array<{ path: string; jsonFile: string; crc: string; time?: string }> = []
-      const savePromises: Array<
-        Promise<{ relativePath: string; jsonFile: string; crc: string; time?: string } | null>
-      > = []
-
-      for (let i = 0; i < packageFiles.length; i++) {
-        const packageFile = packageFiles[i]
-        const cacheResult = cacheResults[i]
-
-        if (!cacheResult.loadedFromCache || cacheResult.needsUpdate) {
-          // 需要重新解析（包括 CRC 变化的情况），解析后保存缓存
-          const savePromise = this.preloadFileToPackageAsync(packageFile.content, packageFile.file)
-          savePromises.push(savePromise)
-        } else {
-          // 从缓存加载，直接使用
-          this.preloadFileToPackage(packageFile.content, packageFile.file, cacheResult.ast)
-
-          // 保留 list 中的记录（即使从缓存加载，也保留原有记录）
-          const relativePath = this.getRelativePath(packageFile.file)
-          const existingInfo = cacheList.get(relativePath)
-          if (existingInfo) {
-            cacheEntries.push({
-              path: relativePath,
-              jsonFile: existingInfo.jsonFile,
-              crc: existingInfo.crc,
-              time: existingInfo.time,
-            })
-          }
-        }
-      }
-
-      // 等待所有缓存保存完成（异步等待，不阻塞主流程）
-      Promise.all(savePromises)
-        .then((savedInfos) => {
-          // 收集所有保存成功的缓存信息（包括新保存的和需要更新的）
-          for (const info of savedInfos) {
-            if (info) {
-              // 查找是否已存在相同路径的记录，如果存在则更新
-              const existingIndex = cacheEntries.findIndex((e) => e.path === info.relativePath)
-              if (existingIndex >= 0) {
-                // 更新现有记录（CRC 变化的情况）
-                cacheEntries[existingIndex] = {
-                  path: info.relativePath,
-                  jsonFile: info.jsonFile,
-                  crc: info.crc,
-                  time: info.time,
-                }
-              } else {
-                // 添加新记录
-                cacheEntries.push({
-                  path: info.relativePath,
-                  jsonFile: info.jsonFile,
-                  crc: info.crc,
-                  time: info.time,
-                })
-              }
-            }
-          }
-          // 保存更新后的 list 文件
-          if (cacheEntries.length > 0) {
-            return this.saveCacheList(cacheEntries)
-          }
-        })
-        .catch((err) => {
-          logger.warn(`Failed to save cache list: ${err.message}`)
-        })
-
-      // 输出缓存加载统计（不输出每个文件的详细信息）
-      if (cachedCount > 0) {
-        yasaLog(`Loaded ${cachedCount}/${totalCount} AST files from cache (${cacheLoadTime}ms)`, 'preProcess')
-      }
+      return
     }
 
+    // 开始预加载阶段：预构建包作用域
+    this.performanceTracker.start(PRELOAD_STAGE)
+    for (const filename in astMap) {
+      const ast = astMap[filename]
+      if (ast) {
+        // sourceCodeCache 已在 parseProject 中自动填充，不需要重新读取
+        const code = this.sourceCodeCache.get(filename)
+        this.preloadFileToPackage(code ? code.join('\n') : '', filename, ast)
+      }
+    }
     this.performanceTracker.end(PRELOAD_STAGE)
-    this.performanceTracker.end(PARSE_CODE_STAGE)
     // 开始 ProcessModule 阶段：处理所有文件作用域（分析 AST）
     const PROCESS_MODULE_STAGE = 'preProcess.processModule'
     this.performanceTracker.start(PROCESS_MODULE_STAGE)
-    for (const unprocessedFileScope of (this as any).unprocessedFileScopes) {
+    for (const unprocessedFileScope of this.unprocessedFileScopes!) {
       if (unprocessedFileScope.isProcessed) continue
       // unprocessedFileScope.isProcessed = true;
       const state = this.initState(unprocessedFileScope)
-      this.processInstruction(unprocessedFileScope, unprocessedFileScope.ast, state)
+      this.processInstruction(unprocessedFileScope, unprocessedFileScope.ast?.node, state)
     }
-    ;(this as any).unprocessedFileScopes.clear()
-    delete (this as any).unprocessedFileScopes
+    this.unprocessedFileScopes?.clear()
+    this.unprocessedFileScopes = undefined
     this.performanceTracker.end('preProcess.processModule')
 
     // 输出时间统计（performanceTracker 已自动输出各阶段耗时）
@@ -272,350 +212,47 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param methods - 方法集合
    */
   _preloadBuiltinToPackage(packageName: string, className: string, methods: any) {
-    const packageScope = this.packageManager.getSubPackage(packageName, true)
-    const classScope = Scope.createSubScope(className, packageScope, 'class')
-    if (!packageScope.exports) {
-      packageScope.exports = Scoped({
+    const packageScope = this.topScope.context.packages.getSubPackage(packageName, true)
+    const qualifiedName = ScopeClass.joinQualifiedName(packageScope.qid, className)
+    const classScope = ScopeClass.createSubScope(className, packageScope, 'class', qualifiedName)
+    if (!packageScope.scope.exports) {
+      packageScope.scope.exports = new Scoped(packageScope.qid, {
         sid: 'exports',
-        id: 'exports',
         parent: packageScope,
       })
     }
-    packageScope.exports.value[className] = classScope
-    const qualifiedName = Scope.joinQualifiedName(packageScope.qid, className)
-    classScope.sort = qualifiedName
-    classScope.qid = qualifiedName
+    packageScope.scope.exports.value[className] = classScope
     for (const prop in methods) {
       const method = methods[prop]
       const targetQid = `${classScope.qid}.${prop}`
-      classScope.value[prop] = FunctionValue({
+      classScope.value[prop] = new FunctionValue('', {
         sid: prop,
         qid: targetQid,
         parent: classScope,
-        execute: method.bind(this),
+        runtime: { execute: method.bind(this) },
         _this: classScope,
       })
-      ;(this as any).funcSymbolTable[targetQid] = classScope.value[prop]
+      this.funcSymbolTable[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = classScope.value[prop]
     }
-  }
-
-  /**
-   * 获取缓存目录路径
-   * @returns {string} 缓存目录的绝对路径
-   */
-  getCacheDir(): string {
-    let outputDir = Config.intermediateDir
-    if (!outputDir) {
-      outputDir = Config.reportDir || './report/'
-      if (!path.isAbsolute(outputDir)) {
-        outputDir = path.resolve(process.cwd(), outputDir)
-      }
-      outputDir = path.join(outputDir, 'ast-output')
-    } else if (!path.isAbsolute(outputDir)) {
-      outputDir = path.resolve(process.cwd(), outputDir)
-    }
-    return outputDir
-  }
-
-  /**
-   * 获取相对于 sourcePath 的路径
-   * @param filename - 文件的绝对路径
-   * @returns {string} 相对路径
-   */
-  getRelativePath(filename: string): string {
-    const sourceDir = Config.maindir || ''
-    if (!sourceDir || !filename) {
-      return filename
-    }
-    // 标准化路径，确保使用统一的分隔符
-    const normalizedSource = path.normalize(sourceDir).replace(/\\/g, '/')
-    const normalizedFile = path.normalize(filename).replace(/\\/g, '/')
-    if (normalizedFile.startsWith(normalizedSource)) {
-      let relative = normalizedFile.substring(normalizedSource.length)
-      // 移除开头的斜杠
-      if (relative.startsWith('/')) {
-        relative = relative.substring(1)
-      }
-      return relative
-    }
-    // 如果不在 sourceDir 下，返回原路径
-    return filename
-  }
-
-  /**
-   * 从缓存 list 文件加载所有缓存信息
-   * @returns {Promise<Map<string, {jsonFile: string, crc: string, time?: string}>>} 相对路径到缓存信息的映射
-   */
-  async loadCacheList(): Promise<Map<string, { jsonFile: string; crc: string; time?: string }>> {
-    return new Promise((resolve) => {
-      const cacheDir = this.getCacheDir()
-      const listPath = path.join(cacheDir, 'ast-cache-list.json')
-
-      fs.readFile(listPath, 'utf8', (err: NodeJS.ErrnoException | null, content: string) => {
-        if (err) {
-          // list 文件不存在，返回空映射
-          resolve(new Map())
-          return
-        }
-
-        try {
-          const listData = JSON.parse(content)
-          const cacheMap = new Map<string, { jsonFile: string; crc: string; time?: string }>()
-
-          if (Array.isArray(listData)) {
-            for (const item of listData) {
-              if (item.path && item.jsonFile && item.crc) {
-                cacheMap.set(item.path, {
-                  jsonFile: item.jsonFile,
-                  crc: item.crc,
-                  time: item.time,
-                })
-              }
-            }
-          }
-
-          resolve(cacheMap)
-        } catch (error) {
-          logger.warn(`Failed to parse cache list: ${(error as Error).message}`)
-          resolve(new Map())
-        }
-      })
-    })
-  }
-
-  /**
-   * 保存缓存 list 文件
-   * @param cacheList - 缓存列表数据（包含 path, jsonFile, crc, time）
-   */
-  async saveCacheList(cacheList: Array<{ path: string; jsonFile: string; crc: string; time?: string }>): Promise<void> {
-    return new Promise((resolve) => {
-      try {
-        const cacheDir = this.getCacheDir()
-        if (!fs.existsSync(cacheDir)) {
-          fs.mkdirSync(cacheDir, { recursive: true })
-        }
-
-        const listPath = path.join(cacheDir, 'ast-cache-list.json')
-        // list 文件要格式化，方便人阅读
-        fs.writeFile(listPath, JSON.stringify(cacheList, null, 2), 'utf8', (err: NodeJS.ErrnoException | null) => {
-          if (err) {
-            logger.warn(`Failed to save cache list: ${err.message}`)
-          }
-          resolve()
-        })
-      } catch (error) {
-        logger.warn(`Failed to save cache list: ${(error as Error).message}`)
-        resolve()
-      }
-    })
-  }
-
-  /**
-   * 从缓存加载 AST（异步，支持并发）
-   * @param source - 源代码内容
-   * @param filename - 文件的绝对路径
-   * @param cacheList - 缓存列表映射
-   * @returns {Promise<{ast: any, loadedFromCache: boolean, needsUpdate: boolean}>} AST、是否从缓存加载、是否需要更新
-   */
-  async loadAstFromCache(
-    source: any,
-    filename: any,
-    cacheList: Map<string, { jsonFile: string; crc: string; time?: string }>
-  ): Promise<{ ast: any; loadedFromCache: boolean; needsUpdate: boolean }> {
-    return new Promise((resolve) => {
-      const relativePath = this.getRelativePath(filename)
-      const cacheInfo = cacheList.get(relativePath)
-
-      // 计算源代码的 CRC（使用 MD5）
-      const sourceCrc = md5(source)
-
-      if (!cacheInfo) {
-        // list 中没有记录，需要重新解析并更新
-        resolve({ ast: null, loadedFromCache: false, needsUpdate: true })
-        return
-      }
-
-      // 检查 CRC 是否匹配
-      if (cacheInfo.crc !== sourceCrc) {
-        // CRC 不匹配，需要重新解析并更新 list
-        resolve({ ast: null, loadedFromCache: false, needsUpdate: true })
-        return
-      }
-
-      // CRC 匹配，从 JSON 文件加载 AST
-      const cacheDir = this.getCacheDir()
-      // jsonFile 可能包含子目录路径（如 "astcache/filename.json"），直接使用
-      const jsonPath = path.join(cacheDir, cacheInfo.jsonFile)
-
-      fs.readFile(jsonPath, 'utf8', (err: NodeJS.ErrnoException | null, astContent: string) => {
-        if (err) {
-          // JSON 文件不存在，需要重新解析并更新
-          resolve({ ast: null, loadedFromCache: false, needsUpdate: true })
-          return
-        }
-
-        try {
-          // JSON 文件只包含 flatted 格式的 AST 字符串（未格式化，更快）
-          const ast = flatted.parse(astContent)
-          resolve({ ast, loadedFromCache: true, needsUpdate: false })
-        } catch (error) {
-          // JSON 文件损坏，需要重新解析并更新
-          logger.warn(`Failed to parse AST cache for ${relativePath}: ${(error as Error).message}`)
-          resolve({ ast: null, loadedFromCache: false, needsUpdate: true })
-        }
-      })
-    })
-  }
-
-  /**
-   * 保存 AST 到缓存（异步）
-   * @param ast - AST 对象
-   * @param source - 源代码内容
-   * @param filename - 文件的绝对路径
-   * @returns {Promise<{relativePath: string, jsonFile: string, crc: string, time: string}>} 缓存信息
-   */
-  async saveAstToCache(
-    ast: any,
-    source: any,
-    filename: any
-  ): Promise<{ relativePath: string; jsonFile: string; crc: string; time: string } | null> {
-    return new Promise((resolve) => {
-      try {
-        const cacheDir = this.getCacheDir()
-
-        // 确保目录存在
-        if (!fs.existsSync(cacheDir)) {
-          fs.mkdirSync(cacheDir, { recursive: true })
-        }
-
-        // 获取相对路径
-        const relativePath = this.getRelativePath(filename)
-
-        // 使用 hash 生成 JSON 文件名（避免文件名过长）
-        // JSON 文件保存在 astcache 子目录中
-        const astCacheSubDir = 'astcache'
-        const jsonFileName = `${md5(relativePath)}.json`
-        const jsonFile = path.join(astCacheSubDir, jsonFileName)
-        const astCacheDir = path.join(cacheDir, astCacheSubDir)
-
-        // 确保 astcache 子目录存在
-        if (!fs.existsSync(astCacheDir)) {
-          fs.mkdirSync(astCacheDir, { recursive: true })
-        }
-
-        const jsonPath = path.join(astCacheDir, jsonFileName)
-
-        // 计算源代码的 CRC
-        const sourceCrc = md5(source)
-
-        // 使用 flatted 序列化 AST（只保存 AST，不包含其他信息，不格式化以提升性能）
-        const astSerialized = flatted.stringify(ast)
-
-        // 生成时间戳
-        const timestamp = new Date().toISOString()
-
-        // 保存 AST 到 JSON 文件（不格式化，提升序列化/反序列化速度）
-        fs.writeFile(jsonPath, astSerialized, 'utf8', (err: NodeJS.ErrnoException | null) => {
-          if (err) {
-            logger.warn(`Failed to write AST cache for ${relativePath}: ${err.message}`)
-            resolve(null)
-            return
-          }
-
-          // 返回缓存信息，用于更新 list 文件
-          resolve({
-            relativePath,
-            jsonFile,
-            crc: sourceCrc,
-            time: timestamp,
-          })
-        })
-      } catch (error) {
-        logger.warn(`Failed to write AST cache for ${filename}: ${(error as Error).message}`)
-        resolve(null)
-      }
-    })
-  }
-
-  /**
-   * 解析文件并预加载到包管理器（异步版本，返回缓存信息）
-   * @param source - 源代码内容
-   * @param filename - 文件名
-   * @returns {Promise<{relativePath: string, jsonFile: string, crc: string, time: string} | null>} 缓存信息
-   */
-  async preloadFileToPackageAsync(
-    source: any,
-    filename: any
-  ): Promise<{ relativePath: string; jsonFile: string; crc: string; time: string } | null> {
-    return new Promise((resolve) => {
-      this.preloadFileToPackage(source, filename, undefined, (cacheInfo) => {
-        resolve(cacheInfo)
-      })
-    })
   }
 
   /**
    * 解析文件并预加载到包管理器
    *
    * 注意：此方法在循环中被调用多次，每个文件的 parseCode 和 preload 时间都会累加到总时间中。
+   * 如果提供了 preParsedAst，直接使用，避免重复解析。
    *
    * @param source - 源代码内容
    * @param filename - 文件名
-   * @param cachedAst - 从缓存加载的 AST（如果存在）
-   * @param onCacheSaved - 缓存保存后的回调函数
+   * @param preParsedAst - 可选的预解析 AST（来自 parseProject，如果提供则直接使用，避免重复解析）
    * @returns {any} 包作用域和文件作用域
    */
-  preloadFileToPackage(
-    source: any,
-    filename: any,
-    cachedAst?: any,
-    onCacheSaved?: (cacheInfo: { relativePath: string; jsonFile: string; crc: string; time: string } | null) => void
-  ) {
+  preloadFileToPackage(source: any, filename: any, preParsedAst?: any) {
     const { options } = this
     options.sourcefile = filename
-    options.language = 'java'
 
-    // 使用传入的缓存 AST，如果没有则重新解析
-    // cachedAst 为 undefined 表示强制重新解析（force 模式），null 表示不使用缓存
-    let ast = cachedAst
-    const shouldSaveCache = cachedAst !== null // null 表示禁用缓存，undefined 表示强制重新解析但保存缓存
-    if (!ast) {
-      // 记录解析时间（parse 子步骤）
-      const parseStart = Date.now()
-      ast = Parsing.parseCode(source, options)
-      const parseTime = Date.now() - parseStart
-      this.performanceTracker.record('preProcess.parseCode.parse', parseTime)
+    const ast = preParsedAst || Parser.parseSingleFile(filename, options, this.sourceCodeCache)
 
-      // 异步保存 AST 到缓存（不阻塞主流程）
-      // 只有在启用缓存或 force 模式时才保存
-      if (ast && shouldSaveCache) {
-        const saveStart = Date.now()
-        this.saveAstToCache(ast, source, filename)
-          .then((cacheInfo) => {
-            // 记录保存缓存时间（saveCache 子步骤）
-            const saveTime = Date.now() - saveStart
-            if (saveTime > 0) {
-              this.performanceTracker.record('preProcess.parseCode.saveCache', saveTime)
-            }
-            if (onCacheSaved) {
-              onCacheSaved(cacheInfo)
-            }
-          })
-          .catch((err) => {
-            logger.warn(`Failed to save AST cache for ${filename}: ${err.message}`)
-            if (onCacheSaved) {
-              onCacheSaved(null)
-            }
-          })
-      } else if (onCacheSaved) {
-        onCacheSaved(null)
-      }
-    } else if (onCacheSaved) {
-      // 从缓存加载，不需要保存
-      onCacheSaved(null)
-    }
-
-    this.sourceCodeCache[filename] = source
     if (!ast) {
       handleException(
         null,
@@ -630,24 +267,28 @@ class JavaAnalyzer extends (Analyzer as any) {
         `JavaAnalyzer.preloadFileToPackage: node type should be CompileUnit, but ${ast?.type}`,
         `JavaAnalyzer.preloadFileToPackage: node type should be CompileUnit, but ${ast?.type}`
       )
+      // 清理 parse 失败时的 sourceCodeCache，避免后续代码误认为文件已处理
+      if (this.sourceCodeCache && this.sourceCodeCache.get(filename)) {
+        this.sourceCodeCache.delete(filename)
+      }
       return undefined
     }
     const packageName = ast._meta.qualifiedName ?? ''
 
-    const packageScope = this.packageManager.getSubPackage(packageName, true)
+    const packageScope = this.topScope.context.packages.getSubPackage(packageName, true)
 
     // 开始记录 preload 时间：初始化文件作用域、处理类定义等
-    const preloadStart = Date.now()
+    this.performanceTracker.record('preProcess.preload')?.start()
 
     // file scope init
     // value specifies what module exports, closure specifies file closure
     const fileScope = this.initFileScope(ast, filename, packageScope)
-    ;(this as any).unprocessedFileScopes = (this as any).unprocessedFileScopes ?? new Set()
-    ;(this as any).unprocessedFileScopes.add(fileScope)
+    this.unprocessedFileScopes = this.unprocessedFileScopes ?? new Set()
+    this.unprocessedFileScopes.add(fileScope)
 
     const { body } = ast
-    ;(this as any).entry_fclos = fileScope
-    ;(this as any).thisFClos = fileScope
+    this.entry_fclos = fileScope
+    this.thisFClos = fileScope
 
     const state = this.initState(fileScope)
     // prebuild
@@ -660,14 +301,13 @@ class JavaAnalyzer extends (Analyzer as any) {
         }
         const { className, classClos } = this.preprocessClassDefinitionRec(classDef, fileScope, fileScope, packageScope)
         if (classDef._meta.isPublic) {
-          packageScope.exports =
-            packageScope.exports ??
-            Scoped({
-              id: 'exports',
+          packageScope.scope.exports =
+            packageScope.scope.exports ??
+            new Scoped(packageScope.qid, {
               sid: 'export',
-              parent: null,
+              parent: packageScope,
             })
-          packageScope.exports.setFieldValue(className, classClos)
+          packageScope.scope.exports.setFieldValue(className, classClos)
         }
         packageScope.setFieldValue(className, classClos)
       } else if (childNode.type === 'ClassDefinition') {
@@ -685,11 +325,10 @@ class JavaAnalyzer extends (Analyzer as any) {
     if (this.checkerManager && this.checkerManager.checkAtEndOfCompileUnit) {
       this.checkerManager.checkAtEndOfCompileUnit(this, null, null, state, null)
     }
-    this.fileManager[filename] = fileScope
+    this.fileManager[filename] = fileScope.uuid
 
     // 记录 preload 时间：累加到总 preload 时间中
-    const preloadTime = Date.now() - preloadStart
-    this.performanceTracker.record('preProcess.preload', preloadTime)
+    this.performanceTracker.record('preProcess.preload')?.end()
 
     return { packageScope, fileScope }
   }
@@ -705,28 +344,28 @@ class JavaAnalyzer extends (Analyzer as any) {
   preprocessClassDefinitionRec(node: any, scope: any, fileScope: any, packageScope?: any) {
     const className = node.id?.name
 
-    const classClos = Scope.createSubScope(className, scope, 'class')
-    const qualifiedName = Scope.joinQualifiedName(scope.qid, className)
-    classClos.sort = qualifiedName
-    classClos.qid = qualifiedName
-    classClos.exports = Scoped({
-      id: 'exports',
+    const classClos = ScopeClass.createSubScope(
+      className,
+      scope,
+      'class',
+      ScopeClass.joinQualifiedName(scope.qid, className)
+    )
+    classClos.scope.exports = new Scoped(classClos.qid, {
       sid: 'exports',
-      parent: null,
+      parent: classClos,
     })
     if (node._meta.isPublic) {
-      scope.exports =
-        scope.exports ??
-        Scoped({
-          id: 'exports',
+      scope.scope.exports =
+        scope.scope.exports ??
+        new Scoped(classClos.qid, {
           sid: 'exports',
-          parent: null,
+          parent: classClos,
         })
-      scope.exports.setFieldValue(className, classClos)
+      scope.scope.exports.setFieldValue(className, classClos)
     }
-    classClos.fdef = node
     classClos.ast = node
-    classClos.fileScope = fileScope
+    classClos.ast.fdef = node
+    classClos.scope.fileScope = fileScope
     classClos.packageScope = packageScope
     const { body } = node
     if (!body) {
@@ -741,13 +380,44 @@ class JavaAnalyzer extends (Analyzer as any) {
   }
 
   /**
+   * process instruction
+   * @param scope
+   * @param node
+   * @param state
+   * @param prePostFlag
+   * @returns {*}
+   */
+  override processInstruction(scope: any, node: any, state: any, prePostFlag?: any): any {
+    if (
+      state.entryPointStartTimestamp &&
+      Config.entryPointTimeoutMs &&
+      Date.now() - state.entryPointStartTimestamp > Config.entryPointTimeoutMs
+    ) {
+      this.globalState.entryPointTimeout = true
+      return new UndefinedValue()
+    }
+    let hasException: boolean = false
+    if (state?.throwstackScopeAndState) {
+      for (const element of state.throwstackScopeAndState) {
+        if (element.scope === scope && element.state === state) {
+          hasException = true
+        }
+      }
+    }
+    if (hasException) {
+      return new UndefinedValue()
+    }
+    return super.processInstruction(scope, node, state, prePostFlag)
+  }
+
+  /**
    * 处理编译单元
    * @param scope - 作用域
    * @param node - AST 节点
    * @param state - 状态
    * @returns {any} 处理结果
    */
-  processCompileUnit(scope: any, node: any, state: any) {
+  override processCompileUnit(scope: Scope, node: CompileUnit, state: State): Value {
     scope.isProcessed = true
     return super.processCompileUnit(scope, node, state)
   }
@@ -759,13 +429,13 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} 变量值
    */
-  processVariableDeclaration(scope: any, node: any, state: any) {
+  override processVariableDeclaration(scope: Scope, node: VariableDeclaration, state: State): SymbolValueType {
     const initVal = super.processVariableDeclaration(scope, node, state)
     if (initVal && node.varType !== null && node.varType !== undefined) {
       initVal.rtype = { type: undefined }
       const val = this.getMemberValueNoCreate(scope, node.varType.id, state)
-      if (val) {
-        initVal.rtype.definiteType = UastSpec.identifier(val._qid)
+      if (val?.vtype === 'class') {
+        initVal.rtype.definiteType = UastSpec.identifier(val.logicalQid)
       } else {
         initVal.rtype.definiteType = node.varType.id
       }
@@ -780,22 +450,43 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} 标识符值
    */
-  processIdentifier(scope: any, node: any, state: any) {
-    const res = super.processIdentifier(scope, node, state)
+  override processIdentifier(scope: Scope, node: Identifier, state: State): SymbolValueType {
+    let res = super.processIdentifier(scope, node, state)
 
     if (res && !res.rtype) {
       res.rtype = { type: undefined }
-      if (res.vtype === 'class') {
-        res.rtype.definiteType = UastSpec.identifier(res._qid)
-      } else {
-        res.rtype.definiteType = node
+      if ((res as any).vtype === 'class') {
+        res.rtype.definiteType = UastSpec.identifier(res.logicalQid)
       }
     }
 
-    const { fileScope } = res
-    if (fileScope && !fileScope.isProcessed) {
-      this.processInstruction(fileScope, fileScope.ast, this.initState(fileScope))
+    const resFileScope = res.scope.fileScope
+    if (resFileScope && !resFileScope.isProcessed) {
+      this.processInstruction(resFileScope, resFileScope.ast?.node, this.initState(resFileScope))
     }
+
+    if (
+      res &&
+      (res as any)?.vtype !== 'fclos' &&
+      (res as any)?.vtype !== 'class' &&
+      res?.parent?.vtype === 'class' &&
+      this.thisFClos &&
+      this.thisFClos.vtype === 'symbol'
+    ) {
+      if (this.thisFClos.members?.get(node.name)) {
+        res = this.thisFClos.members.get(node.name)
+      } else {
+        const vCopy = this.thisFClos.cloneAlias()
+        res = res.cloneAlias ? res.cloneAlias() : _.clone(res)
+        res._this = vCopy
+        res.parent = vCopy
+        res.object = vCopy
+        if (vCopy.taint?.isTaintedRec) {
+          res.taint?.markSource()
+        }
+      }
+    }
+
     return res
   }
 
@@ -813,7 +504,7 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @returns {any} 成员值
    */
   // eslint-disable-next-line complexity
-  processMemberAccess(scope: any, node: any, state: any) {
+  override processMemberAccess(scope: Scope, node: MemberAccess, state: State): SymbolValueType {
     const defscope = this.processInstruction(scope, node.object, state)
     const prop = node.property
     let resolvedProp = prop
@@ -821,18 +512,46 @@ class JavaAnalyzer extends (Analyzer as any) {
     if (node.computed || (prop.type !== 'Identifier' && prop.type !== 'Literal')) {
       resolvedProp = this.processInstruction(scope, prop, state)
     }
-    let res = this.getMemberValue(defscope, resolvedProp, state)
+    let res
+    if (resolvedProp?.type === 'Identifier' && resolvedProp.name === 'length' && defscope.length) {
+      res = new PrimitiveValue(scope.qid, '<defscope_length>', defscope.length, 'number', 'Literal', node.loc)
+    } else {
+      res = this.getMemberValue(defscope, resolvedProp, state)
+    }
     if (this.checkerManager && this.checkerManager.checkAtMemberAccess) {
       this.checkerManager.checkAtMemberAccess(this, defscope, node, state, { res })
     }
 
-    if (node.property.type === 'ThisExpression' && defscope.vtype === 'class' && defscope._qid) {
-      const ancestorInstance = this.getAncestorScopeByQid(scope, `${defscope._qid}<instance>`)
+    if (
+      Number.isInteger(res?.object?.length) &&
+      res?.property?.vtype === 'primitive' &&
+      res?.property?.literalType === 'number'
+    ) {
+      const index = Number(res.property.value)
+      if (index >= res.object.length) {
+        state.throwstack = state.throwstack ?? []
+        let throwValue = res.object
+        throwValue = SourceLine.addSrcLineInfo(
+          throwValue,
+          node.object,
+          node.object.loc && node.object.loc.sourcefile,
+          'Throw Pass: ',
+          AstUtil.prettyPrint(node.object)
+        )
+        state.throwstack.push(throwValue)
+
+        state.throwstackScopeAndState = state.throwstackScopeAndState ?? []
+        state.throwstackScopeAndState.push({ scope, state })
+      }
+    }
+
+    if (node.property.type === 'ThisExpression' && defscope.vtype === 'class' && defscope.qid) {
+      const ancestorInstance = this.getAncestorScopeByQid(scope, `${defscope.qid}`)
       if (ancestorInstance) {
         res = ancestorInstance
       }
     }
-    if (defscope.vtype === 'fclos' && defscope._sid?.includes('anonymous') && res.vtype === 'symbol') {
+    if (defscope.vtype === 'fclos' && defscope.sid?.includes('anonymous') && res.vtype === 'symbol') {
       res = defscope
     }
 
@@ -845,29 +564,36 @@ class JavaAnalyzer extends (Analyzer as any) {
     }
     const { fileScope } = res
     if (fileScope && !fileScope.isProcessed) {
-      this.processInstruction(fileScope, fileScope.ast, this.initState(fileScope))
+      this.processInstruction(fileScope, fileScope.ast?.node, this.initState(fileScope))
     }
 
     if (node.object?.type !== 'SuperExpression') {
-      if (res.vtype !== 'union') {
+      if (res.vtype !== 'union' || !Array.isArray(res.value)) {
         res._this = defscope
       } else {
-        const thisUnion = defscope
-        if (thisUnion?.value) {
+        const _thisUnion = defscope
+        if (_thisUnion?.value && Array.isArray(_thisUnion?.value)) {
           for (const f of res.value) {
-            for (const thisObj of thisUnion.value) {
-              if (!f._sid || !thisObj.value) {
+            for (const _thisObj of _thisUnion.value) {
+              if (!f.sid || !_thisObj.value) {
                 continue
               }
-              if (f === thisObj.value[f._sid]) {
-                f._this = thisObj
+              if (f === _thisObj.value[f.sid]) {
+                f._this = _thisObj
               }
             }
           }
         }
       }
+      res._this = defscope
+    } else {
+      // For super.method() calls, bind this to the current instance.
+      // In Java semantics, super only affects method dispatch (which class's implementation to call),
+      // not this binding. this inside the parent method should still refer to the current instance.
+      if (this.thisFClos) {
+        res._this = this.thisFClos
+      }
     }
-    res._this = defscope
 
     return res
   }
@@ -877,50 +603,58 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param scope - 作用域
    * @param node - AST 节点
    * @param _state - 状态（未使用）
+   * @param state
    * @returns {any} 导入结果
    */
-  processImportDirect(scope: any, node: any, _state: any) {
+  processImportDirect(scope: any, node: any, state: any) {
+    const importNode = node
     node = node.from
-    const fname = node?.value
+    const fromName = node?.value
+    const importedName = importNode?.imported?.name || importNode?.local?.name
 
     // check cached imports first
     let packageName = ''
     const classNames: string[] = []
-    if (fname) {
-      if (fname.includes('.')) {
-        const lastDotIndex = fname.lastIndexOf('.')
-        packageName = fname.substring(0, lastDotIndex)
-        classNames.push(fname.substring(lastDotIndex + 1))
+    let lastName: string = ''
+    if (fromName || importedName) {
+      const fullName = importedName ? `${fromName}.${importedName}` : fromName
+      if (fullName?.includes('.')) {
+        const lastDotIndex = fullName.lastIndexOf('.')
+        packageName = fullName.substring(0, lastDotIndex)
+        lastName = fullName.substring(lastDotIndex + 1)
+        classNames.push(fullName.substring(lastDotIndex + 1))
       } else {
-        classNames.push(fname)
+        lastName = fullName
+        classNames.push(fullName)
       }
     }
-
-    let packageScope = this.packageManager.getSubPackage(packageName, true)
+    packageName = packageName.replace('<global>.packageManager.', '')
+    let packageScope = this.topScope.context.packages.getSubPackage(packageName, true)
     // if package is not created from import statement, but from full qualified name access
     if (packageScope.vtype !== 'package') {
-      packageScope = PackageValue({
+      packageScope = new PackageValue('', {
         vtype: 'package',
-        sid: fname,
+        sid: lastName,
         qid: packageName,
-        exports: Scoped({
-          sid: 'exports',
-          id: 'exports',
-          parent: null,
-        }),
         parent: this,
       })
+      const exports = new Scoped(packageScope.qid, {
+        sid: 'exports',
+        parent: packageScope,
+      })
+      packageScope.scope.exports = exports
     }
     let classScope = packageScope
     for (const className of classNames) {
-      classScope = Scope.createSubScope(className, packageScope, 'class')
-      packageScope.exports.value[className] = classScope
-      const qualifiedName = Scope.joinQualifiedName(packageScope.qid, className)
-      classScope.sort = qualifiedName
-      classScope.qid = qualifiedName
+      classScope = ScopeClass.createSubScope(
+        className,
+        packageScope,
+        'class',
+        ScopeClass.joinQualifiedName(packageScope.qid, className)
+      )
+      packageScope.scope.exports.value[className] = classScope
     }
 
-    classScope.sort = classScope.sort ?? fname
     return classScope
   }
 
@@ -932,8 +666,8 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @returns {any} 类定义结果
    */
   // eslint-disable-next-line complexity
-  processClassDefinition(scope: any, node: any, state: any) {
-    const { annotations } = node._meta
+  override processClassDefinition(scope: Scope, node: ClassDefinition, state: State): SymbolValueType {
+    const { annotations } = node._meta as any
     const annotationValues: any[] = []
     annotations?.forEach((annotation: any) => {
       annotationValues.push(this.processInstruction(scope, annotation, state))
@@ -942,8 +676,8 @@ class JavaAnalyzer extends (Analyzer as any) {
     // adjust the order of the class body, so that static field comes last
     const { body } = node
     let bodyStmt: any
-    if (body?.type === 'ScopedStatement') {
-      bodyStmt = body.body
+    if (body && !Array.isArray(body) && (body as any).type === 'ScopedStatement') {
+      bodyStmt = (body as any).body
     } else if (Array.isArray(body)) {
       bodyStmt = body
     }
@@ -955,34 +689,53 @@ class JavaAnalyzer extends (Analyzer as any) {
     // TODO
     res.annotations = annotationValues
     for (const annotation of annotationValues) {
-      if (annotation.sort === 'lombok.Data') {
-        const value = res.getRawValue()
-        for (const prop in value) {
-          const fieldValue = value[prop]
+      if (annotation.qid.includes('lombok.Data')) {
+        const value = res.members
+        for (const prop of value.keys()) {
+          const fieldValue = value.get(prop)
           if (fieldValue.vtype !== 'fclos') {
             const getterName = `get${getUpperCase(prop)}`
-            if (value[getterName] === undefined) {
+            if (!value.has(getterName)) {
               const targetQid = `${scope.qid}.${getterName}`
-              value[getterName] = FunctionValue({
-                sid: getterName,
-                qid: targetQid,
-                parent: scope,
-                execute: JavaInitializer.builtin.lombok.processGetter(getterName, prop),
-              })
-              ;(this as any).funcSymbolTable[targetQid] = value[getterName]
+              value.set(
+                getterName,
+                new FunctionValue('', {
+                  sid: getterName,
+                  qid: targetQid,
+                  parent: scope,
+                  runtime: { execute: JavaInitializer.builtin.lombok.processGetter(getterName, prop) },
+                })
+              )
+              this.funcSymbolTable[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = value.get(getterName)
             }
             const setterName = `set${getUpperCase(prop)}`
-            if (value[setterName] === undefined) {
+            if (!value.has(setterName)) {
               const targetQid = `${scope.qid}.${setterName}`
-              value[setterName] = FunctionValue({
-                sid: setterName,
-                qid: targetQid,
-                parent: scope,
-                execute: JavaInitializer.builtin.lombok.processSetter(setterName, prop),
-              })
-              ;(this as any).funcSymbolTable[targetQid] = value[getterName]
+              value.set(
+                setterName,
+                new FunctionValue('', {
+                  sid: setterName,
+                  qid: targetQid,
+                  parent: scope,
+                  runtime: { execute: JavaInitializer.builtin.lombok.processSetter(setterName, prop) },
+                })
+              )
+              this.funcSymbolTable[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = value.get(getterName)
             }
           }
+        }
+      } else if (annotation.qid.includes('lombok.AllArgsConstructor')) {
+        const value = res.members
+        if (!value.has('_CTOR_')) {
+          value.set(
+            '_CTOR_',
+            new FunctionValue('', {
+              sid: '_CTOR_',
+              qid: `${res.qid}._CTOR_`,
+              parent: scope,
+              runtime: { execute: JavaInitializer.builtin.lombok._CTOR_ },
+            })
+          )
         }
       }
     }
@@ -996,7 +749,7 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} 赋值结果
    */
-  processAssignmentExpression(scope: any, node: any, state: any) {
+  override processAssignmentExpression(scope: Scope, node: AssignmentExpression, state: State): SymbolValueType {
     const { left } = node
     const oldVal = this.processInstruction(scope, left, state)
 
@@ -1004,11 +757,16 @@ class JavaAnalyzer extends (Analyzer as any) {
 
     if (
       node.operator === '=' &&
-      oldVal?.parent === (this as any).thisFClos &&
-      (this as any).thisFClos?.field?.super &&
-      !this.checkFieldDefinedInClass(oldVal._id, (this as any).thisFClos.sort)
+      oldVal?.parent === this.thisFClos &&
+      this.thisFClos?.members?.get('super') &&
+      !this.checkFieldDefinedInClass(oldVal.sid, this.thisFClos.qid)
     ) {
-      this.saveVarInScopeRec((this as any).thisFClos.field.super, left.property, res, state)
+      this.saveVarInScopeRec(
+        this.thisFClos.members.get('super')!,
+        left.type === 'MemberAccess' ? left.property : left,
+        res,
+        state
+      )
     }
 
     return res
@@ -1021,25 +779,69 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} 表达式结果
    */
-  processBinaryExpression(scope: any, node: any, state: any) {
+  override processBinaryExpression(scope: Scope, node: BinaryExpression, state: State): BinaryExprValue {
     let res = super.processBinaryExpression(scope, node, state)
 
     if (
       res?.left?.vtype === 'primitive' &&
       res?.right?.vtype === 'primitive' &&
-      ['>', '<', '==', '!=', '>=', '<='].includes(res?.operator)
+      res?.operator &&
+      ['>', '<', '==', '!=', '>=', '<='].includes(res.operator)
     ) {
-      const leftPrimitive = res.left.value
-      const rightPrimitive = res.right.value
-      const expr = leftPrimitive + res.operator + rightPrimitive
-      try {
-        // eslint-disable-next-line no-eval
-        const result = eval(expr)
-        if (result != null) {
-          res = PrimitiveValue({ type: 'Literal', value: result, loc: node.loc })
+      const leftPrim = res.left as PrimitiveValueType
+      const rightPrim = res.right as PrimitiveValueType
+      let leftPrimitive = leftPrim.value
+      if (leftPrim.literalType === 'string' && leftPrimitive != null && typeof leftPrimitive === 'string') {
+        leftPrimitive = `'${leftPrimitive.replaceAll("'", "\\'")}'`
+      }
+      let rightPrimitive = rightPrim.value
+      if (rightPrim.literalType === 'string' && rightPrimitive != null && typeof rightPrimitive === 'string') {
+        rightPrimitive = `'${rightPrimitive.replaceAll("'", "\\'")}'`
+      }
+      if (leftPrimitive != null && rightPrimitive != null) {
+        const expr = leftPrimitive + res.operator + rightPrimitive
+        try {
+          // eslint-disable-next-line no-eval
+          const result = eval(expr)
+          if (result != null) {
+            res = new PrimitiveValue(
+              scope.qid,
+              `<operatorExp_${node.operator}_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+              result,
+              null,
+              'Literal',
+              node.loc
+            )
+          }
+        } catch (e) {
+          // 忽略 eval 错误
         }
-      } catch (e) {
-        // 忽略 eval 错误
+      }
+    } else if (res?.operator === 'instanceof') {
+      if (res?.left?.vtype === 'primitive' && (res.left as PrimitiveValueType).literalType === 'null') {
+        res = new PrimitiveValue(scope.qid, '<bool_false>', false, null, 'Literal', node.loc)
+      } else if (res?.right?.vtype === 'class') {
+        if (res.right.qid === 'java.lang.Object' || res.right.logicalQid === 'java.lang.Object') {
+          // eslint-disable-next-line sonarjs/no-duplicate-string
+          res = new PrimitiveValue(scope.qid, '<bool_true>', true, null, 'Literal', node.loc)
+        } else if ((res?.left as any)?.rtype?.definiteType && !(res.left as any).rtype.vagueType) {
+          const leftWithRtype = res.left as any
+          const resType = AstUtil.prettyPrint(leftWithRtype.rtype.definiteType)
+          if (resType === res.right.qid) {
+            res = new PrimitiveValue(scope.qid, '<bool_true>', true, null, 'Literal', node.loc)
+          } else {
+            const classHierarchy: ClassHierarchy | undefined = this.typeResolver.classHierarchyMap.get(resType)
+            if (classHierarchy) {
+              const baseTypes: string[] = this.typeResolver.findBaseTypes(classHierarchy)
+              for (const baseType of baseTypes) {
+                if (baseType === res.right.qid) {
+                  res = new PrimitiveValue(scope.qid, '<bool_true>', true, 'boolean', 'Literal', node.loc)
+                  break
+                }
+              }
+            }
+          }
+        }
       }
     }
 
@@ -1054,7 +856,7 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @returns {any} 调用结果
    */
   // eslint-disable-next-line complexity
-  processCallExpression(scope: any, node: any, state: any) {
+  override processCallExpression(scope: Scope, node: CallExpression, state: State): SymbolValueType {
     /* { callee,
         arguments,
       }
@@ -1065,46 +867,248 @@ class JavaAnalyzer extends (Analyzer as any) {
         einfo: state.einfo,
       })
 
-    const fclos = this.processInstruction(scope, node.callee, state)
-    if (!fclos) return UndefinedValue()
+    let fclos = this.processInstruction(scope, node.callee, state)
+
+    if (!fclos) {
+      return new UndefinedValue()
+    }
+    if (this.entryPointSymValArray.includes(fclos) && !Config.makeAllCG) {
+      this.globalState.meetOtherEntryPoint = true
+      return new UndefinedValue()
+    }
+    if (node.callee.type === 'ThisExpression' && fclos.qid.includes('<instance')) {
+      if (fclos.members.get('_CTOR_')) {
+        fclos = fclos.members.get('_CTOR_')!
+      } else {
+        return new UndefinedValue()
+      }
+    }
 
     // prepare the function arguments
     let argvalues: any[] = []
     let sameArgs = true // minor optimization to save memory
+    let argExecuted = false
     for (const arg of node.arguments) {
       let argv = this.processInstruction(scope, arg, state)
       // 处理参数是 箭头函数或匿名函数
       // 参数类型必须是函数定义,且fclos找不到定义或未建模适配
       // 如果参数适配建模，则会进入相应的逻辑模拟执行，例如array.push
-      if (arg?.type === 'FunctionDefinition' && arg?.name === '<anonymous>' && !fclos?.fdef && !fclos?.execute) {
-        // let subscope = Scope.createSubScope(argv.sid + '_scope', scope,'scope')
-        argv = this.processAndCallFuncDef(scope, arg, argv, state)
+      if (arg.type === 'FunctionDefinition') {
+        const funcDef = arg as FunctionDefinition
+        const funcName = funcDef.id?.type === 'Identifier' ? funcDef.id.name : ''
+        if (funcName.includes('<anonymous') && !fclos?.ast.fdef && !fclos?.runtime?.execute) {
+          // let subscope = ScopeClass.createSubScope(argv.sid + '_scope', scope,'scope')
+          let anonymousArgValues
+          const _this = fclos.getThisObj()
+          if (_this && funcDef.parameters && funcDef.parameters.length > 0) {
+            anonymousArgValues = []
+            let i = 0
+            while (i < funcDef.parameters.length) {
+              anonymousArgValues.push(_this)
+              i++
+            }
+          }
+          argv = this.processAndCallFuncDef(scope, funcDef, argv, state, anonymousArgValues)
+          argExecuted = true
+        }
       }
       if (argv !== arg) sameArgs = false
-      if ((logger as any).isTraceEnabled()) (logger as any).trace(`arg: ${this.formatScope(argv)}`)
+      if (logger.isTraceEnabled()) logger.trace(`arg: ${this.formatScope(argv)}`)
       if (Array.isArray(argv)) {
         argvalues.push(...argv)
       } else {
+        this.addRtypeToArg(arg, argv)
         argvalues.push(argv)
       }
     }
     if (sameArgs) argvalues = node.arguments
 
-    // analyze the resolved function closure and the function arguments
-    let res = this.executeCall(node, fclos, argvalues, state, scope)
-    if (res) {
-      res.rtype = fclos.rtype
+    let res
+    let meetSameFuncInCallstack = false
+
+    const invocations: Invocation[] = this.findNodeInvocations(scope, node)
+    const executedInvocations: Invocation[] = []
+    let fclosExecuted = false
+    let sofaDispatched = false
+
+    /* SOFA 分发：接口调用优先通过 SOFA 服务映射分发到实现类 */
+    let sofaInterfaceName: string | undefined
+    let sofaImplList: Array<{ uniqueId: string; ref: string }> | undefined
+
+    if (fclos.vtype === 'fclos' && this.checkFclosInInterfaceOrAbstractClass(fclos)) {
+      sofaInterfaceName = fclos.parent?.logicalQid
+      sofaImplList = sofaInterfaceName
+        ? this.topScope.spring?.sofaServiceInterfaceMap?.get(sofaInterfaceName)
+        : undefined
     }
 
-    if (res instanceof UndefinedValue && fclos._sid?.includes('<anonymous') && fclos.fdef?.body?.body?.length === 1) {
-      const oldBodyExpr = fclos.fdef.body.body[0]
+    /* 当 fclos 为 symbol（如 Map.get() 返回值的方法调用），从 invocations 目标推断 SOFA 接口 */
+    if (
+      !sofaImplList &&
+      fclos.vtype === 'symbol' &&
+      invocations.length > 10 &&
+      this.topScope.spring?.sofaServiceInterfaceMap
+    ) {
+      const sofaMap = this.topScope.spring.sofaServiceInterfaceMap as Map<
+        string,
+        Array<{ uniqueId: string; ref: string }>
+      >
+      for (const [iface, implList] of sofaMap) {
+        if (implList.length > 10 && implList.length <= invocations.length * 2) {
+          /* 验证：SOFA 映射的 ref 能否匹配到 invocations 的目标类 */
+          let matchCount = 0
+          for (const impl of implList) {
+            const beanInfo = this.topScope.spring.beanMap?.get(impl.ref)
+            if (!beanInfo?.className) continue
+            const classUuid = this.classMap.get(beanInfo.className)
+            if (!classUuid) continue
+            const classObj = this.symbolTable.get(classUuid)
+            if (!classObj) continue
+            const implFclos = classObj.members?.get(fclos.sid)
+            if (
+              implFclos &&
+              invocations.some(
+                (inv: Invocation) =>
+                  inv.toScope === implFclos ||
+                  (inv.toScope?.qid && inv.toScope.qid === implFclos.qid) ||
+                  (inv.toScope?.logicalQid && inv.toScope.logicalQid === implFclos.logicalQid)
+              )
+            ) {
+              matchCount++
+            }
+            if (matchCount >= 3) break
+          }
+          if (matchCount >= 3) {
+            sofaInterfaceName = iface
+            sofaImplList = implList
+            break
+          }
+        }
+      }
+    }
+
+    if (sofaImplList && sofaImplList.length > 0) {
+      const methodName = fclos.sid
+      const { sinkArray } = this.pruneInfoMap
+      /* 复用全局 pruning 缓存：strict 模式（checkUseDynamicFeature=false）的结果是 dynamic 模式的子集，安全复用 */
+      const { matchSinkCacheMap } = this.pruneInfoMap
+
+      /* 获取 this 对象：fclos 可能是 symbol（Map.get() 返回值），需要安全处理 */
+      const thisObj = typeof fclos.getThisObj === 'function' ? fclos.getThisObj() : fclos._this
+
+      /* 只收集严格匹配 sink 的实现，跳过不匹配的（不再收集 dynamicMatched） */
+      let strictMatchCount = 0
+      for (const sofaImpl of sofaImplList) {
+        const beanInfo = this.topScope.spring.beanMap?.get(sofaImpl.ref)
+        if (!beanInfo?.className) continue
+        const classUuid = this.classMap.get(beanInfo.className)
+        if (!classUuid) continue
+        const classObj = this.symbolTable.get(classUuid)
+        if (!classObj) continue
+        const implFclos = classObj.members?.get(methodName)
+        if (!implFclos || implFclos.vtype !== 'fclos') continue
+        const implFdef = implFclos.ast?.fdef
+        if (!implFdef || implFdef.body?.type === 'Noop') continue
+
+        /* 严格匹配：callgraph 中静态可达 sink 才执行 */
+        const matchSink = this.checkFclosMatchSink(implFclos, [], sinkArray, matchSinkCacheMap, false)
+        if (!matchSink) continue
+
+        strictMatchCount++
+        implFclos.ast.fdef = implFdef
+        const oldThis = implFclos._this
+        implFclos._this = thisObj
+        res = this.executeCall(node, implFclos, state, scope, { callArgs: this.buildCallArgs(node, argvalues, implFclos) })
+        if (res?.type === 'FunctionCall') {
+          meetSameFuncInCallstack = true
+        }
+        implFclos._this = oldThis
+      }
+
+      if (strictMatchCount > 0) {
+        sofaDispatched = true
+        fclosExecuted = true
+      }
+    }
+
+    if (!sofaDispatched && (fclos.vtype !== 'fclos' || this.checkFclosInInterfaceOrAbstractClass(fclos))) {
+      // execute fclos found by callgraph
+      for (const invocation of invocations) {
+        if (
+          invocation.toScope?.vtype === 'fclos' &&
+          (invocation.toScopeAst || invocation.toScope.runtime?.execute) &&
+          invocation.toScopeAst?.body?.type !== 'Noop' &&
+          !this.checkFclosCanPruneDuringInterpret(invocation.toScope, node, argvalues, state, true)
+        ) {
+          if (invocation.toScope.qid === fclos.qid) {
+            fclosExecuted = true
+          }
+          let executed: boolean = false
+          for (const executedInvocation of executedInvocations) {
+            if (
+              (invocation.toScopeAst &&
+                executedInvocation.toScopeAst &&
+                invocation.toScopeAst._meta?.nodehash === executedInvocation.toScopeAst._meta?.nodehash) ||
+              (invocation.toScope.runtime?.execute &&
+                executedInvocation.toScope.runtime?.execute &&
+                invocation.toScope.runtime.execute === executedInvocation.toScope.runtime.execute)
+            ) {
+              executed = true
+              break
+            }
+          }
+          if (executed) {
+            continue
+          }
+          executedInvocations.push(invocation)
+          invocation.toScope.ast.fdef = invocation.toScopeAst
+          const oldThis = invocation.toScope._this
+          invocation.toScope._this = fclos.getThisObj()
+          res = this.executeCall(node, invocation.toScope, state, scope, { callArgs: this.buildCallArgs(node, argvalues, invocation.toScope) })
+          if (res?.type === 'FunctionCall') {
+            meetSameFuncInCallstack = true
+          }
+          invocation.toScope._this = oldThis
+        }
+      }
+    }
+
+    // analyze the resolved function closure and the function arguments
+    if (!sofaDispatched && ((fclos.vtype === 'fclos' && !fclosExecuted) || executedInvocations.length === 0)) {
+      if (
+        this.checkFclosCanPruneDuringInterpret(fclos, node, argvalues, state, false) ||
+        fclos?.ast?.fdef?.body?.type === 'Noop'
+      ) {
+        if (!res) {
+          res = this.processLibArgToRet(node, fclos, argvalues, scope, state, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
+        }
+      } else {
+        res = this.executeCall(node, fclos, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
+      }
+      if (res?.type === 'FunctionCall') {
+        meetSameFuncInCallstack = true
+      }
+    }
+    if (res) {
+      const resolvedRes = this.resolveRuntimeValueRef(res)
+      if (resolvedRes && typeof resolvedRes === 'object') {
+        resolvedRes.rtype = fclos.rtype
+      }
+    }
+
+    if (
+      res?.constructor?.name === 'UndefinedValue' &&
+      fclos.sid?.includes('<anonymous') &&
+      fclos.ast.fdef?.body?.body?.length === 1
+    ) {
+      const oldBodyExpr = fclos.ast.fdef.body.body[0]
       try {
-        fclos.fdef.body.body[0] = UastSpec.returnStatement(fclos.fdef.body.body[0])
-        res = this.executeCall(node, fclos, argvalues, state, scope)
+        fclos.ast.fdef.body.body[0] = UastSpec.returnStatement(fclos.ast.fdef.body.body[0])
+        res = this.executeCall(node, fclos, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
       } catch (e) {
         // 忽略错误
       } finally {
-        fclos.fdef.body.body[0] = oldBodyExpr
+        fclos.ast.fdef.body.body[0] = oldBodyExpr
       }
     }
 
@@ -1114,13 +1118,55 @@ class JavaAnalyzer extends (Analyzer as any) {
       if (Config.invokeCallbackOnUnknownFunction) {
         this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
       }
-      if (fclos._this?.field?._functionNotFoundCallback_?.vtype === 'fclos') {
-        this.executeCall(node, fclos._this.field._functionNotFoundCallback_, argvalues, state, scope)
+
+      // execute function not found callback
+      if (fclos._this?.members?.get('_functionNotFoundCallback_')?.vtype === 'fclos') {
+        this.executeCall(node, fclos._this.members.get('_functionNotFoundCallback_')!, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos._this.members.get('_functionNotFoundCallback_')!) })
+      }
+
+      // evaluate default equals result
+      if (
+        fclos.sid === 'equals' &&
+        fclos.getThisObj()?.vtype === 'primitive' &&
+        argvalues.length > 0 &&
+        argvalues[0]?.vtype === 'primitive' &&
+        fclos.getThisObj().value !== argvalues[0].value
+      ) {
+        res = new PrimitiveValue(scope.qid, '<bool_false>', false, null, 'Literal', node.loc)
       }
     }
 
-    if (fclos?._this?.vtype === 'fclos' && (fclos._sid === 'accept' || fclos._sid === 'apply')) {
-      this.executeCall(node, fclos._this, argvalues, state, scope)
+    // execute fclos of this
+    if (fclos?._this?.vtype === 'fclos') {
+      if (['accept', 'apply', 'call', 'run', 'get'].includes(fclos.sid)) {
+        this.executeCall(node, fclos._this, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos._this) })
+      } else if (fclos.sid === 'invoke' && argvalues.length >= 1) {
+        fclos._this._this = argvalues[0]
+        this.executeCall(node, fclos._this, state, scope, { callArgs: this.buildCallArgs(node, argvalues.slice(1), fclos._this) })
+      }
+    }
+
+    if (meetSameFuncInCallstack && !argExecuted && node.arguments?.length === argvalues.length) {
+      for (let i = 0; i < node.arguments.length; i++) {
+        const arg = node.arguments[i]
+        const argv = argvalues[i]
+        const argNode = arg as { type?: string; name?: string; parameters?: Array<any> }
+        if (argNode?.type === 'FunctionDefinition' && argNode?.name?.includes('<anonymous')) {
+          const funcDef = arg as unknown as FunctionDefinition
+          let anonymousArgValues
+          const _this = fclos.getThisObj()
+          if (_this && argNode.parameters && argNode.parameters.length > 0) {
+            anonymousArgValues = []
+            let j = 0
+            while (j < argNode.parameters.length) {
+              anonymousArgValues.push(_this)
+              j++
+            }
+          }
+          this.processAndCallFuncDef(scope, funcDef, argv, state, anonymousArgValues)
+          argExecuted = true
+        }
+      }
     }
 
     if (res && this.checkerManager?.checkAtFunctionCallAfter) {
@@ -1134,6 +1180,9 @@ class JavaAnalyzer extends (Analyzer as any) {
       })
     }
 
+    if (!res) {
+      res = new UndefinedValue()
+    }
     return res
   }
 
@@ -1144,12 +1193,11 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} new 表达式结果
    */
-  processNewExpression(scope: any, node: any, state: any) {
+  override processNewExpression(scope: Scope, node: NewExpression, state: State): SymbolValueType {
     if (node._meta && node._meta.isEnumImpl) {
-      this.processInstruction(scope, node.callee, state)
-    } else {
-      return super.processNewExpression(scope, node, state)
+      return this.processInstruction(scope, node.callee, state)
     }
+    return super.processNewExpression(scope, node, state)
   }
 
   /**
@@ -1159,16 +1207,30 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param state - 状态
    * @returns {any} 一元表达式结果
    */
-  processUnaryExpression(scope: any, node: any, state: any) {
+  override processUnaryExpression(scope: Scope, node: UnaryExpression, state: State): UnaryExprValue {
     let res = super.processUnaryExpression(scope, node, state)
 
     if (res.argument?.vtype === 'primitive' && res.argument?.literalType === 'number') {
       const argValueNum = Number(res.argument.value)
       if (node.operator === '++') {
-        res = PrimitiveValue({ type: 'Literal', value: argValueNum + 1, loc: node.loc })
+        res = new PrimitiveValue(
+          scope.qid,
+          `<operatorExp_${node.operator}_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+          argValueNum + 1,
+          null,
+          'Literal',
+          node.loc
+        )
         this.saveVarInScope(scope, node.argument, res, state)
       } else if (node.operator === '--') {
-        res = PrimitiveValue({ type: 'Literal', value: argValueNum - 1, loc: node.loc })
+        res = new PrimitiveValue(
+          scope.qid,
+          `<operatorExp_${node.operator}_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
+          argValueNum - 1,
+          null,
+          'Literal',
+          node.loc
+        )
         this.saveVarInScope(scope, node.argument, res, state)
       }
     }
@@ -1177,23 +1239,188 @@ class JavaAnalyzer extends (Analyzer as any) {
   }
 
   /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processTryStatement(scope: Scope, node: TryStatement, state: State): VoidValueType {
+    state.throwstack = state.throwstack ?? []
+
+    this.processInstruction(scope, node.body, state)
+
+    const { handlers } = node
+    if (handlers) {
+      for (const clause of handlers) {
+        const subScope = ScopeClass.createSubScope(
+          `<block_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
+          scope
+        )
+        if (clause && state?.throwstack?.length > 0) {
+          const throw_value = state.throwstack[0]
+          for (const param of clause.parameter) {
+            if (param && param.type === 'VariableDeclaration' && param.init === null) {
+              param._meta.isCatchParam = true
+              param.init = {
+                type: 'Identifier',
+                name: throw_value.sid,
+                _meta: param._meta,
+                loc: param.loc,
+                parent: param.parent,
+              } as any
+            }
+          }
+        }
+        if (clause) {
+          clause.parameter.forEach((param: any) => this.processInstruction(subScope, param, state))
+          this.processInstruction(subScope, clause.body, state)
+        }
+      }
+    }
+
+    if (node.finalizer) {
+      this.processInstruction(scope, node.finalizer, state)
+    }
+
+    if (state?.throwstack?.length === 0) {
+      delete state.throwstack
+    }
+
+    return new UndefinedValue()
+  }
+
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processRangeStatement(scope: Scope, node: RangeStatement, state: State): any {
+    const { key, value, right, body } = node
+    scope = ScopeClass.createSubScope(
+      `<block_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
+      scope
+    )
+    const rightVal = this.processInstruction(scope, right, state)
+    let executed = false
+    if (
+      !Array.isArray(rightVal) &&
+      (this.inRange ||
+        rightVal?.vtype === 'primitive' ||
+        Object.keys(rightVal.getRawValue()).filter((key) => !key.startsWith('__yasa')).length === 0 ||
+        rightVal?.vtype === 'union' ||
+        !rightVal?.getMisc('precise'))
+    ) {
+      if (value) {
+        if (value.type === 'VariableDeclaration') {
+          this.saveVarInCurrentScope(scope, value.id, rightVal, state)
+        } else if (value.type === 'TupleExpression') {
+          for (const ele of value.elements) {
+            const eleName = ele && ele.type === 'Identifier' ? ele.name : ele?.name || 'unknown'
+            this.saveVarInCurrentScope(scope, eleName, rightVal, state)
+          }
+        } else {
+          this.saveVarInScope(scope, value, rightVal, state)
+        }
+      }
+      if (key) {
+        // TODO js存到value，go存到key。且需要考虑既有key 又有value的场景
+        this.saveVarInScope(scope, key, rightVal, state)
+      }
+      this.processInstruction(scope, body, state)
+      executed = true
+    } else {
+      this.inRange = true
+      if (this.isNullLiteral(rightVal)) {
+        this.inRange = false
+        return undefined
+      }
+      const itr = this.getValueIterator(rightVal, filterDataFromScope)
+      let countLimit = 30
+      for (let { value: field, done } = itr.next(); !done; { value: field, done } = itr.next()) {
+        if (countLimit-- === 0) {
+          break
+        }
+        if (!field) continue
+        let { k, v } = field
+        if (key) {
+          if (key.type === 'VariableDeclaration') {
+            this.saveVarInCurrentScope(scope, key.id, k, state)
+          } else {
+            // 如果是string，将其构造出符号值再存储
+            // TODO 250731 将符号的字面量(而非符号值)作为key存储是否合适，有待商榷。
+            if (_.isString(k)) k = new PrimitiveValue(scope.qid, k, k, undefined, key.type, key.loc, key)
+            this.saveVarInScope(scope, key, k, state)
+          }
+        }
+        if (value) {
+          if (value.type === 'VariableDeclaration') {
+            this.saveVarInCurrentScope(scope, value.id, v, state)
+          } else {
+            this.saveVarInScope(scope, value, v, state)
+          }
+        }
+        this.processInstruction(scope, body, state)
+        executed = true
+      }
+      this.inRange = false
+    }
+
+    if (!executed && rightVal?._this?.vtype === 'class' && this.thisFClos && this.thisFClos.vtype === 'symbol') {
+      this.inRange = true
+      this.processInstruction(scope, body, state)
+      this.inRange = false
+    }
+    return new VoidValue()
+  }
+
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processCastExpression(scope: any, node: any, state: any) {
+    const exprVal = this.processInstruction(scope, node.expression, state)
+    if (exprVal?.vtype === 'fclos' && node?.expression?.type === 'FunctionDefinition') {
+      this.processAndCallFuncDef(scope, node.expression, exprVal, state)
+    }
+    return exprVal
+  }
+
+  /**
    * 预处理项目目录
    * @param dir - 项目目录
    */
   // eslint-disable-next-line complexity
   async preProcess(dir: any) {
-    // init global scope
     JavaInitializer.initGlobalScope(this.topScope)
-
-    // time-out control
-    ;(this as any).thisIterationTime = 0
-    ;(this as any).prevIterationTime = new Date().getTime()
+    JavaInitializer.initPackageScope(this.topScope.context.packages)
 
     await this.scanPackages(dir)
+    if (!Config.miniSaveContextEnvironment) {
+      this.assembleClassMap(this.topScope.context.packages)
+      if (!Config.loadContextEnvironment) {
+        JavaInitializer.addClassProto(this.classMap, this.topScope.context.packages, this)
+      }
+    }
+  }
 
-    JavaInitializer.initPackageScope(this.topScope.packageManager)
+  /**
+   * 加载缓存后的初始化阶段，会创建一些全局builtin
+   */
+  initAfterUsingCache() {
+    JavaInitializer.initGlobalScope(this.topScope)
+    JavaInitializer.initPackageScope(this.topScope.context.packages)
+    this.assembleClassMap(this.topScope.context.packages)
+  }
 
-    this.assembleClassMap(this.topScope.packageManager)
+  /**
+   *
+   */
+  override startAnalyze() {
+    super.startAnalyze()
+    FullCallGraphFileEntryPoint.makeFullCallGraphByType(this, this.typeResolver)
   }
 
   /**
@@ -1202,76 +1429,241 @@ class JavaAnalyzer extends (Analyzer as any) {
    */
   // eslint-disable-next-line complexity
   symbolInterpret() {
-    const { entryPoints } = this as any
+    const { entryPoints } = this
     const state = this.initState(this.topScope)
     if (_.isEmpty(entryPoints)) {
       logger.info('[symbolInterpret]：EntryPoints are not found')
       return true
     }
+
+    for (const entryPoint of entryPoints) {
+      this.entryPointSymValArray.push(entryPoint.entryPointSymVal)
+    }
+
+    this.pruneInfoMap.sinkArray = this.loadAllSink()
+    this.pruneInfoMap.funcCallSourceSinkSanitizerArray.push(...this.pruneInfoMap.sinkArray)
+
+    const allSources = this.loadAllSource()
+    this.pruneInfoMap.funcCallSourceSinkSanitizerArray.push(...allSources[0])
+    this.pruneInfoMap.otherSourceArray = allSources[1]
+
+    const allSanitizers = this.loadAllSanitizer()
+    this.pruneInfoMap.funcCallSourceSinkSanitizerArray.push(...allSanitizers[0])
+    this.pruneInfoMap.otherSanitizerArray = allSanitizers[1]
+
+    const pruneSupported = this.checkPruneSupported(entryPoints.length, this.pruneInfoMap.sinkArray.length)
+    if (pruneSupported) {
+      logger.info('EntryPoint Pruning is enabled')
+    }
+
+    const oldEntryPointTimeoutMs = Config.entryPointTimeoutMs
+    Config.entryPointTimeoutMs = Config.entryPointTimeoutQuickMs
     const hasAnalysised: any[] = []
     // 自定义source入口方式，并根据入口自主加载source
     for (const entryPoint of entryPoints) {
+      this.symbolTable.clear()
+      entryPoint.entryPointSymVal = this.tmpSymbolTable.tmpTableCopyUnit(entryPoint.entryPointSymVal)
+      entryPoint.scopeVal = this.tmpSymbolTable.tmpTableCopyUnit(entryPoint.scopeVal)
       if (entryPoint.type === Constant.ENGIN_START_FUNCALL) {
         if (
           hasAnalysised.includes(
-            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
           )
         ) {
           continue
         }
 
+        if (pruneSupported) {
+          const entrypointCanPrune = this.checkFclosCanPrune(entryPoint.entryPointSymVal)
+          if (entrypointCanPrune) {
+            logger.info(
+              'EntryPoint [%s.%s] is pruned',
+              entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
+              entryPoint.functionName ||
+                `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc.start.line}_$${
+                  entryPoint.entryPointSymVal?.ast?.node?.loc.end.line
+                }>`
+            )
+            continue
+          }
+        }
+
         hasAnalysised.push(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
         )
         CurrentEntryPoint.setCurrentEntryPoint(entryPoint)
         logger.info(
           'EntryPoint [%s.%s] is executing',
           entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
           entryPoint.functionName ||
-            `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_$${
-              entryPoint.entryPointSymVal?.ast.loc.end.line
+            `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc.start?.line}_$${
+              entryPoint.entryPointSymVal?.ast?.node?.loc.end?.line
             }>`
         )
 
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+        const overloadedList = entryPoint.entryPointSymVal?.overloaded
+        if (!overloadedList?.length) {
+          continue
+        }
 
-        const argValues: any[] = []
-        try {
-          for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
-            argValues.push(
-              this.processInstruction(
+        for (const overloadFuncDef of overloadedList.filter(() => true)) {
+          this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+          ;(state as any).entryPointStartTimestamp = Date.now()
+          const argValues: any[] = []
+          try {
+            for (const key in overloadFuncDef?.parameters) {
+              let argValue = this.processInstruction(
                 entryPoint.entryPointSymVal,
-                entryPoint.entryPointSymVal?.ast?.parameters[key]?.id,
+                overloadFuncDef?.parameters[key]?.id,
                 state
               )
+              if (argValue.vtype !== 'symbol') {
+                argValue.taint.sanitize()
+                const tmpVal = new SymbolValue(entryPoint.entryPointSymVal.qid, {
+                  sid: overloadFuncDef?.parameters[key]?.id?.name,
+                  parent: entryPoint.entryPointSymVal,
+                })
+                entryPoint.entryPointSymVal.value[tmpVal.sid] = tmpVal
+                argValue = this.processInstruction(
+                  entryPoint.entryPointSymVal,
+                  overloadFuncDef?.parameters[key]?.id,
+                  state
+                )
+              }
+              if (overloadFuncDef?.parameters[key]?.varType?.id) {
+                const val = this.getMemberValueNoCreate(
+                  entryPoint.entryPointSymVal,
+                  overloadFuncDef.parameters[key]?.varType.id,
+                  state
+                )
+                if (val?.vtype === 'class') {
+                  argValue.rtype.definiteType = UastSpec.identifier(val.logicalQid)
+                } else {
+                  argValue.rtype.definiteType = overloadFuncDef.parameters[key].varType.id
+                }
+              }
+              argValues.push(argValue)
+            }
+          } catch (e) {
+            handleException(
+              e,
+              'Error occurred in JavaAnalyzer.symbolInterpret: process argValue err',
+              'Error occurred in JavaAnalyzer.symbolInterpret: process argValue err'
             )
           }
-        } catch (e) {
-          handleException(
-            e,
-            'Error occurred in JavaAnalyzer.symbolInterpret: process argValue err',
-            'Error occurred in JavaAnalyzer.symbolInterpret: process argValue err'
-          )
-        }
 
-        try {
-          this.executeCall(
-            entryPoint.entryPointSymVal?.ast,
-            entryPoint.entryPointSymVal,
-            argValues,
-            state,
-            entryPoint.scopeVal
-          )
-        } catch (e) {
-          handleException(
-            e,
-            `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
-            `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log file`
-          )
+          try {
+            this.executeCall(overloadFuncDef, entryPoint.entryPointSymVal, state, entryPoint.scopeVal, { callArgs: this.buildCallArgs(overloadFuncDef, argValues, entryPoint.entryPointSymVal) })
+          } catch (e) {
+            handleException(
+              e,
+              `[${overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
+              `[${overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`
+            )
+            if (this.globalState.meetOtherEntryPoint) {
+              delete this.globalState.meetOtherEntryPoint
+            }
+            if (this.globalState.entryPointTimeout) {
+              delete this.globalState.entryPointTimeout
+            }
+          }
+
+          if (this.globalState.meetOtherEntryPoint) {
+            logger.info(
+              'EntryPoint [%s.%s] is interrupted because encountered other entrypoint during execution',
+              entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
+              entryPoint.functionName ||
+                `<anonymousFunc_${overloadFuncDef.loc.start.line}_$${overloadFuncDef.loc.end.line}>`
+            )
+            delete this.globalState.meetOtherEntryPoint
+          }
+          if (this.globalState.entryPointTimeout) {
+            logger.info(
+              'EntryPoint [%s.%s] is interrupted because timeout',
+              entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
+              entryPoint.functionName ||
+                `<anonymousFunc_${overloadFuncDef.loc.start.line}_$${overloadFuncDef.loc.end.line}>`
+            )
+            delete this.globalState.entryPointTimeout
+            this.timeoutEntryPoints.push({
+              entryPoint,
+              overloadFuncDef,
+              argValues,
+            })
+          }
+
+          this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
         }
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
       }
     }
+    Config.entryPointTimeoutMs = oldEntryPointTimeoutMs
+
+    if (this.timeoutEntryPoints.length > 0) {
+      this.outputAnalyzerExistResult()
+      logger.info('Rerun timeout entryPoint with aggressive prune mode')
+      this.pruneInfoMap.aggressiveMode = true
+      for (const timeoutEntryPoint of this.timeoutEntryPoints) {
+        this.symbolTable.clear()
+        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+
+        try {
+          CurrentEntryPoint.setCurrentEntryPoint(timeoutEntryPoint.entryPoint)
+          logger.info(
+            'EntryPoint [%s.%s] is executing',
+            timeoutEntryPoint.entryPoint.filePath?.substring(
+              0,
+              timeoutEntryPoint.entryPoint.filePath?.lastIndexOf('.')
+            ),
+            timeoutEntryPoint.entryPoint.functionName ||
+              `<anonymousFunc_${timeoutEntryPoint.entryPoint.entryPointSymVal?.ast?.node?.loc.start.line}_$${
+                timeoutEntryPoint.entryPoint.entryPointSymVal?.ast?.node?.loc.end.line
+              }>`
+          )
+          const newState = state as any
+          newState.entryPointStartTimestamp = Date.now()
+          this.executeCall(
+            timeoutEntryPoint.overloadFuncDef,
+            timeoutEntryPoint.entryPoint.entryPointSymVal,
+            state,
+            timeoutEntryPoint.entryPoint.scopeVal,
+            { callArgs: this.buildCallArgs(timeoutEntryPoint.overloadFuncDef, timeoutEntryPoint.argValues, timeoutEntryPoint.entryPoint.entryPointSymVal) }
+          )
+        } catch (e) {
+          handleException(
+            e,
+            `[${timeoutEntryPoint.overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
+            `[${timeoutEntryPoint.overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`
+          )
+          if (this.globalState.meetOtherEntryPoint) {
+            delete this.globalState.meetOtherEntryPoint
+          }
+          if (this.globalState.entryPointTimeout) {
+            delete this.globalState.entryPointTimeout
+          }
+        }
+
+        if (this.globalState.meetOtherEntryPoint) {
+          delete this.globalState.meetOtherEntryPoint
+        }
+        if (this.globalState.entryPointTimeout) {
+          logger.info(
+            'EntryPoint [%s.%s] is interrupted because timeout',
+            timeoutEntryPoint.entryPoint.filePath?.substring(
+              0,
+              timeoutEntryPoint.entryPoint.filePath?.lastIndexOf('.')
+            ),
+            timeoutEntryPoint.entryPoint.functionName ||
+              `<anonymousFunc_${timeoutEntryPoint.overloadFuncDef.loc.start.line}_$${timeoutEntryPoint.overloadFuncDef.loc.end.line}>`
+          )
+          delete this.globalState.entryPointTimeout
+          this.outputAnalyzerExistResult()
+        }
+
+        this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+      }
+      this.pruneInfoMap.aggressiveMode = false
+    }
+
     return true
   }
 
@@ -1280,7 +1672,7 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param val - 值
    * @returns {boolean} 是否为 null 字面量
    */
-  isNullLiteral(val: any) {
+  override isNullLiteral(val: any) {
     return val.getRawValue() === 'null' && val.type === 'Literal'
   }
 
@@ -1289,8 +1681,8 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @param scope - 作用域
    * @returns {any[]} 导出作用域数组
    */
-  getExportsScope(scope: any) {
-    return [scope.exports, scope]
+  override getExportsScope(scope: any) {
+    return [scope.scope.exports, scope]
   }
 
   /**
@@ -1301,11 +1693,11 @@ class JavaAnalyzer extends (Analyzer as any) {
     if (!obj) {
       return
     }
-    if (obj.sort && typeof obj.sort === 'string') {
-      this.classMap.set(obj.sort, obj)
-    } else if (obj.field) {
-      for (const key in obj.field) {
-        this.assembleClassMap(obj.field[key])
+    if (obj.vtype === 'class' && obj.qid && typeof obj.qid === 'string') {
+      this.classMap.set(obj.logicalQid, obj.uuid)
+    } else if (obj.members?.size > 0) {
+      for (const key of obj.members.keys()) {
+        this.assembleClassMap(obj.members.get(key))
       }
     }
   }
@@ -1317,15 +1709,16 @@ class JavaAnalyzer extends (Analyzer as any) {
    * @returns {boolean} 是否定义
    */
   checkFieldDefinedInClass(fieldName: string, fullClassName: string) {
+    fullClassName = QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fullClassName)
     if (!fieldName || !fullClassName || !this.classMap.has(fullClassName)) {
       return false
     }
 
-    const classObj = this.classMap.get(fullClassName)
-    if (!classObj.ast || !classObj.ast.body) {
+    const classObj = this.symbolTable.get(this.classMap.get(fullClassName))
+    if (!classObj.ast.node || !classObj.ast.node.body) {
       return false
     }
-    for (const bodyItem of classObj.ast.body) {
+    for (const bodyItem of classObj.ast.node.body) {
       if (bodyItem.type !== 'VariableDeclaration') {
         continue
       }
@@ -1348,17 +1741,437 @@ class JavaAnalyzer extends (Analyzer as any) {
       return null
     }
     while (scope) {
-      if (scope._qid === qid) {
+      if (QidUnifyUtil.removeInstanceFromString(scope.qid) === QidUnifyUtil.removeInstanceFromString(qid)) {
         return scope
       }
       scope = scope.parent
     }
     return null
   }
+
+  /**
+   * find invocations in scope by node hash
+   * @param scope
+   * @param node
+   * @returns {Invocation[]}
+   */
+  findNodeInvocations(scope: any, node: any): Invocation[] {
+    const resultArray: Invocation[] = []
+    const nodeHash = node?._meta?.nodehash
+    if (!nodeHash) {
+      return resultArray
+    }
+
+    let targetScope = scope
+    while (targetScope) {
+      if (targetScope.invocationMap?.has(nodeHash)) {
+        resultArray.push(...targetScope.invocationMap.get(nodeHash))
+        break
+      }
+      targetScope = targetScope.parent
+    }
+    return resultArray
+  }
+
+  /**
+   * build new object
+   * @param fdef
+   * @param argvalues
+   * @param fclos
+   * @param state
+   * @param node
+   * @param scope
+   */
+  override buildNewObject(fdef: any, fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
+    const obj = super.buildNewObject(fdef, fclos, state, node, scope, callInfo)
+    if (obj && node.callee?.type === 'MemberAccess' && /^[1-9]\d*$/.test(node.callee.property.name)) {
+      obj.length = Number(node.callee.property.name)
+    }
+    delete obj.value.class
+    return obj
+  }
+
+  /**
+   * load all sink from rule
+   */
+  loadAllSink() {
+    const resultArray = []
+    const ruleConfigArray = BasicRuleHandler.getRules()
+    for (const ruleConfig of ruleConfigArray) {
+      if (!ruleConfig.sinks) {
+        continue
+      }
+      for (const sinkArray of Object.values(ruleConfig.sinks)) {
+        if (Array.isArray(sinkArray)) {
+          resultArray.push(...sinkArray)
+        }
+      }
+    }
+    return resultArray
+  }
+
+  /**
+   * load all source from rule
+   */
+  loadAllSource() {
+    const funcCallSourceArray = []
+    const otherSourceArray = []
+    const ruleConfigArray = BasicRuleHandler.getRules()
+    for (const ruleConfig of ruleConfigArray) {
+      if (!ruleConfig.sources) {
+        continue
+      }
+      for (const key of Object.keys(ruleConfig.sources)) {
+        if (key.startsWith('FuncCall')) {
+          funcCallSourceArray.push(...ruleConfig.sources[key])
+        } else {
+          otherSourceArray.push(...ruleConfig.sources[key])
+        }
+      }
+    }
+    return [funcCallSourceArray, otherSourceArray]
+  }
+
+  /**
+   * load all sanitizer from rule
+   */
+  loadAllSanitizer() {
+    const funcCallSanitizerArray = []
+    const otherSanitizerArray = []
+    const ruleConfigArray = BasicRuleHandler.getRules()
+    for (const ruleConfig of ruleConfigArray) {
+      if (!ruleConfig.sanitizers) {
+        continue
+      }
+      for (const sanitizer of ruleConfig.sanitizers) {
+        if (sanitizer.sanitizerType === 'FunctionCallSanitizer') {
+          funcCallSanitizerArray.push(sanitizer)
+        } else {
+          otherSanitizerArray.push(sanitizer)
+        }
+      }
+    }
+    return [funcCallSanitizerArray, otherSanitizerArray]
+  }
+
+  /**
+   * check if prune is supported
+   * @param entryPointNum
+   * @param sinkNum
+   */
+  checkPruneSupported(entryPointNum: number, sinkNum: number) {
+    if (entryPointNum < Config.minEntryPointToEnablePrune || sinkNum <= 0 || Config.makeAllCG) {
+      return false
+    }
+    return !!(this.typeResolver.resolveFinish && this.ainfo?.callgraph)
+  }
+
+  /**
+   * check if prune is supported during symbol interpret
+   * @param sinkNum
+   * @param otherSanitizerNum
+   */
+  checkPruneSupportedDuringInterpret(sinkNum: number, otherSanitizerNum: number) {
+    if (sinkNum <= 0 || otherSanitizerNum > 0 || Config.makeAllCG) {
+      return false
+    }
+    return !!(this.typeResolver.resolveFinish && this.ainfo?.callgraph)
+  }
+
+  /**
+   * check if fclos can be pruned
+   * @param fclos
+   */
+  checkFclosCanPrune(fclos: any) {
+    if (!fclos) {
+      return false
+    }
+    const matchSink = this.checkFclosMatchSink(
+      fclos,
+      [],
+      this.pruneInfoMap.sinkArray,
+      this.pruneInfoMap.matchSinkCacheMap,
+      true
+    )
+    return !matchSink
+  }
+
+  /**
+   * check if fclos can be pruned during executing
+   * @param fclos
+   * @param node
+   * @param argvalues
+   * @param state
+   * @param fromCallGraph
+   */
+  checkFclosCanPruneDuringInterpret(fclos: any, node: any, argvalues: any, state: any, fromCallGraph: boolean) {
+    if (this.pruneInfoMap.aggressiveMode && state?.callstack?.length >= Config.maxCallstackDepth) {
+      return true
+    }
+
+    if (Array.isArray(node.arguments)) {
+      for (const argument of node.arguments) {
+        if (argument.type === 'Sequence' || argument.type === 'FunctionDefinition') {
+          return false
+        }
+      }
+    }
+    if (Array.isArray(argvalues)) {
+      for (const argvalue of argvalues) {
+        if (argvalue.vtype === 'class' || argvalue.vtype === 'fclos') {
+          return false
+        }
+      }
+    }
+
+    if (
+      !this.enablePruneDuringInterpret ||
+      !fclos ||
+      !fclos.ast.fdef ||
+      !this.checkPruneSupportedDuringInterpret(
+        this.pruneInfoMap.sinkArray.length,
+        this.pruneInfoMap.otherSanitizerArray.length
+      )
+    ) {
+      return false
+    }
+    const matchSourceSinkSanitizer = this.checkFclosMatchSink(
+      fclos,
+      [],
+      this.pruneInfoMap.funcCallSourceSinkSanitizerArray,
+      this.pruneInfoMap.matchFuncCallSourceSinkSanitizerCacheMap,
+      true
+    )
+    if (matchSourceSinkSanitizer) {
+      return false
+    }
+
+    if (fromCallGraph) {
+      return !matchSourceSinkSanitizer
+    }
+    return false
+  }
+
+  /**
+   * check if fclos match any sink, ignore sub fclos
+   * @param fclos
+   * @param sinkArray
+   * @param matchSinkCacheMap
+   * @param checkUseDynamicFeature
+   */
+  checkFclosMatchSinkNoRecurse(
+    fclos: any,
+    sinkArray: any[],
+    matchSinkCacheMap: Map<any, any>,
+    checkUseDynamicFeature: boolean
+  ) {
+    if (!fclos || !fclos.invocationMap || !sinkArray) {
+      matchSinkCacheMap.set(fclos, false)
+      return false
+    }
+
+    if (matchSinkCacheMap.has(fclos)) {
+      return matchSinkCacheMap.get(fclos)
+    }
+
+    for (const invocationArray of fclos.invocationMap.values()) {
+      for (const invocation of invocationArray) {
+        if (checkUseDynamicFeature) {
+          for (const dynamicClass of this.pruneInfoMap.dynamicClassArray) {
+            if (dynamicClass === invocation.calleeType || invocation.calleeType?.endsWith(`.${dynamicClass}`)) {
+              matchSinkCacheMap.set(fclos, true)
+              return true
+            }
+          }
+          for (const dynamicPackage of this.pruneInfoMap.dynamicPackageArray) {
+            if (invocation.calleeType?.startsWith(`${dynamicPackage}.`)) {
+              matchSinkCacheMap.set(fclos, true)
+              return true
+            }
+          }
+        }
+
+        for (const sink of sinkArray) {
+          const invocationMatchSink: boolean = checkInvocationMatchSink(invocation, sink, this.typeResolver)
+          if (invocationMatchSink) {
+            matchSinkCacheMap.set(fclos, true)
+            return true
+          }
+        }
+      }
+    }
+
+    matchSinkCacheMap.set(fclos, false)
+    return false
+  }
+
+  /**
+   * check if fclos match any sink
+   * @param fclos
+   * @param fclosStack
+   * @param sinkArray
+   * @param matchSinkCacheMap
+   * @param checkUseDynamicFeature
+   */
+  checkFclosMatchSink(
+    fclos: any,
+    fclosStack: any[],
+    sinkArray: any[],
+    matchSinkCacheMap: Map<any, any>,
+    checkUseDynamicFeature: boolean
+  ) {
+    if (!fclos || !fclos.invocationMap || !sinkArray) {
+      matchSinkCacheMap.set(fclos, false)
+      return false
+    }
+
+    if (matchSinkCacheMap.has(fclos)) {
+      return matchSinkCacheMap.get(fclos)
+    }
+
+    // if (checkUseDynamicFeature) {
+    //   const innerFuncDefVisitor = new InnerFuncDefVisitor()
+    //   if (Array.isArray(fclos.overloaded)) {
+    //     for (const funcDef of fclos.overloaded) {
+    //       innerFuncDefVisitor.matchFuncDefCount = 0
+    //       AstUtil.visit(funcDef, innerFuncDefVisitor)
+    //       if (innerFuncDefVisitor.matchFuncDefCount > 1) {
+    //         matchSinkCacheMap.set(fclos, true)
+    //         return true
+    //       }
+    //     }
+    //   }
+    // }
+
+    const toScopeArray = []
+    for (const invocationArray of fclos.invocationMap.values()) {
+      for (const invocation of invocationArray) {
+        if (checkUseDynamicFeature) {
+          for (const dynamicClass of this.pruneInfoMap.dynamicClassArray) {
+            if (dynamicClass === invocation.calleeType || invocation.calleeType?.endsWith(`.${dynamicClass}`)) {
+              matchSinkCacheMap.set(fclos, true)
+              return true
+            }
+          }
+          for (const dynamicPackage of this.pruneInfoMap.dynamicPackageArray) {
+            if (invocation.calleeType?.startsWith(`${dynamicPackage}.`)) {
+              matchSinkCacheMap.set(fclos, true)
+              return true
+            }
+          }
+        }
+
+        for (const sink of sinkArray) {
+          const invocationMatchSink: boolean = checkInvocationMatchSink(invocation, sink, this.typeResolver)
+          if (invocationMatchSink) {
+            matchSinkCacheMap.set(fclos, true)
+            return true
+          }
+        }
+
+        if (invocation.toScope?.vtype === 'fclos') {
+          toScopeArray.push(invocation.toScope)
+        }
+      }
+    }
+
+    fclosStack.push(fclos)
+    const analysedScopeArray: any[] = []
+    for (const toScope of toScopeArray) {
+      if (analysedScopeArray.includes(toScope) || fclosStack.includes(toScope)) {
+        continue
+      }
+      analysedScopeArray.push(toScope)
+      const subResult = this.checkFclosMatchSink(
+        toScope,
+        fclosStack,
+        sinkArray,
+        matchSinkCacheMap,
+        checkUseDynamicFeature
+      )
+      if (subResult) {
+        matchSinkCacheMap.set(fclos, true)
+        return true
+      }
+    }
+    fclosStack.pop()
+
+    matchSinkCacheMap.set(fclos, false)
+    return false
+  }
+
+  /**
+   * Resolve UUID-backed values before mutating them during transitional storage migration.
+   * @param value
+   */
+  private resolveRuntimeValueRef<T>(value: T): T | any {
+    if (typeof value === 'string' && value.startsWith('symuuid_')) {
+      return this.symbolTable.get(value) ?? value
+    }
+    return value
+  }
+
+  /**
+   * add rtype to arg
+   * @param argAst
+   * @param argValue
+   */
+  addRtypeToArg(argAst: any, argValue: any) {
+    const resolvedArgValue = this.resolveRuntimeValueRef(argValue)
+    if (
+      !argAst ||
+      !argAst._meta ||
+      !argAst._meta.nodehash ||
+      !resolvedArgValue ||
+      typeof resolvedArgValue !== 'object' ||
+      (resolvedArgValue.rtype?.definiteType && !resolvedArgValue.rtype.vagueType) ||
+      !(this.typeResolver?.typeResultCacheMap instanceof Map) ||
+      !this.typeResolver.typeResultCacheMap.has(argAst._meta.nodehash)
+    ) {
+      return
+    }
+
+    const resolvedTypeArray = this.typeResolver.typeResultCacheMap.get(argAst._meta.nodehash)
+    for (const resolvedType of resolvedTypeArray) {
+      if (resolvedType?.type !== '') {
+        if (!resolvedArgValue.rtype) {
+          resolvedArgValue.rtype = { type: undefined }
+        }
+        resolvedArgValue.rtype.definiteType = UastSpec.identifier(resolvedType.type)
+        return
+      }
+    }
+  }
+
+  /**
+   * check if fclos in interface or abstract class
+   * @param fclos
+   */
+  checkFclosInInterfaceOrAbstractClass(fclos: any) {
+    return !!(
+      (fclos?.parent?.vtype === 'class' &&
+        (fclos.parent.ast?.node?._meta?.isAbstract || fclos.parent.ast?.node?._meta?.isInterface)) ||
+      (fclos?.ast.fdef?.parent?.type === 'ClassDefinition' &&
+        (fclos.ast.fdef.parent._meta?.isAbstract || fclos.ast.fdef.parent._meta?.isInterface))
+    )
+  }
+
+  /**
+   *
+   * @param className
+   * @param baseClassName
+   */
+  addExtraClassHierarchyByName(className: string, baseClassName: string) {
+    if (!this.extraClassHierarchyByNameMap.has(className)) {
+      this.extraClassHierarchyByNameMap.set(className, [])
+    }
+    if (!this.extraClassHierarchyByNameMap.get(className).includes(baseClassName)) {
+      this.extraClassHierarchyByNameMap.get(className).push(baseClassName)
+    }
+  }
 }
 
 ;(JavaAnalyzer as any).prototype.initFileScope = JavaInitializer.initFileScope
-;(JavaAnalyzer as any).prototype.initInPackageScope = JavaInitializer.initInPackageScope
 
 export = JavaAnalyzer
 

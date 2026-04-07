@@ -12,6 +12,8 @@ const astUtil = require('../../util/ast-util')
 const MemSpace = require('../../engine/analyzer/common/memSpace')
 const { prettyPrint } = require('../../util/ast-util')
 const { getValueFromPackageByQid } = require('../../engine/util/value-util')
+const QidUnifyUtil = require('../../util/qid-unify-util')
+const Config = require('../../config')
 
 /**
  * resolve type, declarations, invocations after preprocess
@@ -31,7 +33,7 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     this.classHierarchyMap = this.findClassHierarchy(analyzer, analyzer.initState(analyzer.topScope))
     Object.entries(analyzer.funcSymbolTable).forEach(([, funcSymbol]) => {
       const funcSymbolAny = funcSymbol as any
-      if (funcSymbolAny.vtype === 'fclos' && funcSymbolAny.ast) {
+      if (funcSymbolAny.vtype === 'fclos' && funcSymbolAny.ast.node) {
         const targetAstAndScopeArray = this.findTargetUastNodeInScope(funcSymbolAny)
         for (const targetAstAndScope of targetAstAndScopeArray) {
           const thisScope =
@@ -105,17 +107,53 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     const resultArray: TypeRelatedInfoResult[] = []
 
     let val
+    let funcDef
     let defScopeType: string = ''
     const defScope = this.getDefScope(scope, node)
     if (defScope) {
       if (['class', 'package'].includes(defScope.vtype)) {
-        defScopeType = defScope._qid
+        defScopeType = defScope.logicalQid
       }
-      val = this.getMemberValueNoCreate(defScope, node, 1)
+      val = this.getMemberValueNoCreate(defScope, node, state, 1)
+      if (
+        Config.loadContextEnvironmentId?.startsWith('jdk8') &&
+        (val?.vtype === 'undefine' || defScope.qid === '<global>')
+      ) {
+        const langScope = getValueFromPackageByQid(analyzer.topScope.context.packages, 'java.lang')
+        val = this.getMemberValueNoCreate(langScope, node, state, 1)
+      }
     }
     if (val?.vtype !== 'undefine') {
       if (['class', 'package'].includes(val.vtype)) {
-        resultArray.push(this.assembleTypeResult(node, 0, node.name, val._qid, val, val.ast, defScope, defScopeType))
+        if (this.checkDefineInLocalScope(scope, node)) {
+          let declScope = scope
+          while (declScope) {
+            if (declScope.declarationMap?.has(node.name)) {
+              const { type } = declScope.declarationMap.get(node.name)
+              resultArray.push(this.assembleTypeResult(node, 0, node.name, type, undefined, undefined, undefined, ''))
+              break
+            }
+            if (declScope.scope?.declarationMap?.has(node.name)) {
+              const { type } = declScope.scope.declarationMap.get(node.name)
+              resultArray.push(this.assembleTypeResult(node, 0, node.name, type, undefined, undefined, undefined, ''))
+              break
+            }
+            declScope = declScope.parent
+          }
+        } else {
+          resultArray.push(
+            this.assembleTypeResult(
+              node,
+              0,
+              node.name,
+              QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(val.qid),
+              val,
+              val.ast,
+              defScope,
+              defScopeType
+            )
+          )
+        }
       } else if (val.rtype?.definiteType && !val.rtype?.vagueType) {
         resultArray.push(
           this.assembleTypeResult(
@@ -124,19 +162,19 @@ export default class TypeRelatedInfoResolver extends MemSpace {
             node.name,
             prettyPrint(val.rtype.definiteType),
             val,
-            val.ast,
+            val.ast?.node,
             defScope,
             defScopeType
           )
         )
-      } else if (val.vtype === 'fclos' && val.overloaded?.length > 0 && Array.isArray(state.argumentTypes)) {
-        const funcDef = this.findMatchedFuncDef(val, state.argumentTypes)
+      } else if (val.vtype === 'fclos' && val.overloaded.length > 0 && Array.isArray(state.argumentTypes)) {
+        funcDef = this.findMatchedFuncDef(val, state.argumentTypes)
         const funcReturnTypeArray = this.resolveInstruction(analyzer, scope, funcDef.returnType, state)
         for (const funcReturnType of funcReturnTypeArray) {
           const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
             node,
             funcReturnType.index,
-            funcReturnType.name,
+            node.name,
             funcReturnType.type,
             val,
             funcDef,
@@ -149,8 +187,8 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     } else {
       let declScope = scope
       while (declScope) {
-        if (scope.declarationMap?.has(node.name)) {
-          const { type } = scope.declarationMap.get(node.name)
+        if (declScope.scope?.declarationMap?.has(node.name)) {
+          const { type } = declScope.scope.declarationMap.get(node.name)
           resultArray.push(this.assembleTypeResult(node, 0, node.name, type, undefined, undefined, undefined, ''))
           break
         }
@@ -162,7 +200,9 @@ export default class TypeRelatedInfoResolver extends MemSpace {
       if (state.allOrigin) {
         resultArray.push(this.assembleTypeResult(node, 0, node.name, node.name, undefined, undefined, undefined, ''))
       } else {
-        resultArray.push(this.assembleTypeResult(node, 0, node.name, '', val, val?.ast, defScope, defScopeType))
+        resultArray.push(
+          this.assembleTypeResult(node, 0, node.name, '', val, funcDef || val?.ast?.node, defScope, defScopeType)
+        )
       }
     }
 
@@ -233,10 +273,10 @@ export default class TypeRelatedInfoResolver extends MemSpace {
           declSite: node,
           nodeScope: state.nodeScope,
         }
-        if (!(state.nodeScope.declarationMap instanceof Map)) {
-          state.nodeScope.declarationMap = new Map()
+        if (!(state.nodeScope.scope.declarationMap instanceof Map)) {
+          state.nodeScope.scope.declarationMap = new Map()
         }
-        state.nodeScope.declarationMap.set(nameArray[i], declaration)
+        state.nodeScope.scope.declarationMap.set(nameArray[i], declaration)
       }
     }
 
@@ -260,13 +300,29 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     if (objTypeResultArray.length === 1) {
       const objTypeResult: TypeRelatedInfoResult = objTypeResultArray[0]
       objScopeType = objTypeResult.type
+      if (objTypeResult.type?.endsWith('[]')) {
+        resultArray.push(
+          this.assembleTypeResult(
+            node,
+            0,
+            '',
+            objTypeResult.type.substring(0, objTypeResult.type.length - 2),
+            objTypeResult.value,
+            objTypeResult.valueNode,
+            objTypeResult.valueDefScope,
+            objTypeResult.valueDefScopeType
+          )
+        )
+        return resultArray
+      }
+
       if (['class', 'package'].includes(objTypeResult.value?.vtype)) {
         objScope = objTypeResult.value
       } else if (objTypeResult.type !== '') {
         if (objTypeResult.type.includes('.')) {
-          objScope = getValueFromPackageByQid(analyzer.topScope.packageManager, objTypeResult.type)
+          objScope = getValueFromPackageByQid(analyzer.topScope.context.packages, objTypeResult.type)
         } else {
-          objScope = this.getMemberValueNoCreate(scope, UastSpec.identifier(objTypeResult.type))
+          objScope = this.getMemberValueNoCreate(scope, UastSpec.identifier(objTypeResult.type), state)
         }
       }
     }
@@ -374,12 +430,14 @@ export default class TypeRelatedInfoResolver extends MemSpace {
             callSite: node,
             fromScope: state.nodeScope,
             fromScopeAst: state.nodeScopeAst,
-            toScope: returnTypeResult.value,
-            toScopeAst: returnTypeResult.valueNode,
+            toScope: returnTypeResult.value?.vtype === 'fclos' ? returnTypeResult.value : undefined,
+            toScopeAst:
+              returnTypeResult.valueNode?.type === 'FunctionDefinition' ? returnTypeResult.valueNode : undefined,
           }
           if (node?._meta?.nodehash) {
             this.addInvocationToScope(state.nodeScope, node?._meta?.nodehash, invocation)
-            if (invocation.calleeType !== '') {
+            const invokeSuper = node.callee?.type === 'MemberAccess' && node.callee.object?.type === 'SuperExpression'
+            if (invocation.calleeType !== '' && !invokeSuper) {
               const polyInvocationArray = this.findPolymorphismInvocation(invocation, state)
               this.addInvocationToScope(state.nodeScope, node?._meta?.nodehash, polyInvocationArray)
             }
@@ -606,26 +664,23 @@ export default class TypeRelatedInfoResolver extends MemSpace {
       const fclos = this.getMemberValueNoCreate(classVal, UastSpec.identifier('_CTOR_'), state, 1)
       if (fclos?.vtype === 'fclos') {
         const funcDef = this.findMatchedFuncDef(fclos, calleeArgumentTypes)
-        const funcReturnTypeArray = this.resolveInstruction(analyzer, scope, funcDef.returnType, state)
-        for (const funcReturnType of funcReturnTypeArray) {
-          const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
-            node,
-            funcReturnType.index,
-            funcReturnType.name,
-            funcReturnType.type,
-            fclos,
-            funcDef,
-            classVal,
-            classVal._qid
-          )
-          resultArray.push(finalTypeResult)
-        }
+        const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
+          node,
+          0,
+          '',
+          classVal.logicalQid,
+          fclos,
+          funcDef,
+          classVal,
+          classVal.logicalQid
+        )
+        resultArray.push(finalTypeResult)
 
         if (state.nodeScope) {
           const invocation: Invocation = {
             callSiteLiteral: prettyPrint(node.callee),
-            calleeType: classVal._qid,
-            fsig: fclos._sid,
+            calleeType: classVal.logicalQid,
+            fsig: fclos.sid,
             argTypes: calleeArgumentTypes,
             callSite: node,
             fromScope: state.nodeScope,
@@ -638,9 +693,21 @@ export default class TypeRelatedInfoResolver extends MemSpace {
           }
         }
       } else if (state.nodeScope) {
+        const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
+          node,
+          0,
+          '',
+          classVal.logicalQid,
+          undefined,
+          undefined,
+          classVal,
+          classVal.logicalQid
+        )
+        resultArray.push(finalTypeResult)
+
         const invocation: Invocation = {
           callSiteLiteral: prettyPrint(node.callee),
-          calleeType: classVal._qid,
+          calleeType: classVal.logicalQid,
           fsig: prettyPrint(node.callee),
           argTypes: calleeArgumentTypes,
           callSite: node,
@@ -668,6 +735,20 @@ export default class TypeRelatedInfoResolver extends MemSpace {
       if (node?._meta?.nodehash) {
         this.addInvocationToScope(state.nodeScope, node?._meta?.nodehash, invocation)
       }
+    }
+
+    if (resultArray.length === 0) {
+      const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
+        node,
+        0,
+        '',
+        prettyPrint(node.callee),
+        undefined,
+        undefined,
+        undefined,
+        prettyPrint(node.callee)
+      )
+      resultArray.push(finalTypeResult)
     }
 
     return resultArray
@@ -805,7 +886,16 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     const resultArray: TypeRelatedInfoResult[] = []
     if (scope.parent?.vtype === 'class') {
       resultArray.push(
-        this.assembleTypeResult(node, 0, '', scope.parent._qid, scope.parent, scope.parent.ast, scope.parent.parent, '')
+        this.assembleTypeResult(
+          node,
+          0,
+          '',
+          scope.parent.logicalQid,
+          scope.parent,
+          scope.parent.ast?.node,
+          scope.parent.parent,
+          ''
+        )
       )
     }
     return resultArray
@@ -827,14 +917,15 @@ export default class TypeRelatedInfoResolver extends MemSpace {
           node,
           0,
           '',
-          scope.parent.super._qid,
+          scope.parent.super.logicalQid,
           scope.parent.super,
-          scope.parent.super.ast,
+          scope.parent.super.ast?.node,
           scope.parent.super.parent,
           ''
         )
       )
     }
+
     return resultArray
   }
 
@@ -864,6 +955,39 @@ export default class TypeRelatedInfoResolver extends MemSpace {
         idTypeResult.valueNode,
         idTypeResult.valueDefScope,
         idTypeResult.valueDefScopeType
+      )
+      resultArray.push(finalTypeResult)
+    }
+
+    return resultArray
+  }
+
+  /**
+   * ArrayType
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @returns {TypeRelatedInfoResult[]}
+   */
+  resolveArrayType(analyzer: any, scope: any, node: any, state: any): TypeRelatedInfoResult[] {
+    const resultArray: TypeRelatedInfoResult[] = []
+
+    const newState = lodash.clone(state)
+    newState.parent = state
+    newState.allOrigin = true
+
+    const elementTypeResultArray = this.resolveInstruction(analyzer, scope, node.element, state)
+    for (const elementTypeResult of elementTypeResultArray) {
+      const finalTypeResult: TypeRelatedInfoResult = this.assembleTypeResult(
+        node,
+        elementTypeResult.index,
+        elementTypeResult.name !== '' ? `${elementTypeResult.name}[]` : elementTypeResult.name,
+        elementTypeResult.type !== '' ? `${elementTypeResult.type}[]` : elementTypeResult.type,
+        elementTypeResult.value,
+        elementTypeResult.valueNode,
+        elementTypeResult.valueDefScope,
+        elementTypeResult.valueDefScopeType
       )
       resultArray.push(finalTypeResult)
     }
@@ -948,12 +1072,12 @@ export default class TypeRelatedInfoResolver extends MemSpace {
   findTargetUastNodeInScope(funcSymbol: any): any[] {
     const resultArray: AstAndScope[] = []
 
-    if (funcSymbol.vtype !== 'fclos' || !Array.isArray(funcSymbol.overloaded)) {
+    if (funcSymbol.vtype !== 'fclos' || !funcSymbol.overloaded?.length) {
       return resultArray
     }
 
     const typeResolverASTVisitor = new TypeResolverASTVisitor()
-    for (const funcDef of funcSymbol.overloaded) {
+    for (const funcDef of funcSymbol.overloaded.filter(() => true)) {
       typeResolverASTVisitor.nodeScope = funcSymbol
       typeResolverASTVisitor.nodeScopeAst = funcDef
       typeResolverASTVisitor.astAndScopeArray = []
@@ -1029,6 +1153,34 @@ export default class TypeRelatedInfoResolver extends MemSpace {
   }
 
   /**
+   * find baseTypes
+   * @param typeInfo
+   * @param typeDeclaration
+   * @returns {string[]}
+   */
+  findBaseTypes(typeInfo: ClassHierarchy, typeDeclaration?: string): string[] {
+    const resultArray: string[] = []
+    if (!typeInfo) {
+      return resultArray
+    }
+
+    for (const extendsTypeInfo of typeInfo.extends) {
+      if (!typeDeclaration || typeDeclaration === extendsTypeInfo.typeDeclaration) {
+        resultArray.push(extendsTypeInfo.type)
+      }
+      resultArray.push(...this.findBaseTypes(extendsTypeInfo, typeDeclaration))
+    }
+    for (const implementsTypeInfo of typeInfo.implements) {
+      if (!typeDeclaration || typeDeclaration === implementsTypeInfo.typeDeclaration) {
+        resultArray.push(implementsTypeInfo.type)
+      }
+      resultArray.push(...this.findBaseTypes(implementsTypeInfo, typeDeclaration))
+    }
+
+    return resultArray
+  }
+
+  /**
    * find invoke by polymorphism
    * @param invocation
    * @param state
@@ -1051,9 +1203,10 @@ export default class TypeRelatedInfoResolver extends MemSpace {
         continue
       }
       const fclos = this.getMemberValueNoCreate(subClassHierarchy.value, UastSpec.identifier(invocation.fsig), state, 1)
-      if (fclos?.vtype !== 'fclos' || !Array.isArray(fclos.overloaded)) {
+      if (fclos?.vtype !== 'fclos' || fclos.func?.inherited) {
         continue
       }
+      if (!fclos.overloaded?.length) continue
       let polyFuncDef
       for (const funcDef of fclos.overloaded) {
         if (funcDef.parameters.length === invocation.argTypes.length) {
@@ -1103,20 +1256,26 @@ export default class TypeRelatedInfoResolver extends MemSpace {
    * @returns {*}
    */
   findMatchedFuncDef(fclos: any, argumentTypes: string[]): any {
-    if (fclos?.vtype !== 'fclos' || !Array.isArray(fclos.overloaded) || fclos.overloaded.length === 0) {
+    if (fclos?.vtype !== 'fclos' || !fclos.overloaded?.length) {
       return undefined
     }
 
-    let funcDef = fclos.overloaded[0]
+    let funcDef = fclos.overloaded.get(0)
     for (const f of fclos.overloaded) {
-      const paramLength = Array.isArray(f.parameters) ? f.parameters.length : f.parameters.parameters.length
-      if (paramLength !== argumentTypes.length) {
+      if (!Array.isArray(f.parameters)) {
         continue
       }
-      funcDef = f
-      if (this.checkFuncParamTypeMatch(f.parameters, argumentTypes)) {
+      if (
+        f.parameters.length === argumentTypes.length ||
+        (f.parameters.length < argumentTypes.length &&
+          f.parameters.length > 0 &&
+          f.parameters[f.parameters.length - 1].varType?._meta?.varargs)
+      ) {
         funcDef = f
-        break
+        if (this.checkFuncParamTypeMatch(f.parameters, argumentTypes)) {
+          funcDef = f
+          break
+        }
       }
     }
 
@@ -1130,23 +1289,53 @@ export default class TypeRelatedInfoResolver extends MemSpace {
    * @returns {boolean}
    */
   checkFuncParamTypeMatch(parameters: any, argumentTypes: string[]): boolean {
-    const paramLength = Array.isArray(parameters) ? parameters.length : parameters.parameters.length
-    if (paramLength !== argumentTypes.length) {
+    if (!Array.isArray(parameters)) {
       return false
     }
-    let typeMatch = true
-    for (let i = 0; i < paramLength; i++) {
-      if (
-        argumentTypes[i] === '' ||
-        parameters[i].varType?.id?.name === argumentTypes[i] ||
-        argumentTypes[i].endsWith(`.${parameters[i].varType?.id?.name}`)
-      ) {
-        continue
-      }
-      typeMatch = false
-    }
 
-    return typeMatch
+    if (parameters.length === argumentTypes.length) {
+      let typeMatch = true
+      for (let i = 0; i < argumentTypes.length; i++) {
+        if (!argumentTypes[i] || argumentTypes[i] === '') {
+          continue
+        }
+        const paramAst = parameters[i]
+        const paramType = paramAst.varType?.id?.name
+        let argType = argumentTypes[i]
+        if (argType.endsWith('[]')) {
+          argType = argType.substring(0, argType.length - 2)
+        }
+        if (paramType === argType || argType.endsWith(`.${paramType}`)) {
+          continue
+        }
+        typeMatch = false
+      }
+      return typeMatch
+    }
+    if (
+      parameters.length < argumentTypes.length &&
+      parameters.length > 0 &&
+      parameters[parameters.length - 1]?.varType?._meta?.varargs
+    ) {
+      let typeMatch = true
+      for (let i = 0; i < argumentTypes.length; i++) {
+        if (!argumentTypes[i] || argumentTypes[i] === '') {
+          continue
+        }
+        const paramAst = i < parameters.length ? parameters[i] : parameters[parameters.length - 1]
+        const paramType = paramAst.varType?.id?.name
+        let argType = argumentTypes[i]
+        if (argType.endsWith('[]')) {
+          argType = argType.substring(0, argType.length - 2)
+        }
+        if (paramType === argType || argType.endsWith(`.${paramType}`)) {
+          continue
+        }
+        typeMatch = false
+      }
+      return typeMatch
+    }
+    return false
   }
 
   /**
@@ -1193,5 +1382,23 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     }
 
     return load(this)
+  }
+
+  /**
+   * check if identifer define in local scope
+   * @param scope
+   */
+  checkDefineInLocalScope(scope: any, node: any) {
+    if (!node || node.type !== 'Identifier') {
+      return false
+    }
+    let declScope = scope
+    while (declScope) {
+      if (declScope.declarationMap?.has(node.name) || declScope.scope?.declarationMap?.has(node.name)) {
+        return true
+      }
+      declScope = declScope.parent
+    }
+    return false
   }
 }

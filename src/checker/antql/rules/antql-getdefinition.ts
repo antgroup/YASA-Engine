@@ -3,7 +3,7 @@ import type { Finding } from '../../../engine/analyzer/common/common-types'
 const LocationUtil = require('../util/location-util')
 const EntrypointUtil = require('../util/entrypoint-util')
 const Config = require('../../../config')
-const QidUnifyUtil = require('../util/qid-unify-util')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const logger = require('../../../util/logger')(__filename)
 const Checker = require('../../common/checker')
 const InteractiveOutputStrategy = require('../../common/output/interactive-output-strategy')
@@ -85,7 +85,8 @@ class AntQLGetDefinition extends Checker {
     const fullCallGraphEntrypoint = fullCallGraphFileEntryPoint.getEntryPointsUsingCallGraphByLoc(
       LocationUtil.convertQLLocationStringListToUastLocation([this.input], Config.prefixPath),
       analyzer.ainfo?.callgraph,
-      analyzer.fileManager
+      analyzer.fileManager,
+      analyzer
     )
     const uniqueEntries = EntrypointUtil.mergeEntryPoints(fullCallGraphEntrypoint, analyzer.entryPoints)
     analyzer.entryPoints = Array.from(uniqueEntries.values())
@@ -107,7 +108,7 @@ class AntQLGetDefinition extends Checker {
     const qlLocationString = LocationUtil.findUastLocationInList(node?.loc, [this.input], Config.prefixPath)
     if (qlLocationString) {
       const finding: Finding = {
-        output: QidUnifyUtil.unify(info.val),
+        output: QidUnifyUtil.qidUnifyForQL(info.val),
       }
       this.resultManager.newFinding(finding, InteractiveOutputStrategy.outputStrategyId)
     }

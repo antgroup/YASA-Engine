@@ -106,7 +106,7 @@ function traverseAndCollectNodes(
 ): void {
   if (!node) return
   const currentNodePath = buildPath(node)
-  if (node.loc && node.loc.start.line <= targetEndLine && node.loc.end.line >= targetStartLine) {
+  if (node.loc && node.loc.start?.line <= targetEndLine && node.loc.end?.line >= targetStartLine) {
     collectedNodes.push({ node, level, path: currentNodePath })
   }
   for (const key in node) {
@@ -119,7 +119,6 @@ function traverseAndCollectNodes(
         'type',
         'ast',
         'loc',
-        'sort',
         '_tags',
         'uninit',
         'callnode',
@@ -163,8 +162,8 @@ function isDirectParent(childPath: any[], potentialParentPath: any[]): boolean {
  * @param flag
  */
 function findClosestNode(ast: any, loc: any, flag: string): any {
-  const targetStartLine = loc.start.line
-  const targetEndLine = loc.end.line
+  const targetStartLine = loc.start?.line
+  const targetEndLine = loc.end?.line
   let closestNode: any = null
   let closestNodeLevel = -1
   const collectedNodes: any[] = []
@@ -177,8 +176,8 @@ function findClosestNode(ast: any, loc: any, flag: string): any {
         !collectedNodes.some(
           ({ node: otherNode, path: otherPath }) =>
             otherNode !== node &&
-            otherNode.loc.start.line <= targetEndLine &&
-            otherNode.loc.end.line >= targetStartLine &&
+            otherNode.loc.start?.line <= targetEndLine &&
+            otherNode.loc.end?.line >= targetStartLine &&
             isDirectParent(otherPath, path)
         ))
     ) {
@@ -188,10 +187,10 @@ function findClosestNode(ast: any, loc: any, flag: string): any {
   })
   if (flag === 'source') {
     closestNode._meta.isSource = true
-    closestNode._meta.sourcePos = `${loc.filename}:${loc.start.line}:${loc.start.column}:${loc.end.line}:${loc.end.column}`
+    closestNode._meta.sourcePos = `${loc.filename}:${loc.start?.line}:${loc.start?.column}:${loc.end?.line}:${loc.end?.column}`
   } else if (flag === 'sink') {
     closestNode._meta.isSink = true
-    closestNode._meta.sinkPos = `${loc.filename}:${loc.start.line}:${loc.start.column}:${loc.end.line}:${loc.end.column}`
+    closestNode._meta.sinkPos = `${loc.filename}:${loc.start?.line}:${loc.start?.column}:${loc.end?.line}:${loc.end?.column}`
   }
   return closestNode
 }
@@ -258,7 +257,7 @@ function introduceFlowConfig(options: any, ast: any, filename: string): void {
   }
 }
 
-// filemanager = {filename : scope(filescope) }
+// filemanager = {filename : scope(filescope).uuid }
 // 从source的文件出发
 /**
  *
@@ -274,10 +273,11 @@ function calcEntryPointAndRun(options: any, fileManager: any, analyzer: any): vo
   for (const filename in fileManager) {
     for (const sourcefile in options.FlowConfig.sourcefiles) {
       if (filename.endsWith(sourcefile)) {
-        const filescope = fileManager[filename]
+        const fileUuid = fileManager[filename]
+        const filescope = analyzer.symbolTable.get(fileUuid)
         let entryPoints = AstUtilConverter.satisfy(
           filescope,
-          (n: any) => n.vtype === 'fclos' && n.ast,
+          (n: any) => n.vtype === 'fclos' && n.ast.node,
           null,
           null,
           true
@@ -287,20 +287,20 @@ function calcEntryPointAndRun(options: any, fileManager: any, analyzer: any): vo
           return
         }
         if (Array.isArray(entryPoints)) {
-          entryPoints = _.uniqBy(entryPoints, (value: any) => value.fdef)
+          entryPoints = _.uniqBy(entryPoints, (value: any) => value.ast.fdef)
         } else {
           entryPoints = [entryPoints]
         }
         const state = analyzer.initState(filescope)
         entryPoints.forEach((main: any) => {
-          const nd = AstUtilConverter.satisfy(main.ast, (n: any) => n?._meta?.isSource === true)
+          const nd = AstUtilConverter.satisfy(main.ast?.node, (n: any) => n?._meta?.isSource === true)
           if (nd) {
             const argValues: any[] = []
-            for (const key in main?.ast?.parameters) {
-              argValues.push(analyzer.processInstruction(filescope, main.ast.parameters[key], state))
+            for (const key in main?.ast?.node?.parameters) {
+              argValues.push(analyzer.processInstruction(filescope, main.ast.node.parameters[key], state))
             }
-            logger.info(`entryPoint ${main?.ast?.loc?.sourcefile}:${main.id}`)
-            analyzer.executeCall(main.ast, main, argValues, state, filescope)
+            logger.info(`entryPoint ${main?.ast?.node?.loc?.sourcefile}:${main.id}`)
+            analyzer.executeCall(main.ast?.node, main, state, filescope, { callArgs: { args: argValues.map((v, i) => ({ index: i, value: v, kind: 'positional' as const })) } })
           }
         })
       }

@@ -4,7 +4,7 @@ const {
 } = require('./buffer')
 const MemSpaceQueue = require('../../../common/memSpace')
 const Collection = require('./collection-builtins')
-const UndefinedValueQueue = require('../../../common/value/undefine')
+import { UndefinedValue } from '../../../common/value/undefine'
 
 const memSpaceUtil = new MemSpaceQueue()
 
@@ -37,9 +37,9 @@ class Queue extends Collection {
    * @param scope
    */
   static add(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValueQueue()
+      return new UndefinedValue()
     }
     if (!_this.getMisc('precise')) {
       addElementToBufferQueue(_this, argvalues[0])
@@ -56,7 +56,7 @@ class Queue extends Collection {
       }
     }
 
-    return new UndefinedValueQueue()
+    return new UndefinedValue()
   }
 
   /**
@@ -68,9 +68,9 @@ class Queue extends Collection {
    * @param scope
    */
   static element(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
-      return new UndefinedValueQueue()
+      return new UndefinedValue()
     }
 
     if (!_this.getMisc('precise')) {
@@ -113,9 +113,9 @@ class Queue extends Collection {
    * @param scope
    */
   static poll(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
-      return new UndefinedValueQueue()
+      return new UndefinedValue()
     }
 
     if (!_this.getMisc('precise')) {
@@ -166,7 +166,7 @@ class Queue extends Collection {
    * @private
    */
   static _functionNotFoundCallback_(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return
     }

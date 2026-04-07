@@ -1,0 +1,28 @@
+{
+  "sidKeywords": [
+    "log",
+    "logger",
+    "logging",
+    "console",
+    "print",
+    "println",
+    "printf",
+    "debug",
+    "trace",
+    "info",
+    "warn",
+    "error",
+    "fatal",
+    "format",
+    "formatter",
+    "stringify",
+    "serialize",
+    "dump",
+    "inspect",
+    "metric",
+    "metrics",
+    "telemetry",
+    "audit",
+    "report"
+  ]
+}

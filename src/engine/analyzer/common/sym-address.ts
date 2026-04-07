@@ -14,9 +14,8 @@ function toStringIDCached(node: any, visited: VisitedMap): string | undefined {
 
   visited.set(node, '__') // place holder: unknown
   id = toStringID(node, visited)
-  if (id && id.length > 36) id = id.substring(id.length - 36)
+  if (id && id.length > 100) id = id.substring(id.length - 100)
   visited.set(node, id || '__') // replace the unknown
-  node.sid = id
   return id
 }
 
@@ -27,8 +26,6 @@ function toStringIDCached(node: any, visited: VisitedMap): string | undefined {
  */
 function toStringID(node: any, visited: VisitedMap): string | undefined {
   if (!node) return
-
-  if (node.sid) return node.sid
 
   if (Array.isArray(node)) {
     const sub_ids = node.map((x: any) => toStringIDCached(x, visited))
@@ -47,11 +44,11 @@ function toStringID(node: any, visited: VisitedMap): string | undefined {
     case 'MemberAccess':
       if (!node.object || node.object.vtype === 'scope') return toStringIDCached(node.property, visited)
       if (node.computed) return `${toStringIDCached(node.object, visited)}[${toStringIDCached(node.property, visited)}]`
-      return `[${toStringIDCached(node.object, visited)}.${toStringIDCached(node.property, visited)}]`
+      return `${toStringIDCached(node.object, visited)}.${toStringIDCached(node.property, visited)}`
     case 'Noop': {
       return 'Noop'
     }
-    case 'BinaryOperation': {
+    case 'BinaryExpression': {
       const left = toStringIDCached(node.left, visited) || ''
       const right = toStringIDCached(node.right, visited) || ''
       switch (node.operator) {
@@ -94,13 +91,13 @@ function toStringID(node: any, visited: VisitedMap): string | undefined {
   switch (node.vtype) {
     case 'object': {
       let { parent } = node
-      let { id } = node
+      let { sid } = node
       while (parent && parent.vtype !== 'scope' && parent.vtype !== 'fclos' && !parent.type) {
-        id = `${toStringIDCached(parent, visited)}.${id}`
+        sid = `${toStringIDCached(parent, visited)}.${sid}`
         parent = parent.parent
       }
-      if (parent && parent.vtype === 'fclos') id = `${parent.id}.${id}`
-      return id
+      if (parent && parent.vtype === 'fclos') sid = `${parent.sid}.${sid}`
+      return sid
     }
     case 'union': {
       let id = '{'
@@ -125,49 +122,10 @@ function toStringID(node: any, visited: VisitedMap): string | undefined {
   }
 }
 
-/**
- * whether two values, e.g. two symbolic expressions, are equivalent
- * @param val1
- * @param val2
- * @returns {*}
- * TODO
- */
-function isSameValueSymAddress(val1: any, val2: any): any {
-  if (val1 === val2) return true
-  if (!val1 || !val2) return false
-
-  switch (val1.type) {
-    case 'MemberAccess':
-      return (
-        isSameValueSymAddress(val1.expression, val2.expression) && isSameValueSymAddress(val1.property, val2.property)
-      )
-    case 'Identifier':
-    case 'Parameter':
-      if (val2.type) return val1.name === val2.name
-    case 'Literal':
-      return val1.value === val2.value
-    default:
-      return false
-  }
-  switch (val1.vtype) {
-    case 'object':
-      if (val1.id !== val2.id) return false
-      return isSameValueSymAddress(val1.parent, val2.parent)
-    case 'scope':
-      return val1.id === val2.id
-  }
-  return false
-}
-
 // ***
 
-const symAddress = {
+export = {
   toStringID(node: any) {
     return toStringIDCached(node, new Map())
   },
-
-  isSameValue: isSameValueSymAddress,
 }
-
-module.exports = symAddress
-export default symAddress

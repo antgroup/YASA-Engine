@@ -1,0 +1,495 @@
+{
+  "version": "1.0",
+  "totalFindings": 9,
+  "findings": [
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "connection.query",
+        "sinkAttribute": "JSSQLInjection",
+        "callSite": {
+          "code": "    connection.query(query, function (error, results, fields) {",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "bb4f27bcf467d15bc6c2637fa9544dd0",
+          "fullName": "/test_callchain.testSqlInjection",
+          "function": "testSqlInjection",
+          "file": "/test_callchain.js",
+          "line": 7,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "fullName": "mysql.createConnection({host:localhost, user:root, password:password, database:test}).query",
+          "function": "query",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testSqlInjection('admin');",
+          "nodeHash": "d8f75b31bb792f2c25272bf6d2cb8bfb",
+          "file": "/test_callchain.js",
+          "line": 51,
+          "column": 1
+        },
+        {
+          "code": "    connection.query(query, function (error, results, fields) {\n        if (error) throw error;\n    ",
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "child_process.exec",
+        "sinkAttribute": "JSCommandExec",
+        "callSite": {
+          "code": "    exec(command, (error, stdout, stderr) => {",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "176a70c2f8672528cc8cdb9b08b3fed2",
+          "fullName": "/test_callchain.testCommandInjection",
+          "function": "testCommandInjection",
+          "file": "/test_callchain.js",
+          "line": 30,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "fullName": "child_process.exec",
+          "function": "exec",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testCommandInjection('ls -la');",
+          "nodeHash": "a79005a1148a94a1b66cf30f6d24aee3",
+          "file": "/test_callchain.js",
+          "line": 52,
+          "column": 1
+        },
+        {
+          "code": "    exec(command, (error, stdout, stderr) => {\n        if (error) {\n            console.error(`exec ",
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "filePath": "YASADefault",
+        "functionName": "YASADefault",
+        "attribute": "YASADefault",
+        "funcReceiverType": "YASADefault"
+      },
+      "sinkInfo": {
+        "sinkRule": "eval",
+        "sinkAttribute": "JSEvalInjection",
+        "callSite": {
+          "code": "    eval(code);",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "ba6b76b84719810d6d28ec51048f8162",
+          "fullName": "/test_callchain.testEvalInjection",
+          "function": "testEvalInjection",
+          "file": "/test_callchain.js",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "fullName": "/test_callchain.testEvalInjection.eval",
+          "function": "eval",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testEvalInjection('console.log(\"test\")');",
+          "nodeHash": "4953778979b01df31240e67bc3980b63",
+          "file": "/test_callchain.js",
+          "line": 53,
+          "column": 1
+        },
+        {
+          "code": "    eval(code);",
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "testSqlInjection",
+        "filePath": "/test_callchain.js",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "connection.query",
+        "sinkAttribute": "JSSQLInjection",
+        "callSite": {
+          "code": "    connection.query(query, function (error, results, fields) {",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "bb4f27bcf467d15bc6c2637fa9544dd0",
+          "fullName": "/test_callchain.testSqlInjection",
+          "function": "testSqlInjection",
+          "file": "/test_callchain.js",
+          "line": 7,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "fullName": "mysql.createConnection({host:localhost, user:root, password:password, database:test}).query",
+          "function": "query",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "function testSqlInjection(userInput) {\n    const connection = mysql.createConnection({\n        host:",
+          "nodeHash": "bb4f27bcf467d15bc6c2637fa9544dd0",
+          "file": "/test_callchain.js",
+          "line": 7,
+          "column": 1
+        },
+        {
+          "code": "    connection.query(query, function (error, results, fields) {\n        if (error) throw error;\n    ",
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "testCommandInjection",
+        "filePath": "/test_callchain.js",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "child_process.exec",
+        "sinkAttribute": "JSCommandExec",
+        "callSite": {
+          "code": "    exec(command, (error, stdout, stderr) => {",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "176a70c2f8672528cc8cdb9b08b3fed2",
+          "fullName": "/test_callchain.testCommandInjection",
+          "function": "testCommandInjection",
+          "file": "/test_callchain.js",
+          "line": 30,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "fullName": "child_process.exec",
+          "function": "exec",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "function testCommandInjection(command) {\n    // This should be detected as a sink match\n    exec(com",
+          "nodeHash": "176a70c2f8672528cc8cdb9b08b3fed2",
+          "file": "/test_callchain.js",
+          "line": 30,
+          "column": 1
+        },
+        {
+          "code": "    exec(command, (error, stdout, stderr) => {\n        if (error) {\n            console.error(`exec ",
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "testEvalInjection",
+        "filePath": "/test_callchain.js",
+        "attribute": "fullCallGraphMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "eval",
+        "sinkAttribute": "JSEvalInjection",
+        "callSite": {
+          "code": "    eval(code);",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "ba6b76b84719810d6d28ec51048f8162",
+          "fullName": "/test_callchain.testEvalInjection",
+          "function": "testEvalInjection",
+          "file": "/test_callchain.js",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "fullName": "/test_callchain.testEvalInjection.eval",
+          "function": "eval",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "function testEvalInjection(code) {\n    // This should be detected as a sink match\n    eval(code);\n}",
+          "nodeHash": "ba6b76b84719810d6d28ec51048f8162",
+          "file": "/test_callchain.js",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "code": "    eval(code);",
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "fileBegin",
+        "filePath": "test/callchain/js/test_callchain.js",
+        "attribute": "fullfileManagerMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "connection.query",
+        "sinkAttribute": "JSSQLInjection",
+        "callSite": {
+          "code": "    connection.query(query, function (error, results, fields) {",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "bb4f27bcf467d15bc6c2637fa9544dd0",
+          "fullName": "/test_callchain.module.exports.testSqlInjection",
+          "function": "testSqlInjection",
+          "file": "/test_callchain.js",
+          "line": 7,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "fullName": "mysql.createConnection({host:localhost, user:root, password:password, database:test}).query",
+          "function": "query",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testSqlInjection('admin');",
+          "nodeHash": "d8f75b31bb792f2c25272bf6d2cb8bfb",
+          "file": "/test_callchain.js",
+          "line": 51,
+          "column": 1
+        },
+        {
+          "code": "    connection.query(query, function (error, results, fields) {\n        if (error) throw error;\n    ",
+          "nodeHash": "c0dcaa8aa340b4b76b204d21f7bdf1f2",
+          "file": "/test_callchain.js",
+          "line": 19,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "fileBegin",
+        "filePath": "test/callchain/js/test_callchain.js",
+        "attribute": "fullfileManagerMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "child_process.exec",
+        "sinkAttribute": "JSCommandExec",
+        "callSite": {
+          "code": "    exec(command, (error, stdout, stderr) => {",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "176a70c2f8672528cc8cdb9b08b3fed2",
+          "fullName": "/test_callchain.module.exports.testCommandInjection",
+          "function": "testCommandInjection",
+          "file": "/test_callchain.js",
+          "line": 30,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "fullName": "child_process.exec",
+          "function": "exec",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testCommandInjection('ls -la');",
+          "nodeHash": "a79005a1148a94a1b66cf30f6d24aee3",
+          "file": "/test_callchain.js",
+          "line": 52,
+          "column": 1
+        },
+        {
+          "code": "    exec(command, (error, stdout, stderr) => {\n        if (error) {\n            console.error(`exec ",
+          "nodeHash": "7f45db454226c3e3132def6605c7007a",
+          "file": "/test_callchain.js",
+          "line": 32,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "fileBegin",
+        "filePath": "test/callchain/js/test_callchain.js",
+        "attribute": "fullfileManagerMade",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "eval",
+        "sinkAttribute": "JSEvalInjection",
+        "callSite": {
+          "code": "    eval(code);",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "ba6b76b84719810d6d28ec51048f8162",
+          "fullName": "/test_callchain.module.exports.testEvalInjection",
+          "function": "testEvalInjection",
+          "file": "/test_callchain.js",
+          "line": 45,
+          "column": 1
+        },
+        {
+          "type": 1,
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "fullName": "/test_callchain.module.exports.testEvalInjection.eval",
+          "function": "eval",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ],
+      "callsites": [
+        {
+          "code": "testEvalInjection('console.log(\"test\")');",
+          "nodeHash": "4953778979b01df31240e67bc3980b63",
+          "file": "/test_callchain.js",
+          "line": 53,
+          "column": 1
+        },
+        {
+          "code": "    eval(code);",
+          "nodeHash": "8bf38db1a0288bc4c4ab1c7bc8cc280a",
+          "file": "/test_callchain.js",
+          "line": 47,
+          "column": 5
+        }
+      ]
+    }
+  ]
+}

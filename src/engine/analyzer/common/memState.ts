@@ -2,8 +2,9 @@ const _ = require('lodash')
 
 const Config = require('../../../config')
 const StateBVT = require('./memStateBVT')
+const { lodashCloneWithTag } = require('../../../util/clone-util')
 const {
-  ValueUtil: { ObjectValue, Scoped, PrimitiveValue, UndefinedValue, UnionValue, SymbolValue },
+  ValueUtil: { UnionValue },
 } = require('../../util/value-util')
 
 /** ********************* analysis state management ********************** */
@@ -36,7 +37,7 @@ const options = {
 //* *****************************  Interface ********************************************
 
 /**
- * deep object cloning
+ * 待删除，新增逻辑不要再用了
  * @param object
  * @param state: e.g. side effects
  * @param state
@@ -93,9 +94,6 @@ function forkStates(state: any, n: number = 2): any[] {
         rstate.brs = `${state.brs}R`
         lstate.parent = state
         rstate.parent = state
-
-        // lstate.pcond = _.clone(state.pcond);
-        // rstate.pcond = _.clone(state.pcond);
         return pair
       }
       if (n === 1) {
@@ -134,47 +132,6 @@ function forkStates(state: any, n: number = 2): any[] {
 }
 
 //* ***************************** Utility ********************************************
-
-/**
- * simplify the union expression
- * @param v1
- * @param v2
- * @param reuse
- * @returns {*}
- */
-function mk_union(v1: any, v2: any, reuse: any): any {
-  if (!v1) return v2
-  if (!v2) return v1
-  if (v1.vtype === 'union') {
-    if (v2.vtype === 'union') {
-      if (reuse) {
-        for (const el of v2.value) {
-          if (!v1.value.some((x: any) => isEqValue(x, el))) v1.value.push(el)
-        }
-        return v1
-      }
-      return UnionValue({ value: v1.value.concat(v2.value) })
-    }
-    if (v1.value.some((x: any) => isEqValue(x, v2))) return v1
-
-    if (reuse) {
-      v1.value.push(v2)
-      return v1
-    }
-    return UnionValue({ value: v1.value.concat([v2]) })
-  }
-  if (v2.vtype === 'union') {
-    if (v2.value.some((x: any) => isEqValue(x, v1))) return v2
-
-    if (reuse) {
-      v2.value.push(v1)
-      return v2
-    }
-    return UnionValue({ value: v2.value.concat([v1]) })
-  }
-  if (isEqValue(v1, v2)) return v1
-  return UnionValue({ value: [v1, v2] })
-}
 
 /**
  *
@@ -235,48 +192,14 @@ function writeValueMemState(fields: any, id: any, value: any, state: any, scope:
  * @param scope
  */
 function simpleObjectClone(scope: any): any {
-  if (scope.readonly) return scope
+  if (scope.runtime?.readonly) return scope
 
-  const clone = _.clone(scope)
+  const clone = lodashCloneWithTag(scope)
   switch (clone.vtype) {
     case 'object':
     case 'fclos':
     case 'scope':
-      clone.value = _.clone(scope.value)
-  }
-  return clone
-}
-
-/**
- * deep scope of a scope with meta-information sharing
- * @param scope
- * @param filter
- * @param visited
- */
-function deepScopeClone(scope: any, filter: any, visited: Map<any, any>): any {
-  if (scope.readonly) return scope
-  if (!filter(scope)) return scope
-
-  const old = visited.get(scope)
-  if (old) return old
-  const clone = _.clone(scope)
-  visited.set(scope, clone)
-
-  switch (clone.vtype) {
-    case 'object':
-    case 'fclos':
-    case 'scope': {
-      const res: any = {}
-      for (const field of Object.keys(clone.value)) {
-        const val = clone.value[field]
-        const v1 = deepScopeClone(val, filter, visited)
-        res[field] = v1
-        // if (val.parent === scope)     // adjust the parent pointer to the clone
-        if (v1 !== clone) v1.parent = clone // Important!!!
-        // v1.parent === visited.get(val.parent);    // Important!!!: adjust the parent pointer to the clone
-      }
-      clone.value = res
-    }
+      clone.value = lodashCloneWithTag(scope.value)
   }
   return clone
 }
@@ -341,7 +264,7 @@ function unionPrimitiveValuesMemState(v1: any, v2: any): any {
       }
     } else if (!res.includes(v2)) res.push(v2)
     if (v1.vtype === 'union') {
-      return UnionValue({ value: res })
+      return new UnionValue(res, undefined, `${v1.qid}.<union@ms>`, v1.ast?.node)
     }
     return { vtype: v1.vtype, value: res }
   }
@@ -350,20 +273,17 @@ function unionPrimitiveValuesMemState(v1: any, v2: any): any {
     if (!res.includes(v1)) res.push(v1)
     if (res.length >= options.unionValueLimit) return v2
     if (v2.vtype === 'union') {
-      return UnionValue({ value: res })
+      return new UnionValue(res, undefined, `${v2.qid}.<union@ms>`, v2.ast?.node)
     }
     return { vtype: v2.vtype, value: res }
   }
-  return UnionValue({ value: [v1, v2] })
+  return new UnionValue([v1, v2], undefined, `${v1.qid}.<union@ms>`, v1.ast?.node)
 }
 
 //* ***************************** exports ***************************************
 
 module.exports = {
   cloneScope: cloneObject,
-  deepScopeClone: (scope: any, filter: any) => {
-    return deepScopeClone(scope, filter, new Map())
-  },
   loadForkedValue,
   writeValue: writeValueMemState,
   unionValues: unionValuesMemState,

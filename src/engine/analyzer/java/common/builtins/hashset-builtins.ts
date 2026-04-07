@@ -32,7 +32,7 @@ class HashSet extends SetBuiltins {
    * @param scope
    */
   static clone(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    return fclos.getThis()
+    return fclos.getThisObj()
   }
 }
 

@@ -1,4 +1,6 @@
-const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
+import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
+
+const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker')
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { markTaintSource } = require('../common-kit/source-util')
@@ -43,7 +45,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
     super.triggerAtFunctionCallBefore(analyzer, scope, node, state, info)
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
+    const argvalues = getLegacyArgValues(callInfo)
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !argvalues) return
     const isApp = isTornadoCall(node, 'Application')
     const isRouter = isTornadoCall(node, 'RuleRouter')
@@ -93,7 +96,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       const handler = val.value['1']
       if (handler) {
         const pathArg = val.value['0']
-        const path = pathArg?.value || pathArg?.ast?.value
+        const path = pathArg?.value || pathArg?.ast?.node?.value
         if (typeof path === 'string') {
           this.finishRoute(analyzer, scope, state, handler)
           return
@@ -134,15 +137,15 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     }
     // 2. Handle Class Definition (Handler classes)
     let cls = h
-    if (cls.vtype !== 'class' && cls.ast?.type === 'ClassDefinition') {
+    if (cls.vtype !== 'class' && cls.ast?.node?.type === 'ClassDefinition') {
       try {
-        cls = analyzer.processInstruction(scope, cls.ast, state) || this.buildClassSymbol(cls.ast)
+        cls = analyzer.processInstruction(scope, cls.ast.node, state) || this.buildClassSymbol(cls.ast.node)
       } catch (e) {
-        cls = this.buildClassSymbol(cls.ast)
+        cls = this.buildClassSymbol(cls.ast.node)
       }
-    } else if (cls.vtype === 'symbol' && cls.cdef) {
+    } else if (cls.vtype === 'symbol' && cls.ast?.cdef) {
       // If it's an instance symbol, get its class definition
-      cls = cls.cdef
+      cls = cls.ast.cdef
     }
     if (cls && (cls.vtype === 'class' || cls.vtype === 'symbol')) {
       this.registerEntryPoints(analyzer, cls)
@@ -156,14 +159,23 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   private registerEntryPoints(analyzer: any, cls: any) {
     const methods = ['get', 'post', 'put', 'delete', 'patch']
-    // Look for methods in cls.value, cls.field, or cls.value.field (Python specificity)
-    const classValue = cls.value?.field || cls.field || cls.value || {}
+    // 在 cls.value 或 cls.value.value 中查找方法（Python 类结构）
+    const classValue = cls.value?.value || cls.value || {}
     Object.entries(classValue).forEach(([name, fclos]: [string, any]) => {
       if (methods.includes(name)) {
         const ep = completeEntryPoint(fclos)
         if (ep) {
-          analyzer.entryPoints.push(ep)
-          const actualParams = (fclos.fdef?.parameters || fclos.ast?.parameters || []) as any[]
+          ep.funcReceiverType = cls.ast?.node?.id?.name || cls.sid || 'Unknown'
+          const isDuplicate = analyzer.entryPoints.some(
+            (existing: any) =>
+              existing.functionName === ep.functionName &&
+              existing.filePath === ep.filePath &&
+              existing.funcReceiverType === ep.funcReceiverType
+          )
+          if (!isDuplicate) {
+            analyzer.entryPoints.push(ep)
+          }
+          const actualParams = (fclos.ast?.fdef?.parameters || fclos.ast?.node?.parameters || []) as any[]
           actualParams.forEach((p: any) => {
             const pName = p.id?.name || p.name
             if (pName === 'self') return
@@ -171,7 +183,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
             this.sourceScope.value.push({
               path: pName,
               kind: 'PYTHON_INPUT',
-              scopeFile: extractRelativePath(fclos?.ast?.loc?.sourcefile || ep.filePath, Config.maindir),
+              scopeFile: extractRelativePath(fclos?.ast?.node?.loc?.sourcefile || ep.filePath, Config.maindir),
               scopeFunc: ep.functionName,
               locStart: p.loc?.start?.line,
               locEnd: p.loc?.end?.line,
@@ -213,7 +225,8 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     super.triggerAtFunctionCallAfter(analyzer, scope, node, state, info)
-    const { fclos, ret, argvalues } = info
+    const { fclos, ret, callInfo } = info
+    const argvalues = getLegacyArgValues(callInfo)
     if (Config.entryPointMode === 'ONLY_CUSTOM' || !fclos || !ret) return
     const name = node.callee?.property?.name || node.callee?.name
     // 1. Record route info for Rule, URLSpec, url (Recording phase)
@@ -259,4 +272,4 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
   }
 }
 
-export = TornadoTaintChecker
+module.exports = TornadoTaintChecker

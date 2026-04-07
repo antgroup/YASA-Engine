@@ -11,8 +11,8 @@ function getMainEntryPoints(packageManager: any) {
   const entryPoints: any[] = []
   const mainEntryPoints = AstUtil.satisfy(
     packageManager,
-    (n: any) => n.ast?.id?.name === 'main' && n.vtype === 'fclos',
-    (node: any, prop: any) => prop === 'field',
+    (n: any) => n.ast?.node?.id?.name === 'main' && n.vtype === 'fclos',
+    (node: any, prop: any) => prop === '_field',
     null,
     true
   )

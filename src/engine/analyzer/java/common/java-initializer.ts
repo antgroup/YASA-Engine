@@ -1,14 +1,16 @@
 const jsonfile = require('jsonfile')
 const _ = require('lodash')
+const path = require('path')
+const QidUnifyUtil = require('../../../../util/qid-unify-util')
 const {
   ValueUtil: { ObjectValue, FunctionValue, Scoped },
   getValueFromPackageByQid,
 } = require('../../../util/value-util')
-
 const lombok = require('./builtins/lombok')
 const config = require('../../../../config')
 const { getAbsolutePath } = require('../../../../util/file-util')
 const Scope = require('../../common/scope')
+const { buildNewValueInstance } = require('../../../../util/clone-util')
 /**
  *
  */
@@ -49,32 +51,21 @@ class JavaInitializer {
     // init for module
     // const modScope = {id:file, vtype: 'modScope', value:{}, closure:{}, decls:node, parent : this.topScope, fdef:node};
     if (!file) return
-    const relateFileName = file.startsWith(config.maindirPrefix)
-      ? file.substring(config.maindirPrefix.length).split('.')[0]
-      : file.split('.')[0]
-    const fileClos = Scoped({
+    const relativePath = file.substring(config.maindirPrefix.length)
+    const filename = path.basename(relativePath, path.extname(relativePath))
+    const fileClos = new Scoped('', {
+      sid: filename,
       qid: packageScope.qid,
-      sid: relateFileName,
       parent: packageScope,
       decls: {},
-      fdef: node,
       ast: node,
     })
+    fileClos.ast.fdef = node
     fileClos._this = fileClos
     fileClos.isProcessed = false
-    fileClos.exports = packageScope.exports
+    fileClos.scope.exports = packageScope.scope.exports
 
     return fileClos
-  }
-
-  /**
-   *
-   * @param packageName
-   */
-  static initInPackageScope(packageName: any) {
-    const packageClos = Scoped({ sid: 'package', parent: (this as any).topScope, decls: {} })
-    packageClos._this = packageClos
-    return packageClos
   }
 
   /**
@@ -120,32 +111,32 @@ class JavaInitializer {
           continue
         }
 
-        const classScope = Scope.createSubScope(className, scope, 'class')
-        classScope.sort = classScope.qid = fullClassName
+        const classScope = Scope.createSubScope(className, scope, 'class', fullClassName)
 
         for (const method of methods) {
           if (fullClassName === baseType && method.name === className) {
             baseClsCtor = method
           }
           const targetQid = `${classScope.qid}.${method.name}`
-          classScope.value[method.name] = FunctionValue({
+          classScope.value[method.name] = new FunctionValue('', {
             sid: method.name,
             qid: targetQid,
             parent: classScope,
-            execute: method,
+            runtime: { execute: method },
             _this: classScope,
           })
         }
 
         if (baseClsCtor) {
-          classScope.execute = baseClsCtor
+          if (!classScope.runtime) classScope.runtime = {}
+          classScope.runtime.execute = baseClsCtor
           if (fullClassName !== baseType) {
             const targetQid = `${classScope.qid}.${className}`
-            classScope.value[className] = FunctionValue({
+            classScope.value[className] = new FunctionValue('', {
               sid: className,
               qid: targetQid,
               parent: classScope,
-              execute: baseClsCtor,
+              runtime: { execute: baseClsCtor },
               _this: classScope,
             })
           }
@@ -203,40 +194,53 @@ class JavaInitializer {
           className = fullClassName.substring(lastDotIndex + 1)
         }
         const packageScope = packageName ? scope.getSubPackage(packageName, true) : scope
-        const classScope = Scope.createSubScope(className, packageScope, 'class')
-        if (!packageScope.exports) {
-          packageScope.exports = Scoped({
+        let classScope
+        if (packageScope.members.has(className)) {
+          classScope = packageScope.members.get(className)
+        }
+        if (!classScope) {
+          classScope = Scope.createSubScope(className, packageScope, 'class', Scope.joinQualifiedName(packageScope.qid, className))
+        }
+        if (!packageScope.scope.exports) {
+          packageScope.scope.exports = new Scoped(packageScope.qid, {
             sid: 'exports',
-            id: 'exports',
             parent: packageScope,
           })
         }
-        packageScope.exports.value[className] = classScope
-        classScope.sort = classScope.qid = Scope.joinQualifiedName(packageScope.qid, className)
+        packageScope.scope.exports.value[className] = classScope
 
         for (const method of methods) {
           if (fullClassName === baseType && method.name === className) {
             baseClsCtor = method
           }
-          const targetQid = `${classScope.qid}.${method.name}`
-          classScope.value[method.name] = FunctionValue({
-            sid: method.name,
-            qid: targetQid,
-            parent: classScope,
-            execute: method,
-            _this: classScope,
-          })
+
+          if (classScope.value[method.name]) {
+            const fclos = classScope.value[method.name]
+            if (!fclos.runtime) fclos.runtime = {}
+            fclos.runtime.execute = method
+            fclos._this = classScope
+          } else {
+            const targetQid = `${classScope.qid}.${method.name}`
+            classScope.value[method.name] = new FunctionValue('', {
+              sid: method.name,
+              qid: targetQid,
+              parent: classScope,
+              runtime: { execute: method },
+              _this: classScope,
+            })
+          }
         }
 
         if (baseClsCtor) {
-          classScope.execute = baseClsCtor
+          if (!classScope.runtime) classScope.runtime = {}
+          classScope.runtime.execute = baseClsCtor
           if (fullClassName !== baseType) {
             const targetQid = `${classScope.qid}.${className}`
-            classScope.value[className] = FunctionValue({
+            classScope.value[className] = new FunctionValue('', {
               sid: className,
               qid: targetQid,
               parent: classScope,
-              execute: baseClsCtor,
+              runtime: { execute: baseClsCtor },
               _this: classScope,
             })
           }
@@ -258,32 +262,29 @@ class JavaInitializer {
    * @param scope
    */
   static initRuntimeBuiltin(scope: any) {
-    const Runtime = ObjectValue({
-      id: 'Runtime',
+    const Runtime = new ObjectValue('', {
       sid: 'Runtime',
       qid: `Runtime`,
       parent: scope,
     })
     scope.setFieldValue('Runtime', Runtime)
-    const getRuntime = FunctionValue({
-      id: 'getRuntime',
+    const getRuntime = new FunctionValue('', {
       sid: 'getRuntime',
       qid: `Runtime.getRuntime()`,
       parent: scope,
     })
     Runtime.setFieldValue('getRuntime()', getRuntime)
-    const runtimeExec = FunctionValue({
-      id: 'exec',
+    const runtimeExec = new FunctionValue('', {
       sid: 'exec',
       qid: `Runtime.getRuntime().exec`,
       parent: getRuntime,
     })
     getRuntime.setFieldValue('exec', runtimeExec)
-    if (scope.funcSymbolTable) {
+    if (scope.context?.funcs) {
       // eslint-disable-next-line no-param-reassign
-      scope.funcSymbolTable['Runtime.getRuntime()'] = getRuntime
+      scope.context.funcs['Runtime.getRuntime()'] = getRuntime
       // eslint-disable-next-line no-param-reassign
-      scope.funcSymbolTable['Runtime.getRuntime().exec'] = runtimeExec
+      scope.context.funcs['Runtime.getRuntime().exec'] = runtimeExec
     }
   }
 
@@ -292,48 +293,52 @@ class JavaInitializer {
    * @param scope
    */
   static initThreadBuiltin(scope: any) {
-    const Thread = ObjectValue({
-      id: 'Thread',
+    const Thread = new ObjectValue('', {
       sid: 'Thread',
       qid: `Thread`,
       parent: scope,
     })
     scope.setFieldValue('Thread', Thread)
-    const start = FunctionValue({
-      // val为当前符号值，qid为当前坐标， s为scope，返回为预期的fclos
-      jumpLocate: (val: any, qid: any, s: any) => {
-        if (s && qid) {
-          let current = s
-          while (current) {
-            if (current.sid === '<global>') {
-              break
+    const start = new FunctionValue('', {
+      func: {
+        // val为当前符号值，qid为当前坐标， s为scope，返回为预期的fclos
+        jumpLocate: (val: any, qid: any, s: any) => {
+          if (s && qid) {
+            let current = s
+            while (current) {
+              if (current.sid === '<global>') {
+                break
+              }
+              current = current.parent
             }
-            current = current.parent
-          }
-          const { funcSymbolTable } = current
+            const funcs = current.context?.funcs
 
-          // 将 jumpFrom 替换为 jumpTo
-          const targetQid = qid
-            .replace(/<instance>/g, '')
-            .split('.')
-            .map((segment: string) => {
-              return segment === 'start' ? 'run' : segment
-            })
-            .join('.')
-          if (funcSymbolTable[targetQid]) {
-            return funcSymbolTable[targetQid]
-          }
+            // 将 jumpFrom 替换为 jumpTo
+            const targetQid = qid
+              .replace(/<instance_[^.]*?_endtag>/g, '')
+              .split('.')
+              .map((segment: string) => {
+                return segment === 'start' ? 'run' : segment
+              })
+              .join('.')
+            if (funcs && funcs[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)]) {
+              return funcs[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)]
+            }
 
-          if (s.arguments instanceof Array) {
-            for (const argument of s.arguments) {
-              if (argument.sort?.endsWith('.Runnable') && argument.field?.run) {
-                return argument.field.run
+            if (s.arguments instanceof Array) {
+              for (const argument of s.arguments) {
+                const runMethod = argument.members?.get('run')
+                if (argument.qid?.includes('.Runnable<') && runMethod) {
+                  return runMethod
+                }
               }
             }
           }
-        }
-        return undefined
+          return undefined
+        },
       },
+      sid: 'start',
+      qid: `Thread.start`,
       parent: Thread,
     })
     Thread.setFieldValue('start', start)
@@ -344,22 +349,15 @@ class JavaInitializer {
    * @param scope
    */
   static initExecutorsBuiltin(scope: any) {
-    const Executor = getValueFromPackageByQid(scope, 'java.util.concurrent.Executor')
-    if (!Executor || !Executor.field) {
+    const ExecutorService = getValueFromPackageByQid(scope, 'java.util.concurrent.ExecutorService')
+    if (!ExecutorService || !ExecutorService.members) {
       return
     }
 
     let Executors = getValueFromPackageByQid(scope, 'java.util.concurrent.Executors')
     if (!Executors) {
-      Executors = ObjectValue({
-        id: 'Executors',
-        sid: 'Executors',
-        qid: 'Executors',
-        parent: scope,
-      })
-      scope.setFieldValue('Executors', Executors)
-    } else {
-      Executors.field = {}
+      const packageScope = scope.getSubPackage('java.util.concurrent', true)
+      Executors = Scope.createSubScope('Executors', packageScope, 'class')
     }
     const returnExecutorFuncNames = [
       'newCachedThreadPool',
@@ -375,16 +373,23 @@ class JavaInitializer {
       'unconfigurableScheduledExecutorService',
     ]
     for (const returnExecutorFuncName of returnExecutorFuncNames) {
-      const returnExecutorFunc = FunctionValue({
-        id: returnExecutorFuncName,
-        sid: returnExecutorFuncName,
-        qid: `java.util.concurrent.Executors.${returnExecutorFuncName}`,
-        parent: scope,
-        execute: () => {
-          return Executor
-        },
-      })
-      Executors.setFieldValue(`${returnExecutorFuncName}`, returnExecutorFunc)
+      if (Executors.value[returnExecutorFuncName]) {
+        const fclos = Executors.value[returnExecutorFuncName]
+        if (!fclos.runtime) fclos.runtime = {}
+        fclos.runtime.execute = () => {
+          return ExecutorService
+        }
+      } else {
+        const returnExecutorFunc = new FunctionValue('', {
+          sid: returnExecutorFuncName,
+          qid: `java.util.concurrent.Executors.${returnExecutorFuncName}`,
+          parent: scope,
+          runtime: { execute: () => {
+            return ExecutorService
+          } },
+        })
+        Executors.setFieldValue(`${returnExecutorFuncName}`, returnExecutorFunc)
+      }
     }
   }
 
@@ -398,7 +403,7 @@ class JavaInitializer {
   static resetInitVariables(scope: any) {
     for (const field of Object.keys(scope.value)) {
       const v = scope.value[field]
-      if (v.trace) delete v.trace
+      if (v.taint) v.taint.clearTrace()
     }
   }
 
@@ -419,6 +424,55 @@ class JavaInitializer {
     }
 
     return methods
+  }
+
+  /**
+   * add default property to class
+   * @param classMap
+   * @param scope
+   * @param analyzer
+   */
+  static addClassProto(classMap: Map<string, any>, scope: any, analyzer: any) {
+    if (!classMap) {
+      return
+    }
+    const protoClsVal = getValueFromPackageByQid(scope, 'java.lang.Class')
+    const objectClsVal = getValueFromPackageByQid(scope, 'java.lang.Object')
+    for (const classValUUid of classMap.values()) {
+      const classVal = analyzer.symbolTable.get(classValUUid)
+      classVal.value.class = JavaInitializer.buildClassProtoObject(protoClsVal, classVal, analyzer)
+      if (!classVal.value.getClass) {
+        classVal.value.getClass = objectClsVal.value.getClass
+      }
+    }
+  }
+
+  /**
+   * build class proto object
+   * @param protoVal
+   * @param classVal
+   * @param analyzer
+   * @returns {*}
+   */
+  static buildClassProtoObject(protoVal: any, classVal: any, analyzer: any) {
+    const qidSuffix = `_<class_${classVal.logicalQid}>`
+    const obj = buildNewValueInstance(
+      analyzer,
+      protoVal,
+      null,
+      protoVal.parent,
+      (x: any) => {
+        return x === 'class'
+      },
+      (v: any) => {
+        return !v
+      },
+      1,
+      qidSuffix
+    )
+    obj.parent = analyzer.symbolTable.get(classVal.uuid)
+
+    return obj
   }
 }
 

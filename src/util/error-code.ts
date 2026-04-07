@@ -163,7 +163,7 @@ function genClass(err: ErrorConfig): ErrorConstructor {
     /**
      *
      */
-    toString(): string {
+    override toString(): string {
       return this.message === this.description ? this.message : `${this.description} : ${this.message}`
     }
   }

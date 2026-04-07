@@ -1,38 +1,294 @@
+import { primitiveToString } from '../../../util/variable-util'
+import type { ISymbolTableManager } from './symbol-table-interface'
+import type { Invocation } from '../../../resolver/common/value/invocation'
+import type {
+  BaseNode,
+  Node,
+  Identifier,
+  Literal,
+  CompileUnit,
+  IfStatement,
+  SwitchStatement,
+  ForStatement,
+  WhileStatement,
+  RangeStatement,
+  ReturnStatement,
+  BreakStatement,
+  ContinueStatement,
+  ThrowStatement,
+  TryStatement,
+  ExpressionStatement,
+  ScopedStatement,
+  BinaryExpression,
+  UnaryExpression,
+  AssignmentExpression,
+  ConditionalExpression,
+  SuperExpression,
+  ThisExpression,
+  MemberAccess,
+  SliceExpression,
+  TupleExpression,
+  ObjectExpression,
+  CallExpression,
+  CastExpression,
+  NewExpression,
+  FunctionDefinition,
+  ClassDefinition,
+  VariableDeclaration,
+  ImportExpression,
+  SpreadElement,
+  YieldExpression,
+  ExportStatement,
+} from '../../../types/uast'
+import type {
+  Scope as ScopeType,
+  State,
+  Value,
+  SymbolValue as SymbolValueType,
+  VoidValue as VoidValueType,
+  SpreadValue as SpreadValueType,
+} from '../../../types/analyzer'
+import { BaseAnalyzer } from './base-analyzer'
+import { BinaryExprValue } from './value/binary-expr'
+import { UnaryExprValue } from './value/unary-expr'
+import { CallExprValue } from './value/call-expr'
+import { AnalysisContext } from './analysis-context'
+
 const _ = require('lodash')
 const Uuid = require('node-uuid')
-const chalk = require('chalk')
 const logger = require('../../../util/logger')(__filename)
 const Config = require('../../../config')
 const Initializer = require('./initializer')
-const MemSpace = require('./memSpace')
 const NativeResolver = require('./native-resolver')
+import type { CallArg, CallArgs, CallInfo, BoundParam, BoundCall } from './call-args'
+import { getLegacyArgValues, INTERNAL_CALL } from './call-args'
 const MemState = require('./memState')
 const Scope = require('./scope')
 const SourceLine = require('./source-line')
 const AstUtil = require('../../../util/ast-util')
-const ValueFormatter = require('../../../util/value-formatter')
 const StateUtil = require('../../util/state-util')
 const SymAddress = require('./sym-address')
 const { unionAllValues } = require('./memStateBVT')
-const { cloneWithDepth } = require('../../../util/clone-util')
+const { shallowCopyValue, buildNewValueInstance, lodashCloneWithTag } = require('../../../util/clone-util')
 const { handleException } = require('./exception-handler')
 const {
-  ValueUtil: { ObjectValue, Scoped, PrimitiveValue, UndefinedValue, UnionValue, SymbolValue, PackageValue },
+  ValueUtil: {
+    ObjectValue,
+    Scoped,
+    PrimitiveValue,
+    UndefinedValue,
+    UnionValue,
+    SymbolValue,
+    PackageValue,
+    VoidValue,
+    SpreadValue,
+  },
 } = require('../../util/value-util')
 
 const { filterDataFromScope, shallowEqual } = require('../../../util/common-util')
 const Rules = require('../../../checker/common/rules-basic-handler')
 const { getAbsolutePath, loadJSONfile } = require('../../../util/file-util')
+const { saveAnalyzerCache, loadAnalyzerCache, generateCacheId } = require('./analyzer-cache')
 const { matchSinkAtFuncCallWithCalleeType } = require('../../../checker/taint/common-kit/sink-util')
-const { moveExistElementsToBuffer } = require('../java/common/builtins/buffer')
-const { PerformanceTracker } = require('../../../util/performance-tracker')
+const { moveExistElementsToBuffer, addElementToBuffer } = require('../java/common/builtins/buffer')
+const { performanceTracker } = require('../../../util/performance-tracker')
+const { checkInvocationMatchSink } = require('../../../checker/taint/common-kit/sink-util')
+const OutputStrategyAutoRegister = require('./output-strategy-auto-register')
+
+const ASTManager = require('./ast-manager')
+const SymbolTableManager = require('./symbol-table-manager')
+const { setGlobalASTManager, setGlobalSymbolTable, getGlobalSymbolTable } = require('../../../util/global-registry')
+const { prettyPrint } = require('../../../util/ast-util')
+
+/**
+ * 临时符号表管理器：包装原始符号表，在执行 symbolInterpretFn 期间自动拷贝符号值
+ * 实现 ISymbolTableManager 接口，与 SymbolTableManager 具有相同的接口
+ */
+class TemporarySymbolTableManager {
+  private originalSymbolTable: InstanceType<typeof SymbolTableManager> // SymbolTableManager 实例
+
+  private tmpSymbolTableManager: InstanceType<typeof SymbolTableManager> // SymbolTableManager 实例，其 symbolMap 作为临时符号表存储，同时提供 UUID 引用管理功能
+
+  private copiedUnits: Map<string, any> // 记录已拷贝的 Unit 对象，避免重复拷贝
+
+  /**
+   *
+   * @param originalSymbolTable SymbolTableManager 实例
+   */
+  constructor(originalSymbolTable: InstanceType<typeof SymbolTableManager>) {
+    this.originalSymbolTable = originalSymbolTable
+    // 使用 tmpSymbolTableManager 的 symbolMap 作为临时符号表存储，同时使用其 UUID 引用管理功能
+    this.tmpSymbolTableManager = new SymbolTableManager()
+    this.copiedUnits = new Map()
+  }
+
+  /**
+   * 获取临时符号表的 symbolMap（直接访问私有属性）
+   * @private
+   */
+  private getTmpSymbolMap(): Map<string, any> {
+    // 通过反射访问私有属性 symbolMap
+    return (this.tmpSymbolTableManager as any).symbolMap
+  }
+
+  /**
+   * 拷贝 Unit 对象（按需拷贝，只拷贝当前对象，不递归拷贝 parent 和 field 中的引用）
+   * _parentRef 和 field 中的 uuid 保持原样，当真正访问时再按需拷贝
+   * 直接复制内存中的属性值，不触发 getter/setter，避免循环调用
+   * @param unit
+   */
+  private tmpTableCopyUnit(unit: any): any {
+    if (!unit || typeof unit !== 'object') {
+      return unit
+    }
+
+    // 如果已经拷贝过，直接返回
+    if (unit.uuid && this.copiedUnits.has(unit.uuid)) {
+      return this.copiedUnits.get(unit.uuid)
+    }
+
+    // 创建新对象，保持原型链
+    const copiedUnit = shallowCopyValue(unit)
+
+    // 确保 _parentRef 被正确拷贝（ValueRef 不可变，可安全共享引用）
+    const originalParentRef = unit._parentRef
+    if (originalParentRef && !copiedUnit._parentRef) {
+      copiedUnit._parentRef = originalParentRef
+    }
+
+    // 注册到临时符号表（直接存储到 tmpSymbolTableManager 的 symbolMap）
+    if (copiedUnit.uuid) {
+      this.getTmpSymbolMap().set(copiedUnit.uuid, copiedUnit)
+      this.copiedUnits.set(copiedUnit.uuid, copiedUnit)
+    }
+
+    return copiedUnit
+  }
+
+  /**
+   * 获取 Unit 对象：如果存在于临时符号表，直接返回；否则从原始符号表获取并拷贝
+   * 如果临时符号表中的符号值没有 parent，但从原始符号表查有 parent，则重新完整拷贝
+   * @param uuid
+   */
+  get(uuid: string | null | undefined): any {
+    if (!uuid) {
+      return null
+    }
+
+    // 先检查临时符号表（使用 tmpSymbolTableManager 的 symbolMap）
+    const tmpUnit = this.getTmpSymbolMap().get(uuid) || null
+    if (tmpUnit) {
+      // 检查临时符号表中的符号值是否有 parent（通过 _parentRef 判断）
+      if (!tmpUnit._parentRef) {
+        // 临时符号表中没有 parent，检查原始符号表中是否有
+        const originalUnit = this.originalSymbolTable.get(uuid)
+        if (originalUnit?._parentRef) {
+          // 从临时符号表中删除旧的拷贝
+          this.getTmpSymbolMap().delete(uuid)
+          this.copiedUnits.delete(uuid)
+          // 重新完整拷贝（包括 _parentRef）
+          return this.tmpTableCopyUnit(originalUnit)
+        }
+      }
+      return tmpUnit
+    }
+
+    // 从原始符号表获取
+    const originalUnit = this.originalSymbolTable.get(uuid)
+    if (!originalUnit) {
+      return null
+    }
+
+    // 深拷贝并注册到临时符号表
+    return this.tmpTableCopyUnit(originalUnit)
+  }
+
+  /**
+   * 注册 Unit 对象到临时符号表
+   * 当 UUID 变化时，自动更新所有引用该 UUID 的地方
+   * @param unit
+   */
+  register(unit: any): string | null {
+    if (!unit || typeof unit !== 'object') {
+      return null
+    }
+
+    // 使用临时符号表管理器计算 UUID
+    const uuid = this.tmpSymbolTableManager.calculateUUID(unit)
+    if (!uuid) {
+      return null
+    }
+
+    // 设置 UUID
+    unit.uuid = uuid
+
+    // 直接存储到 tmpSymbolTableManager 的 symbolMap（而不是调用 register，因为 register 会重新计算 UUID）
+    if (uuid) {
+      this.getTmpSymbolMap().set(uuid, unit)
+    }
+
+    return uuid
+  }
+
+  /**
+   * 检查 UUID 是否存在
+   * @param uuid
+   */
+  has(uuid: string | null | undefined): boolean {
+    if (!uuid) {
+      return false
+    }
+    return this.getTmpSymbolMap().has(uuid) || this.originalSymbolTable.has(uuid)
+  }
+
+  /**
+   * 计算 UUID
+   * @param unit
+   * @param qidSuffix
+   */
+  calculateUUID(unit: any, qidSuffix?: any): string | null {
+    return this.tmpSymbolTableManager.calculateUUID(unit, qidSuffix)
+  }
+
+  /**
+   * 删除 Unit 对象
+   * @param uuid
+   */
+  delete(uuid: string | null | undefined): void {
+    if (uuid) {
+      this.getTmpSymbolMap().delete(uuid)
+    }
+  }
+
+  /**
+   * 清空临时符号表
+   */
+  clear(): void {
+    this.getTmpSymbolMap().clear()
+    this.copiedUnits.clear()
+  }
+
+  /**
+   * 获取临时符号表大小
+   */
+  size(): number {
+    return this.getTmpSymbolMap().size
+  }
+
+  /**
+   * 获取临时符号表
+   */
+  getMap(): Map<string, any> {
+    return this.tmpSymbolTableManager.getMap()
+  }
+}
 
 /**
  * The main AST analyzer with checker invoking
  * @param checker
  * @constructor
  */
-class Analyzer extends MemSpace {
+class Analyzer extends BaseAnalyzer {
   options: any
 
   checkerManager: any
@@ -41,17 +297,17 @@ class Analyzer extends MemSpace {
 
   lastReturnValue: any
 
-  thisFClos: any
+  _thisFClos: any // 内部存储，通过 getter/setter 访问
 
-  entry_fclos: any
+  _entry_fclos: any // 内部存储，通过 getter/setter 访问
 
   inRange: boolean
 
   ainfo: Record<string, any>
 
-  sourceCodeCache: Record<string, any>
+  sourceCodeCache: Map<string, string[]>
 
-  lastProcessedNode: any
+  _lastProcessedNode: any // 内部存储，通过 getter/setter 访问
 
   thisIterationTime: number
 
@@ -63,9 +319,9 @@ class Analyzer extends MemSpace {
 
   libFuncTagPropagationRuleArray: any[]
 
-  moduleManager: any
+  context!: AnalysisContext
 
-  packageManager: any
+  libArgToThisSidBlacklistKeywords: string[]
 
   fileManager!: Record<string, any>
 
@@ -73,9 +329,20 @@ class Analyzer extends MemSpace {
 
   topScope: any
 
+  astManager: any
+
+  // 操作符号表：基于analyzer中使用this.symbolTable，基于符号值使用getSymbolTable()
+  symbolTable!: ISymbolTableManager
+
   preprocessState: boolean | undefined
 
   performanceTracker: import('../../../util/performance-tracker').IPerformanceTracker
+
+  backUpSymbolTable: any
+
+  tmpSymbolTable: any
+
+  isTmpSymbolTableOpen: boolean
 
   /**
    *
@@ -85,18 +352,21 @@ class Analyzer extends MemSpace {
   constructor(checkerManager: any, options?: any) {
     super()
     this.options = options || {}
+    this.isTmpSymbolTableOpen = false
     this.checkerManager = checkerManager // 关联的检查器管理器
-    this.performanceTracker = new PerformanceTracker()
+    this.performanceTracker = performanceTracker // 使用单例
     this.enablePerformanceLogging = this.options.enablePerformanceLogging || false // 默认关闭
     // 启用详细指令统计（如果启用了性能日志，输出 top 信息）
     this.performanceTracker.setEnableDetailedInstructionStats(this.enablePerformanceLogging)
     this.lastReturnValue = null // 记录最后一次函数调用的返回值
-    this.thisFClos = null // 当前分析函数的闭包
-    this.entry_fclos = null // 最外层函数的闭包
+    this._thisFClos = null // 当前分析函数的闭包（存储 UUID）
+    this._entry_fclos = null // 最外层函数的闭包（存储 UUID）
     this.inRange = false // 范围语句标志
     this.ainfo = {} // 整个分析过程中的信息
-    this.sourceCodeCache = {} // 缓存的源代码
-    this.lastProcessedNode = null
+    this.sourceCodeCache = new Map<string, string[]>() // 缓存的源代码（文件路径 -> 代码行数组）
+    // 设置全局 analyzer 引用，使 source-line.ts 可以访问 sourceCodeCache
+    SourceLine.setGlobalAnalyzer(this)
+    this._lastProcessedNode = null // 最后处理的节点（存储 UUID 或 AST 节点）
     // 超时控制
     this.thisIterationTime = 0
     this.prevIterationTime = 0
@@ -107,6 +377,113 @@ class Analyzer extends MemSpace {
     this.initValTreeStruct()
     this.entryPoints = []
     this.libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
+    this.libArgToThisSidBlacklistKeywords = this.loadLibArgToThisSidBlacklistKeywords()
+  }
+
+  /**
+   * thisFClos getter: 如果存储的是 UUID，从符号表中获取对象
+   */
+  get thisFClos() {
+    if (this._thisFClos === null || this._thisFClos === undefined) {
+      return null
+    }
+    // 如果是 UUID，从符号表中获取对象
+    if (typeof this._thisFClos === 'string' && this._thisFClos.startsWith('symuuid_')) {
+      const unit = this.symbolTable.get(this._thisFClos)
+      return unit || null
+    }
+    // 如果不是 UUID，直接返回（向后兼容）
+    return this._thisFClos
+  }
+
+  /**
+   * thisFClos setter: 如果值是符号值对象，转换为 UUID 存储
+   */
+  set thisFClos(val) {
+    if (val === null || val === undefined) {
+      this._thisFClos = null
+      return
+    }
+    // 如果是符号值对象，转换为 UUID 存储
+    if (val && typeof val === 'object' && val.vtype && val.qid) {
+      const uuid = this.symbolTable.register(val)
+      this._thisFClos = uuid
+    } else {
+      // 如果不是符号值对象，直接存储（向后兼容）
+      this._thisFClos = val
+    }
+  }
+
+  /**
+   * entry_fclos getter: 如果存储的是 UUID，从符号表中获取对象
+   */
+  get entry_fclos() {
+    if (this._entry_fclos === null || this._entry_fclos === undefined) {
+      return null
+    }
+    // 如果是 UUID，从符号表中获取对象
+    if (typeof this._entry_fclos === 'string' && this._entry_fclos.startsWith('symuuid_')) {
+      const unit = this.symbolTable.get(this._entry_fclos)
+      return unit || null
+    }
+    // 如果不是 UUID，直接返回（向后兼容）
+    return this._entry_fclos
+  }
+
+  /**
+   * entry_fclos setter: 如果值是符号值对象，转换为 UUID 存储
+   */
+  set entry_fclos(val) {
+    if (val === null || val === undefined) {
+      this._entry_fclos = null
+      return
+    }
+    // 如果是符号值对象，转换为 UUID 存储
+    if (val && typeof val === 'object' && val.vtype && val.qid) {
+      const uuid = this.symbolTable.register(val)
+      this._entry_fclos = uuid
+    } else {
+      // 如果不是符号值对象，直接存储（向后兼容）
+      this._entry_fclos = val
+    }
+  }
+
+  /**
+   * lastProcessedNode getter: 如果存储的是 nodehash，从 AST 管理器中获取 AST 节点
+   */
+  get lastProcessedNode() {
+    if (this._lastProcessedNode === null || this._lastProcessedNode === undefined) {
+      return null
+    }
+    // 如果是字符串，尝试从 AST 管理器中获取 AST 节点（可能是 nodehash）
+    if (typeof this._lastProcessedNode === 'string') {
+      const astNode = this.astManager?.get(this._lastProcessedNode)
+      if (astNode) {
+        return astNode
+      }
+      // 如果获取不到，可能是其他字符串，直接返回（向后兼容）
+      return this._lastProcessedNode
+    }
+    // 如果不是字符串，直接返回（向后兼容）
+    return this._lastProcessedNode
+  }
+
+  /**
+   * lastProcessedNode setter: 如果值是 AST 节点，转换为 nodehash 存储
+   */
+  set lastProcessedNode(val) {
+    if (val === null || val === undefined) {
+      this._lastProcessedNode = null
+      return
+    }
+    // 如果是 AST 节点（有 type 属性），注册并存储 nodehash
+    if (val && typeof val === 'object' && val.type && this.astManager) {
+      const nodehash = this.astManager.register(val)
+      this._lastProcessedNode = nodehash
+    } else {
+      // 如果不是 AST 节点，直接存储（向后兼容）
+      this._lastProcessedNode = val
+    }
   }
 
   /**
@@ -154,91 +531,140 @@ class Analyzer extends MemSpace {
    * 初始化符号值树
    */
   initValTreeStruct() {
-    this.moduleManager = Scoped({
-      parent: null, // will set to topScope right away
-      sid: 'moduleManager',
-    }) // cache of imported module
+    this.astManager = new ASTManager()
+    this.symbolTable = new SymbolTableManager()
+    setGlobalASTManager(this.astManager)
+    setGlobalSymbolTable(this.symbolTable)
 
-    this.packageManager = PackageValue({
-      parent: null, // will set to topScope right away
-      sid: '',
-      id: '',
+    const moduleManager = new Scoped('<global>', {
+      sid: 'moduleManager',
+    })
+
+    const packageManager = new PackageValue('<global>', {
+      parent: null,
+      sid: 'packageManager',
       name: 'packageManager',
-    }) // cache of imported module
+    })
 
     this.fileManager = {}
-    this.funcSymbolTable = {} // 函数符号值集合，可快速搜索全局函数，向QL/断点粘连提供快速检索能力
-    this.topScope = Scoped({
-      id: '<global>',
+
+    const funcSymbolTableTarget: Record<string, any> = {}
+    const { symbolTable } = this
+    this.funcSymbolTable = new Proxy(funcSymbolTableTarget, {
+      get: (target, prop: string | symbol) => {
+        if (typeof prop === 'symbol') {
+          return (target as any)[prop]
+        }
+        if (prop === 'toString' || prop === 'valueOf' || prop === 'constructor') {
+          return (target as any)[prop]
+        }
+        const value = target[prop]
+        if (value && typeof value === 'string' && value.startsWith('symuuid_')) {
+          const unit = symbolTable.get(value)
+          return unit || null
+        }
+        return value
+      },
+      set: (target, prop: string, value: any) => {
+        if (value && typeof value === 'object' && value.vtype && value.qid) {
+          const uuid = symbolTable.register(value)
+          target[prop] = uuid
+          ;(symbolTable as any).addFuncSymbolTableRef?.(uuid, prop)
+        } else {
+          target[prop] = value
+        }
+        return true
+      },
+      deleteProperty: (target, prop: string) => {
+        delete target[prop]
+        return true
+      },
+      ownKeys: (target) => {
+        return Reflect.ownKeys(target)
+      },
+      has: (target, prop) => {
+        return prop in target
+      },
+    }) as Record<string, any>
+
+    this.topScope = new Scoped('', {
       sid: '<global>',
-      moduleManager: this.moduleManager,
-      packageManager: this.packageManager,
-      fileManager: this.fileManager,
-      funcSymbolTable: this.funcSymbolTable,
+      qid: '<global>',
       parent: null,
     })
-    this.funcSymbolTable.parent = this.topScope
-    this.fileManager.parent = this.topScope
-    this.moduleManager.parent = this.topScope
-    this.packageManager.parent = this.topScope
-    this.fileManager.parent = this.topScope
+
+    this.context = new AnalysisContext()
+    this.context.ast = this.astManager
+    this.context.symbols = this.symbolTable
+    this.context.modules = moduleManager
+    this.context.packages = packageManager
+    this.context.files = this.fileManager
+    this.context.funcs = this.funcSymbolTable
+    this.topScope.context = this.context
+
+    moduleManager.parent = this.topScope
+    packageManager.parent = this.topScope
 
     this.thisFClos = this.topScope
   }
 
   /**
-   * 执行分析流程的通用方法，统一处理性能追踪（同步版本）
-   *
-   * **重要说明：**
-   * - 此方法仅用于同步 preProcess 场景，preProcessFn 必须返回 void（不能返回 Promise）
-   * - 如果 preProcessFn 可能返回 Promise，请使用 executeAnalysisPipelineAsync 方法
-   *
-   * @param preProcessFn - 执行同步 preProcess 的函数（必须返回 void，不能返回 Promise）
-   * @param symbolInterpretFn - 执行 symbolInterpret 的函数
+   * 切换到临时符号表，在执行 symbolInterpretFn 期间自动拷贝符号值
    */
-  private executeAnalysisPipeline(preProcessFn: () => void, symbolInterpretFn: () => void): void {
-    // 开始整体性能追踪
-    this.performanceTracker.start()
-    this.performanceTracker.start('preProcess')
+  protected switchToTemporarySymbolTable(): void {
+    // 确保当前 symbolTable 是 SymbolTableManager，不是 TemporarySymbolTableManager
+    // 如果已经是 TemporarySymbolTableManager，说明存在嵌套调用，这是不支持的
+    if (this.symbolTable instanceof TemporarySymbolTableManager) {
+      throw new Error(
+        'Nested TemporarySymbolTableManager is not supported. symbolInterpretFn should not be called recursively.'
+      )
+    }
 
-    Rules.setPreprocessReady(false)
-    // 启用指令级别的性能监控（如果已启用性能日志）
-    this.performanceTracker.startInstructionMonitor()
+    // 创建临时符号表，在执行 symbolInterpretFn 期间自动拷贝符号值
+    const tmpSymbolTable = new TemporarySymbolTableManager(this.symbolTable as InstanceType<typeof SymbolTableManager>)
+    const originalGlobalSymbolTable = getGlobalSymbolTable()
+    const originalAnalyzerSymbolTable = this.symbolTable
+    const originalTopScopeSymbolTable = (this.topScope?.context?.symbols as ISymbolTableManager | null) || null
 
-    // 执行同步 preProcess
-    preProcessFn()
-
-    this.performanceTracker.end('preProcess')
-    this.performanceTracker.start('startAnalyze')
-
-    this.startAnalyze()
-
-    this.performanceTracker.end('startAnalyze')
-    Rules.setPreprocessReady(true)
-
-    this.performanceTracker.start('symbolInterpret')
-
-    symbolInterpretFn()
-
-    this.performanceTracker.end('symbolInterpret')
-    this.endAnalyze()
-
-    // 记录性能数据并输出摘要（会自动输出指令统计）
-    this.performanceTracker.logPerformance(this)
+    setGlobalSymbolTable(tmpSymbolTable)
+    this.symbolTable = tmpSymbolTable
+    if (this.topScope?.context) {
+      this.topScope.context.symbols = tmpSymbolTable
+    }
+    this.isTmpSymbolTableOpen = true
+    this.tmpSymbolTable = tmpSymbolTable
+    this.backUpSymbolTable = {
+      originalGlobalSymbolTable,
+      originalAnalyzerSymbolTable,
+      originalTopScopeSymbolTable,
+    }
   }
 
   /**
-   * 执行分析流程的通用方法（异步版本），统一处理性能追踪
-   *
-   * 用于处理异步 preProcess 场景，避免 analyzeProjectAsync 中的代码重复。
-   *
-   * @param preProcessFn - 执行异步 preProcess 的函数
-   * @param symbolInterpretFn - 执行 symbolInterpret 的函数
+   * 恢复原始符号表引用，并清理临时符号表
    */
-  private async executeAnalysisPipelineAsync(
-    preProcessFn: () => Promise<void>,
-    symbolInterpretFn: () => void
-  ): Promise<void> {
+  protected restoreSymbolTable(): void {
+    // 恢复所有符号表引用
+    setGlobalSymbolTable(this.backUpSymbolTable.originalGlobalSymbolTable)
+    this.symbolTable = this.backUpSymbolTable.originalAnalyzerSymbolTable
+    if (this.topScope?.context) {
+      this.topScope.context.symbols = this.backUpSymbolTable.originalTopScopeSymbolTable
+    }
+    this.isTmpSymbolTableOpen = false
+    // 清理临时符号表
+    this.tmpSymbolTable.clear()
+  }
+
+  /**
+   * 执行分析流程的通用方法，统一处理性能追踪
+   * @param initAfterUsingCache
+   * @param preProcessFn - 执行同步 preProcess 的函数（必须返回 void，不能返回 Promise）
+   * @returns {Promise<any>} 分析结果
+   */
+  private async executeAnalysisPipeline(
+    initAfterUsingCache: () => void,
+    preProcessFn: () => void | Promise<void>
+  ): Promise<any> {
     // 开始整体性能追踪
     this.performanceTracker.start()
     this.performanceTracker.start('preProcess')
@@ -247,10 +673,59 @@ class Analyzer extends MemSpace {
     // 启用指令级别的性能监控（如果已启用性能日志）
     this.performanceTracker.startInstructionMonitor()
 
-    // 执行异步 preProcess
-    await preProcessFn()
+    // 尝试加载缓存
+    let cacheLoaded = false
+    let shouldPreProcess = true
+    if (Config.loadContextEnvironment) {
+      shouldPreProcess = false
+      this.performanceTracker.start('loadContextEnvironment')
+      try {
+        // 根据源路径查找缓存文件夹（基于 repoName 和 hashPrefix）
+        const sourcePath = this.options?.maindir || Config.prefixPath || process.cwd()
+        cacheLoaded = loadAnalyzerCache(this, Config.loadContextEnvironmentId, sourcePath)
+        if (cacheLoaded) {
+          logger.info('Analyzer cache loaded successfully')
+        }
+        if (cacheLoaded && Config.maindirPrefix) {
+          const name = Config.maindirPrefix.split('/').pop() || Config.maindirPrefix
+          if (!Config.loadContextEnvironmentId || !Config.loadContextEnvironmentId.startsWith(`${name}_`)) {
+            shouldPreProcess = true
+          }
+        }
+        if (!shouldPreProcess && typeof initAfterUsingCache === 'function') {
+          initAfterUsingCache()
+        }
+      } catch (err: any) {
+        logger.warn(`Failed to load analyzer cache: ${err.message}`)
+      }
+      this.performanceTracker.end('loadContextEnvironment')
+    }
+
+    if (shouldPreProcess) {
+      const result = preProcessFn()
+      if (result instanceof Promise) {
+        await result
+      }
+    }
 
     this.performanceTracker.end('preProcess')
+
+    // 保存缓存（在 startAnalyze 之前）
+    if (Config.saveContextEnvironment || Config.miniSaveContextEnvironment) {
+      try {
+        this.performanceTracker.start('saveContextEnvironment')
+        const sourcePath = this.options?.maindir
+        const cacheId = generateCacheId(sourcePath)
+        saveAnalyzerCache(this, cacheId)
+        logger.info('Analyzer cache saved successfully')
+        // 保存完成后结束分析
+        this.performanceTracker.end('saveContextEnvironment')
+        return
+      } catch (err: any) {
+        logger.warn(`Failed to save analyzer cache: ${err.message}`)
+      }
+    }
+
     this.performanceTracker.start('startAnalyze')
 
     this.startAnalyze()
@@ -260,86 +735,76 @@ class Analyzer extends MemSpace {
 
     this.performanceTracker.start('symbolInterpret')
 
-    symbolInterpretFn()
+    // 切换到临时符号表
+    this.switchToTemporarySymbolTable()
 
+    try {
+      this.symbolInterpret()
+    } finally {
+      // 恢复原始符号表
+      this.restoreSymbolTable()
+    }
     this.performanceTracker.end('symbolInterpret')
     this.endAnalyze()
 
     // 记录性能数据并输出摘要（会自动输出指令统计）
-    this.performanceTracker.logPerformance(this)
+    performanceTracker.collectAnalysisData(this)
+
+    return this.recordCheckerFindings()
   }
 
   /**
    * 分析单个文件
-   *
-   * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
-   *
    * @param source - 源代码内容
    * @param fileName - 文件名
    * @returns 分析结果
    */
-  analyzeSingleFile(source: any, fileName: any) {
+  async analyzeSingleFile(source: any, fileName: any) {
     try {
+      // 单文件就不要用缓存了
+      Config.loadContextEnvironment = false
+      Config.saveContextEnvironment = false
+      Config.miniSaveContextEnvironment = false
       if (typeof this.preProcess4SingleFile === 'function' && typeof this.symbolInterpret === 'function') {
-        this.executeAnalysisPipeline(
-          () => this.preProcess4SingleFile(source, fileName),
-          () => this.symbolInterpret()
+        return await this.executeAnalysisPipeline(
+          () => {},
+          () => this.preProcess4SingleFile(source, fileName)
         )
-      } else {
-        logger.info(`this analyzer has not support analyzeSingleFile yet`)
       }
+      logger.info(`this analyzer has not support analyzeSingleFile yet`)
       return this.recordCheckerFindings()
     } catch (e) {
       handleException(e, 'Error occurred in analyzer analyzeSingleFile', 'Error occurred in analyzer analyzeSingleFile')
+      return false
     }
   }
 
   /**
-   * 异步分析项目
-   *
-   * 用于处理支持异步 preProcess 的分析器（如 Go Analyzer、Python Analyzer）。
-   *
+   * 分析项目
    * @param processingDir - 要分析的项目目录
    * @returns 分析结果
    */
-  async analyzeProjectAsync(processingDir: any) {
+  async analyzeProject(processingDir: any) {
     try {
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
-        await this.executeAnalysisPipelineAsync(
-          () => this.preProcess(processingDir),
-          () => this.symbolInterpret()
+        if (typeof this.initAfterUsingCache !== 'function') {
+          this.initAfterUsingCache = () => {}
+        }
+        return await this.executeAnalysisPipeline(
+          () => this.initAfterUsingCache(),
+          () => this.preProcess(processingDir)
         )
       }
       return this.recordCheckerFindings()
-    } catch (e) {
+    } catch (e: any) {
+      const errorMsg = e?.message || String(e)
+      const errorStack = e?.stack || ''
       handleException(
         e,
-        'Error occurred in analyzer analyzeProjectAsync',
-        'Error occurred in analyzer analyzeProjectAsync'
+        `Error occurred in analyzer analyzeProject: ${errorMsg}\n${errorStack}`,
+        `Error occurred in analyzer analyzeProject: ${errorMsg}`
       )
-    }
-  }
-
-  /**
-   * 同步分析项目
-   *
-   * 用于处理同步 preProcess 的分析器（如 Java Analyzer、JavaScript Analyzer）。
-   * 性能追踪逻辑已统一到 executeAnalysisPipeline 方法，避免代码重复。
-   *
-   * @param processingDir - 要分析的项目目录
-   * @returns 分析结果
-   */
-  analyzeProject(processingDir: any) {
-    try {
-      if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
-        this.executeAnalysisPipeline(
-          () => this.preProcess(processingDir),
-          () => this.symbolInterpret()
-        )
-      }
-      return this.recordCheckerFindings()
-    } catch (e) {
-      handleException(e, 'Error occurred in analyzer analyzeProject', 'Error occurred in analyzer analyzeProject')
+      return false
     }
   }
 
@@ -358,13 +823,6 @@ class Analyzer extends MemSpace {
    *
    */
   initTopScope() {}
-
-  /**
-   *
-   * @param source
-   * @param filename
-   */
-  parseUast(source: any, filename: any) {}
 
   /**
    *
@@ -393,68 +851,6 @@ class Analyzer extends MemSpace {
 
   /**
    *
-   * @param target
-   * @param topScopeTemp
-   */
-  findValInTree(target: any, topScopeTemp: any): any {
-    const passVals: any[] = []
-    let current = target
-    while (current) {
-      if (current.sid === '<global>') {
-        break
-      }
-      passVals.push(current)
-      current = current.parent
-    }
-    passVals.reverse()
-    let scope = topScopeTemp
-    for (const val of passVals) {
-      let hasFind = false
-      for (const s of Object.values(scope) as any[]) {
-        if (
-          s &&
-          val.vtype === s.vtype &&
-          val.id === s.id &&
-          val.sid === s.sid &&
-          val.qid === s.qid &&
-          val.sort === s.sort &&
-          val.name === s.name &&
-          val.ast === s.ast &&
-          val.parent?.vtype === s.parent?.vtype
-        ) {
-          scope = s
-          hasFind = true
-          break // 提前退出循环
-        }
-      }
-      if (!hasFind && scope.field) {
-        for (const s of Object.values(scope.field) as any[]) {
-          if (
-            s &&
-            val.vtype === s.vtype &&
-            val.id === s.id &&
-            val.sid === s.sid &&
-            val.qid === s.qid &&
-            val.sort === s.sort &&
-            val.name === s.name &&
-            val.ast === s.ast &&
-            val.parent?.vtype === s.parent?.vtype
-          ) {
-            scope = s
-            hasFind = true
-            break // 提前退出循环
-          }
-        }
-      }
-      if (!hasFind) {
-        return null
-      }
-    }
-    return scope
-  }
-
-  /**
-   *
    * @param instructionType
    */
   loadInstruction(instructionType: any) {
@@ -476,47 +872,6 @@ class Analyzer extends MemSpace {
     return load(this)
   }
 
-  /**
-   *
-   * @param node
-   */
-  debugInstruction(node: any) {
-    if (!Array.isArray(node)) {
-      const code = this.sourceCodeCache[node?.loc?.sourcefile]
-
-      if (code) {
-        const { start, end } = node.loc
-        const showLine = getLine(code, node.loc.start.line)
-        const startColumn = start.column
-        let endColumn = end.column
-        if (start.line !== end.line) {
-          endColumn = start.column
-        }
-        const msg = `${start.line}   ${showLine.substring(0, startColumn)}${chalk.blue(
-          showLine.substring(startColumn, endColumn)
-        )}${showLine.substring(endColumn, showLine.length)}`
-        logger.debug(msg)
-      }
-    }
-
-    /**
-     *
-     * @param code
-     * @param n
-     */
-    function getLine(code: any, n: any) {
-      // 将代码分割成行数组
-      const lines = code.split('\n')
-
-      // 检查行数是否在有效范围内
-      if (n > 0 && n <= lines.length) {
-        // 获取第N行的内容
-        return lines[n - 1]
-      }
-      return null // 行数无效，返回null或其他适当的值
-    }
-  }
-
   // prePostFlag
   /**
    *
@@ -527,7 +882,7 @@ class Analyzer extends MemSpace {
    */
   processInstruction(scope: any, node: any, state: any, prePostFlag?: any): any {
     if (!node || !scope) {
-      return UndefinedValue()
+      return new UndefinedValue()
     }
     if (node.vtype) {
       return node
@@ -535,7 +890,12 @@ class Analyzer extends MemSpace {
     this.lastProcessedNode = node
 
     if (scope.vtype === 'union') {
-      const res = UnionValue()
+      const res = new UnionValue(
+        undefined,
+        undefined,
+        `${scope.qid}.<union@PI:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+        node
+      )
       for (const scp of scope.value) {
         const val = this.processInstruction(scp, node, state, prePostFlag)
         res.appendValue(val)
@@ -553,7 +913,10 @@ class Analyzer extends MemSpace {
     const action = prePostFlag ? `${prePostFlag}Process` : 'process'
     const inst = this.loadInstruction(action + node.type)
     if (!inst) {
-      return SymbolValue(node)
+      if (Config.saveContextEnvironment || Config.miniSaveContextEnvironment) {
+        return new SymbolValue(scope.qid, { sid: '<unknownProcessTypeNode>' })
+      }
+      return new SymbolValue(scope.qid, { ...node, sid: '<unknownProcessTypeNode>' })
     }
     // TODO 添加判断，后续指令是否是跟在return或throw后且在同一个scope内无法执行的指令 4+
     this.statistics.numProcessedInstructions++
@@ -565,12 +928,11 @@ class Analyzer extends MemSpace {
     try {
       val = inst.call(this, scope, node, state)
     } catch (e) {
-      handleException(
-        e,
-        '',
-        `process${node.type} error! loc is${node.loc.sourcefile}::${node.loc.start.line}_${node.loc.end.line}`
-      )
-      val = UndefinedValue()
+      const locInfo = node.loc
+        ? `${node.loc.sourcefile}::${node.loc.start?.line}_${node.loc.end?.line}`
+        : '<unknown location>'
+      handleException(e, '', `process${node.type} error! loc is${locInfo}`)
+      val = new UndefinedValue()
     }
 
     // 性能追踪：结束指令执行并更新统计（内部会检查是否启用）
@@ -594,10 +956,10 @@ class Analyzer extends MemSpace {
   processPre(val: any, state: any) {
     switch (val?.vtype) {
       case 'class':
-        this.processClassDefinition(val.parent, val.cdef, state)
+        this.processClassDefinition(val.parent, val.ast.cdef, state)
         break
       case 'fclos':
-        this.processFunctionDefinition(val.parent, val.fdef, state)
+        this.processFunctionDefinition(val.parent, val.ast.fdef, state)
         break
     }
   }
@@ -609,7 +971,7 @@ class Analyzer extends MemSpace {
    * @param state
    */
   processNoop(scope: any, node: any, state: any) {
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -618,8 +980,16 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processLiteral(scope: any, node: any, state: any) {
-    return PrimitiveValue({ ...node, ast: node, qid: node.value, sid: node.value, id: node.value })
+  processLiteral(scope: ScopeType, node: Literal, state: State): SymbolValueType {
+    return new PrimitiveValue(
+      scope.qid,
+      primitiveToString(node.value),
+      node.value,
+      node.literalType,
+      node.type,
+      node.loc,
+      node
+    )
   }
 
   /**
@@ -628,19 +998,25 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processIdentifier(scope: any, node: any, state: any) {
-    if (node.name === 'undefined') return PrimitiveValue({ type: 'Literal', value: undefined })
-    const res = this.getMemberValue(scope, node, state)
+  processIdentifier(scope: ScopeType, node: Identifier, state: State): SymbolValueType {
+    if (node.name === 'undefined') {
+      return new PrimitiveValue(scope.qid, 'undefined', undefined, null, 'Literal')
+    }
+    let res
+    if (state?.findIdInCurScope) {
+      res = this.getMemberValueInCurrentScope(scope, node, state)
+    } else {
+      res = this.getMemberValue(scope, node, state)
+    }
     if (res.vtype === 'fclos') {
       res._this = this.topScope
     }
     if (res.vtype === 'undefine' || res.vtype === 'uninitialized' || res.vtype === 'symbol') {
-      res.vtype = 'symbol'
-      res._id = node.name
-      res._sid = node.name
+      res.sid = node.name
     }
-    this.checkerManager.checkAtIdentifier(this, scope, node, state, { res })
-    return res
+    const info = { res }
+    this.checkerManager.checkAtIdentifier(this, scope, node, state, info)
+    return info.res
   }
 
   /**
@@ -649,7 +1025,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processCompileUnit(scope: any, node: any, state: any) {
+  processCompileUnit(scope: ScopeType, node: CompileUnit, state: State): Value {
     if (this.checkerManager && this.checkerManager.checkAtCompileUnit) {
       this.checkerManager.checkAtCompileUnit(this, scope, node, state, {
         pcond: state.pcond,
@@ -667,6 +1043,7 @@ class Analyzer extends MemSpace {
     // node.body.filter(n => needCompileFirst(n.type)).forEach(n => this.processInstruction(scope, n, state));
     // process Compile First twice in order to handle elements which can't be correctly compiled once first
     node.body.forEach((n: any) => this.processInstruction(scope, n, state))
+    return new VoidValue()
   }
 
   /**
@@ -675,7 +1052,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processExportStatement(scope: any, node: any, state: any) {
+  processExportStatement(scope: ScopeType, node: ExportStatement, state: State): VoidValueType {
     // locate exports
     const exports = this.getExportsScope(scope)
     const val = this.processInstruction(scope, node.argument, state)
@@ -684,6 +1061,7 @@ class Analyzer extends MemSpace {
     } else if (exports) {
       this.saveVarInCurrentScope(exports, node.alias, val, state)
     }
+    return new VoidValue()
   }
 
   /**
@@ -711,7 +1089,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processIfStatement(scope: any, node: any, state: any) {
+  processIfStatement(scope: ScopeType, node: IfStatement, state: State): VoidValueType {
     /*
       { test,
         consequent,
@@ -727,7 +1105,13 @@ class Analyzer extends MemSpace {
       })
     }
 
-    const b: string = 'U' // abstraction.evaluate(test, state.pcond);
+    let b: string = 'U' // abstraction.evaluate(test, state.pcond);
+    if (test?.type === 'Literal' && test.value === true) {
+      b = 'T'
+    } else if (test?.type === 'Literal' && test.value === false) {
+      b = 'F'
+    }
+
     switch (b) {
       case 'T':
         this.processInstruction(scope, node.consequent, state)
@@ -770,6 +1154,7 @@ class Analyzer extends MemSpace {
         }
       }
     }
+    return new VoidValue()
   }
 
   /**
@@ -778,19 +1163,20 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processSwitchStatement(scope: any, node: any, state: any) {
+  processSwitchStatement(scope: ScopeType, node: SwitchStatement, state: State): VoidValueType {
     // cases: [ SwitchCase ]
     const test = this.processInstruction(scope, node.discriminant, state)
     if (test && test.type === 'Literal') {
+      const testValue = (test as any as Literal).value
       for (const caseClause of node.cases) {
         if (
           !caseClause.test || // FIXME
-          caseClause.test.value === test.value
+          (caseClause.test.type === 'Literal' && (caseClause.test as any as Literal).value === testValue)
         ) {
           return this.processInstruction(scope, caseClause.body, state)
         }
       }
-      return UndefinedValue()
+      return new UndefinedValue()
     }
 
     const scopes = []
@@ -804,7 +1190,7 @@ class Analyzer extends MemSpace {
       this.processInstruction(scope1, caseClause.body, st)
     }
     MemState.unionValues(scopes, substates, state.brs)
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -813,7 +1199,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processForStatement(scope: any, node: any, state: any) {
+  processForStatement(scope: ScopeType, node: ForStatement, state: State): VoidValueType {
     StateUtil.pushLoopInfo(state, node)
     if (node.init) {
       this.processInstruction(scope, node.init, state)
@@ -836,7 +1222,7 @@ class Analyzer extends MemSpace {
     } else this.processInstruction(scope, node.body, state)
 
     StateUtil.popLoopInfo(state)
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -845,7 +1231,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processWhileStatement(scope: any, node: any, state: any) {
+  processWhileStatement(scope: ScopeType, node: WhileStatement, state: State): VoidValueType {
     /*
     { test,
      body,
@@ -869,7 +1255,7 @@ class Analyzer extends MemSpace {
     // // fixed-point on values (with scopes) for data-flow calculation
     // scope.value = MemState.computeValueFixedPoint(scope).value;
 
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -878,9 +1264,9 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processRangeStatement(scope: any, node: any, state: any) {
+  processRangeStatement(scope: ScopeType, node: RangeStatement, state: State): any {
     const { key, value, right, body } = node
-    scope = Analyzer.createSubScope(
+    scope = Scope.createSubScope(
       `<block_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
       scope
     )
@@ -889,7 +1275,7 @@ class Analyzer extends MemSpace {
       !Array.isArray(rightVal) &&
       (this.inRange ||
         rightVal?.vtype === 'primitive' ||
-        Object.keys(rightVal.getRawValue()).length === 0 ||
+        Object.keys(rightVal.getRawValue()).filter((key) => !key.startsWith('__yasa')).length === 0 ||
         rightVal?.vtype === 'union')
     ) {
       if (value) {
@@ -897,6 +1283,7 @@ class Analyzer extends MemSpace {
           this.saveVarInCurrentScope(scope, value.id, rightVal, state)
         } else if (value.type === 'TupleExpression') {
           for (const ele of value.elements) {
+            // Runtime may have 'name' property even if not in type definition
             this.saveVarInCurrentScope(scope, ele.name, rightVal, state)
           }
         } else {
@@ -912,7 +1299,7 @@ class Analyzer extends MemSpace {
       this.inRange = true
       if (this.isNullLiteral(rightVal)) {
         this.inRange = false
-        return
+        return undefined as any // 保持历史行为（25282dbd）
       }
       const itr = this.getValueIterator(rightVal, filterDataFromScope)
       let countLimit = 30
@@ -928,13 +1315,18 @@ class Analyzer extends MemSpace {
           } else {
             // 如果是string，将其构造出符号值再存储
             // TODO 250731 将符号的字面量(而非符号值)作为key存储是否合适，有待商榷。
-            if (_.isString(k)) k = PrimitiveValue({ ...key, value: k, ast: key, qid: k, sid: k, id: k })
+            if (_.isString(k)) k = new PrimitiveValue(scope.qid, k, k, null, key.type, key.loc, key)
             this.saveVarInScope(scope, key, k, state)
           }
         }
         if (value) {
           if (value.type === 'VariableDeclaration') {
             this.saveVarInCurrentScope(scope, value.id, v, state)
+          } else if (value.type === 'TupleExpression') {
+            for (let i = 0; i < value.elements.length; i++) {
+              const eleVal = v?.members?.get(String(i)) ?? v
+              this.saveVarInCurrentScope(scope, value.elements[i].name, eleVal, state)
+            }
           } else {
             this.saveVarInScope(scope, value, v, state)
           }
@@ -943,6 +1335,7 @@ class Analyzer extends MemSpace {
       }
       this.inRange = false
     }
+    return new VoidValue()
   }
 
   /**
@@ -951,25 +1344,36 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processReturnStatement(scope: any, node: any, state: any) {
+  processReturnStatement(scope: ScopeType, node: ReturnStatement, state: State): VoidValueType {
     // { expression }
     // lastReturnValue should be treated as union since there are multi return points in one func
     if (node.argument) {
-      const return_value = this.processInstruction(scope, node.argument, state)
+      const returnValue = this.processInstruction(scope, node.argument, state)
       if (!node.isYield) {
         if (!this.lastReturnValue) {
-          this.lastReturnValue = return_value
+          this.lastReturnValue = returnValue
         } else if (this.lastReturnValue.vtype === 'union') {
-          if (return_value === this.lastReturnValue || return_value.value === this.lastReturnValue.value) {
-            const new_return_value = cloneWithDepth(return_value, 2)
-            this.lastReturnValue.appendValue(new_return_value, false)
+          if (returnValue === this.lastReturnValue || returnValue.value === this.lastReturnValue.value) {
+            const newReturnValue = buildNewValueInstance(
+              this,
+              returnValue,
+              node,
+              scope,
+              () => {
+                return false
+              },
+              (v: any) => {
+                return !v
+              }
+            )
+            this.lastReturnValue.appendValue(newReturnValue, false)
           } else {
-            this.lastReturnValue.appendValue(return_value, false)
+            this.lastReturnValue.appendValue(returnValue, false)
           }
         } else {
-          const tmp = UnionValue()
+          const tmp = new UnionValue(undefined, undefined, `${scope.qid}.<union@ret:${node.loc?.start?.line}>`, node)
           tmp.appendValue(this.lastReturnValue)
-          tmp.appendValue(return_value)
+          tmp.appendValue(returnValue)
           this.lastReturnValue = tmp
         }
         if (node.loc && this.lastReturnValue)
@@ -981,9 +1385,9 @@ class Analyzer extends MemSpace {
             '[return value]'
           )
       }
-      return return_value
+      return returnValue
     }
-    return PrimitiveValue({ type: 'Literal', value: null, loc: node.loc })
+    return new PrimitiveValue(scope.qid, 'undefined', null, null, 'Literal', node.loc)
   }
 
   // TODO break statement
@@ -993,8 +1397,8 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processBreakStatement(scope: any, node: any, state: any) {
-    return UndefinedValue()
+  processBreakStatement(scope: ScopeType, node: BreakStatement, state: State): VoidValueType {
+    return new UndefinedValue()
   }
 
   // TODO continue statement
@@ -1004,8 +1408,8 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processContinueStatement(scope: any, node: any, state: any) {
-    return UndefinedValue()
+  processContinueStatement(scope: ScopeType, node: ContinueStatement, state: State): VoidValueType {
+    return new UndefinedValue()
   }
 
   // TODO throw
@@ -1015,7 +1419,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processThrowStatement(scope: any, node: any, state: any) {
+  processThrowStatement(scope: ScopeType, node: ThrowStatement, state: State): VoidValueType {
     // 原本是注释的，打开了，throw和return 还是有很大区别的
     // throw会沿着调用栈传递，return 只会传到调用层 没处理就结束了
     // const ret = this.processReturnStatement(scope, node, state);
@@ -1030,15 +1434,25 @@ class Analyzer extends MemSpace {
           node,
           node.loc && node.loc.sourcefile,
           'Throw Pass: ',
-          node.argument.name
+          (node.argument.type === 'Identifier' ? node.argument.name : null) ||
+            AstUtil.prettyPrintAST(node.argument).slice(0, 50)
         )
         // 没有被try处理的异常
         state.throwstack = state.throwstack ?? []
         state.throwstack.push(throw_value)
         return throw_value
       }
+      state.throwstackScopeAndState = state.throwstackScopeAndState ?? []
+      state.throwstackScopeAndState.push({ scope, state })
     }
-    return PrimitiveValue({ type: 'Literal', value: node.argument, loc: node.loc })
+    return new PrimitiveValue(
+      scope.qid,
+      `<throwVariable_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
+      node.argument,
+      null,
+      'Literal',
+      node.loc
+    )
   }
 
   /**
@@ -1047,13 +1461,14 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processTryStatement(scope: any, node: any, state: any) {
+  processTryStatement(scope: ScopeType, node: TryStatement, state: State): VoidValueType {
     // 此处processInstruction的返回值是undefine 因此无法拿到try里面是否抛出异常的信息
     this.processInstruction(scope, node.body, state)
     const { handlers } = node
     if (handlers) {
       for (const clause of handlers) {
-        scope = Analyzer.createSubScope(
+        if (!clause) continue
+        scope = Scope.createSubScope(
           `<block_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
           scope
         )
@@ -1062,7 +1477,7 @@ class Analyzer extends MemSpace {
       }
     }
     if (node.finalizer) this.processInstruction(scope, node.finalizer, state)
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -1071,7 +1486,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processExpressionStatement(scope: any, node: any, state: any) {
+  processExpressionStatement(scope: ScopeType, node: ExpressionStatement, state: State): VoidValueType {
     // { expression }
     return this.processInstruction(scope, node.expression, state)
   }
@@ -1082,17 +1497,17 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processScopedStatement(scope: any, node: any, state: any) {
+  processScopedStatement(scope: ScopeType, node: ScopedStatement, state: State): any {
     /*
     { statements }
     */
     const { loc } = node
     let scopeName
     if (loc) {
-      if (!scope._qid) {
-        const relateFileName = loc.sourcefile.startsWith(Config.maindirPrefix)
-          ? loc.sourcefile?.substring(Config.maindirPrefix.length).split('.')[0]
-          : loc.sourcefile.split('.')[0]
+      if (!scope.qid) {
+        const prefix = loc.sourcefile?.substring(Config.maindirPrefix.length)
+        const lastDotIndex = prefix?.lastIndexOf('.') ?? -1
+        const relateFileName = lastDotIndex >= 0 ? prefix?.substring(0, lastDotIndex) : prefix
         scopeName = `${relateFileName}<block_${loc.start?.line}_${loc.start?.column}_${loc.end?.line}_${loc.end?.column}>`
       } else {
         scopeName = `<block_${loc.start?.line}_${loc.start?.column}_${loc.end?.line}_${loc.end?.column}>`
@@ -1112,6 +1527,7 @@ class Analyzer extends MemSpace {
     if (this.checkerManager && this.checkerManager.checkAtEndOfBlock) {
       this.checkerManager.checkAtEndOfBlock(this, scope, node, state, {})
     }
+    return new VoidValue()
   }
 
   /**
@@ -1120,27 +1536,22 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processBinaryExpression(scope: any, node: any, state: any) {
-    /*
-   { operator,
-     left,
-     right
-    }
-    */
-    const new_node = _.clone(node)
-    new_node.ast = node
-    const new_left = (new_node.left = this.processInstruction(scope, node.left, state))
-    const new_right = (new_node.right = this.processInstruction(scope, node.right, state))
+  processBinaryExpression(scope: ScopeType, node: BinaryExpression, state: State): BinaryExprValue {
+    const new_left = this.processInstruction(scope, node.left, state)
+    const new_right = this.processInstruction(scope, node.right, state)
 
-    const has_tag = (new_left && new_left.hasTagRec) || (new_right && new_right.hasTagRec)
-    if (has_tag) {
-      new_node.hasTagRec = has_tag
-    }
+    const has_tag = (new_left && new_left.taint?.isTaintedRec) || (new_right && new_right.taint?.isTaintedRec)
 
+    // checkerManager 需要 newNode 兼容对象
+    const newNode: any = { ...node, ast: node, left: new_left, right: new_right, isTainted: has_tag || null }
     if (this.checkerManager && this.checkerManager.checkAtBinaryOperation)
-      this.checkerManager.checkAtBinaryOperation(this, scope, node, state, { newNode: new_node })
+      this.checkerManager.checkAtBinaryOperation(this, scope, node, state, { newNode })
 
-    return SymbolValue(new_node)
+    const result = new BinaryExprValue(scope.qid, node.operator, new_left, new_right, node, node.loc)
+    if (has_tag) {
+      result.taint?.mergeFrom([new_left, new_right])
+    }
+    return result
   }
 
   /**
@@ -1149,14 +1560,12 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processUnaryExpression(scope: any, node: any, state: any) {
-    const new_node = SymbolValue(_.clone(node))
-    new_node.ast = node
-    new_node.argument = this.processInstruction(scope, node.argument, state)
-    // return nativeResolver.simplifyUnaryExpression(new_node);
-    const hasTags = new_node.argument && new_node.argument.hasTagRec
-    if (hasTags) new_node.hasTagRec = hasTags
-    return new_node
+  processUnaryExpression(scope: ScopeType, node: UnaryExpression, state: State): UnaryExprValue {
+    const unaryArg = this.processInstruction(scope, node.argument, state)
+    const result = new UnaryExprValue(scope.qid, node.operator, unaryArg, node, node.loc, node.isSuffix)
+    const hasTags = unaryArg && unaryArg.taint?.isTaintedRec
+    if (hasTags) result.taint?.mergeFrom([unaryArg])
+    return result
   }
 
   /**
@@ -1165,7 +1574,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processAssignmentExpression(scope: any, node: any, state: any) {
+  processAssignmentExpression(scope: ScopeType, node: AssignmentExpression, state: State): any {
     /*
     { operator,
       left,
@@ -1178,17 +1587,15 @@ class Analyzer extends MemSpace {
         const { left } = node
         const { right } = node
         let tmpVal = this.processInstruction(scope, right, state)
-        if (node.cloned && !tmpVal?.refCount) {
-          tmpVal = _.clone(tmpVal)
-          tmpVal.value = _.clone(tmpVal.value)
-        }
         const oldVal = this.processInstruction(scope, left, state)
 
         // TODO: clean the following up
         if (left.type === 'TupleExpression') {
           for (let k = 0; k < left.elements.length; k++) {
             const x = left.elements[k]
-            if (!x || x.name === '_') continue
+            if (!x) continue
+            const xName = x.type === 'Identifier' ? x.name : undefined
+            if (xName === '_') continue
 
             let val = tmpVal && tmpVal.type === 'TupleExpression' ? tmpVal.elements[k] : tmpVal
             const oldV = oldVal && oldVal.type === 'TupleExpression' ? oldVal.elements[k] : oldVal
@@ -1212,11 +1619,20 @@ class Analyzer extends MemSpace {
             }
           }
         } else {
-          if (!tmpVal)
-            // explicit null value
-            tmpVal = PrimitiveValue({ type: 'Literal', value: null, loc: right.loc })
+          if (!tmpVal) {
+            tmpVal = new PrimitiveValue(scope.qid, 'undefined', null, null, 'Literal', right.loc)
+          }
+          if (typeof tmpVal !== 'object') {
+            tmpVal = new PrimitiveValue(scope.qid, `<literal_${tmpVal}>`, tmpVal, null, 'Literal', right.loc)
+          }
           const sid = SymAddress.toStringID(node.left)
-          tmpVal.sid = !tmpVal.id || tmpVal.id === '<anonymous>' ? sid : tmpVal.id
+          if (
+            tmpVal.sid === undefined ||
+            tmpVal.sid === null ||
+            (typeof tmpVal.sid === 'string' && tmpVal.sid.includes('<object'))
+          ) {
+            tmpVal.sid = sid
+          }
           if (this.checkerManager && this.checkerManager.checkAtAssignment) {
             const lscope = this.getDefScope(scope, left)
             const mindex = this.resolveIndices(scope, left, state)
@@ -1233,10 +1649,12 @@ class Analyzer extends MemSpace {
               ainfo: this.ainfo,
             })
           }
-          if (left.name === undefined && left.sid !== undefined) {
-            left.name = left.sid
+          // Runtime may have 'name' property even if not in type definition
+          const leftAsAny = left as any
+          if (!leftAsAny.name && sid) {
+            leftAsAny.name = sid
           }
-          tmpVal = SourceLine.addSrcLineInfo(tmpVal, node, node.loc && node.loc.sourcefile, 'Var Pass:', left.name)
+          tmpVal = SourceLine.addSrcLineInfo(tmpVal, node, node.loc && node.loc.sourcefile, 'Var Pass:', leftAsAny.name)
           this.saveVarInScope(scope, left, tmpVal, state, oldVal)
         }
         return tmpVal
@@ -1250,22 +1668,27 @@ class Analyzer extends MemSpace {
       case '*=':
       case '/=':
       case '%=': {
-        const val = SymbolValue(node)
-        val.type = 'BinaryOperation'
-        val.operator = node.operator.substring(0, node.operator.length - 1)
-        val.arith_assign = true
-        val.left = this.processInstruction(scope, node.left, state)
-        val.right = this.processInstruction(scope, node.right, state)
+        const binLeft = this.processInstruction(scope, node.left, state)
+        const binRight = this.processInstruction(scope, node.right, state)
+        const val = new BinaryExprValue(
+          scope.qid,
+          node.operator.substring(0, node.operator.length - 1),
+          binLeft,
+          binRight,
+          node,
+          node.loc,
+          true
+        )
         if (node.cloned) {
-          const clonedValue = _.clone(val.right.value)
-          val.right = _.clone(val.right)
-          val.right.value = clonedValue
+          const clonedValue = lodashCloneWithTag(val.right!.value)
+          val.right = lodashCloneWithTag(val.right)
+          val.right!.value = clonedValue
         }
         const { left } = node
         const oldVal = this.getMemberValueNoCreate(scope, left, state)
 
-        const hasTags = (val.left && val.left.hasTagRec) || (val.right && val.right.hasTagRec)
-        if (hasTags) val.hasTagRec = hasTags
+        const hasTags = (val.left && val.left.taint?.isTaintedRec) || (val.right && val.right.taint?.isTaintedRec)
+        if (hasTags) val.taint?.mergeFrom([val.left, val.right])
 
         this.saveVarInScope(scope, node.left, val, state)
 
@@ -1287,6 +1710,10 @@ class Analyzer extends MemSpace {
           // this.recordSideEffect(lscope, node.left, val.left);
         }
         return val
+      }
+      default: {
+        // 其他操作符暂不支持，返回 UndefinedValue
+        return new UndefinedValue()
       }
     }
   }
@@ -1312,7 +1739,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processConditionalExpression(scope: any, node: any, state: any) {
+  processConditionalExpression(scope: ScopeType, node: ConditionalExpression, state: State): SymbolValueType {
     /*
     { test,
       consequent,
@@ -1327,7 +1754,12 @@ class Analyzer extends MemSpace {
     const rstate = substates[1]
     this.processLRScopeInternal(lstate, rstate, state, test)
 
-    const res = UnionValue()
+    const res = new UnionValue(
+      undefined,
+      undefined,
+      `${scope.qid}.<union@cond:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+      node
+    )
     res.appendValue(this.processInstruction(scope, node.consequent, lstate))
     res.appendValue(this.processInstruction(rscope, node.alternative, rstate))
     return res
@@ -1339,7 +1771,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processSuperExpression(scope: any, node: any, state: any) {
+  processSuperExpression(scope: ScopeType, node: SuperExpression, state: State): SymbolValueType {
     return this.getMemberValue(scope, node, state)
   }
 
@@ -1349,7 +1781,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processThisExpression(scope: any, node: any, state: any) {
+  processThisExpression(scope: ScopeType, node: ThisExpression, state: State): SymbolValueType {
     return this.thisFClos
   }
 
@@ -1359,7 +1791,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processMemberAccess(scope: any, node: any, state: any) {
+  processMemberAccess(scope: ScopeType, node: MemberAccess, state: State): SymbolValueType {
     /**
      object,
      property,
@@ -1379,6 +1811,9 @@ class Analyzer extends MemSpace {
       }
     }
     const res = this.getMemberValue(defscope, resolved_prop, state)
+    if (node.object.type !== 'SuperExpression' && (res.vtype !== 'union' || !Array.isArray(res.value))) {
+      res._this = defscope
+    }
     if (this.checkerManager && this.checkerManager.checkAtMemberAccess) {
       this.checkerManager.checkAtMemberAccess(this, defscope, node, state, { res })
     }
@@ -1392,7 +1827,10 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processSliceExpression(scope: any, node: any, state: any) {}
+  processSliceExpression(scope: ScopeType, node: SliceExpression, state: State): SymbolValueType {
+    // 返回 undefined 保持历史行为（25282dbd）
+    return undefined as any // TODO: 实现 SliceExpression 处理
+  }
 
   // TODO tuple
   /**
@@ -1401,13 +1839,11 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processTupleExpression(scope: any, node: any, state: any) {
-    return unionAllValues(
-      node.elements.map((ele: any) => {
-        return this.processInstruction(scope, ele, state)
-      }),
-      state
-    )
+  processTupleExpression(scope: ScopeType, node: TupleExpression, state: State): SymbolValueType {
+    const values = node.elements.map((ele: any) => {
+      return this.processInstruction(scope, ele, state)
+    })
+    return unionAllValues(values, state)
   }
 
   /**
@@ -1416,24 +1852,33 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processObjectExpression(scope: any, node: any, state: any) {
+  processObjectExpression(scope: ScopeType, node: ObjectExpression, state: State): SymbolValueType {
     // FIXME
-    let res = Scoped({ parent: scope, ast: node })
+    const objSid = `<object_${node.loc?.start?.line}_${node.loc?.end?.line}>`
+    let res = new Scoped(scope.qid, {
+      sid: objSid,
+      parent: scope,
+      ast: node,
+      _skipRegister: true,
+    })
     if (node.properties) {
       for (const property of node.properties) {
         let name
         let fvalue
-        switch (property.type) {
+        // ObjectMethod may exist in runtime but not in UAST type definition
+        const propertyType = (property as any).type
+        switch (propertyType) {
           case 'ObjectMethod': {
-            name = property.key.name
-            fvalue = this.createFuncScope(property, scope)
-            fvalue.fdef = _.clone(fvalue.fdef)
-            if (fvalue.fdef) {
-              fvalue.fdef.type = 'FunctionDefinition'
+            // ObjectMethod is not in UAST definition, but may exist in runtime
+            const objectMethod = property as any
+            name = objectMethod.key?.name
+            fvalue = this.createFuncScope(objectMethod, scope)
+            fvalue.ast.fdef = _.clone(fvalue.ast.fdef)
+            if (fvalue.ast.fdef) {
+              fvalue.ast.fdef.type = 'FunctionDefinition'
             }
-            fvalue.ast = _.clone(fvalue.ast)
-            if (fvalue.ast) {
-              fvalue.ast.type = 'FunctionDefinition'
+            if (fvalue.ast?.node) {
+              fvalue.ast.node.type = 'FunctionDefinition'
             }
             break
           }
@@ -1443,6 +1888,7 @@ class Analyzer extends MemSpace {
           }
           case 'ObjectProperty':
           default: {
+            if (property.type !== 'ObjectProperty') continue
             let { key } = property
             switch (key.type) {
               // FIXME  process ObjectMethod
@@ -1454,11 +1900,12 @@ class Analyzer extends MemSpace {
                 break
               default:
                 key = this.processInstruction(res, key, state)
-                name = key.type === 'Literal' ? key.value : key.name
+                name = key.type === 'Literal' ? key.value : key.type === 'Identifier' ? key.name : undefined
                 break
             }
             fvalue = this.processInstruction(res, property.value, state)
-            res.hasTagRec = res.hasTagRec || fvalue?.hasTagRec
+            if (fvalue?.taint?.isTaintedRec) res.taint?.propagateFrom(fvalue)
+            // FunctionDefinition is both Decl and Expr (double inheritance)
             if (property.value && property.value.type === 'FunctionDefinition') fvalue.parent = res
             break
           }
@@ -1472,21 +1919,305 @@ class Analyzer extends MemSpace {
         // //triggers.checkObjectValue(node, property, fvalue, this.currentFunction.sourcefile);
         //     triggers.checkExpression(property, fvalue);
       }
+      res.length = node.properties.length
     }
-    res = ObjectValue(res)
+    res = new ObjectValue(scope.qid, { ...res, sid: objSid })
     res.vtype = 'object'
     res._this = res
     return res
   }
+
+  // ==================== CallArgs methods (Step 2) ====================
+
+  /**
+   * Build CallArgs from evaluated argvalues and call-site AST node.
+   * Base implementation: all args are positional, keyword determined by node.names.
+   * Language-specific analyzers can override (e.g. Python buildPythonCallArgs).
+   */
+  buildCallArgs(node: any, argvalues: any[], fclos: any): CallArgs {
+    const args: CallArg[] = []
+    for (let i = 0; i < argvalues.length; i++) {
+      const name = this.getCallArgName(node, i)
+      args.push({
+        index: i,
+        value: argvalues[i],
+        node: node.arguments?.[i],
+        name,
+        kind: name ? 'keyword' : 'positional',
+      })
+    }
+    const receiver = this.getCallReceiver(fclos, node)
+    return { receiver, args }
+  }
+
+  /**
+   * Get the keyword name for argument at given index from node.names.
+   */
+  getCallArgName(node: any, index: number): string | undefined {
+    if (node.names && Array.isArray(node.names) && index < node.names.length) {
+      const name = node.names[index]
+      if (name && typeof name === 'string') return name
+    }
+    return undefined
+  }
+
+  /**
+   * Get the receiver (this/self) from fclos for MemberAccess calls.
+   */
+  getCallReceiver(fclos: any, node: any): any {
+    if (node?.callee?.type === 'MemberAccess') {
+      return fclos?._this || fclos?.getThisObj?.()
+    }
+    return undefined
+  }
+
+  /**
+   * 确保 callInfo 有效：缺失时创建空对象，callArgs 缺失时构建空 callArgs。
+   */
+  ensureCallInfo(node: any, fclos: any, callInfo?: CallInfo): CallInfo {
+    const activeCallInfo: CallInfo = callInfo || ({ callArgs: { args: [] } } as CallInfo)
+    if (!activeCallInfo.callArgs) {
+      activeCallInfo.callArgs = this.buildCallArgs(node, [], fclos)
+    }
+    return activeCallInfo
+  }
+
+  /**
+   * Bind CallArgs to function parameters, producing BoundCall.
+   * 核心绑定逻辑：将 CallArgs 中的实参绑定到 BoundCall 的形参上。
+   * 替代旧的 for-loop + node.names.indexOf 方式。
+   */
+  bindCallArgs(node: any, fclos: any, fdecl: any, callInfo: CallInfo): BoundCall {
+    const callArgs = callInfo.callArgs
+    const params = fdecl?.parameters
+    const boundCall: BoundCall = {
+      receiver: callArgs?.receiver,
+      params: [],
+    }
+    if (!params || !callArgs) return boundCall
+
+    const paramList: any[] = Array.isArray(params) ? params : params.parameters || []
+    for (let i = 0; i < paramList.length; i++) {
+      const param = paramList[i]
+      boundCall.params.push({
+        index: i,
+        name: param.name || param.id?.name || `_${i}`,
+        value: undefined,
+        provided: false,
+        argIndexes: [],
+      })
+    }
+
+    const startIndex = this.bindReceiverParam(boundCall, paramList, callArgs, node)
+    this.bindPositionalArgs(boundCall, paramList, callArgs, startIndex)
+    this.bindKeywordArgs(boundCall, paramList, callArgs)
+
+    return boundCall
+  }
+
+  /**
+   * 判定形参类型：vararg（*args/rest）、varkw（**kwargs）、keyword_only、positional_only 或普通
+   */
+  getParamKind(param: any): string {
+    if (param?._meta?.parameterKind) {
+      return param._meta.parameterKind
+    }
+    if (param?._meta?.positional_only) {
+      return 'positional_only'
+    }
+    if (param?._meta?.keyword_only) {
+      return 'keyword_only'
+    }
+    if (param?._meta?.varkw) {
+      return 'varkw'
+    }
+    // isRestElement: JS parser; varType._meta.varargs: Java/Go parser
+    if (param?._meta?.isRestElement || param?.varType?._meta?.varargs) {
+      return 'vararg'
+    }
+    return 'positional_or_keyword'
+  }
+
+  /**
+   * 统一赋值：普通参数直接赋值，vararg 收集为数组，varkw 收集为对象
+   */
+  private assignParamValue(boundCall: BoundCall, params: any[], paramIndex: number, value: any, argIndex: number): void {
+    if (paramIndex < 0 || paramIndex >= boundCall.params.length) return
+    const target = boundCall.params[paramIndex]
+    const paramKind = this.getParamKind(params[paramIndex])
+    if (paramKind === 'vararg') {
+      if (!target.provided || !Array.isArray(target.value)) {
+        target.value = []
+        target.provided = true
+      }
+      target.value.push(value)
+      target.argIndexes.push(argIndex)
+      return
+    }
+    if (paramKind === 'varkw') {
+      if (!target.provided || !target.value || typeof target.value !== 'object' || Array.isArray(target.value)) {
+        target.value = {}
+        target.provided = true
+      }
+    }
+    target.value = value
+    target.provided = true
+    target.argIndexes.push(argIndex)
+  }
+
+  /**
+   * 展开 *args spread 值为数组
+   */
+  resolveSpreadValues(value: any): any[] {
+    if (Array.isArray(value)) {
+      return value
+    }
+    if (value?._field && Array.isArray(value._field)) {
+      return value._field
+    }
+    if (value?.members && value.members.size > 0) {
+      const numericKeys = [...value.members.keys()]
+        .filter((key: string) => /^\d+$/.test(key))
+        .sort((a: string, b: string) => Number(a) - Number(b))
+      if (numericKeys.length > 0) {
+        return numericKeys.map((key: string) => value.members.get(key))
+      }
+    }
+    if (value?._field && typeof value._field === 'object') {
+      const numericKeys = Object.keys(value._field)
+        .filter((key: string) => /^\d+$/.test(key))
+        .sort((a: string, b: string) => Number(a) - Number(b))
+      if (numericKeys.length > 0) {
+        return numericKeys.map((key: string) => value._field[key])
+      }
+    }
+    return [value]
+  }
+
+  /**
+   * 展开 **kwargs kwspread 值为 [name, value] 对
+   */
+  resolveKwSpreadEntries(value: any): Array<[string, any]> {
+    if (!value) return []
+    const entries: Array<[string, any]> = []
+    if (value.members && value.members.size > 0) {
+      for (const key of value.members.keys()) {
+        entries.push([key, value.members.get(key)])
+      }
+    } else {
+      const source = value._field && typeof value._field === 'object' ? value._field : value
+      if (source && typeof source === 'object') {
+        for (const [key, val] of Object.entries(source)) {
+          if (typeof key === 'string') {
+            entries.push([key, val])
+          }
+        }
+      }
+    }
+    return entries
+  }
+
+  /**
+   * receiver（self/cls/this）绑定到第一个形参，返回 positional 绑定的起始索引
+   */
+  bindReceiverParam(boundCall: BoundCall, params: any[], callArgs: CallArgs, node: any): number {
+    if (!callArgs.receiver || params.length === 0) return 0
+    const firstParam = params[0]
+    const firstName = firstParam.name || firstParam.id?.name || ''
+    if (['self', 'cls', 'this'].includes(firstName)) {
+      const bp = boundCall.params[0]
+      if (bp) {
+        bp.value = callArgs.receiver
+        bp.provided = true
+      }
+      return 1
+    }
+    return 0
+  }
+
+  /**
+   * positional/spread 实参绑定到形参，溢出部分收集到 vararg
+   */
+  bindPositionalArgs(boundCall: BoundCall, params: any[], callArgs: CallArgs, startIndex: number): void {
+    let nextPositionalIndex = startIndex
+    const findNext = (): number => {
+      while (nextPositionalIndex < params.length) {
+        const kind = this.getParamKind(params[nextPositionalIndex])
+        if (kind === 'keyword_only' || kind === 'varkw') {
+          nextPositionalIndex++
+          continue
+        }
+        return nextPositionalIndex
+      }
+      return -1
+    }
+
+    for (const arg of callArgs?.args || []) {
+      if (arg.kind === 'keyword' || arg.kind === 'kwspread') continue
+      const values = arg.kind === 'spread' ? this.resolveSpreadValues(arg.value) : [arg.value]
+      for (const value of values) {
+        const paramIndex = findNext()
+        if (paramIndex === -1) {
+          // 溢出：收集到 vararg 形参
+          const varargIndex = params.findIndex((p: any) => this.getParamKind(p) === 'vararg')
+          if (varargIndex !== -1) {
+            this.assignParamValue(boundCall, params, varargIndex, value, arg.index)
+          }
+          continue
+        }
+        this.assignParamValue(boundCall, params, paramIndex, value, arg.index)
+        if (this.getParamKind(params[paramIndex]) !== 'vararg') {
+          nextPositionalIndex = paramIndex + 1
+        }
+      }
+    }
+  }
+
+  /**
+   * keyword/kwspread 实参按名称匹配形参，未匹配的收集到 varkw（**kwargs）
+   */
+  bindKeywordArgs(boundCall: BoundCall, params: any[], callArgs: CallArgs): void {
+    const keywordEntries: Array<{ name: string; value: any; argIndex: number }> = []
+    for (const arg of callArgs?.args || []) {
+      if (arg.kind === 'keyword' && arg.name) {
+        keywordEntries.push({ name: arg.name, value: arg.value, argIndex: arg.index })
+      } else if (arg.kind === 'kwspread') {
+        for (const [name, value] of this.resolveKwSpreadEntries(arg.value)) {
+          keywordEntries.push({ name, value, argIndex: arg.index })
+        }
+      }
+    }
+
+    const varkwIndex = params.findIndex((p: any) => this.getParamKind(p) === 'varkw')
+    for (const entry of keywordEntries) {
+      const paramIndex = params.findIndex((p: any) => (p?.id?.name || p?.name) === entry.name)
+      if (paramIndex === -1) {
+        // 未匹配的 keyword → **kwargs
+        if (varkwIndex !== -1) {
+          const target = boundCall.params[varkwIndex]
+          if (!target.provided || !target.value || typeof target.value !== 'object' || Array.isArray(target.value)) {
+            target.value = {}
+            target.provided = true
+          }
+          target.value[entry.name] = entry.value
+          target.argIndexes.push(entry.argIndex)
+        }
+        continue
+      }
+      if (this.getParamKind(params[paramIndex]) === 'positional_only') continue
+      this.assignParamValue(boundCall, params, paramIndex, entry.value, entry.argIndex)
+    }
+  }
+
+  // ==================== End CallArgs methods ====================
 
   /**
    *
    * @param scope
    * @param node
    * @param state
-   * @param cachedFclos
    */
-  processCallExpression(scope: any, node: any, state: any, cachedFclos?: any) {
+  processCallExpression(scope: ScopeType, node: CallExpression, state: State): any {
     /* { callee,
         arguments,
       }
@@ -1497,11 +2228,8 @@ class Analyzer extends MemSpace {
         einfo: state.einfo,
       })
 
-    const fclos = cachedFclos ?? this.processInstruction(scope, node.callee, state)
-    if (!fclos) return UndefinedValue()
-    if (node?.callee?.type === 'MemberAccess' && fclos.fdef && node.callee?.object?.type !== 'SuperExpression') {
-      fclos._this = this.processInstruction(scope, node.callee.object, state)
-    }
+    const fclos = this.processInstruction(scope, node.callee, state)
+    if (!fclos) return new UndefinedValue()
 
     // prepare the function arguments
     let argvalues = []
@@ -1511,9 +2239,12 @@ class Analyzer extends MemSpace {
       // 处理参数是 箭头函数或匿名函数
       // 参数类型必须是函数定义,且fclos找不到定义或未建模适配
       // 如果参数适配建模，则会进入相应的逻辑模拟执行，例如array.push
-      if (arg?.type === 'FunctionDefinition' && arg?.name === '<anonymous>' && !fclos?.fdef && !fclos?.execute) {
-        // let subscope = Scope.createSubScope(argv.sid + '_scope', scope,'scope')
-        argv = this.processAndCallFuncDef(scope, arg, argv, state)
+      if (arg.type === 'FunctionDefinition' && !fclos?.ast.fdef && !fclos?.runtime?.execute) {
+        const funcDef = arg as FunctionDefinition & { name?: string }
+        if (funcDef.name?.includes('<anonymous')) {
+          // let subscope = Scope.createSubScope(argv.sid + '_scope', scope,'scope')
+          argv = this.processAndCallFuncDef(scope, funcDef, argv, state)
+        }
       }
       if (argv !== arg) same_args = false
       if (logger.isTraceEnabled()) logger.trace(`arg: ${this.formatScope(argv)}`)
@@ -1525,8 +2256,11 @@ class Analyzer extends MemSpace {
     }
     if (same_args) argvalues = node.arguments
 
+    // build structured call info
+    const callInfo: CallInfo = { callArgs: this.buildCallArgs(node, argvalues, fclos) }
+
     // analyze the resolved function closure and the function arguments
-    const res = this.executeCall(node, fclos, argvalues, state, scope)
+    const res = this.executeCall(node, fclos, state, scope, callInfo)
 
     // function definition not found, examine possible call-back functions in the arguments
     if (fclos.vtype !== 'fclos' && Config.invokeCallbackOnUnknownFunction) {
@@ -1535,7 +2269,7 @@ class Analyzer extends MemSpace {
 
     if (res && this.checkerManager?.checkAtFunctionCallAfter) {
       this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
-        argvalues,
+        callInfo,
         fclos,
         ret: res,
         pcond: state.pcond,
@@ -1553,30 +2287,35 @@ class Analyzer extends MemSpace {
    * @param fDef
    * @param fClos
    * @param state
+   * @param argValues
    */
-  processAndCallFuncDef(scope: any, fDef: any, fClos: any, state: any) {
+  processAndCallFuncDef(scope: any, fDef: any, fClos: any, state: any, argValues?: any) {
     if (fDef?.type !== 'FunctionDefinition' || fClos?.vtype !== 'fclos') return fClos
 
     try {
-      // process FuncDef的参数
-      const argValues = []
-      for (const para of fDef.parameters) {
-        const argv = this.processInstruction(scope, para, state)
-        if (Array.isArray(argv)) {
-          argValues.push(...argv)
-        } else {
-          argValues.push(argv)
+      if (!argValues) {
+        // process FuncDef的参数
+        argValues = []
+        for (const para of fDef.parameters) {
+          const argv = this.processInstruction(scope, para, state)
+          if (Array.isArray(argv)) {
+            argValues.push(...argv)
+          } else {
+            argValues.push(argv)
+          }
         }
       }
+
       // execute call
-      return this.executeCall(fDef, fClos, argValues, state, scope)
+      const callInfo: CallInfo = { callArgs: this.buildCallArgs(fDef, argValues, fClos) }
+      return this.executeCall(fDef, fClos, state, scope, callInfo)
     } catch (e) {
       handleException(
         e,
         '',
         `YASA Simulation Execution Error in processAndCallFuncDef. Loc is ${fDef?.loc?.sourcefile} line:${fDef?.loc?.start?.line}`
       )
-      return UndefinedValue()
+      return new UndefinedValue()
     }
   }
 
@@ -1586,7 +2325,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processCastExpression(scope: any, node: any, state: any) {
+  processCastExpression(scope: ScopeType, node: CastExpression, state: State): SymbolValueType {
     return this.processInstruction(scope, node.expression, state)
   }
 
@@ -1596,7 +2335,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processNewExpression(scope: any, node: any, state: any) {
+  processNewExpression(scope: ScopeType, node: NewExpression, state: State): SymbolValueType {
     /*
   { typeName }
   */
@@ -1618,7 +2357,7 @@ class Analyzer extends MemSpace {
       ret.__preprocess = true
       return ret
     }
-    return UndefinedValue()
+    return new UndefinedValue()
   }
 
   /**
@@ -1627,20 +2366,21 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processFunctionDefinition(scope: any, node: any, state: any) {
+  processFunctionDefinition(scope: ScopeType, node: FunctionDefinition, state: State): SymbolValueType {
     let fclos
     if (node.body) {
       // TODO: handle function declaration better
       fclos = this.createFuncScope(node, scope)
-      if (node.body.body && Array.isArray(node?.body?.body)) {
-        for (const body of node.body.body) {
+      const nodeBody = node.body as any
+      if (nodeBody?.body && Array.isArray(nodeBody.body)) {
+        for (const body of nodeBody.body) {
           if (body.type === 'FunctionDefinition') {
             this.processInstruction(fclos, body, state)
           }
         }
       }
     } else {
-      fclos = UndefinedValue()
+      fclos = new UndefinedValue()
     }
     if (this.checkerManager && this.checkerManager.checkAtFunctionDefinition) {
       this.checkerManager.checkAtFunctionDefinition(this, scope, node, state, { fclos })
@@ -1679,15 +2419,15 @@ class Analyzer extends MemSpace {
    * @param state
    */
   preProcessClassDefinition(scope: any, cdef: any, state: any) {
-    if (!(cdef && cdef.body)) return UndefinedValue() // Should not happen
+    if (!(cdef && cdef.body)) return new UndefinedValue() // Should not happen
 
     // pre-processing
     const fname = cdef.id?.name
 
     const cscope = Scope.createSubScope(fname, scope, 'class') // class scope
-    cscope.cdef = cdef
-    cscope.fdef = cdef
     cscope.ast = cdef
+    cscope.ast.cdef = cdef
+    cscope.ast.fdef = cdef
     cscope.__preprocess = true
     return cscope
   }
@@ -1698,15 +2438,16 @@ class Analyzer extends MemSpace {
    * @param cdef
    * @param state
    */
-  processClassDefinition(scope: any, cdef: any, state: any) {
-    if (!(cdef && cdef.body)) return UndefinedValue() // Should not happen
+  processClassDefinition(scope: ScopeType, cdef: ClassDefinition, state: State): SymbolValueType {
+    if (!(cdef && cdef.body)) return new UndefinedValue() // Should not happen
 
     // pre-processing
     const fname = cdef.id?.name
 
     const cscope = Scope.createSubScope(fname, scope, 'class') // class scope
-    cscope.fdef = cdef
-    cscope.cdef = cdef
+    cscope.ast = cdef
+    cscope.ast.fdef = cdef
+    cscope.ast.cdef = cdef
     cscope.modifier = {}
     cscope.inits = new Set() // for storing the variables initialized in the constructor
     this.resolveClassInheritance(cscope, state) // inherit base classes
@@ -1737,20 +2478,21 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processVariableDeclaration(scope: any, node: any, state: any) {
+  processVariableDeclaration(scope: ScopeType, node: VariableDeclaration, state: State): SymbolValueType {
     const initialNode = node.init
     const { id } = node
-    if (!id || id?.name === '_') return UndefinedValue() // e.g. in Go
+    const idName = id?.type === 'Identifier' ? id.name : undefined
+    if (!id || idName === '_') return new UndefinedValue() // e.g. in Go
 
     let initVal
     if (!initialNode) {
       initVal = this.createVarDeclarationScope(id, scope)
       initVal.uninit = !initialNode
-      initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', id.name)
-    } else if (node?.parent?.type === 'CatchClause' && node?._meta?.isCatchParam && state?.throwstack?.length > 0) {
+      initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', idName || '')
+    } else if (node?.parent?.type === 'CatchClause' && node?._meta?.isCatchParam && (state?.throwstack?.length ?? 0) > 0) {
       // 处理throw传递到catch的情况
       initVal = state?.throwstack && state?.throwstack.shift()
-      initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', id.name)
+      initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', idName || '')
       delete node._meta.isCatchParm
     } else {
       initVal = this.processInstruction(scope, initialNode, state)
@@ -1759,7 +2501,7 @@ class Analyzer extends MemSpace {
           initVal = this.processInstruction(scope, initialNode, state)
         }
       }
-      initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', id.name)
+      initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', idName || '')
     }
 
     if (this.checkerManager && this.checkerManager.checkAtPreDeclaration)
@@ -1774,16 +2516,13 @@ class Analyzer extends MemSpace {
     this.saveVarInCurrentScope(scope, id, initVal, state)
 
     // set alias name if val itself has no identifier
-    if (
-      initVal &&
-      !Array.isArray(initVal) &&
-      !(initVal.name || (initVal.id && initVal.id !== '<anonymous>') || initVal.sid)
-    ) {
-      initVal.sid = id.name
-      delete initVal.id
+    if (initVal && !Array.isArray(initVal) && !(initVal.name || initVal.sid) && idName) {
+      initVal.sid = idName
     }
 
-    scope.decls[id.name] = id
+    if (idName) {
+      scope.ast.setDecl(idName, id)
+    }
 
     const typeQualifiedName = AstUtil.typeToQualifiedName(node.varType)
     let declTypeVal
@@ -1791,9 +2530,6 @@ class Analyzer extends MemSpace {
       declTypeVal = this.getMemberValueNoCreate(scope, typeQualifiedName, state)
     }
 
-    if (initVal && declTypeVal) {
-      initVal.sort = declTypeVal.sort
-    }
     return initVal
   }
 
@@ -1806,10 +2542,10 @@ class Analyzer extends MemSpace {
    */
   processDereferenceExpression(scope: any, node: any, state: any) {
     const ret = this.processInstruction(scope, node.argument, state)
-    if (ret && ret.refCount) {
-      ret.refCount--
-      if (ret.refCount === 0) {
-        delete ret.refCount
+    if (ret && ret.runtime?.refCount) {
+      ret.runtime.refCount--
+      if (ret.runtime.refCount === 0) {
+        delete ret.runtime.refCount
       }
     }
     return ret
@@ -1825,8 +2561,9 @@ class Analyzer extends MemSpace {
   processReferenceExpression(scope: any, node: any, state: any) {
     const val = this.processInstruction(scope, node.argument, state)
     if (val) {
-      val.refCount = val.refCount || 0
-      val.refCount++
+      if (!val.runtime) val.runtime = {}
+      val.runtime.refCount = val.runtime.refCount || 0
+      val.runtime.refCount++
     }
     return val
   }
@@ -1837,7 +2574,7 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processImportExpression(scope: any, node: any, state: any) {
+  processImportExpression(scope: ScopeType, node: ImportExpression, state: State): SymbolValueType {
     /* {
         from,
         local,
@@ -1857,14 +2594,14 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processSpreadElement(scope: any, node: any, state: any) {
+  processSpreadElement(scope: ScopeType, node: SpreadElement, state: State): SpreadValueType {
     const val = this.processInstruction(scope, node.argument, state)
     if (!val) {
       return val
     }
     const res = new Set()
     const self = this
-    const fields = Array.isArray(val) ? val : val.exports ? val.exports.getRawValue() : val.getRawValue()
+    const fields = Array.isArray(val) ? val : val.scope.exports ? val.scope.exports.getRawValue() : val.getRawValue()
     if (Array.isArray(fields)) {
       for (const f of fields) {
         handler(f)
@@ -1893,8 +2630,8 @@ class Analyzer extends MemSpace {
         // eg arr1= [1,2,3] arr2=[10,...arr1,...arr1]
         // 第一个...arr1应该加上的偏移量是1，第二个arr1应该加上的偏移量是4
         // TODO 未来数组表达式的ast从ObjectExpression换成ArrayExpression 在这里需要做相应修改
-        const offset = Object.keys(scope.field).length
-        const isArray = node.parent?._meta?.isArray
+        const offset = scope.members.size
+        const isArray = (node.parent as any)?._meta?.isArray
         for (let fname in flds) {
           const fVal = flds[fname]
           // 解构变量field中undefine的值不应该被保存到scope的field中，会清除有污点的变量
@@ -1912,7 +2649,15 @@ class Analyzer extends MemSpace {
       }
     }
 
-    return Array.from(res)
+    // 创建 SpreadValue - 返回增强数组（保持向后兼容）
+    // 注意：不预先计算 isTainted，让后续逻辑（如 js-analyzer）按需处理
+    const spreadValue: any = Array.from(res)
+    spreadValue.vtype = 'spread'
+    spreadValue.elements = spreadValue // elements 指向自身（因为本身就是数组）
+    spreadValue.sid = '<spread>'
+    spreadValue.qid = '<spread>'
+
+    return spreadValue as SpreadValueType
   }
 
   // TODO YieldExpression
@@ -1922,42 +2667,14 @@ class Analyzer extends MemSpace {
    * @param node
    * @param state
    */
-  processYieldExpression(scope: any, node: any, state: any) {
-    node.expression = node.argument
-    return this.processReturnStatement(scope, node, state)
-  }
-
-  /**
-   *
-   * @param node
-   */
-  traceNodeInfo(node: any) {
-    const loc = node?.loc
-    if (!loc) return
-
-    const sourcefile = (() => {
-      let n = node
-      while (n) {
-        if (n?.loc?.sourcefile) {
-          return n.loc.sourcefile
-        }
-        n = n.parent
-      }
-      return null
-    })()
-
-    if (!sourcefile) return
-    const source_code = this.sourceCodeCache[sourcefile]
-    if (!source_code) return
-    const lines = source_code.split('\n')
-
-    const snippet = lines[loc.start.line - 1]
-    const start = loc.start.column
-    const end = loc.end.line === loc.start.line ? loc.end.column : snippet.length - 1
-
-    const prefix = `${sourcefile}:${loc.start.line}:[${node.type}] ${snippet.substring(0, start)}`
-    const highlight = source_code.substring(loc.start.index, loc.end.index).substring(0, 100).replace(/\n/g, ' ')
-    return prefix + chalk.blue(highlight)
+  processYieldExpression(scope: ScopeType, node: YieldExpression, state: State): VoidValueType {
+    // 保持历史行为（25282dbd）：转换为 ReturnStatement 处理
+    // YieldExpression has 'argument' field, not 'expression'
+    const returnLike = {
+      ...node,
+      expression: node.argument,
+    } as any as ReturnStatement
+    return this.processReturnStatement(scope, returnLike, state)
   }
 
   /**
@@ -2021,18 +2738,28 @@ class Analyzer extends MemSpace {
    * @param scope
    * @returns {*}
    */
-  executeCall(node: any, fclos: any, argvalues: any, state: any, scope: any): any {
-    if (Config.makeAllCG && fclos?.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
+  executeCall(node: any, fclos: any, state: State, scope: any, callInfo: CallInfo): any {
+    callInfo = this.ensureCallInfo(node, fclos, callInfo)
+    const argvalues = getLegacyArgValues(callInfo)
+    if (Config.miniSaveContextEnvironment) {
+      return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
+    }
+    if (Config.makeAllCG && fclos?.ast.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
       for (const callgraphnode of this.ainfo?.callgraph?.nodes.values()) {
+        // 从 nodehash 还原 funcDef
+        let callgraphFuncDef = callgraphnode.opts?.funcDef
+        if (callgraphnode.opts?.funcDefNodehash && this.astManager) {
+          callgraphFuncDef = this.astManager.get(callgraphnode.opts.funcDefNodehash)
+        }
         if (
-          callgraphnode.opts?.funcDef?.loc?.start?.line &&
-          callgraphnode.opts?.funcDef?.loc?.end?.line &&
-          callgraphnode.opts?.funcDef?.loc?.sourcefile === fclos.fdef?.loc?.sourcefile &&
-          callgraphnode.opts?.funcDef?.loc?.start?.line === fclos.fdef?.loc?.start?.line &&
-          callgraphnode.opts?.funcDef?.loc?.end?.line === fclos.fdef?.loc?.end?.line
+          callgraphFuncDef?.loc?.start?.line &&
+          callgraphFuncDef?.loc?.end?.line &&
+          callgraphFuncDef?.loc?.sourcefile === fclos.ast.fdef?.loc?.sourcefile &&
+          callgraphFuncDef?.loc?.start?.line === fclos.ast.fdef?.loc?.start?.line &&
+          callgraphFuncDef?.loc?.end?.line === fclos.ast.fdef?.loc?.end?.line
         ) {
           this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
-            argvalues,
+            callInfo,
             fclos,
             pcond: state.pcond,
             entry_fclos: this.entry_fclos,
@@ -2041,43 +2768,44 @@ class Analyzer extends MemSpace {
             analyzer: this,
             ainfo: this.ainfo,
           })
-          return SymbolValue({
-            type: 'FunctionCall',
-            expression: fclos,
-            arguments: argvalues,
-            ast: node,
-          })
+          return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
         }
       }
     }
 
     // process the function body
-    if (fclos.fdef || fclos.execute) {
+    if (fclos.ast.fdef || fclos.runtime?.execute) {
       const { decorators } = fclos
       // const decorators = fclos.ast && fclos.ast.decorators;
       if (decorators && decorators.length > 0) {
-        return this.executeCallWithDecorators(_.clone(decorators), fclos, argvalues, state, node, scope)
+        return this.executeCallWithDecorators(_.clone(decorators), fclos, state, node, scope, callInfo)
       }
-      return this.executeSingleCall(fclos, argvalues, state, node, scope)
+      return this.executeSingleCall(fclos, state, node, scope, callInfo)
     }
     if (fclos.vtype === 'union') {
       const res: any[] = []
       for (const f of fclos.value) {
         if (!f) continue
-        node = node || f.ast
-        const v = this.executeCall(node, f, argvalues, state, scope)
+        node = node || f.ast?.node
+        const v = this.executeCall(node, f, state, scope, callInfo)
         if (v) res.push(v)
       }
       const len = res.length
       if (len === 0) {
       } else if (len === 1) return res[0]
-      else return UnionValue({ value: res })
+      else
+        return new UnionValue(
+          res,
+          undefined,
+          `${scope.qid}.<union@call:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`,
+          node
+        )
     }
 
     // now for the function without body
     if (this.checkerManager) {
       this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
-        argvalues,
+        callInfo,
         fclos,
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
@@ -2091,10 +2819,14 @@ class Analyzer extends MemSpace {
     const native = NativeResolver.processNativeFunction.call(this, node, fclos, argvalues, state)
     if (native) return native
 
-    const libFuncTagPropagationRuleFound = this.processLibFuncTagPropagation(node, fclos, argvalues, scope, state)
+    const libFuncTagPropagationRuleFound = this.processLibFuncTagPropagation(node, fclos, callInfo, scope, state)
     if (!libFuncTagPropagationRuleFound) {
       // 没有配置的库函数，采用默认处理方式：arg->ret
-      return this.processLibArgToRet(node, fclos, argvalues, scope, state)
+      const res = this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
+      if (this.enableLibArgToThis) {
+        this.processLibArgToThis(node, fclos, argvalues, -1, scope, state)
+      }
+      return res
     }
   }
 
@@ -2106,57 +2838,72 @@ class Analyzer extends MemSpace {
    * @param scope
    * @param state
    */
-  processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any) {
+  processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any, callInfo: CallInfo) {
     // the case without function body, still process the call, e.g. perform taint propagation
     let res = _.clone(node)
     res.expression = fclos
     res.arguments = argvalues
     res.ast = node
     const argsSignature = AstUtil.prettyPrintAST(node.arguments)
-    res.id = `${fclos?.id}(${argsSignature})`
     res.sid = `${fclos?.sid}(${argsSignature})`
     res.qid = `${fclos?.qid}(${argsSignature})`
     // res.field = {}
-    if (fclos.hasTagRec) {
-      res.hasTagRec = true
+    let isTainted = false
+    if (fclos.taint?.isTaintedRec) {
+      isTainted = true
     }
 
-    // attach taint information if any
-    // var taint;
+    // 检查参数是否携带污点
     for (const arg of argvalues) {
       if (arg) {
-        if (arg.hasTagRec) {
-          res.hasTagRec = true
+        if (arg.taint?.isTaintedRec) {
+          isTainted = true
           break
-        }
-        const hasTag = AstUtil.hasTag(arg, '')
-        if (hasTag) {
-          res.hasTagRec = true
         }
       }
     }
 
-    // e.g. XXInterface token = XXInterface(id) where id is ctor_init
+    // e.g. XXInterface token = XXInterface(id) where id is ctorInit
     for (const arg of argvalues) {
-      if (arg && arg.ctor_init && node.expression && node.expression.value) {
+      if (arg && arg.runtime?.ctorInit && node.expression && node.expression.value) {
         let top_scope = scope
         while (top_scope.parent) {
           top_scope = top_scope.parent
         }
         if (top_scope.value && top_scope.value[node.expression.value]) {
-          res.ctor_init = true
+          if (!res.runtime) res.runtime = {}
+          res.runtime.ctorInit = true
         }
       }
     }
     if (node.callee.type === 'MemberAccess') {
-      if (fclos?.object?.hasTagRec) {
-        res.hasTagRec = true
+      if (fclos?.object?.taint?.isTaintedRec) {
+        isTainted = true
+      } else {
+        /*
+          first invoke: JSONObject.toJSONString();
+          second invoke: JSONObject obj = new JSONObject(); obj.toJSONString();
+         */
+        const thisVal = fclos.getThisObj()
+        if (
+          thisVal &&
+          ['symbol', 'object'].includes(thisVal.vtype) &&
+          res.expression &&
+          !res.expression.object &&
+          thisVal.taint?.isTaintedRec
+        ) {
+          res.expression.object = thisVal
+          isTainted = true
+        }
       }
     }
 
     // return { type : 'FunctionCall', expression: fclos, arguments: argvalues,
     //          ast: node };
-    res = SymbolValue(res) // esp. for member getter function
+    res = new SymbolValue('', { sid: res.sid, qid: res.qid, ...res }) // esp. for member getter function
+    if (isTainted) {
+      res.taint?.markSource()
+    }
 
     // save pass-in arguments for later use
     if (argvalues.length > 0) {
@@ -2173,12 +2920,15 @@ class Analyzer extends MemSpace {
    * @param scope
    * @param state
    */
-  processLibFuncTagPropagation(node: any, fclos: any, argvalues: any, scope: any, state: any) {
+  processLibFuncTagPropagation(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any) {
+    const argvalues = getLegacyArgValues(callInfo)
     let matchRuleFound = false
     const libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
     for (const libFuncTagPropagationRule of libFuncTagPropagationRuleArray) {
       if (
-        matchSinkAtFuncCallWithCalleeType(node, fclos, [libFuncTagPropagationRule.func], scope, argvalues)?.length > 0
+        matchSinkAtFuncCallWithCalleeType(node, fclos, [libFuncTagPropagationRule.func], scope, callInfo)?.length >
+          0 ||
+        this.findMatchedRuleByCallGraph(node, scope, [libFuncTagPropagationRule.func])?.length > 0
       ) {
         const sourceType = libFuncTagPropagationRule.source?.type
         const targetType = libFuncTagPropagationRule.target?.type
@@ -2232,28 +2982,25 @@ class Analyzer extends MemSpace {
     if (!argvalues || argvalues.length < 2 || !targetIndex || targetIndex >= argvalues.length) {
       return
     }
-    const res = argvalues[targetIndex]
+    let res = argvalues[targetIndex]
 
     res.setMisc('precise', false)
     moveExistElementsToBuffer(res)
 
-    const passIn = res.getMisc('pass-in') || []
+    const passIn = res.getMisc('buffer') || []
     for (const argIndex in argvalues) {
       if (sourceIndex >= 0 && sourceIndex !== Number(argIndex)) {
         continue
       }
       const arg = argvalues[argIndex]
       passIn.push(arg)
-      if (arg.hasTagRec) {
-        res.hasTagRec = true
-      }
-      const hasTag = AstUtil.hasTag(arg, '')
-      if (hasTag) {
-        res.hasTagRec = true
+      if (arg.taint?.isTaintedRec) {
+        res.taint?.markSource()
+        res = SourceLine.addSrcLineInfo(res, node, node.loc && node.loc.sourcefile, 'Var Pass: ', res.sid)
       }
     }
 
-    res.setMisc('pass-in', passIn)
+    res.setMisc('buffer', passIn)
   }
 
   /**
@@ -2266,37 +3013,46 @@ class Analyzer extends MemSpace {
    * @param state
    */
   processLibArgToThis(node: any, fclos: any, argvalues: any, sourceIndex: any, scope: any, state: any) {
-    const _this = fclos.getThis()
-    if (!argvalues || !_this) {
+    let thisVal = fclos.getThisObj()
+    if (
+      !argvalues ||
+      argvalues.length === 0 ||
+      !thisVal ||
+      !['symbol', 'object'].includes(thisVal.vtype) ||
+      !_.isFunction(thisVal.setMisc) ||
+      this.shouldSkipLibArgToThisPropagation(thisVal) ||
+      thisVal.injected ||
+      thisVal?.parent?.vtype === 'class' ||
+      thisVal?.parent?._isConstructor ||
+      thisVal?._this?.vtype === 'class' ||
+      thisVal?._this?._isConstructor ||
+      thisVal.qid?.startsWith('<global>.syslib_from')
+    ) {
       return
     }
 
-    _this.setMisc('precise', false)
-    moveExistElementsToBuffer(_this)
+    thisVal.setMisc('precise', false)
+    moveExistElementsToBuffer(thisVal)
 
     switch (node.callee.type) {
       case 'MemberAccess':
-        const thisVal = this.processInstruction(scope, node.callee.object, state)
         for (const argIndex in argvalues) {
           if (sourceIndex >= 0 && sourceIndex !== Number(argIndex)) {
             continue
           }
           const arg = argvalues[argIndex]
-          if (arg.hasTagRec) {
-            thisVal.setFieldValue(
-              arg.id,
-              ObjectValue({
-                sid: arg.sid,
-                qid: arg.qid,
-                parent: thisVal,
-                value: arg,
-              })
-            )
-            thisVal.hasTagRec = true
-          }
-          const hasTag = AstUtil.hasTag(arg, '')
-          if (hasTag) {
-            thisVal.hasTagRec = true
+          addElementToBuffer(thisVal, arg)
+          if (arg.taint?.isTaintedRec) {
+            thisVal.taint?.markSource()
+            if (node?.parent?.type !== 'AssignmentExpression') {
+              thisVal = SourceLine.addSrcLineInfo(
+                thisVal,
+                node,
+                node.loc && node.loc.sourcefile,
+                'Var Pass: ',
+                node?.callee?.object ? prettyPrint(node.callee.object) : thisVal.sid
+              )
+            }
           }
         }
         break
@@ -2305,6 +3061,28 @@ class Analyzer extends MemSpace {
       default:
         break
     }
+  }
+
+  /**
+   * Check whether lib arg->this propagation should be skipped.
+   * @param thisVal
+   */
+  shouldSkipLibArgToThisPropagation(thisVal: any) {
+    if (!thisVal || typeof thisVal.sid !== 'string') {
+      return false
+    }
+    const sid = thisVal.sid.toLowerCase()
+    const keywords = this.loadLibArgToThisSidBlacklistKeywords()
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+      return false
+    }
+    return keywords.some((keyword) => {
+      if (typeof keyword !== 'string') {
+        return false
+      }
+      const normalizedKeyword = keyword.trim().toLowerCase()
+      return normalizedKeyword.length > 0 && sid.includes(normalizedKeyword)
+    })
   }
 
   /**
@@ -2328,22 +3106,22 @@ class Analyzer extends MemSpace {
           if (targetIndex >= 0 && targetIndex !== Number(argIndex)) {
             continue
           }
-          const arg = argvalues[argIndex]
+          let arg = argvalues[argIndex]
 
           arg.setMisc('precise', false)
           moveExistElementsToBuffer(arg)
 
-          if (thisVal && thisVal.hasTagRec) {
+          if (thisVal && thisVal.taint?.isTaintedRec) {
             arg.setFieldValue(
-              thisVal.id,
-              ObjectValue({
+              thisVal.sid,
+              new ObjectValue(arg.qid, {
                 sid: thisVal.sid,
-                qid: thisVal.qid,
                 parent: arg,
                 value: thisVal,
               })
             )
-            arg.hasTagRec = true
+            arg.taint?.markSource()
+            arg = SourceLine.addSrcLineInfo(arg, node, node.loc && node.loc.sourcefile, 'Var Pass: ', arg.sid)
           }
         }
         break
@@ -2364,9 +3142,9 @@ class Analyzer extends MemSpace {
    * @param node
    * @param scope
    */
-  executeCallWithDecorators(decorators: any, fclos: any, argvalues: any, state: any, node: any, scope: any) {
+  executeCallWithDecorators(decorators: any, fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
     if (!decorators || decorators.length === 0) {
-      return this.executeSingleCall(fclos, argvalues, state, node, scope)
+      return this.executeSingleCall(fclos, state, node, scope, callInfo)
     }
 
     // The decorator expressions get called top to bottom, and produce decorators,
@@ -2374,11 +3152,11 @@ class Analyzer extends MemSpace {
 
     let decorator = decorators.pop()
     let descriptor_fclos = fclos
-    const class_obj = fclos.getThis() // fclos represents class method, the parent of it is class object
+    const class_obj = fclos.getThisObj() // fclos represents class method, the parent of it is class object
 
     while (decorator) {
-      let descriptor = ObjectValue({ sid: 'descriptor' })
-      descriptor.value.value = _.clone(descriptor_fclos)
+      let descriptor = new ObjectValue(descriptor_fclos.qid, { sid: 'descriptor' })
+      descriptor.value.value = lodashCloneWithTag(descriptor_fclos)
       const { name } = decorator // both function decl and identifier have name
       const target = decorator
       decorator._this = class_obj
@@ -2388,8 +3166,9 @@ class Analyzer extends MemSpace {
 
       // if decorator is not found, just skip it
       // TODO decorators that can't be found should be summary analyzed
-      if (decorator_clos?.vtype === 'fclos' && !shallowEqual(decorator_clos.ast, decorator)) {
-        descriptor_res = this.executeCall(node, decorator, [target, name, descriptor], state, scope)
+      if (decorator_clos?.vtype === 'fclos' && !shallowEqual(decorator_clos.ast?.node, decorator)) {
+        const decoratorCallInfo: CallInfo = { callArgs: this.buildCallArgs(node, [target, name, descriptor], decorator) }
+        descriptor_res = this.executeCall(node, decorator, state, scope, decoratorCallInfo)
       } else {
         descriptor_res = null
       }
@@ -2400,17 +3179,14 @@ class Analyzer extends MemSpace {
 
       descriptor_fclos = this.getMemberValue(
         descriptor,
-        PrimitiveValue({
-          type: 'Literal',
-          value: 'value',
-        }),
+        new PrimitiveValue(scope.qid, '<decoratorValue>', 'value', null, 'Literal'),
         state
       )
       // descriptor_fclos runs with class object as it's [this], which can be located from parent of class method
       descriptor_fclos._this = class_obj
       decorator = decorators.pop()
     }
-    return this.executeSingleCall(descriptor_fclos, argvalues, state, descriptor_fclos.ast, scope)
+    return this.executeSingleCall(descriptor_fclos, state, descriptor_fclos.ast?.node, scope, callInfo)
   }
 
   /**
@@ -2423,114 +3199,221 @@ class Analyzer extends MemSpace {
    * @param scope
    * @returns {undefined|*}
    */
-  executeSingleCall(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    let fdecl = fclos.fdef
+  executeSingleCall(fclos: any, state: State, node: any, scope: any, callInfo: CallInfo) {
+    const argvalues = getLegacyArgValues(callInfo)
+    let fdecl = fclos.ast.fdef
     let fname // name of the function
 
     if (fclos && fclos.vtype === 'union') {
-      const res = UnionValue()
+      const res = new UnionValue(
+        undefined,
+        undefined,
+        `${scope.qid}.<union@exec:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`,
+        node
+      )
       for (const fc of fclos.value) {
-        node = node || fc.ast
-        res.appendValue(this.executeSingleCall(fc, argvalues, state, node, scope))
+        node = node || fc.ast?.node
+        res.appendValue(this.executeSingleCall(fc, state, node, scope, callInfo))
       }
       return res
     }
     let execute_builtin = false
     if (!fdecl) {
-      if (!fclos.execute) {
-        return { type: 'FunctionCall', callee: fclos, arguments: argvalues, loc: node.loc }
+      if (!fclos.runtime?.execute) {
+        return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc)
       }
       // execute prepared builtins function
       execute_builtin = true
     } else {
       fname = fdecl.name
       if (fdecl.type === 'StructDefinition') {
-        return this.buildNewObject(fdecl, argvalues, fclos, state, node, scope)
+        return this.buildNewObject(fdecl, fclos, state, node, scope, callInfo)
       }
       if (fdecl.type === 'ClassDefinition' && fclos.value?._CTOR_ && fclos.value?._CTOR_.vtype === 'fclos') {
-        fdecl = fclos?.value?._CTOR_?.fdef
+        fdecl = fclos?.value?._CTOR_?.ast.fdef
       }
       if (fdecl.type !== 'FunctionDefinition') {
-        return UndefinedValue()
+        return new UndefinedValue()
       }
     }
+    fname = fname || fclos.sid || ''
+    if (fname.includes('<anonymous')) {
+      fname = fclos.sid
+    }
 
-    if (fclos.overloaded && fclos.overloaded.length > 1) {
+    let extraFuncDefs = []
+    const overloadedNodes = fclos.overloaded.filter(() => true)
+    if (overloadedNodes.length > 1) {
       // overloaded functions
       let hasFind = false
-      for (const f of fclos.overloaded) {
+      let maxMatchNum = 0
+      let maxMatchFdef
+      for (const f of overloadedNodes) {
+        let matchNum = 0
         let paramLength = 0
-        const param = f.parameters
-        if (param) {
-          paramLength = Array.isArray(param) ? param.length : param.parameters.length
+        const params = f.parameters
+        if (params) {
+          paramLength = Array.isArray(params) ? params.length : params.parameters.length
         }
+        const literalTypeList = ['String', 'string', 'int', 'Integer', 'Double', 'double', 'float', 'Float']
+        let typeMatch = false
         if (paramLength === argvalues.length) {
-          let typeMatch = true
-          const literalTypeList = ['String', 'string', 'int', 'Integer', 'Double', 'double', 'float', 'Float']
+          typeMatch = true
           for (let i = 0; i < paramLength; i++) {
+            const param = params[i]
             if (
-              param[i].varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
-              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param[i].varType?.id?.name}`) ||
-              (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param[i].varType?.id?.name))
+              param.varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
+              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param.varType?.id?.name}`) ||
+              (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param.varType?.id?.name))
             ) {
+              matchNum++
               continue
             }
             typeMatch = false
           }
-          if (typeMatch) {
-            hasFind = true
-            fclos = _.clone(fclos)
-            fclos.ast = fclos.fdef = fdecl = f // adjust to the right function definition
-            break
+          if (matchNum > maxMatchNum) {
+            maxMatchNum = matchNum
+            maxMatchFdef = f
+            extraFuncDefs = []
+          } else if (matchNum === maxMatchNum) {
+            extraFuncDefs.push(f)
           }
+        } else if (
+          paramLength < argvalues.length &&
+          paramLength > 0 &&
+          params[paramLength - 1]?.varType?._meta?.varargs
+        ) {
+          typeMatch = true
+          for (let i = 0; i < argvalues.length; i++) {
+            const param = i < paramLength ? params[i] : params[paramLength - 1]
+            if (
+              param.varType?.id?.name === argvalues[i].rtype?.definiteType?.name ||
+              argvalues[i].rtype?.definiteType?.name?.endsWith(`.${param.varType?.id?.name}`) ||
+              (argvalues[i].vtype === 'primitive' && literalTypeList.includes(param.varType?.id?.name))
+            ) {
+              matchNum++
+              continue
+            }
+            typeMatch = false
+          }
+          if (matchNum > maxMatchNum) {
+            maxMatchNum = matchNum
+            maxMatchFdef = f
+            extraFuncDefs = []
+          } else if (matchNum === maxMatchNum) {
+            extraFuncDefs.push(f)
+          }
+        }
+        if (typeMatch) {
+          hasFind = true
+          fclos = lodashCloneWithTag(fclos)
+          fdecl = f // adjust to the right function definition
+          fclos.ast = fdecl
+          fclos.ast.fdef = fdecl
         }
       }
       // 兜底，假设类型完全没匹配到（类型检测没适配好），就走长度匹配
       if (!hasFind) {
-        for (const f of fclos.overloaded) {
-          let paramLength = 0
-          const param = f.parameters
-          if (param) {
-            paramLength = Array.isArray(param) ? param.length : param.parameters.length
-          }
-          if (paramLength === argvalues.length) {
-            fclos = _.clone(fclos)
-            fclos.ast = fclos.fdef = fdecl = f // adjust to the right function definition
-            break
+        if (maxMatchFdef) {
+          fclos = lodashCloneWithTag(fclos)
+          fclos.ast = maxMatchFdef
+          fclos.ast.fdef = maxMatchFdef
+          fdecl = maxMatchFdef
+        } else {
+          for (const f of overloadedNodes) {
+            let paramLength = 0
+            const params = f.parameters
+            if (params) {
+              paramLength = Array.isArray(params) ? params.length : params.parameters.length
+            }
+            if (
+              paramLength === argvalues.length ||
+              (paramLength < argvalues.length && paramLength > 0 && params[paramLength - 1]?.varType?._meta?.varargs)
+            ) {
+              fclos = lodashCloneWithTag(fclos)
+              fclos.ast = f
+              fclos.ast.fdef = f
+              fdecl = f // adjust to the right function definition
+              break
+            }
           }
         }
       }
     }
 
+    // 在进入 executeFdeclOrExecute 前，预计算形参绑定
+    if (callInfo) {
+      const boundCall = this.bindCallArgs(node, fclos, fdecl, callInfo)
+      callInfo.boundCall = boundCall
+    }
+    const return_value = this.executeFdeclOrExecute(fclos, state, node, scope, fdecl, fname, execute_builtin, callInfo)
+    extraFuncDefs = extraFuncDefs.filter((extraFuncDef) => extraFuncDef !== fclos.ast?.node)
+    if (extraFuncDefs.length === 0) {
+      return return_value
+    }
+    const union_return_value = new UnionValue(
+      undefined,
+      undefined,
+      `${scope.qid}.<union@overload:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`,
+      node
+    )
+    union_return_value.appendValue(return_value)
+    for (const extraFuncDef of extraFuncDefs) {
+      fclos = lodashCloneWithTag(fclos)
+      fdecl = extraFuncDef
+      fclos.ast = extraFuncDef
+      fclos.ast.fdef = extraFuncDef
+      // 每个 overload 需要独立绑定
+      const extraCallInfo: CallInfo = { callArgs: callInfo?.callArgs }
+      const extraBoundCall = this.bindCallArgs(node, fclos, fdecl, extraCallInfo)
+      extraCallInfo.boundCall = extraBoundCall
+      const extraReturnValue = this.executeFdeclOrExecute(fclos, state, node, scope, fdecl, fname, false, extraCallInfo)
+      union_return_value.appendValue(extraReturnValue)
+    }
+    return union_return_value
+  }
+
+  /**
+   *
+   * @param fclos
+   * @param argvalues
+   * @param state
+   * @param node
+   * @param scope
+   * @param fdecl
+   * @param fname
+   * @param execute_builtin
+   */
+  executeFdeclOrExecute(
+    fclos: any,
+    state: State,
+    node: any,
+    scope: any,
+    fdecl: any,
+    fname: any,
+    execute_builtin: any,
+    callInfo: CallInfo
+  ) {
+    const argvalues = getLegacyArgValues(callInfo)
     if (logger.isTraceEnabled()) logger.trace(`\nprocessCall: function: ${this.formatScope(fdecl?.id?.name)}`)
 
     // avoid infinite loops,the re-entry should only less than 3
     if (
       fdecl &&
       state.callstack.reduce((previousValue: any, currentValue: any) => {
-        return currentValue.fdef === fdecl ? previousValue + 1 : previousValue
+        return currentValue.ast.fdef === fdecl ? previousValue + 1 : previousValue
       }, 0) > 0
     ) {
-      return SymbolValue({
-        type: 'FunctionCall',
-        expression: fclos,
-        arguments: argvalues,
-        ast: node,
-      })
+      return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
     }
 
     // pre-call processing
     const oldThisFClos = this.thisFClos
-    this.thisFClos = fclos.getThis()
-
-    fname = fname || fclos.id || fclos.sid || ''
-    if (fname === '<anonymous>') {
-      fname = fclos.id
-    }
+    this.thisFClos = fclos.getThisObj()
 
     let fscope = Scope.createSubScope(`${fname}_scope`, fclos) // this is actually named "activation record" in computer science
     fscope._this = fclos._this
-    if (fclos.vtype === 'class') {
+    if (fclos.vtype === 'class' || fclos._isConstructor) {
       // for javascript class ctor function
       fscope = fclos
     }
@@ -2539,13 +3422,28 @@ class Analyzer extends MemSpace {
     const new_state = _.clone(state)
     new_state.parent = state
     new_state.callstack = state.callstack ? state.callstack.concat([fclos]) : [fclos]
+    new_state.callsites = state.callsites
+      ? state.callsites.concat([
+          {
+            code: AstUtil.getRawCode(node).slice(0, 100),
+            nodeHash: node._meta?.nodehash,
+            loc: node.loc,
+          },
+        ])
+      : [
+          {
+            code: AstUtil.getRawCode(node).slice(0, 100),
+            nodeHash: node._meta?.nodehash,
+            loc: node.loc,
+          },
+        ]
     new_state.brs = ''
     // this.recordFunctionDefinitions(fscope, fdecl.body, new_state);
 
     let return_value
     if (execute_builtin) {
       this?.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
-        argvalues,
+        callInfo,
         fclos,
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
@@ -2555,16 +3453,16 @@ class Analyzer extends MemSpace {
         ainfo: this.ainfo,
       })
 
-      // this.lastReturnValue =  fclos.execute.call(this, fclos, argvalues, new_state, node, scope);
+      // this.lastReturnValue =  fclos.runtime.execute.call(this, fclos, argvalues, new_state, node, scope);
       this.lastReturnValue = null
       for (let i = 0; i < argvalues.length; i++) {
         argvalues[i] = SourceLine.addSrcLineInfo(argvalues[i], node, node.loc && node.loc.sourcefile, 'CALL: ', fname)
       }
-      return_value = fclos.execute.call(this, fclos, argvalues, new_state, node, scope)
+      return_value = fclos.runtime!.execute!.call(this, fclos, argvalues, new_state, node, scope)
     } else {
       // now go into the function body
       this?.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
-        argvalues,
+        callInfo,
         fclos,
         pcond: state.pcond,
         entry_fclos: this.entry_fclos,
@@ -2574,60 +3472,59 @@ class Analyzer extends MemSpace {
         ainfo: this.ainfo,
       })
 
+      // 基于 boundCall 绑定形参（替代旧的 argvalues[i] + node.names.indexOf 逻辑）
+      const activeBoundCall = callInfo?.boundCall
+      if (!activeBoundCall) {
+        logger.warn('executeFdeclOrExecute: boundCall missing from callInfo')
+      }
+
       // process function arguments
       if (!fdecl.parameters) {
-        // Errors.UnexpectedNode(`warning: processCall: function parameters not found: ${fdecl}`)
-        return UndefinedValue()
+        return new UndefinedValue()
       }
       const params = fdecl.parameters
-      // // make sure all parameters in fclos are defined
+      // 先执行形参声明（确保 scope 中有位置）
       params?.forEach((param: any) => {
         this.processInstruction(fscope, param, new_state)
       })
 
-      const size = Math.min(argvalues.length, params.length)
-      let hasVariadicElement = false
-      if (
-        argvalues.length > size &&
-        ((Config.language !== 'js' && Config.language !== 'javascript') ||
-          params[params.length - 1]?._meta.isRestElement)
-      ) {
-        hasVariadicElement = true
-      }
-      for (let i = 0; i < size; i++) {
-        const param = params[i]
-        let val
-        const paramName = param.id?.name
-        if (i === size - 1 && hasVariadicElement) {
-          // variadic parameter processing
-          const rest_argvalues = argvalues.slice(i)
-          const rest_val: any = {}
-          rest_argvalues.forEach((element: any, index: any) => {
-            rest_val[index.toString()] = element
-          })
+      // 遍历 boundCall.params 绑定实参到形参
+      for (const boundParam of activeBoundCall?.params || []) {
+        if (!boundParam?.provided) continue
+        const param = params[boundParam.index]
+        const paramName = param?.id?.name
+        if (!paramName) continue
+        let val = boundParam.value
 
-          val = ObjectValue({
-            id: paramName,
-            field: rest_val,
+        // vararg（*args / rest parameter）→ 收集为 ObjectValue
+        if (Array.isArray(val) && this.getParamKind(param) === 'vararg') {
+          const restVal: any = {}
+          val.forEach((element: any, index: number) => {
+            restVal[index.toString()] = element
           })
-        } else {
-          if (!paramName) continue // unused parameters
-
-          let index = i
-          if (node.names && node.names.length > 0) {
-            // handle named argument values like "f({value: 2, key: 3})"
-            const k = node.names.indexOf(param.name)
-            if (k !== -1) index = k
-          }
-          // if (DEBUG) logger.info('write arg:' + formatNode(param) + ' = ' + formatNode(argvalues[i]));
-          val = argvalues[index]
+          val = new ObjectValue(fscope.qid, {
+            sid: paramName,
+            field: restVal,
+          })
+        } else if (
+          val &&
+          !Array.isArray(val) &&
+          this.getParamKind(param) === 'varkw' &&
+          typeof val === 'object' &&
+          !val.vtype
+        ) {
+          // varkw（**kwargs）→ 收集为 ObjectValue
+          val = new ObjectValue(fscope.qid, {
+            sid: paramName,
+            field: val,
+          })
         }
 
-        // add source line information
+        // SourceLine 信息
         if (param.loc && oldThisFClos && node.type !== 'FunctionDefinition') {
           val = SourceLine.addSrcLineInfo(val, node, node.loc && node.loc.sourcefile, 'CALL: ', fname)
           const fdeclParam = Array.isArray(fdecl.parameters) ? fdecl.parameters[0] : fdecl.parameters
-          if (fdeclParam.loc.end.line === param.loc.end.line)
+          if (fdeclParam.loc.end?.line === param.loc.end?.line)
             val = SourceLine.addSrcLineInfo(val, fdeclParam, fdeclParam.loc.sourcefile, 'ARG PASS: ', paramName)
           else val = SourceLine.addSrcLineInfo(val, param, param.loc && param.loc.sourcefile, 'ARG PASS: ', paramName)
         }
@@ -2642,15 +3539,14 @@ class Analyzer extends MemSpace {
           })
         }
 
-        // argument passing
         this.saveVarInCurrentScope(fscope, param, val, new_state)
       }
 
-      // make sure all parameters in fclos are defined
+      // 未绑定的形参初始化为 UndefinedValue
       params?.forEach((param: any) => {
         const val = this._getMemberValueDirect(fscope, param.id, state, false, 0, new Set())
         if (!val) {
-          this.saveVarInCurrentScope(fscope, param.id, UndefinedValue(), state)
+          this.saveVarInCurrentScope(fscope, param.id, new UndefinedValue(), state)
         }
       })
 
@@ -2663,13 +3559,13 @@ class Analyzer extends MemSpace {
           node.callee.object,
           node.callee.object.loc.sourcefile,
           'ARG PASS: ',
-          node.callee.object.name
+          node.callee.object.name || AstUtil.prettyPrintAST(node.callee.object).slice(0, 50)
         )
       }
 
       // return parameters
       if (fdecl.returnParameters) {
-        const val_0 = PrimitiveValue({ type: 'Literal', value: 0, loc: fdecl.returnParameters.loc })
+        const val_0 = new PrimitiveValue(scope.qid, '<number_0>', 0, null, 'Literal', fdecl.returnParameters.loc)
         const paras = Array.isArray(fdecl.returnParameters) ? fdecl.returnParameters : fdecl.returnParameters.parameters
         if (paras) {
           for (const param of paras) {
@@ -2684,12 +3580,25 @@ class Analyzer extends MemSpace {
       const oldReturnValue = this.lastReturnValue
       this.lastReturnValue = undefined
       this.processInstruction(fscope, fdecl.body, new_state)
-      // if (this.lastReturnValue) {  // for the source line trace
-      //     const dataflow = 'RETURN:'; // size ? 'RETURN: ' : null;
-      //     this.lastReturnValue = SourceLine.addSrcLineInfo(this.lastReturnValue, node, node.loc && node.loc.sourcefile, dataflow);
-      // }
-      // return_value = return_value || UndefinedValue();
-      return_value = this.lastReturnValue || UndefinedValue()
+
+      // Java lambda 表达式体隐式返回值：匿名函数的 ScopedStatement 无 ReturnStatement 时，取最后一个表达式的值
+      if (
+        !this.lastReturnValue &&
+        Config.language === 'java' &&
+        fdecl.body?.type === 'ScopedStatement' &&
+        fname?.includes('<anonymous')
+      ) {
+        const stmts = fdecl.body.body
+        if (stmts && stmts.length > 0) {
+          const lastStmt = stmts[stmts.length - 1]
+          const hasReturn = stmts.some((s: any) => s.type === 'ReturnStatement')
+          if (!hasReturn && lastStmt.type !== 'ReturnStatement') {
+            this.lastReturnValue = this.processInstruction(fscope, lastStmt, new_state)
+          }
+        }
+      }
+
+      return_value = this.lastReturnValue || new UndefinedValue()
       this.lastReturnValue = oldReturnValue
 
       const tag = 'CALL RETURN:' // size ? 'RETURN: ' : null;
@@ -2697,7 +3606,7 @@ class Analyzer extends MemSpace {
     }
 
     // post-call processing
-    delete fclos.value[fscope.id]
+    delete fclos.value[fscope.sid]
     // this.setCurrentFunction(old_function);
     this.thisFClos = oldThisFClos
 
@@ -2734,15 +3643,16 @@ class Analyzer extends MemSpace {
       if (same_args) argvalues = call.arguments
     }
 
-    const { fdef } = fclos
+    const { fdef } = fclos.ast
     // if (analysisutil.isInCallStack(fdef, state.callstack)) return;
 
-    const obj = this.buildNewObject(fdef, argvalues, fclos, state, node, scope)
+    const newCallInfo: CallInfo = { callArgs: this.buildCallArgs(node, argvalues, fclos) }
+    const obj = this.buildNewObject(fdef, fclos, state, node, scope, newCallInfo)
     if (logger.isTraceEnabled()) logger.trace(`new expression: ${this.formatScope(obj)}`)
 
     if (obj && this.checkerManager?.checkAtNewExprAfter) {
       this.checkerManager.checkAtNewExprAfter(this, scope, node, state, {
-        argvalues,
+        callInfo: newCallInfo,
         fclos,
         ret: obj,
         pcond: state.pcond,
@@ -2764,44 +3674,35 @@ class Analyzer extends MemSpace {
    * @param scope
    * @returns {*}
    */
-  buildNewObject(fdef: any, argvalues: any, fclos: any, state: any, node: any, scope: any) {
-    let obj
-    // clone the basic class object
-    obj = ObjectValue(fclos)
-    obj.reset()
-    obj.vtype = 'object'
-    obj.value = {}
-    obj.id = `${obj.sid}<instance>`
-    obj.qid += '<instance>'
-    obj._this = obj
-    if (obj.parent?.sid === '<global>') {
-      obj.parent = scope
-    }
-    if (typeof fclos.value === 'object') {
-      for (const x in fclos.value) {
-        const v = fclos.value[x]
-        if (!v) continue
-        const v_copy = cloneWithDepth(v)
-        obj.value[x] = v_copy
-        // if (v.vtype !== 'fclos') {   // can reuse function definitions
-        // }
-        if (typeof v_copy === 'object') {
-          v_copy._this = obj
-          v_copy.parent = obj
-        }
-      }
+  buildNewObject(fdef: any, fclos: any, state: State, node: any, scope: any, callInfo: CallInfo) {
+    const argvalues = getLegacyArgValues(callInfo)
+    if (Config.miniSaveContextEnvironment) {
+      return new UndefinedValue()
     }
 
-    if (_.isFunction(fclos.execute)) {
-      fclos.execute.call(this, obj, argvalues, state, node, scope)
+    const obj = buildNewValueInstance(
+      this,
+      fclos,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      },
+      1,
+      '',
+      'object'
+    )
+
+    if (_.isFunction(fclos.runtime?.execute)) {
+      fclos.runtime!.execute!.call(this, obj, argvalues, state, node, scope)
     }
 
     if (!argvalues) return obj
 
     if (!fdef) {
-      if (logger.isTraceEnabled())
-        logger.trace(`processNewObject: definition not found: ${ValueFormatter.formatNode(fclos)}`)
-
       // function definition not found, examine possible call-back functions in the arguments
       if (Config.invokeCallbackOnUnknownFunction) {
         this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
@@ -2823,7 +3724,7 @@ class Analyzer extends MemSpace {
         body = fdef.properties
         break
       case 'FunctionDefinition':
-        fclos.vtype = 'class'
+        fclos._isConstructor = true
       // fall through
       case 'ClassDefinition':
       default:
@@ -2839,7 +3740,9 @@ class Analyzer extends MemSpace {
     let ctorClos
     switch (fdef.type) {
       case 'StructDefinition':
-        paras = fdef.members.map((x: any) => SymbolValue({ type: 'Parameter', name: x.name, loc: x.loc }))
+        paras = fdef.members.map(
+          (x: any) => new SymbolValue(obj.qid, { sid: x.name, type: 'Parameter', name: x.name, loc: x.loc })
+        )
         break
       // for javascript, ctor is itself
       case 'FunctionDefinition':
@@ -2874,7 +3777,13 @@ class Analyzer extends MemSpace {
         let val = argvalues[index]
         // add source line information
         if (param.loc) {
-          val = SourceLine.addSrcLineInfo(val, node, param.loc.sourcefile, 'CTOR ARG PASS: ', param.name)
+          val = SourceLine.addSrcLineInfo(
+            val,
+            node,
+            param.loc.sourcefile,
+            'CTOR ARG PASS: ',
+            param.name || AstUtil.prettyPrint(param).slice(0, 50)
+          )
         }
 
         if (fdef.type === 'StructDefinition') {
@@ -2886,7 +3795,7 @@ class Analyzer extends MemSpace {
     if (ctorClos) {
       if (this.checkerManager && this.checkerManager.checkAtNewObject) {
         this.checkerManager.checkAtNewObject(this, scope, fdef, state, {
-          argvalues,
+          callInfo,
           state,
           fclos: ctorClos,
           ainfo: this.ainfo,
@@ -2895,7 +3804,7 @@ class Analyzer extends MemSpace {
       const oldThisFClos = this.thisFClos
       this.thisFClos = obj
       ctorClos._this = obj
-      this.executeCall(node, ctorClos, argvalues, state, scope)
+      this.executeCall(node, ctorClos, state, scope, callInfo)
       this.thisFClos = oldThisFClos
     }
 
@@ -2916,16 +3825,31 @@ class Analyzer extends MemSpace {
    */
   executeFunctionInArguments(scope: any, caller: any, callsite_node: any, argvalues: any, state: any) {
     const needInvoke = Config.invokeCallbackOnUnknownFunction
-    if (needInvoke !== 1 && needInvoke !== 2) return UndefinedValue()
+    if (needInvoke !== 1 && needInvoke !== 2) return new UndefinedValue()
 
     for (let i = 0; i < argvalues.length; i++) {
       const arg = argvalues[i]
       if (arg && arg.vtype === 'fclos') {
-        const fclos = _.clone(arg)
+        const fclos = lodashCloneWithTag(arg)
         const new_state = _.clone(state)
         new_state.parent = state
         new_state.callstack = state.callstack ? state.callstack.concat([caller]) : [caller]
-        this.executeCall(callsite_node, fclos, [], new_state, scope)
+        new_state.callsites = state.callsites
+          ? state.callsites.concat([
+              {
+                code: AstUtil.getRawCode(callsite_node).slice(0, 100),
+                nodeHash: callsite_node._meta?.nodehash,
+                loc: callsite_node.loc,
+              },
+            ])
+          : [
+              {
+                code: AstUtil.getRawCode(callsite_node).slice(0, 100),
+                nodeHash: callsite_node._meta?.nodehash,
+                loc: callsite_node.loc,
+              },
+            ]
+        this.executeCall(callsite_node, fclos, new_state, scope, INTERNAL_CALL)
       }
     }
   }
@@ -2983,7 +3907,7 @@ class Analyzer extends MemSpace {
   // };
 
   resolveClassInheritance(fclos: any, state: any) {
-    const { fdef } = fclos
+    const { fdef } = fclos.ast
     const { supers } = fdef
     if (!supers || supers.length === 0) return
 
@@ -3001,13 +3925,13 @@ class Analyzer extends MemSpace {
      * @param superId
      */
     function _resolveClassInheritance(this: any, fclos: any, superId: any) {
-      if (fclos?.id === superId?.name) {
+      if (fclos?.sid === superId?.name) {
         // to avoid self-referencing
         return
       }
       const superClos = this.processInstruction(scope, superId, state)
       // const superClos = this.getMemberValue(scope, superId, state);
-      if (!superClos) return UndefinedValue()
+      if (!superClos) return new UndefinedValue()
       fclos.super = superClos
 
       // inherit definitions
@@ -3018,28 +3942,32 @@ class Analyzer extends MemSpace {
       for (const fieldName in superClos.value) {
         if (fieldName === 'super') continue
         const v = superClos.value[fieldName]
-        if (v.readonly) continue
-        const v_copy = _.clone(v)
-        v_copy.inherited = true
-        v_copy._this = fclos
-        v_copy._base = superClos
-        fclos.value[fieldName] = v_copy
+        if (v.runtime?.readonly) continue
+        // const v_copy = _.clone(v)
+        const v_copy = lodashCloneWithTag(v)
+        if (v_copy) {
+          if (!v_copy.func) v_copy.func = {}
+          v_copy.func.inherited = true
+          v_copy._this = fclos
+          v_copy._base = superClos
+          fclos.value[fieldName] = v_copy
 
-        superValue.value[fieldName] = v_copy
-        // super fclos should fill its fdef with ctor definition
-        if (fieldName === '_CTOR_') {
-          superValue.fdef = v_copy.fdef
-          superValue.overloaded = superValue.overloaded || []
-          superValue.overloaded.push(fdef)
+          superValue.value[fieldName] = v_copy
+          if (fieldName === '_CTOR_') {
+            superValue.ast.node = v_copy.ast.fdef
+            superValue.ast.fdef = v_copy.ast.fdef
+            superValue.overloaded = superValue.overloaded || []
+            superValue.overloaded.push(fdef)
+          }
         }
 
         // v_copy.parent = fclos;  // Important!
       }
 
       // inherit declarations
-      for (const x in superClos.decls) {
-        const v = superClos.decls[x]
-        fclos.decls[x] = v
+      for (const x of superClos.ast.declKeys) {
+        const v = superClos.ast.getDecl(x)
+        fclos.ast.setDecl(x, v)
       }
       // inherit modifiers
       for (const x in superClos.modifier) {
@@ -3088,6 +4016,9 @@ class Analyzer extends MemSpace {
       const fields = rightVal.getRawValue()
       for (const key in fields) {
         // 过滤原型链
+        if (typeof key === 'string' && key.includes('__yasa')) {
+          continue
+        }
         if (typeof fields.hasOwnProperty === 'function' && fields.hasOwnProperty(key)) {
           if (!filter) yield { k: key, v: fields[key] }
           else if (filter(fields[key])) yield { k: key, v: fields[key] }
@@ -3124,6 +4055,80 @@ class Analyzer extends MemSpace {
     }
     return ruleArray
   }
+
+  /**
+   * load lib arg to this sid blacklist keywords
+   */
+  loadLibArgToThisSidBlacklistKeywords() {
+    if (Array.isArray(this.libArgToThisSidBlacklistKeywords)) {
+      return this.libArgToThisSidBlacklistKeywords
+    }
+
+    let sidKeywordArray: any[] = []
+    try {
+      const rulePath = getAbsolutePath('resource/tag-propagation/lib-arg-to-this-sid-blacklist.json')
+      const ruleData = loadJSONfile(rulePath)
+      if (Array.isArray(ruleData?.sidKeywords)) {
+        sidKeywordArray = ruleData.sidKeywords
+      } else if (Array.isArray(ruleData?.keywords)) {
+        sidKeywordArray = ruleData.keywords
+      }
+    } catch (e) {
+      return []
+    }
+
+    return sidKeywordArray.filter((item) => typeof item === 'string' && item.trim().length > 0)
+  }
+
+  /**
+   * find matched rule by CallGraph
+   * @param node
+   * @param scope
+   * @param sinkRules
+   */
+  findMatchedRuleByCallGraph(node: any, scope: any, sinkRules: any[]) {
+    const resultArray: any[] = []
+
+    if (!node || !scope || !sinkRules || !this.findNodeInvocations) {
+      return resultArray
+    }
+
+    const invocations: Invocation[] = this.findNodeInvocations(scope, node)
+    if (!invocations) {
+      return resultArray
+    }
+
+    for (const invocation of invocations) {
+      for (const sink of sinkRules) {
+        const matchSink: boolean = checkInvocationMatchSink(invocation, sink, this.typeResolver)
+        if (matchSink) {
+          resultArray.push(sink)
+        }
+      }
+    }
+
+    return resultArray
+  }
+
+  /**
+   * output all the findings of all registered checker
+   * @param {any} printf - Print function for output
+   */
+  async outputAnalyzerExistResult(printf?: any) {
+    let allFindings = null
+    const { resultManager } = this.getCheckerManager()
+    if (resultManager && Config.reportDir) {
+      const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+      outputStrategyAutoRegister.autoRegisterAllStrategies()
+      allFindings = resultManager.getFindings()
+      for (const outputStrategyId in allFindings) {
+        const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
+        if (strategy && typeof strategy.outputFindings === 'function') {
+          strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -3137,3 +4142,4 @@ function needCompileFirst(type: any) {
 //* *******************************************
 
 module.exports = Analyzer
+export { Analyzer }

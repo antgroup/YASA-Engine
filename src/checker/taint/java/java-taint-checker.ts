@@ -36,7 +36,7 @@ class JavaTaintChecker extends JavaTaintAbstractChecker {
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
       logger.info('YASA will collect Entrypoint and Source')
       const { selfCollectSpringEntryPoints, selfCollectSpringTaintSource } =
-        SpringEntryPoint.getSpringEntryPointAndSource(topScope.packageManager)
+        SpringEntryPoint.getSpringEntryPointAndSource(topScope.context.packages)
 
       if (!_.isEmpty(selfCollectSpringTaintSource)) {
         this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
@@ -77,9 +77,9 @@ class JavaTaintChecker extends JavaTaintAbstractChecker {
         }
         targetPackage = targetPackage.startsWith('.') ? targetPackage.slice(1) : targetPackage
         const arr = Loader.getPackageNameProperties(targetPackage)
-        let packageManagerT = topScope.packageManager
+        let packageManagerT = topScope.context.packages
         arr.forEach((path: any) => {
-          packageManagerT = packageManagerT?.field[path]
+          packageManagerT = packageManagerT?.members?.get(path)
         })
         if (!packageManagerT || packageManagerT.vtype === 'undefine') {
           continue
@@ -92,23 +92,7 @@ class JavaTaintChecker extends JavaTaintAbstractChecker {
           continue
         }
 
-        const scopeVal = Scoped({
-          vtype: 'scope',
-          _sid: 'mock',
-          _id: 'mock',
-          field: {},
-          parent: null,
-        })
-
-        const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
-        entryPoint.scopeVal = scopeVal
-        entryPoint.argValues = []
-        entryPoint.functionName = entrypoint.functionName
-        entryPoint.filePath = entrypoint.filePath
-        entryPoint.attribute = entrypoint.attribute
-        entryPoint.packageName = entrypoint.packageName
-        entryPoint.entryPointSymVal = entryPointSymVal
-        this.entryPoints.push(entryPoint)
+        this.resolveAndPushEntryPoint(entryPointSymVal, entrypoint, func, analyzer, Scoped, EntryPoint, Constant)
       }
     }
   }

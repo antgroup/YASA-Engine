@@ -85,5 +85,16 @@ module.exports = {
         'no-undef': 'off', // TypeScript 已处理变量未定义检查
       },
     },
+    {
+      files: ['check-requires.js'], // 编译检查工具，不参与 dist 生成
+      parserOptions: {
+        project: null, // 不使用 TypeScript 项目配置
+        ecmaVersion: 'latest',
+        sourceType: 'script', // 使用 script 模式（因为文件开头有 #!）
+      },
+      rules: {
+        'filenames/match-regex': 'off', // 允许工具文件使用不同的命名
+      },
+    },
   ],
 }

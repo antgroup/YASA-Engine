@@ -1,0 +1,116 @@
+{
+  "version": "1.0",
+  "totalFindings": 2,
+  "findings": [
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "testSqlInjection",
+        "filePath": "TestCallchain.java",
+        "attribute": "HTTP",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "executeQuery",
+        "sinkAttribute": "JavaSQLInjection",
+        "callSite": {
+          "code": "            stmt.executeQuery(query);",
+          "file": "/TestCallchain.java",
+          "line": 13,
+          "column": 13
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "0287980e93c5e5bb427549aa7d0014ad",
+          "fullName": ".TestCallchain.testSqlInjection",
+          "function": "testSqlInjection",
+          "file": "/TestCallchain.java",
+          "line": 7,
+          "column": 5
+        },
+        {
+          "type": 1,
+          "nodeHash": "fcc4805fc859481fd6668a8f788e4299",
+          "fullName": "java.sql.DriverManager.getConnection(jdbc:mysql://localhost:3306/test).createStatement().executeQuery",
+          "function": "executeQuery",
+          "file": "/TestCallchain.java",
+          "line": 13,
+          "column": 13
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    public void testSqlInjection(String userInput) {\n        try {\n            Connection conn = Dri",
+          "nodeHash": "0287980e93c5e5bb427549aa7d0014ad",
+          "file": "/TestCallchain.java",
+          "line": 7,
+          "column": 5
+        },
+        {
+          "code": "            stmt.executeQuery(query);",
+          "nodeHash": "fcc4805fc859481fd6668a8f788e4299",
+          "file": "/TestCallchain.java",
+          "line": 13,
+          "column": 13
+        }
+      ]
+    },
+    {
+      "entrypoint": {
+        "type": "functionCall",
+        "functionName": "testCommandInjection",
+        "filePath": "TestCallchain.java",
+        "attribute": "HTTP",
+        "funcReceiverType": ""
+      },
+      "sinkInfo": {
+        "sinkRule": "exec",
+        "sinkAttribute": "JavaCommandExec",
+        "callSite": {
+          "code": "            Runtime.getRuntime().exec(command);",
+          "file": "/TestCallchain.java",
+          "line": 22,
+          "column": 13
+        }
+      },
+      "callstack": [
+        {
+          "type": 0,
+          "nodeHash": "b33ac74e457afbdd5ec2789deab7ebb5",
+          "fullName": ".TestCallchain.testCommandInjection",
+          "function": "testCommandInjection",
+          "file": "/TestCallchain.java",
+          "line": 19,
+          "column": 5
+        },
+        {
+          "type": 1,
+          "nodeHash": "1c8eb52ecc103ecf9528e82ff6ff736a",
+          "fullName": "Runtime.getRuntime().exec",
+          "function": "exec",
+          "file": "/TestCallchain.java",
+          "line": 22,
+          "column": 13
+        }
+      ],
+      "callsites": [
+        {
+          "code": "    public void testCommandInjection(String command) {\n        try {\n            // This should be d",
+          "nodeHash": "b33ac74e457afbdd5ec2789deab7ebb5",
+          "file": "/TestCallchain.java",
+          "line": 19,
+          "column": 5
+        },
+        {
+          "code": "            Runtime.getRuntime().exec(command);",
+          "nodeHash": "1c8eb52ecc103ecf9528e82ff6ff736a",
+          "file": "/TestCallchain.java",
+          "line": 22,
+          "column": 13
+        }
+      ]
+    }
+  ]
+}

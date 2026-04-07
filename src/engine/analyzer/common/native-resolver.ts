@@ -1,9 +1,9 @@
 const util = require('util')
-const _ = require('lodash')
 const logger = require('../../../util/logger')(__filename)
 const {
   ValueUtil: { PrimitiveValue },
 } = require('../../util/value-util')
+const ASTUtil = require('../../../util/ast-util')
 const { handleException } = require('./exception-handler')
 
 /**
@@ -25,282 +25,10 @@ function mkLiteral(v: any, parent: any): any {
       res = { ast: v, parent }
       break
     default:
-      res = PrimitiveValue({ type: 'Literal', value: v })
+      res = new PrimitiveValue(parent.qid, ASTUtil.prettyPrint(v), v, null, 'Literal')
+      res.parent = parent
   }
   return res
-}
-
-//* ***************************** value simplifcation **************************************
-
-/**
- * "-" | "+" | "!" | "~" | "typeof" | "void" | "delete"
- * @param exp
- * @returns {*}
- */
-function simplifyUnaryExpression(exp: any): any {
-  const argument = exp.subExpression
-  if (!argument) return exp
-
-  if (Array.isArray(argument)) {
-    switch (exp.operator) {
-      case '!': {
-        const newval = argument.length === 0
-        return PrimitiveValue({ type: 'Literal', value: newval })
-      }
-    }
-    return exp
-  }
-  if (exp.operator === '#') {
-    // handle escaping
-    switch (argument.type) {
-      case 'Literal':
-        return argument.value
-      // should handle only literals; otherwise #id is resolved to a constant rather than an expression
-      // case 'Identifier':
-      //    return argument.name;
-    }
-  } else if (argument.type === 'Literal') {
-    const val = argument.value
-    let newval
-    switch (exp.operator) {
-      case '--': {
-        newval = val - 1
-        break
-      }
-      case '++': {
-        newval = val + 1
-        break
-      }
-      case '-': {
-        newval = -val
-        break
-      }
-      case '+': {
-        newval = +val
-        break
-      }
-      case '!': {
-        newval = !val
-        break
-      }
-      case '~': {
-        newval = ~val
-        break
-      }
-      default:
-        return PrimitiveValue(exp)
-    }
-    if (val && val.hasTagRec) newval.hasTagRec = val.hasTagRec
-    return PrimitiveValue({ type: 'Literal', value: newval })
-  } else if (argument.vtype === 'object') {
-    switch (exp.operator) {
-      case '!': {
-        const newval = _.isEmpty(argument.value)
-        return PrimitiveValue({ type: 'Literal', value: newval })
-      }
-    }
-    return exp
-  }
-  return exp
-}
-
-/**
- *
- * "==" | "!=" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "<<" | ">>" | ">>>" |
- * "+" | "-" | "*" | "/" | "%" | "|" | "^" | "&" |
- * "&&" | "||"
- * @param exp
- * @returns {*}
- */
-function simplifyBinaryExpression(exp: any): any {
-  // onsole.log("simplify: " + formatNode(exp));
-  const { left } = exp
-  const { right } = exp
-  if (!left || !right || left.type !== 'Literal' || right.type !== 'Literal') return exp
-  const lval = left.value
-  const rval = right.value
-  let newval
-  switch (exp.operator) {
-    case '+':
-    case '+=': {
-      newval = lval + rval
-      break
-    }
-    case '-':
-    case '-=': {
-      newval = lval - rval
-      break
-    }
-    case '*':
-    case '*=': {
-      newval = lval * rval
-      break
-    }
-    case '/':
-    case '/=': {
-      newval = lval / rval
-      break
-    }
-    case '%':
-    case '%=': {
-      newval = lval % rval
-      break
-    }
-    case '|':
-    case '|=': {
-      newval = lval | rval
-      break
-    }
-    case '^':
-    case '^=': {
-      newval = lval ^ rval
-      break
-    }
-    case '&':
-    case '&=': {
-      newval = lval & rval
-      break
-    }
-
-    case '<': {
-      newval = lval < rval
-      break
-    }
-    case '<=': {
-      newval = lval <= rval
-      break
-    }
-    case '>': {
-      newval = lval > rval
-      break
-    }
-    case '>=': {
-      newval = lval >= rval
-      break
-    }
-    case '<<':
-    case '<<=': {
-      newval = lval << rval
-      break
-    }
-    case '>>':
-    case '>>=': {
-      newval = lval >> rval
-      break
-    }
-    case '>>>':
-    case '>>>=': {
-      newval = lval >>> rval
-      break
-    }
-
-    case '&&':
-    case '&&=': {
-      newval = lval && rval
-      break
-    }
-    case '||':
-    case '||=': {
-      newval = lval || rval
-      break
-    }
-
-    case '<': {
-      newval = lval < rval
-      break
-    }
-    case '<=': {
-      newval = lval <= rval
-      break
-    }
-    case '>=': {
-      newval = lval >= rval
-      break
-    }
-    case '>': {
-      newval = lval > rval
-      break
-    }
-    case '==': {
-      newval = lval == rval
-      break
-    }
-    case '!=': {
-      newval = lval != rval
-      break
-    }
-    case '&&':
-    case '&&=': {
-      newval = lval && rval
-      break
-    }
-    case '||':
-    case '||=': {
-      newval = lval || rval
-      break
-    }
-
-    default:
-      return exp
-  }
-
-  return PrimitiveValue({ type: 'Literal', value: newval })
-}
-
-/**
- * c ? b1 : b2
- * @param exp
- * @returns {*}
- */
-function simplifyConditionalExpression(exp: any): any {
-  // onsole.log("simplify: " + formatNode(exp));
-  const { test } = exp
-  if (!test || test.type !== 'Literal') return exp
-  return test.value ? PrimitiveValue(exp.trueExpression) : PrimitiveValue(exp.falseExpression)
-}
-
-// ***
-
-/**
- * e.g. accessing members in concrete objects
- * @param obj
- * @param index
- * @returns {{type: string, value: *}|*}
- */
-function simplifyMemberAccess(obj: any, index: any): any {
-  switch (obj.type) {
-    case 'Literal': {
-      // let res = obj.raw[index];
-      if (!obj.value) return // {type: "Literal", value: null};
-      const res = obj.value[index]
-      if (res) return mkLiteral(res, obj)
-      break
-    }
-  }
-}
-
-/**
- * e.g. accessing members in concrete arrays
- * @param obj
- * @param index
- * @returns {*}
- */
-function simplifyArrayExpression(obj: any, index: any): any {
-  try {
-    switch (index) {
-      case 'length': {
-        const len = obj.length
-        return PrimitiveValue({ type: 'Literal', value: len, raw: len })
-      }
-    }
-    const res = obj[index] // return the value
-    if (res) {
-      if (typeof res === 'function') {
-        return { ast: res, parent: obj }
-      }
-      return res
-    }
-  } catch (e) {}
 }
 
 //* ***************************** native calls **************************************
@@ -383,18 +111,18 @@ function nativeCall(obj: any, f: any, argvalues: any[]): any {
  * @returns {*}
  */
 function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[], state: any): any {
-  if (!fclos.id) return
+  if (!fclos.sid) return
 
   const { parent } = fclos
   if (!parent) return
 
   // array related native functions
   try {
-    const res = nativeCall(parent, fclos.ast, argvalues)
+    const res = nativeCall(parent, fclos.ast?.node, argvalues)
     if (res) return res
   } catch (e) {}
 
-  switch (fclos.id) {
+  switch (fclos.sid) {
     case '__delete__': {
       const cval = argvalues[0] // container value
       const key: any = argvalues[1] // key
@@ -405,18 +133,18 @@ function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[
   }
 
   // other native functions, e.g. global functions
-  switch (parent.id) {
+  switch (parent.sid) {
     case 'Array': {
-      switch (fclos.id) {
+      switch (fclos.sid) {
         case 'isArray': {
           const val = argvalues.length == 0 ? false : Array.isArray(argvalues[0])
-          return PrimitiveValue({ type: 'Literal', value: val, raw: val })
+          return new PrimitiveValue(parent.qid, '<isArray_res>', val, null, 'Literal')
         }
       }
       break
     }
     case '__': {
-      const fid = fclos.id
+      const fid = fclos.sid
       if (!fid) break
       switch (fid) {
         case 'log':
@@ -450,11 +178,5 @@ function processNativeFunction(this: any, node: any, fclos: any, argvalues: any[
 // ***
 
 module.exports = {
-  simplifyUnaryExpression,
-  simplifyBinaryExpression,
-  simplifyMemberAccess,
-  simplifyArrayExpression,
-  simplifyConditionalExpression,
-
   processNativeFunction,
 }

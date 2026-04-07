@@ -119,7 +119,7 @@ function yasaLogInternal(
   const coloredMessage = `${colorFn(prefix)} ${message}`
 
   const getLogger = require('./logger')
-  const logger = getLogger('console')
+  const logger = getLogger('yasa')
   logger[level](plainMessage)
 
   outputStream.write(`${coloredMessage}\n`)
