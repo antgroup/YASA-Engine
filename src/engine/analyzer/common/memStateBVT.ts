@@ -1,5 +1,5 @@
 const {
-  ValueUtil: { BVT, UnionValue, Scoped, SymbolValue, UndefinedValue },
+  ValueUtil: { BVTValue, UnionValue, Scoped, SymbolValue, UndefinedValue },
 } = require('../../util/value-util')
 
 /** ************************************************************
@@ -27,19 +27,23 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
    * @param parent
    * @param pname
    */
-  function write(tree: any, br: any, i: number, parent: any, pname: any): void {
+  function write(tree: any, br: any, i: number, parentBvt: any, pname: any): void {
     if (!tree || tree.vtype !== 'BVT') {
-      // create a sub-tree for the new appeared branch
-      tree = BVT({ value: tree })
-      parent[pname] = tree
+      const oldTree = tree
+      tree = new BVTValue('', `<BVT_create>`, {})
+      tree.raw_value = oldTree
+      parentBvt.setChild(pname, tree)
     }
     if (i < br.length - 1) {
       const c = br[i]
-      const { children } = tree
-      write(children[c], br, i + 1, children, c)
+      write(tree.getChild(c), br, i + 1, tree, c)
     } else {
       const c = br[br.length - 1]
-      tree.children[c] = value
+      const oldVal = tree.getChild(c)
+      if (oldVal) {
+        tree.setChild(`${c}_`, oldVal)
+      }
+      tree.setChild(c, value)
     }
   }
 
@@ -47,13 +51,15 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
     // initialize the BVT root node
     let old_value = fields[index]
     if (!old_value) {
-      old_value = BVT({ value: old_value })
+      const oldValue = old_value
+      old_value = new BVTValue(scope.qid, `<BVT_${index}>`, {})
+      old_value.raw_value = oldValue  // 直接设置 raw_value，不通过 setter
     } else if (old_value.vtype !== 'BVT') {
-      old_value = createBVT(br, old_value)
+      old_value = createBVT(scope.qid, br, old_value, value.ast?.node)
     }
     fields[index] = old_value
     write(old_value, br, br_index, old_value, index)
-  } else if (scope.misc_.pointer_reference) {
+  } else if (scope.pointerReference) {
     // overwrite directly
     Object.assign(fields[index], value)
   } else {
@@ -63,18 +69,25 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
 
 /**
  *
+ * @param qidPrefix
  * @param br
  * @param old_value
+ * @param node
  */
-function createBVT(br: any, old_value: any): any {
+function createBVT(qidPrefix: string, br: any, old_value: any, node: any): any {
   if (!br || br.length === 0) {
     return old_value
   }
 
   const currentChar = br[0]
 
-  const nestedBVT = createBVT(br.slice(1), old_value)
-  return BVT({ children: { [currentChar]: nestedBVT } })
+  const nestedBVT = createBVT(qidPrefix, br.slice(1), old_value, node)
+  let sig = '<NodeLocUnknown>'
+  if (node?.loc?.sourcefile && typeof node?.loc?.sourcefile === 'string') {
+    sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
+  }
+  
+  return new BVTValue(qidPrefix, `<BVT_${sig}>`, { [currentChar]: nestedBVT })
 }
 
 /**
@@ -109,7 +122,11 @@ function readValue(value: any, br: any, br_index: any): any {
         if (value.vtype) {
           return value
         }
-        return SymbolValue({ field: value })
+        return new SymbolValue('', {
+          sid: `<treeBranch_br${i}>${tree.sid}`,
+          qid: `<treeBranch_br${i}>${tree.qid}`,
+          field: value,
+        })
       }
       return read(children[c], br, i + 1)
     }
@@ -129,7 +146,11 @@ function readValue(value: any, br: any, br_index: any): any {
     if (pval.vtype) {
       return pval
     }
-    return SymbolValue({ field: pval })
+    return new SymbolValue('', {
+      sid: `<treeBranch_br${i}>${tree.sid}`,
+      qid: `<treeBranch_br${i}>${tree.qid}`,
+      field: pval,
+    })
   }
 
   if (!value) return value
@@ -146,10 +167,10 @@ function readValue(value: any, br: any, br_index: any): any {
  * @param v
  */
 function wrapValue(v: any): any {
-  if (!v) return UndefinedValue()
+  if (!v) return new UndefinedValue()
   if (v.vtype) return v
 
-  return SymbolValue({ field: v })
+  return new SymbolValue('', { sid: '<wrapValue>', qid: '<wrapValue>', field: v })
 }
 
 /**
@@ -171,7 +192,7 @@ function unionValue(v1: any, v2: any): any {
   if (v1.vtype === 'union') {
     if (v2.vtype === 'union') {
       const vs = v1.value.concat(v2.value)
-      return vs.length === 1 ? vs[0] : UnionValue({ value: vs })
+      return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
     }
     const vs = v1.value.slice()
     if (
@@ -180,55 +201,10 @@ function unionValue(v1: any, v2: any): any {
       })
     )
       vs.push(v2)
-    return vs.length === 1 ? vs[0] : UnionValue({ value: vs })
+    return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
   }
   if (v1 === v2) return v1
-  return UnionValue({ value: [v1, v2] })
-}
-
-/**
- * reduce a Branch Value Tree by merging the given branches
- * @param value
- * @param brs
- * @returns {*}
- */
-function mergeBVT(value: any, brs: any): any {
-  /**
-   *
-   * @param tree
-   * @param br
-   * @param i
-   * @param parent
-   * @param extra
-   */
-  function merge(tree: any, br: any, i: number, parent: any, extra?: any): any {
-    if (i < br.length - 1) {
-      const c = br[i]
-      const { children } = tree
-      return merge(children[c], br, i + 1, tree, null)
-    }
-    if (tree) {
-      const c = br[i]
-      let vs: any
-      let numChildren = 0
-      for (const field in tree.children) {
-        const val = tree.children[field]
-        vs = unionValue(vs, val)
-        numChildren++
-      }
-      if (numChildren < 2 && tree.value) vs = unionValue(vs, tree.value)
-      if (parent) {
-        parent.children[c] = vs
-      } else return vs
-    }
-  }
-
-  if (!value) return value
-  if (value.vtype === 'BVT') {
-    const res = merge(value, brs[0], 0, null)
-    return res || value
-  }
-  return value
+  return new UnionValue([v1, v2], undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
 }
 
 /**
@@ -242,7 +218,7 @@ function mergeBVT(value: any, brs: any): any {
  * @returns {*}
  */
 function mergeLeafValues(scope: any, brs: any, br_index: any, parent: any, visited: Set<any>): any {
-  if (typeof scope !== 'object') return scope
+  if (typeof scope !== 'object' || scope === null) return scope
   if (scope.type) return scope // expressions
 
   visited.add(scope)
@@ -261,7 +237,7 @@ function mergeLeafValues(scope: any, brs: any, br_index: any, parent: any, visit
     }
     if (numChildren < 2 && scope.value) vs = unionValue(vs, scope.value)
     if (parent) {
-      parent.children[brs[br_index - 1]] = vs
+      parent.setChild(brs[br_index - 1], vs)
       return parent
     }
     return vs // scope;
@@ -340,8 +316,9 @@ function unionBVTScope(scope1: any, scope2: any, visited: Map<any, any>): any {
   if (scope1.type === 'Literal' && scope2.type.type == 'Literal' && scope1.value === scope2.value) {
     return scope1
   }
-
-  const result = Scoped({ parent: scope1.parent })
+  const bvtQid = `<BVTUnionResQid_${scope1.qid}_${scope2.qid}>`
+  const bvtSid = `<BVTUnionResSid_${scope1.sid}_${scope2.sid}>`
+  const result = new Scoped('', { sid: bvtSid, qid: bvtQid, parent: scope1.parent })
   const vvalue1 = scope1.value
   const vvalue2 = scope2.value
   const rvalue = result.value
@@ -351,23 +328,21 @@ function unionBVTScope(scope1: any, scope2: any, visited: Map<any, any>): any {
     if (v2) {
       const prev_v = visited.get(field)
       if (prev_v) return prev_v
-      const new_v = BVT({ children: { L: v1, R: v2 } })
+      const bvtSid = `<BVTUnionSid_${v1.sid}_${v2.sid}>`
+      const new_v = new BVTValue('', bvtSid, { L: v1, R: v2 })
       rvalue[field] = new_v
       visited.set(field, new_v)
-    } else rvalue[field] = BVT({ children: { L: v1 } })
+    } else {
+      const bvtSid = `<BVTUnionSid_${v1.sid}>`
+      rvalue[field] = new BVTValue(scope1.qid, bvtSid, { L: v1 })
+    }
   }
   for (const field in vvalue2) {
     const v2 = vvalue2[field]
-    if (!vvalue1 || !vvalue1[field]) rvalue[field] = BVT({ children: { R: v2 } })
+    const bvtSid = `<BVTUnionSid_${v2.sid}>`
+    if (!vvalue1 || !vvalue1[field]) rvalue[field] = new BVTValue(scope2.qid, bvtSid, { R: v2 })
   }
-  // if (scope1.ast) {
-  //    if (scope2.ast)
-  //        result.ast = unionPrimitiveValues(scope1.ast, scope2.ast);
-  //    else
-  //        result.ast = scope1.ast;
-  // }
-  // else if (scope2.ast)
-  //    result.ast = scope2.ast;
+
   return result
 }
 
@@ -394,10 +369,10 @@ function reduceBVTScope(scope: any, visited: Set<any>): any {
         const r = reduceBVTScope(rchild, visited)
         return unionBVTScope(l, r, new Map())
       }
-      scope.children.L = l
+      scope.setChild('L', l)
     } else if (rchild) {
       const r = reduceBVTScope(rchild, visited)
-      scope.children.R = r
+      scope.setChild('R', r)
     }
   } else if (scope.vtype === 'object' || scope.vtype === 'fclos' || scope.vtype === 'scope') {
     for (const field in scope.value) {
@@ -448,16 +423,8 @@ function cloneScope(scope: any, state: any): any {
  */
 function unionAllValues(scopes: any, state: any): any {
   const res = scopes[0]
-  const tmp = UnionValue()
-  tmp.appendValue(res)
-  for (let i = 1; i < scopes.length; i++) {
-    if (scopes[i].vtype === 'union') {
-      tmp._pushValue(scopes[i])
-    } else {
-      tmp.appendValue(scopes[i])
-    }
-  }
-  return tmp
+  const validScopes = scopes.filter((s: any) => s != null)
+  return new UnionValue(validScopes, undefined, `${res?.qid || '<union>'}.<union@all>`, res?.ast?.node)
 }
 //* ***************************** exports ********************************************
 

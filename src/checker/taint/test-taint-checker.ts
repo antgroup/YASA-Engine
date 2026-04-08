@@ -1,3 +1,5 @@
+import type { CallInfo } from '../../engine/analyzer/common/call-args'
+
 const BasicRuleHandler = require('../common/rules-basic-handler')
 const IntroduceTaint = require('./common-kit/source-util')
 const SanitizerChecker = require('../sanitizer/sanitizer-checker')
@@ -53,8 +55,8 @@ class TestTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
-    this.checkSinkAtFunctionCall(node, fclos, argvalues)
+    const { fclos, callInfo } = info
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
   }
 
   /**
@@ -76,7 +78,7 @@ class TestTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any) {
-    IntroduceTaint.introduceTaintAtIdentifierDirect(node, info.res, this.sourceScope.value)
+    IntroduceTaint.introduceTaintAtIdentifierDirect(analyzer, scope, node, info.res, this.sourceScope.value)
   }
 
   /**
@@ -123,7 +125,7 @@ class TestTaintChecker extends TaintChecker {
 
   /**
    *
-   
+
    * @param analyzer
    * @param scope
    * @param node
@@ -144,7 +146,7 @@ class TestTaintChecker extends TaintChecker {
 
   /**
    *
-   
+
    * @param analyzer
    * @param scope
    * @param node
@@ -183,10 +185,11 @@ class TestTaintChecker extends TaintChecker {
       // 使用callgraph边界作为entrypoint
       fullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
       const fullCallGraphEntrypoint = fullCallGraphFileEntryPoint.getAllEntryPointsUsingCallGraph(
-        analyzer.ainfo?.callgraph
+        analyzer.ainfo?.callgraph,
+        analyzer
       )
       // 使用file作为entrypoint
-      const fullFileEntrypoint = fullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer.fileManager)
+      const fullFileEntrypoint = fullCallGraphFileEntryPoint.getAllFileEntryPointsUsingFileManager(analyzer)
       this.entryPoints.push(...fullFileEntrypoint)
       this.entryPoints.push(...fullCallGraphEntrypoint)
     }
@@ -197,17 +200,18 @@ class TestTaintChecker extends TaintChecker {
    * @param node
    * @param fclos
    * @param argValues
+   * @param state
    */
-  checkSinkAtFunctionCall(node: any, fclos: any, argValues: any) {
+  checkSinkAtFunctionCall(node: any, fclos: any, callInfo: CallInfo | undefined, state?: any) {
     if (!fclos) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
-    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    let rule = matchSinkAtFuncCall(node, fclos, rules, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      const args = BasicRuleHandler.prepareArgs(argValues, fclos, rule)
+      const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
         node,
@@ -234,7 +238,8 @@ class TestTaintChecker extends TaintChecker {
             fclos,
             TAINT_TAG_NAME_TEST_TAINT,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state?.callstack
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)

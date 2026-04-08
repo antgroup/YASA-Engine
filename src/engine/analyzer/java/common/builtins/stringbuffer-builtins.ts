@@ -26,7 +26,7 @@ class StringBuffer {
    * @param scope
    */
   static append(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
       return
     }

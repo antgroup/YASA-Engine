@@ -28,7 +28,7 @@ function mergeEntryPoints(entryPoints: EntryPoint[], analyzerEntryPoints: EntryP
  * @param entryPoint
  */
 function getEntryPointUniqueKey(entryPoint: EntryPoint): string {
-  const loc = entryPoint?.entryPointSymVal?.ast?.loc
+  const loc = entryPoint?.entryPointSymVal?.ast?.node?.loc
   if (loc) {
     return `${loc?.sourcefile}:${loc?.start?.line}:${loc?.start?.column}:${loc?.end?.line}:${loc?.end?.column}`
   }

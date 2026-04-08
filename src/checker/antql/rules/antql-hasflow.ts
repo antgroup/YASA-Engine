@@ -111,10 +111,7 @@ class AntQLHasFlow extends TaintChecker {
     for (const sourceLoc in this.sourceSymbol) {
       const symbol = this.sourceSymbol[sourceLoc]
       if (symbol !== '') {
-        symbol._has_tags = undefined
-        symbol.hasTagRec = undefined
-        symbol._tags = undefined
-        symbol.trace = undefined
+        symbol.taint.clear()
         symbol.value = {}
         // symbol.misc_ = {}
       }
@@ -152,7 +149,8 @@ class AntQLHasFlow extends TaintChecker {
     const fullCallGraphEntrypoint = fullCallGraphFileEntryPoint.getEntryPointsUsingCallGraphByLoc(
       LocationUtil.convertQLLocationStringListToUastLocation(this.sourceLocs, Config.prefixPath),
       analyzer.ainfo?.callgraph,
-      analyzer.fileManager
+      analyzer.fileManager,
+      analyzer
     )
     const uniqueEntries = EntrypointUtil.mergeEntryPoints(fullCallGraphEntrypoint, analyzer.entryPoints)
     analyzer.entryPoints = Array.from(uniqueEntries.values())
@@ -184,13 +182,14 @@ class AntQLHasFlow extends TaintChecker {
    */
   markTaintSource(unit: any, { node, kind }: { node: any; kind: string }): void {
     SourceUtil.setTaint(unit, kind)
+    const existingTrace = unit.taint.getFirstTrace()
     if (
-      unit.trace &&
-      Array.isArray(unit.trace) &&
-      (unit.trace[0]?.tag !== 'SOURCE: ' ||
-        (typeof unit.trace[0]?.str === 'string' && !unit.trace[0].str.includes('SOURCE: ')))
+      existingTrace &&
+      Array.isArray(existingTrace) &&
+      (existingTrace[0]?.tag !== 'SOURCE: ' ||
+        (typeof existingTrace[0]?.str === 'string' && !existingTrace[0].str.includes('SOURCE: ')))
     ) {
-      unit.trace = undefined
+      unit.taint.clearTrace()
     } else {
       const startLine = node?.loc?.start?.line
       const endLine = node?.loc?.end?.line
@@ -203,10 +202,7 @@ class AntQLHasFlow extends TaintChecker {
         affectedNodeName: AstUtil.prettyPrint(node),
       }
 
-      if (!unit.trace) {
-        unit.trace = []
-      }
-      unit.trace.push(trace)
+      unit.taint.addTraceToAllTags(trace)
     }
   }
 
@@ -289,7 +285,7 @@ class AntQLHasFlow extends TaintChecker {
   ): any {
     const finding = BasicRuleHandler.getFinding(this.getCheckerId(), this.desc, currentNode)
     // const finding = this.mng.newFinding(this.getCheckerId(), currentNode, currentNode.loc, sourceNode, fclos.id)
-    if (finding && sourceNode.hasTagRec) {
+    if (finding && sourceNode.taint?.isTaintedRec) {
       const sourceTrace = FindingUtil.getTrace(sourceNode, tag)
       if (sourceTrace.length > 0) {
         let flag = false

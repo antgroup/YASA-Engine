@@ -1,4 +1,4 @@
-const PythonTaintAbstractChecker = require('./python-taint-abstract-checker')
+const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { extractRelativePath } = require('../../../util/file-util')
 
@@ -64,6 +64,7 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
     if (registerFile.size === 0 || !registerFile.has(fileName)) {
       return
     }
+
     if (node.left.name === 'urlpatterns') {
       const { right } = node
       this.collectDjangoEntrypointAndSource(analyzer, scope, state, right)
@@ -131,17 +132,29 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
       analyzer.entryPoints.push(completeEntryPoint(ep))
       if (targetSrcName.length > 0) {
         const targetName = targetSrcName[0]
-        for (const param of ep.fdef.parameters) {
+        for (const param of ep.ast.fdef.parameters) {
           if (param.id.name === targetName) {
             this.sourceScope.value.push({
               path: param.id.name,
               kind: 'PYTHON_INPUT',
               scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
-              scopeFunc: ep.fdef?.id?.name,
-              locStart: param.loc.start.line,
-              locEnd: param.loc.end.line,
+              scopeFunc: ep.ast.fdef?.id?.name,
+              locStart: param.loc.start?.line,
+              locEnd: param.loc.end?.line,
             })
           }
+        }
+      }
+      for (const param of ep.ast.fdef.parameters) {
+        if (param.id.name === 'request') {
+          this.sourceScope.value.push({
+            path: param.id.name,
+            kind: 'PYTHON_INPUT',
+            scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
+            scopeFunc: ep.ast.fdef?.id?.name,
+            locStart: param.loc.start.line,
+            locEnd: param.loc.end.line,
+          })
         }
       }
     }
@@ -172,15 +185,15 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
     if (targetSrcName.length > 0) {
       const targetName = targetSrcName[0]
       for (const ep of entrypoints as any[]) {
-        for (const param of ep.fdef.parameters) {
+        for (const param of ep.ast.fdef.parameters) {
           if (param.id.name === targetName) {
             this.sourceScope.value.push({
               path: param.id.name,
               kind: 'PYTHON_INPUT',
               scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
-              scopeFunc: ep.fdef?.id?.name,
-              locStart: param.loc.start.line,
-              locEnd: param.loc.end.line,
+              scopeFunc: ep.ast.fdef?.id?.name,
+              locStart: param.loc.start?.line,
+              locEnd: param.loc.end?.line,
             })
           }
         }
@@ -188,6 +201,18 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
       }
     } else {
       for (const ep of entrypoints as any[]) {
+        for (const param of ep.ast.fdef.parameters) {
+          if (param.id.name === 'request') {
+            this.sourceScope.value.push({
+              path: param.id.name,
+              kind: 'PYTHON_INPUT',
+              scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
+              scopeFunc: ep.ast.fdef?.id?.name,
+              locStart: param.loc.start.line,
+              locEnd: param.loc.end.line,
+            })
+          }
+        }
         analyzer.entryPoints.push(completeEntryPoint(ep))
       }
     }

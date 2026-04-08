@@ -19,18 +19,6 @@
       },
       {
         "func": {
-          "calleeType": "CompilerConfiguration",
-          "fsig": "addCompilationCustomizers"
-        },
-        "source": {
-          "type": "ARG"
-        },
-        "target": {
-          "type": "THIS"
-        }
-      },
-      {
-        "func": {
           "calleeType": "BeanUtils",
           "fsig": "copyProperties",
           "argNum": 2
@@ -42,6 +30,34 @@
         "target": {
           "type": "ARG",
           "index": 1
+        }
+      },
+      {
+        "func": {
+          "calleeType": "ProcessBuilder",
+          "fsig": "redirectError",
+          "argNum": 1
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "ARG",
+          "index": 0
+        }
+      },
+      {
+        "func": {
+          "calleeType": "ProcessBuilder",
+          "fsig": "redirectOutput",
+          "argNum": 1
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "ARG",
+          "index": 0
         }
       }
     ]

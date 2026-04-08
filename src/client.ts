@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     console.log(`arguments: ${args.join(' ')}`)
     if (!args.includes('--singleCommand')) {
       const analyzer = await initAnalyzer(null, args)
-      analyzer.preProcess(Config.maindir)
+      await analyzer.preProcess(Config.maindir)
       const fullCallGraphFileEntryPoint = require('./checker/common/full-callgraph-file-entrypoint')
       fullCallGraphFileEntryPoint.makeFullCallGraph(analyzer)
       BasicRuleHandler.setPreprocessReady(true)

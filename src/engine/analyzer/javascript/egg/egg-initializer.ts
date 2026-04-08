@@ -18,39 +18,28 @@ class EggInitializer extends JsInitializer {
    * @param moduleManager
    */
   static initEgg(moduleManager: any) {
-    const egg = Scoped({
+    const egg = new Scoped(moduleManager.qid, {
       parent: moduleManager,
       sid: 'Egg',
     })
     moduleManager.setFieldValue('Egg', egg)
 
     // Application
-    egg.setFieldValue(
-      'Application',
-      Scoped({
-        vtype: 'class',
-        parent: egg,
-        sid: 'Egg.Application',
-        fdef: {
-          type: 'ClassDefinition',
-          body: [],
-        },
-      })
-    )
+    const appClass = new Scoped(egg.qid, {
+      vtype: 'class',
+      parent: egg,
+      sid: 'Application',
+    })
+    appClass.ast.fdef = { type: 'ClassDefinition', body: [] }
+    egg.setFieldValue('Application', appClass)
 
-    // Context
-    egg.setFieldValue(
-      'Context',
-      Scoped({
-        vtype: 'class',
-        parent: egg,
-        sid: 'Egg.Context',
-        fdef: {
-          type: 'ClassDefinition',
-          body: [],
-        },
-      })
-    )
+    const ctxClass = new Scoped(egg.qid, {
+      vtype: 'class',
+      parent: egg,
+      sid: 'Context',
+    })
+    ctxClass.ast.fdef = { type: 'ClassDefinition', body: [] }
+    egg.setFieldValue('Context', ctxClass)
   }
 
   /**
@@ -60,16 +49,16 @@ class EggInitializer extends JsInitializer {
   static initGlobalScope(global: any) {
     global.setFieldValue(
       'app',
-      Scoped({
-        readonly: false,
+      new Scoped(global.qid, {
+        runtime: { readonly: false },
         sid: 'egg_application',
         parent: global,
       })
     )
     global.setFieldValue(
       'ctx',
-      Scoped({
-        readonly: false,
+      new Scoped(global.qid, {
+        runtime: { readonly: false },
         sid: 'ctx_template',
         parent: global,
       })
@@ -93,10 +82,15 @@ class EggInitializer extends JsInitializer {
     }
     const config = (topScope.value.config =
       topScope.value.config ||
-      ObjectValue({
+      new ObjectValue(topScope.qid, {
         sid: 'config',
       }))
-    Object.assign(config.value, configVal.vtype ? configVal.value : configVal)
+    const configSource = configVal.vtype ? configVal.value : configVal
+    if (configSource && typeof configSource === 'object') {
+      for (const [key, value] of Object.entries(configSource)) {
+        config.members.set(key, value as any)
+      }
+    }
     app.value.config = config
   }
 
@@ -118,7 +112,7 @@ class EggInitializer extends JsInitializer {
   static resetInitVariables(scope: any) {
     for (const field of Object.keys(scope.value)) {
       const v = scope.value[field]
-      if (v.trace) delete v.trace
+      if (v.taint) v.taint.clearTrace()
     }
   }
 }

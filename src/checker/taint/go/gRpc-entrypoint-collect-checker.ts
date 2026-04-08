@@ -1,4 +1,5 @@
 import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
+import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
 
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const AstUtil = require('../../../util/ast-util')
@@ -68,7 +69,7 @@ class GRpcEntrypointCollectChecker extends Checker {
           if (match) {
             const serverName = match[1]
             const fClos = analyzer.processFunctionDefinition(scope, exp, state)
-            if (fClos?._qid) registerServerPoints[fClos._qid] = serverName
+            if (fClos?.qid) registerServerPoints[fClos.qid] = serverName
           }
           break
 
@@ -111,11 +112,12 @@ class GRpcEntrypointCollectChecker extends Checker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
     if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
-    if (!(fclos._qid in registerServerPoints)) return // 处理Register_xxx_Server函数，即实现类注册点
+    if (!(fclos.qid in registerServerPoints)) return // 处理Register_xxx_Server函数，即实现类注册点
+    const argvalues = getLegacyArgValues(callInfo)
     if (!Array.isArray(argvalues) || argvalues.length < 1) return
-    const serverName = registerServerPoints[fclos._qid]
+    const serverName = registerServerPoints[fclos.qid]
     const implServer = argvalues[1]
     this.searchServiceEntryPoints(serverName, implServer, fclos, state, analyzer)
   }
@@ -135,14 +137,14 @@ class GRpcEntrypointCollectChecker extends Checker {
     interfaceEntryPoints.forEach((entryPointName: string) => {
       const ep = AstUtil.satisfy(
         implServer,
-        (n: any) => n.vtype === 'fclos' && n?.ast?.id.name === entryPointName,
-        (node: any, prop: any) => prop === 'field',
+        (n: any) => n.vtype === 'fclos' && n?.ast?.node?.id.name === entryPointName,
+        (node: any, prop: any) => prop === '_field',
         null,
         false
       )
 
       if (ep) {
-        const hash = JSON.stringify(ep.ast.loc)
+        const hash = JSON.stringify(ep.ast.node.loc)
         if (!hash || processedRegisterEntryPoints.has(hash)) return
         processedRegisterEntryPoints.add(hash)
         this.introduceGrpcTaint(ep, state, analyzer)

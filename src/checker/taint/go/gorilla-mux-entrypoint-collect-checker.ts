@@ -1,8 +1,10 @@
+import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
+
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const Config = require('../../../config')
 
 const RouteRegistryProperty = ['HandleFunc', 'Handle', 'Handler']
-const RouteRegistryObject = ['github.com/gorilla/mux.NewRouter()']
+const RouteRegistryObject = ['<global>.packageManager.github.com/gorilla/mux.NewRouter()']
 const IntroduceTaint = require('../common-kit/source-util')
 const Checker = require('../../common/checker')
 
@@ -30,8 +32,8 @@ class MuxEntryPointCollectChecker extends Checker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
-
+    const { fclos, callInfo } = info
+    const argvalues = getLegacyArgValues(callInfo)
     this.collectRouteRegistry(node, fclos, argvalues, scope, info)
   }
 
@@ -60,16 +62,16 @@ class MuxEntryPointCollectChecker extends Checker {
     if (Config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!(calleeFClos && calleeFClos.object && calleeFClos.property)) return
     const { object, property } = calleeFClos
-    if (!object._qid || !property.name) return
-    const objectQid = object._qid
+    if (!object.qid || !property.name) return
+    const objectQid = object.qid
     const propertyName = property.name
     if (
       RouteRegistryObject.some((muxPrefix: any) => objectQid.startsWith(muxPrefix)) &&
       RouteRegistryProperty.includes(propertyName)
     ) {
       for (const arg of argValues) {
-        if (arg?.vtype === 'fclos' && arg?.ast.loc) {
-          const hash = JSON.stringify(arg.ast.loc)
+        if (arg?.vtype === 'fclos' && arg?.ast.node.loc) {
+          const hash = JSON.stringify(arg.ast.node.loc)
           if (!processedRouteRegistry.has(hash)) {
             processedRouteRegistry.add(hash)
             IntroduceTaint.introduceFuncArgTaintBySelfCollection(arg, state, analyzer, '1:', 'GO_INPUT')

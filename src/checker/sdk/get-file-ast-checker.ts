@@ -16,6 +16,8 @@ class GetFileAstChecker extends Checker {
 
   fileManager: Record<string, any>
 
+  symbolTable: any
+
   /**
    *
    * @param mng
@@ -56,18 +58,24 @@ class GetFileAstChecker extends Checker {
     const finding: Finding = {
       output: '',
     }
-    if (this.fileManager[this.input]) {
-      finding.output = JSON.stringify(this.fileManager[this.input].ast, (key: string, value: any) => {
-        // 如果属性名是 'parent'，则返回 undefined 表示排除
-        if (key === 'parent') {
-          return undefined
-        }
-        if (value === undefined) {
-          return ''
-        }
-        return value
-      })
-      this.resultManager.newFinding(finding, InteractiveOutputStrategy.outputStrategyId)
+    let fileValue = this.fileManager[this.input]
+    if (fileValue) {
+      if (typeof fileValue === 'string' && fileValue.startsWith('symuuid_')) {
+        fileValue = this.symbolTable.get(this.fileManager[this.input])
+      }
+      if (fileValue?.ast?.node) {
+        finding.output = JSON.stringify(fileValue.ast?.node, (key: string, value: any) => {
+          // 如果属性名是 'parent'，则返回 undefined 表示排除
+          if (key === 'parent') {
+            return undefined
+          }
+          if (value === undefined) {
+            return ''
+          }
+          return value
+        })
+        this.resultManager.newFinding(finding, InteractiveOutputStrategy.outputStrategyId)
+      }
     }
     this.status = false
   }
@@ -82,6 +90,7 @@ class GetFileAstChecker extends Checker {
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
     this.fileManager = analyzer.fileManager
+    this.symbolTable = analyzer.symbolTable
   }
 }
 module.exports = GetFileAstChecker

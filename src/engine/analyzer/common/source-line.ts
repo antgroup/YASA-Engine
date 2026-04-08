@@ -2,12 +2,63 @@ export {}
 const _ = require('lodash')
 const Config = require('../../../config')
 const { prettyPrint } = require('../../../util/ast-util')
-const { cloneWithDepth } = require('../../../util/clone-util')
+const { buildNewCopiedWithTag } = require('../../../util/clone-util')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const VariableUtil = require('../../../util/variable-util')
 
 /** **************** source code line management *********************** */
 
-const codeCache = new Map<string, string[]>()
+// 全局 analyzer 引用，用于访问 sourceCodeCache
+let globalAnalyzer: any = null
+
+/**
+ * 设置全局 analyzer 实例
+ * @param analyzer analyzer 实例
+ */
+function setGlobalAnalyzer(analyzer: any) {
+  globalAnalyzer = analyzer
+}
+
+/**
+ * 获取全局 analyzer 实例
+ * @returns analyzer 实例
+ */
+function getGlobalAnalyzer() {
+  return globalAnalyzer
+}
+
+/**
+ * 获取 sourceCodeCache（统一使用 analyzer.sourceCodeCache）
+ * @returns sourceCodeCache Map，存储文件的行数组
+ */
+function getSourceCodeCache(): Map<string, string[]> {
+  if (globalAnalyzer && globalAnalyzer.sourceCodeCache instanceof Map) {
+    return globalAnalyzer.sourceCodeCache
+  }
+  // 如果没有全局 analyzer，返回一个临时的 Map（向后兼容）
+  if (!globalAnalyzer) {
+    return new Map<string, string[]>()
+  }
+  // 如果 sourceCodeCache 不是 Map，转换为 Map
+  if (
+    globalAnalyzer.sourceCodeCache &&
+    typeof globalAnalyzer.sourceCodeCache === 'object' &&
+    !Array.isArray(globalAnalyzer.sourceCodeCache)
+  ) {
+    const map = new Map<string, string[]>()
+    for (const key in globalAnalyzer.sourceCodeCache) {
+      if (Object.prototype.hasOwnProperty.call(globalAnalyzer.sourceCodeCache, key)) {
+        const value = globalAnalyzer.sourceCodeCache[key]
+        // 兼容处理：如果是字符串，转换为数组
+        map.set(key, typeof value === 'string' ? value.split(/\n/) : value)
+      }
+    }
+    globalAnalyzer.sourceCodeCache = map
+    return map
+  }
+  return new Map<string, string[]>()
+}
+
 
 /**
  *
@@ -19,10 +70,14 @@ const codeCache = new Map<string, string[]>()
  */
 function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affectedNodeName: any) {
   if (!val) return val
+  let sig = '<NodeLocUnknown>'
+  if (node.loc?.sourcefile && typeof node.loc?.sourcefile === 'string') {
+    sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
+  }
   if (Array.isArray(val)) {
     let arrayHasTag = false
     for (const eachVal of val) {
-      if ((eachVal as any).hasTagRec) {
+      if ((eachVal as any).taint?.isTaintedRec) {
         arrayHasTag = true
         break
       }
@@ -30,75 +85,55 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
     if (!arrayHasTag) {
       return val
     }
-    const new_val = _.clone(val)
-    for (const eachVal of new_val) {
-      if (eachVal.trace) {
-        const { trace } = eachVal
-        if (trace.length > 0) {
-          const last_line = trace[trace.length - 1]
-          if (last_line.file === sourcefile && last_line.line === node.loc.start?.line && last_line.tag === tag)
-            trace.pop()
-        }
-        const start_line = node.loc.start?.line
-        const end_line = node.loc.end?.line
-        const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-        eachVal.trace.push({ file: sourcefile, line: tline, node, tag, affectedNodeName })
-      } else {
-        const start_line = node.loc.start?.line
-        const end_line = node.loc.end?.line
-        const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-        eachVal.trace = [
-          {
-            file: sourcefile,
-            line: tline,
-            node,
-            tag,
-            affectedNodeName,
-          },
-        ]
-      }
-      processFieldAndArguments(eachVal, eachVal, 0, [])
-    }
-    return new_val
-  }
-  if (!val.hasTagRec || !sourcefile) return val
+    // 添加copied主要是为了生成新的符号值，避免覆盖原有的表项，这个跟符号值树使用内存维护有区别
+    const newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
+    // @ts-ignore
+    newVal.value = val.value
+    for (const eachVal of newVal) {
+      const start_line = node.loc.start?.line
+      const end_line = node.loc.end?.line
+      const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
+      const traceItem = { file: sourcefile, line: tline, node, tag, affectedNodeName }
 
-  const { trace } = val
-  if (trace) {
-    if (trace.length > 0) {
-      const last_line = trace[trace.length - 1]
-      if (last_line.file === sourcefile && last_line.line === node.loc.start?.line && last_line.tag === tag) trace.pop()
-    }
+      eachVal.taint.dedupLastTrace(sourcefile, node.loc.start?.line, tag)
 
-    let new_val
-    if (Config.shareSourceLineSet) {
-      new_val = val
-    } else {
-      new_val = _.clone(val)
-      new_val.trace = _.clone(val.trace)
+      // Pass traceItem to processFieldAndArguments for delayed addition
+      processFieldAndArguments(eachVal, eachVal, 0, [], node, traceItem)
     }
-    const start_line = node.loc.start?.line
-    const end_line = node.loc.end?.line
-    const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-    new_val.trace.push({ file: sourcefile, line: tline, node, tag, affectedNodeName })
-    processFieldAndArguments(new_val, new_val, 0, [])
-    return new_val
+    return newVal
   }
-  const new_val = _.clone(val)
+  if (!val.taint?.isTaintedRec || !sourcefile) return val
+
   const start_line = node.loc.start?.line
   const end_line = node.loc.end?.line
   const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-  new_val.trace = [
-    {
-      file: sourcefile,
-      line: tline,
-      node,
-      tag,
-      affectedNodeName,
-    },
-  ]
-  processFieldAndArguments(new_val, new_val, 0, [])
-  return new_val
+  const traceItem = { file: sourcefile, line: tline, node, tag, affectedNodeName }
+
+  if (val.taint.hasTraces()) {
+    val.taint.dedupLastTrace(sourcefile, node.loc.start?.line, tag)
+
+    let newVal
+    if (Config.shareSourceLineSet) {
+      newVal = val
+    } else {
+      newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
+      newVal.value = val.value
+    }
+    // CRITICAL: If traceItem exists and val has tags, add it to val FIRST
+    // This handles the case where val itself has tags (first call where val === res)
+    if (traceItem && newVal.taint?.hasTags()) {
+      newVal.taint.addTraceToAllTags(traceItem)
+    }
+    // Pass traceItem to processFieldAndArguments for delayed addition
+    processFieldAndArguments(newVal, newVal, 0, [], node, traceItem)
+    return newVal
+  }
+  const newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
+  newVal.value = val.value
+
+  // Pass traceItem to processFieldAndArguments for delayed addition
+  processFieldAndArguments(newVal, newVal, 0, [], node, traceItem)
+  return newVal
 }
 
 /**
@@ -107,22 +142,25 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
  * @param res
  * @param stack
  * @param visited
+ * @param node
+ * @param traceItem - The trace item to be added during recursion
  */
-function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]) {
+function processFieldAndArguments(val: any, res: any, stack: any, visited: any[], node: any, traceItem?: any) {
   if (visited.includes(val)) {
     return
   }
+  const sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
+
   for (const a of visited) {
     if (
       a.vtype !== 'union' &&
       a.vtype !== 'BVT' &&
       a.vtype === val.vtype &&
-      a._sid === val._sid &&
-      a._qid === val._qid &&
-      a._id === val._id &&
-      a.ast === val.ast &&
+      a.sid === val.sid &&
+      a.logicalQid === val.logicalQid &&
+      a.ast?.node === val.ast?.node &&
       a.type === val.type &&
-      a.hasTagRec === val.hasTagRec
+      a.taint?.isTaintedRec === val.taint?.isTaintedRec
     ) {
       return
     }
@@ -131,293 +169,153 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
   if (stack >= 20) {
     return
   }
-  if (!Array.isArray(res.trace)) {
+
+  // Check if val needs processing
+  if (!val.taint?.isTaintedRec) {
     return
   }
-  if (typeof val.hasTagRec !== 'undefined' && !val.hasTagRec) {
+
+  // Check if there's anything to propagate: res has traces OR traceItem exists
+  // Don't return early just because res has no traces - traceItem might need to propagate to children
+  if (!res.taint.hasTraces() && !traceItem) {
     return
   }
-  if (
-    typeof val?.field !== 'undefined' &&
-    (Array.isArray(val?.field) || Object.getOwnPropertyNames(val?.field).length !== 0) &&
-    val.hasTagRec
+  if (val.taint?.isTaintedRec && val.vtype === 'BVT') {
+    const childKeys = Object.keys(val.value)
+    for (const key of childKeys) {
+      const arg = val.getChild(key)
+      if (arg == null) continue
+      if (arg.taint?.isTaintedRec) {
+        let hasChange = false
+        if (arg.taint?.hasTags()) {
+          const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
+          argCopy.taint.propagateTraceFrom(res.taint, traceItem)
+          val.setChild(key, argCopy)
+          hasChange = true
+        }
+        if (hasChange) {
+          processFieldAndArguments(val.getChild(key), res, stack + 1, visited, node, traceItem)
+        } else {
+          processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
+        }
+      }
+    }
+  } else if (
+    typeof val?._field !== 'undefined' &&
+    (Array.isArray(val?._field) || Object.getOwnPropertyNames(val?._field).length !== 0) &&
+    val.taint?.isTaintedRec
   ) {
-    if (Array.isArray(val.field)) {
-      for (const argI in val.field) {
-        const arg = val.field[argI]
-        if (arg.hasTagRec) {
+    if (Array.isArray(val._field)) {
+      for (const argI in val._field) {
+        const arg = val.getFieldValue(argI)
+        if (arg?.taint?.isTaintedRec) {
           let hasChange = false
-          if (Array.isArray(arg.trace) && VariableUtil.isNotEmpty(arg._tags)) {
-            const arg_copy = cloneWithDepth(arg, 2)
-            for (const argT in res.trace) {
-              let flag = 1
-              for (const tt in arg_copy.trace) {
-                if (
-                  arg_copy.trace[tt].file === res.trace[argT].file &&
-                  arg_copy.trace[tt].tag === res.trace[argT].tag &&
-                  JSON.stringify(arg_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-                ) {
-                  if (
-                    arg_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-                    !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-                  ) {
-                    arg_copy.trace[tt].affectedNodeName = res.trace[argT]?.affectedNodeName
-                  }
-                  flag = 0
-                  break
-                }
-              }
-              if (flag) {
-                arg_copy.trace.push(res.trace[argT])
-              }
-            }
-            val.field[argI] = arg_copy
+          if (arg.taint?.hasTags()) {
+            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
+            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
+            val.setFieldValue(argI, argCopy)
             hasChange = true
           }
           if (hasChange) {
-            processFieldAndArguments(val.field[argI], res, stack + 1, visited)
+            processFieldAndArguments(val.getFieldValue(argI), res, stack + 1, visited, node, traceItem)
           } else {
-            processFieldAndArguments(arg, res, stack + 1, visited)
+            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
           }
         }
       }
-    } else {
-      for (const key in val.field) {
-        if (Object.prototype.hasOwnProperty.call(val.field, key)) {
-          const arg = val.field[key]
-          if (typeof arg === 'undefined') {
-            continue
+    } else if (val.members) {
+      for (const key of val.members.keys()) {
+        const arg = val.members.get(key)
+        if (typeof arg === 'undefined' || arg === null || !arg.taint) {
+          continue
+        }
+        if (arg.taint?.isTaintedRec) {
+          let hasChange = false
+          if (arg.taint?.hasTags()) {
+            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
+            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
+            val.members.set(key, argCopy)
+            hasChange = true
           }
-          if (arg.hasTagRec) {
-            let hasChange = false
-            if (Array.isArray(arg.trace) && VariableUtil.isNotEmpty(arg._tags)) {
-              const arg_copy = cloneWithDepth(arg, 2)
-              for (const argT in res.trace) {
-                let flag = 1
-                for (const tt in arg_copy.trace) {
-                  if (
-                    arg_copy.trace[tt].file === res.trace[argT].file &&
-                    arg_copy.trace[tt].tag === res.trace[argT].tag &&
-                    JSON.stringify(arg_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-                  ) {
-                    if (
-                      arg_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-                      !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-                    ) {
-                      arg_copy.trace[tt].affectedNodeName = res.trace[argT].affectedNodeName
-                    }
-                    flag = 0
-                    break
-                  }
-                }
-                if (flag) {
-                  arg_copy.trace.push(res.trace[argT])
-                }
-              }
-              if (val.vtype === 'BVT') {
-                val.value = { [key]: arg_copy }
-              } else {
-                val.field[key] = arg_copy
-              }
-              hasChange = true
-            }
-            if (hasChange) {
-              processFieldAndArguments(val.field[key], res, stack + 1, visited)
-            } else {
-              processFieldAndArguments(arg, res, stack + 1, visited)
-            }
+          if (hasChange) {
+            processFieldAndArguments(val.members.get(key), res, stack + 1, visited, node, traceItem)
+          } else {
+            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
           }
         }
       }
     }
   }
-  if (val?.hasTagRec && Array.isArray(val?.arguments)) {
-    for (const argJ in val.arguments) {
-      const arg = val.arguments[argJ]
+  if (val?.taint?.isTaintedRec && Array.isArray(val?.arguments)) {
+    const argsSnapshot = val.arguments
+    for (let argIdx = 0; argIdx < argsSnapshot.length; argIdx++) {
+      const arg = argsSnapshot[argIdx]
       if (typeof arg === 'undefined' || arg === null) {
         continue
       }
       try {
-        if (arg.hasTagRec) {
+        if (arg.taint?.isTaintedRec) {
           let hasChange = false
-          if (Array.isArray(arg.trace) && VariableUtil.isNotEmpty(arg._tags)) {
-            const arg_copy = cloneWithDepth(arg, 2)
-            for (const argT in res.trace) {
-              let flag = 1
-              for (const tt in arg_copy.trace) {
-                if (
-                  arg_copy.trace[tt].file === res.trace[argT].file &&
-                  arg_copy.trace[tt].tag === res.trace[argT].tag &&
-                  JSON.stringify(arg_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-                ) {
-                  if (
-                    arg_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-                    !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-                  ) {
-                    arg_copy.trace[tt].affectedNodeName = res.trace[argT].affectedNodeName
-                  }
-                  flag = 0
-                  break
-                }
-              }
-              if (flag) {
-                arg_copy.trace.push(res.trace[argT])
-              }
-            }
-            val.arguments[argJ] = arg_copy
+          if (arg.taint?.hasTags()) {
+            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
+            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
+            const currentArgs = val.arguments
+            currentArgs[argIdx] = argCopy
+            val.arguments = currentArgs
             hasChange = true
           }
           if (hasChange) {
-            processFieldAndArguments(val.arguments[argJ], res, stack + 1, visited)
+            processFieldAndArguments(val.arguments[argIdx], res, stack + 1, visited, node, traceItem)
           } else {
-            processFieldAndArguments(arg, res, stack + 1, visited)
+            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
           }
         }
       } catch (e) {}
     }
   }
-  if (val?.left?.hasTagRec) {
-    if (
-      VariableUtil.isNotEmpty(val.left._tags) &&
-      typeof val.left.trace !== 'undefined' &&
-      Array.isArray(val.left.trace)
-    ) {
-      const arg = val.left
-      const left_copy = cloneWithDepth(arg, 2)
-      for (const argT in res.trace) {
-        let flag = 1
-        for (const tt in left_copy.trace) {
-          if (
-            left_copy.trace[tt].file === res.trace[argT].file &&
-            left_copy.trace[tt].tag === res.trace[argT].tag &&
-            JSON.stringify(left_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-          ) {
-            if (
-              left_copy?.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-              !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-            ) {
-              left_copy.trace[tt].affectedNodeName = res.trace[argT].affectedNodeName
-            }
-            flag = 0
-            break
-          }
-        }
-        if (flag) {
-          left_copy.trace.push(res.trace[argT])
-        }
-      }
-      val.left = left_copy
+  if (val?.left?.taint?.isTaintedRec) {
+    if (val.left.taint?.hasTags()) {
+      const leftCopy = buildNewCopiedWithTag(globalAnalyzer, val.left, sig)
+      leftCopy.taint.propagateTraceFrom(res.taint, traceItem)
+      val.left = leftCopy
     }
-    processFieldAndArguments(val.left, res, stack + 1, visited)
+    processFieldAndArguments(val.left, res, stack + 1, visited, node, traceItem)
   }
-  if (val?.right?.hasTagRec) {
-    if (
-      VariableUtil.isNotEmpty(val.right._tags) &&
-      typeof val.right.trace !== 'undefined' &&
-      Array.isArray(val.right.trace)
-    ) {
-      const arg = val.right
-      const right_copy = cloneWithDepth(arg, 2)
-      for (const argT in res.trace) {
-        let flag = 1
-        for (const tt in right_copy.trace) {
-          if (
-            right_copy.trace[tt].file === res.trace[argT].file &&
-            right_copy.trace[tt].tag === res.trace[argT].tag &&
-            JSON.stringify(right_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-          ) {
-            if (
-              right_copy?.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-              !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-            ) {
-              right_copy.trace[tt].affectedNodeName = res.trace[argT]?.affectedNodeName
-            }
-            flag = 0
-            break
-          }
-        }
-        if (flag) {
-          right_copy.trace.push(res.trace[argT])
-        }
-      }
-      val.right = right_copy
+  if (val?.right?.taint?.isTaintedRec) {
+    if (val.right.taint?.hasTags()) {
+      const rightCopy = buildNewCopiedWithTag(globalAnalyzer, val.right, sig)
+      rightCopy.taint.propagateTraceFrom(res.taint, traceItem)
+      val.right = rightCopy
     }
-    processFieldAndArguments(val.right, res, stack + 1, visited)
+    processFieldAndArguments(val.right, res, stack + 1, visited, node, traceItem)
   }
-  if (val?.expression?.hasTagRec) {
-    if (
-      VariableUtil.isNotEmpty(val.expression._tags) &&
-      typeof val.expression.trace !== 'undefined' &&
-      Array.isArray(val.expression.trace)
-    ) {
-      const arg = val.expression
-      const expression_copy = cloneWithDepth(arg, 2)
-      for (const argT in res.trace) {
-        let flag = 1
-        for (const tt in expression_copy.trace) {
-          if (
-            expression_copy.trace[tt].file === res.trace[argT].file &&
-            expression_copy.trace[tt].tag === res.trace[argT].tag &&
-            JSON.stringify(expression_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-          ) {
-            if (
-              expression_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-              !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-            ) {
-              expression_copy.trace[tt].affectedNodeName = res.trace[argT]?.affectedNodeName
-            }
-            flag = 0
-            break
-          }
-        }
-        if (flag) {
-          expression_copy.trace.push(res.trace[argT])
-        }
-      }
-      val.expression = expression_copy
+  if (val?.expression?.taint?.isTaintedRec) {
+    if (val.expression.taint?.hasTags()) {
+      const expressionCopy = buildNewCopiedWithTag(globalAnalyzer, val.expression, sig)
+      expressionCopy.taint.propagateTraceFrom(res.taint, traceItem)
+      val.expression = expressionCopy
     }
-    processFieldAndArguments(val.expression, res, stack + 1, visited)
+    processFieldAndArguments(val.expression, res, stack + 1, visited, node, traceItem)
   }
-  if (val?.children) {
+  if (val?.children && val.vtype !== 'BVT') {
     for (const key in val.children) {
       if (Object.prototype.hasOwnProperty.call(val.children, key)) {
         const children = val.children[key]
         if (typeof children === 'undefined') {
           continue
         }
-        if (children.hasTagRec) {
+        if (children.taint?.isTaintedRec) {
           let hasChange = false
-          if (Array.isArray(children.trace) && VariableUtil.isNotEmpty(children._tags)) {
-            const children_copy = cloneWithDepth(children, 2)
-            for (const argT in res.trace) {
-              let flag = 1
-              for (const tt in children_copy.trace) {
-                if (
-                  children_copy.trace[tt].file === res.trace[argT].file &&
-                  children_copy.trace[tt].tag === res.trace[argT].tag &&
-                  JSON.stringify(children_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-                ) {
-                  if (
-                    children_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-                    !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-                  ) {
-                    children_copy.trace[tt].affectedNodeName = res.trace[argT].affectedNodeName
-                  }
-                  flag = 0
-                  break
-                }
-              }
-              if (flag) {
-                children_copy.trace.push(res.trace[argT])
-              }
-            }
-            val.field[key] = children_copy
+          if (children.taint?.hasTags()) {
+            const childrenCopy = buildNewCopiedWithTag(globalAnalyzer, children, sig)
+            childrenCopy.taint.propagateTraceFrom(res.taint, traceItem)
+            val.children[key] = childrenCopy
             hasChange = true
           }
           if (hasChange) {
-            processFieldAndArguments(val.field[key], res, stack + 1, visited)
+            processFieldAndArguments(val.children[key], res, stack + 1, visited, node, traceItem)
           } else {
-            processFieldAndArguments(children, res, stack + 1, visited)
+            processFieldAndArguments(children, res, stack + 1, visited, node, traceItem)
           }
         }
       }
@@ -426,48 +324,51 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
 
   if (val.vtype === 'symbol') {
     const processMemberAccess = (target: any) => {
-      const targetRef = val[target]
+      const targetRef = target === 'object' ? val.object : val.property
 
-      if (targetRef.object && targetRef?.object?._sid && targetRef?.object?._sid?.includes('__tmp')) {
+      if (targetRef.object && targetRef?.object?.sid && targetRef?.object?.sid?.includes('__tmp')) {
         return
       }
 
-      if (Array.isArray(targetRef.trace) && VariableUtil.isNotEmpty(targetRef._tags)) {
-        const target_copy = cloneWithDepth(targetRef, 2)
-        for (const argT in res.trace) {
-          let flag = 1
-          for (const tt in target_copy.trace) {
-            if (
-              target_copy.trace[tt].file === res.trace[argT].file &&
-              target_copy.trace[tt].tag === res.trace[argT].tag &&
-              JSON.stringify(target_copy.trace[tt].line) === JSON.stringify(res.trace[argT].line)
-            ) {
-              if (
-                target_copy.trace[tt]?.affectedNodeName?.includes('__tmp') &&
-                !res.trace[argT]?.affectedNodeName?.includes('__tmp')
-              ) {
-                target_copy.trace[tt].affectedNodeName = res.trace[argT].affectedNodeName
-              }
-              flag = 0
-              break
-            }
-          }
-          if (flag) {
-            target_copy.trace.push(res.trace[argT])
-          }
+      if (targetRef.taint?.hasTags()) {
+        const targetCopy = buildNewCopiedWithTag(globalAnalyzer, targetRef, sig)
+        targetCopy.taint.propagateTraceFrom(res.taint, traceItem)
+        if (target === 'object') {
+          val.object = targetCopy
+        } else {
+          val.property = targetCopy
         }
-        val[target] = target_copy
       }
 
-      processFieldAndArguments(val[target], res, stack + 1, visited)
+      const nextTarget = target === 'object' ? val.object : val.property
+      processFieldAndArguments(nextTarget, res, stack + 1, visited, node, traceItem)
     }
 
-    if (val.object?.hasTagRec) {
+    if (val.object?.taint && val.object.taint?.isTaintedRec) {
       processMemberAccess('object')
     }
 
-    if (val.property?.hasTagRec) {
+    if (val.property?.taint && val.property.taint?.isTaintedRec) {
       processMemberAccess('property')
+    }
+  }
+  if (val?.misc_?.buffer && Array.isArray(val.misc_.buffer)) {
+    for (const bufferI in val.misc_.buffer) {
+      const buffer = val.misc_.buffer[bufferI]
+      if (buffer.taint?.isTaintedRec) {
+        let hasChange = false
+        if (buffer.taint?.hasTags()) {
+          const buffer_copy = buildNewCopiedWithTag(globalAnalyzer, buffer, sig)
+          buffer_copy.taint.propagateTraceFrom(res.taint, traceItem)
+          val.misc_.buffer[bufferI] = buffer_copy
+          hasChange = true
+        }
+        if (hasChange) {
+          processFieldAndArguments(val.misc_.buffer[bufferI], res, stack + 1, visited, node, traceItem)
+        } else {
+          processFieldAndArguments(buffer, res, stack + 1, visited, node, traceItem)
+        }
+      }
     }
   }
 }
@@ -491,7 +392,7 @@ function getNodeTrace(fdef: any, node: any) {
     sourcefile = src_node?.loc?.sourcefile
   }
 
-  const line = loc.start.line === loc.end.line ? loc.start.line : _.range(loc.start.line, loc.end.line + 1)
+  const line = loc.start?.line === loc.end?.line ? loc.start?.line : _.range(loc.start?.line, loc.end?.line + 1)
   if (sourcefile === undefined) {
     sourcefile = node?.loc?.sourcefile
   }
@@ -504,9 +405,14 @@ function getNodeTrace(fdef: any, node: any) {
  * @param code
  */
 function storeCode(sourcefile: string, code: string) {
+  const codeCache = getSourceCodeCache()
   const fname = sourcefile ? sourcefile.toString() : `_f_${codeCache.size}`
   const lines = (code as string).split(/\n/)
   codeCache.set(fname, lines)
+  // 同时更新 analyzer.sourceCodeCache（如果存在）
+  if (globalAnalyzer) {
+    globalAnalyzer.sourceCodeCache = codeCache
+  }
   return fname
 }
 
@@ -551,6 +457,7 @@ function formatSingleTrace(item: any) {
   }
   let code
   if (fname) {
+    const codeCache = getSourceCodeCache()
     const flines = codeCache.get(fname)
     const lines = Array.isArray(item.line) ? item.line : [item.line]
     for (let i = 0; i < lines.length; i++) {
@@ -598,6 +505,7 @@ function getCodeByLocation(loc: any) {
   const endLine = loc?.end?.line
 
   if (sourcefile && startLine && endLine) {
+    const codeCache = getSourceCodeCache()
     const lines = codeCache.get(sourcefile)
     if (lines) {
       const startIdx = startLine - 1
@@ -615,10 +523,12 @@ function getCodeByLocation(loc: any) {
  * @param sourcefile
  */
 function getCodeBySourceFile(sourcefile: string) {
+  const codeCache = getSourceCodeCache()
   if (sourcefile && codeCache.has(sourcefile)) {
-    const lines = codeCache.get(sourcefile) as string[]
-    if (lines.length === 0) return ''
-    return lines.join('\n')
+    const lines = codeCache.get(sourcefile)
+    if (lines && lines.length > 0) {
+      return lines.join('\n')
+    }
   }
   return ''
 }
@@ -631,4 +541,6 @@ module.exports = {
   formatSingleTrace,
   getCodeByLocation,
   getCodeBySourceFile,
+  setGlobalAnalyzer,
+  getGlobalAnalyzer,
 }

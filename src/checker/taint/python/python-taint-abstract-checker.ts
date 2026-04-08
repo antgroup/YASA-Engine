@@ -1,10 +1,18 @@
+import type { CallInfo } from '../../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
+const commonUtil = require('../../../util/common-util')
+const config = require('../../../config')
+const { handleException } = require('../../../engine/analyzer/common/exception-handler')
+
 const IntroduceTaint = require('../common-kit/source-util')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
 const { matchSinkAtFuncCall, matchRegex } = require('../common-kit/sink-util')
 const TaintChecker = require('../taint-checker')
 const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
+const FileUtil = require('../../../util/file-util')
 
 const TAINT_TAG_NAME_PYTHON = 'PYTHON_INPUT'
 
@@ -21,7 +29,25 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param info
    */
   triggerAtIdentifier(analyzer: any, scope: any, node: any, state: any, info: any) {
-    IntroduceTaint.introduceTaintAtIdentifier(node, info.res, this.sourceScope.value)
+    const result = IntroduceTaint.introduceTaintAtIdentifier(analyzer, scope, node, info.res, this.sourceScope.value)
+    if (result !== undefined) {
+      info.res = result
+    }
+  }
+
+  /**
+   *
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtFunctionDefinition(analyzer: any, scope: any, node: any, state: any, info: any) {
+    if (config.analyzer !== 'PythonAnalyzer') {
+      return
+    }
+    commonUtil.fillSourceScope(info.fclos, this.sourceScope)
   }
 
   /**
@@ -33,11 +59,11 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
-    this.checkByNameMatch(node, fclos, argvalues)
-    this.checkByFieldMatch(node, fclos, argvalues)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, callInfo, funcCallArgTaintSource)
+    this.checkByNameMatch(node, fclos, callInfo, state)
+    this.checkByFieldMatch(node, fclos, callInfo, state)
   }
 
   /**
@@ -60,18 +86,20 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param node
    * @param fclos
    * @param argvalues
+   * @param callInfo
+   * @param state
    * @returns {boolean}
    */
-  checkByNameMatch(node: any, fclos: any, argvalues: any) {
+  checkByNameMatch(node: any, fclos: any, callInfo: CallInfo | undefined, state?: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
-    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    let rule = matchSinkAtFuncCall(node, fclos, rules, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
+      this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
     }
   }
 
@@ -80,9 +108,28 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param node
    * @param fclos
    * @param argvalues
-   * @param scope
+   * @param state
+   * @param qid
    */
-  checkByFieldMatch(node: any, fclos: any, argvalues: any) {
+  // 去除 qid 中每个 `.` 分隔段的调用参数元数据，如 connect(with(config)) → connect
+  stripCallMetadata(qid: string): string {
+    return qid
+      .split('.')
+      .map((seg) => {
+        const parenIdx = seg.indexOf('(')
+        return parenIdx >= 0 ? seg.substring(0, parenIdx) : seg
+      })
+      .join('.')
+  }
+
+  /**
+   *
+   * @param node
+   * @param fclos
+   * @param callInfo
+   * @param state
+   */
+  checkByFieldMatch(node: any, fclos: any, callInfo: CallInfo | undefined, state?: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
@@ -97,15 +144,21 @@ class PythonTaintAbstractChecker extends TaintChecker {
       }
       if (rule.fsig) {
         if (rule.fsig === callFull) {
-          this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
+          this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
+          return true
+        }
+        // 去除参数元数据后做后缀匹配
+        const stripped = this.stripCallMetadata(callFull)
+        if (stripped.endsWith(rule.fsig)) {
+          this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
           return true
         }
       } else {
         if (!rule.fregex) {
           return false
         }
-        if (callFull.type === 'MemberAccess' && matchRegex(rule.fregex, fclos._qid)) {
-          this.findArgsAndAddNewFinding(node, argvalues, fclos, rule)
+        if (callFull.type === 'MemberAccess' && matchRegex(rule.fregex, fclos.qid)) {
+          this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
           return true
         }
       }
@@ -118,27 +171,24 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param fclos
    */
   getObj(fclos: any): any {
-    if (
-      typeof fclos?._sid !== 'undefined' &&
-      typeof fclos?._qid === 'undefined' &&
-      typeof fclos?._this === 'undefined'
-    ) {
-      const index = fclos?._sid.indexOf('>.')
-      const result = index !== -1 ? fclos?._sid.substring(index + 2) : fclos?._sid
-      return result.replace('<instance>', '').replace('()', '')
+    if (typeof fclos?.sid !== 'undefined' && typeof fclos?.qid === 'undefined' && typeof fclos?._this === 'undefined') {
+      const index = fclos?.sid.indexOf('>.')
+      return index !== -1 ? fclos?.sid.substring(index + 2) : fclos?.sid
     }
-    if (typeof fclos?._qid !== 'undefined') {
-      const index = fclos._qid.indexOf('>.')
-      const result = index !== -1 ? fclos?._qid.substring(index + 2) : fclos?._qid
-      return result.replace('<instance>', '').replace('()', '')
+    if (typeof fclos?.qid !== 'undefined' && typeof fclos.qid === 'string') {
+      const index = fclos.qid.indexOf('>.')
+      const result = index !== -1 ? fclos?.qid.substring(index + 2) : fclos?.qid
+      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result)
     }
     if (!(fclos === fclos?._this)) {
       return this.getObj(fclos._this)
     }
-    const index = fclos?._sid.indexOf('>.')
-    const result = index !== -1 ? fclos?._sid.substring(index + 2) : fclos?._sid
-    if (result) {
-      return result.replace('<instance>', '').replace('()', '')
+    if (typeof fclos?.sid === 'string') {
+      const index = fclos?.sid.indexOf('>.')
+      const result = index !== -1 ? fclos?.sid.substring(index + 2) : fclos?.sid
+      if (result) {
+        return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result)
+      }
     }
   }
 
@@ -146,11 +196,13 @@ class PythonTaintAbstractChecker extends TaintChecker {
    *
    * @param node
    * @param argvalues
+   * @param callInfo
    * @param fclos
    * @param rule
+   * @param state
    */
-  findArgsAndAddNewFinding(node: any, argvalues: any, fclos: any, rule: any) {
-    const args = BasicRuleHandler.prepareArgs(argvalues, fclos, rule)
+  findArgsAndAddNewFinding(node: any, callInfo: CallInfo | undefined, fclos: any, rule: any, state?: any) {
+    const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
     const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
     const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
       node,
@@ -177,7 +229,8 @@ class PythonTaintAbstractChecker extends TaintChecker {
           fclos,
           TAINT_TAG_NAME_PYTHON,
           ruleName,
-          matchedSanitizerTags
+          matchedSanitizerTags,
+          state?.callstack
         )
         if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
         this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
@@ -187,4 +240,18 @@ class PythonTaintAbstractChecker extends TaintChecker {
   }
 }
 
-module.exports = PythonTaintAbstractChecker
+/**
+ *
+ */
+function loadPythonDefaultRule() {
+  let pythonDefaultRule
+  try {
+    const rulePath = FileUtil.getAbsolutePath('./resource/python/python-default-rule.json')
+    pythonDefaultRule = FileUtil.loadJSONfile(rulePath)
+  } catch (e) {
+    handleException(e, 'Error occurred in load python default rule', 'Error occurred in load python default rule')
+  }
+  return pythonDefaultRule
+}
+
+module.exports = { PythonTaintAbstractChecker, loadPythonDefaultRule }

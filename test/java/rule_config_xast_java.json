@@ -70,10 +70,11 @@
           "attribute": "JavaSSRF",
           "calleeType": "java.sql.Statement",
           "fsig": "executeQuery"
-        }
-      ],
-      "ObjectTaintFuncCallSink": [
+        },
         {
+          "args": [
+            "-1"
+          ],
           "attribute": "JavaSSRF",
           "calleeType": "java.net.URL",
           "fsig": "openConnection"

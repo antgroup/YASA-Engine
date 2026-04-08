@@ -1,5 +1,6 @@
 import type Unit from '../../../engine/analyzer/common/value/unit'
-import { flattenUnionValues, processEntryPointAndTaintSource } from './util'
+import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
+import { flattenUnionValues, processEntryPointAndTaintSource } from '../common-kit/taint-entrypoint-util'
 
 const config = require('../../../config')
 
@@ -46,33 +47,32 @@ class BeegoEntrypointCollectChecker extends Checker {
    * @param node
    * @param state
    * @param info
-   * @param info.fclos
-   * @param info.argvalues
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
+    const argvalues = getLegacyArgValues(callInfo)
     if (config.entryPointMode === 'ONLY_CUSTOM') return
     if (fclos.vtype === 'symbol') {
       if (fclos.type === 'Identifier') {
-        if (fclos._qid.startsWith('github.com/beego/beego/v2/server/web/filter/apiauth.APISecretAuth')) {
-          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0')
-        } else if (fclos._qid.startsWith('github.com/beego/beego/v2/server/web/filter/auth.NewBasicAuthenticator')) {
-          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0, 1')
-        } else if (fclos._qid.startsWith('github.com/beego/beego/v2/server/web')) {
+        if (fclos._qid.includes('github.com/beego/beego/v2/server/web/filter/apiauth.APISecretAuth')) {
+          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0', 'GO_INPUT')
+        } else if (fclos._qid.includes('github.com/beego/beego/v2/server/web/filter/auth.NewBasicAuthenticator')) {
+          processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0, 1', 'GO_INPUT')
+        } else if (fclos._qid.includes('github.com/beego/beego/v2/server/web')) {
           this.handleHttpServerMethod(analyzer, scope, state, fclos.name, argvalues)
         }
       } else if (fclos.type === 'MemberAccess') {
         if (controllerQids.has(fclos.object._qid) && fclos.property.name === 'Mapping') {
           const controllerMethodVal = argvalues[1]
-          if (controllerMethodVal?.ast.loc) {
-            const hash = JSON.stringify(controllerMethodVal.ast.loc)
+          if (controllerMethodVal?.ast?.node?.loc) {
+            const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
             if (!processedRouteRegistry.has(hash)) {
               processedRouteRegistry.add(hash)
               const entryPoint = completeEntryPoint(controllerMethodVal)
               analyzer.entryPoints.push(entryPoint)
             }
           }
-        } else if (fclos._qid.startsWith('github.com/beego/beego/v2/server/web.NewNamespace')) {
+        } else if (fclos._qid.includes('github.com/beego/beego/v2/server/web.NewNamespace')) {
           this.handleNamespaceMethod(analyzer, scope, state, fclos.property.name, argvalues)
         }
       }
@@ -88,7 +88,8 @@ class BeegoEntrypointCollectChecker extends Checker {
    * @param info
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, argvalues, ret } = info
+    const { fclos, ret, callInfo } = info
+    const argvalues = getLegacyArgValues(callInfo)
     if (config.entryPointMode === 'ONLY_CUSTOM') return
     if (fclos.vtype === 'symbol' && fclos.type === 'MemberAccess') {
       if (controllerQids.has(fclos.object._qid)) {
@@ -138,10 +139,10 @@ class BeegoEntrypointCollectChecker extends Checker {
     const { rvalue } = info
     const { left } = node
     if (
-      analyzer.processInstruction(scope, left.object, state)?._qid === 'github.com/beego/beego/v2/server/web.BConfig' &&
+      analyzer.processInstruction(scope, left.object, state)?._qid?.includes('github.com/beego/beego/v2/server/web.BConfig') &&
       left.property?.name === 'RecoverFunc'
     ) {
-      processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, rvalue, '0')
+      processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, rvalue, '0', 'GO_INPUT')
     }
   }
 
@@ -166,8 +167,10 @@ class BeegoEntrypointCollectChecker extends Checker {
   isControllerMethod(name: string, value: any): boolean {
     if (!name[0] || name[0] < 'A' || name[0] > 'Z') return false
     if (!value || value.vtype !== 'fclos') return false
-    if (value.fdef.returnType.type !== 'VoidType') return false
-    return value.fdef.parameters.length === 0
+    const fdef = value.ast?.fdef || value.ast?.node
+    if (!fdef) return false
+    if (fdef.returnType?.type !== 'VoidType') return false
+    return fdef.parameters?.length === 0
   }
 
   /**
@@ -183,38 +186,39 @@ class BeegoEntrypointCollectChecker extends Checker {
     switch (name) {
       case 'AutoRouter':
       case 'NSAutoRouter':
-        this.handleAutoControllerArgVal(analyzer, argvalues[0])
+        if (argvalues[0]) this.handleAutoControllerArgVal(analyzer, argvalues[0])
         break
       case 'AutoPrefix':
       case 'NSAutoPrefix':
-        this.handleAutoControllerArgVal(analyzer, argvalues[1])
+        if (argvalues[1]) this.handleAutoControllerArgVal(analyzer, argvalues[1])
         break
       case 'InsertFilter':
-        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[2], '0')
+        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[2], '0', 'GO_INPUT')
         break
       case 'InsertFilterChain':
         flattenUnionValues([argvalues[1]])
           .filter((unit) => unit.vtype === 'fclos')
           .forEach((fclos) => {
-            const retVal = analyzer.processAndCallFuncDef(scope, (fclos as any).fdef, fclos, state)
-            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, retVal, '0')
+            const fdef = (fclos as any).ast?.fdef || (fclos as any).ast?.node
+            const retVal = analyzer.processAndCallFuncDef(scope, fdef, fclos, state)
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, retVal, '0', 'GO_INPUT')
           })
         break
       case 'Handler':
         flattenUnionValues([argvalues[1]]).forEach((handlerVal) => {
-          const serveHttp = handlerVal.field?.ServeHTTP
+          const serveHttp = handlerVal.value?.ServeHTTP
           if (serveHttp) {
-            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, serveHttp, '1')
+            processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, serveHttp, '1', 'GO_INPUT')
           }
         })
         break
       case 'Include':
       case 'NSInclude':
         flattenUnionValues(argvalues).forEach((mappingController) => {
-          const urlMapping = mappingController.field?.URLMapping
+          const urlMapping = mappingController.value?.URLMapping
           if (urlMapping) {
             controllerQids.add(mappingController._qid)
-            analyzer.processAndCallFuncDef(scope, urlMapping.fdef, urlMapping, state)
+            analyzer.processAndCallFuncDef(scope, urlMapping.ast?.fdef || urlMapping.ast?.node, urlMapping, state)
           }
         })
         break
@@ -237,20 +241,22 @@ class BeegoEntrypointCollectChecker extends Checker {
         flattenUnionValues([argvalues[1]])
           .filter((unit) => unit.vtype === 'fclos')
           .forEach((unboundMethodVal: any) => {
+            const thisVal = unboundMethodVal._this
             const instance = analyzer.buildNewObject(
-              unboundMethodVal.__this.cdef,
+              thisVal?.cdef || thisVal?.ast?.cdef,
               [],
-              unboundMethodVal.__this,
+              thisVal,
               state,
               null,
               scope
             )
-            const boundMethodVal = instance.field?.[unboundMethodVal.fdef.id.name]
-            if (boundMethodVal?.ast.loc) {
-              const hash = JSON.stringify(boundMethodVal.ast.loc)
+            const fdef = unboundMethodVal.ast?.fdef || unboundMethodVal.ast?.node
+            const boundMethodVal = instance.value?.[fdef?.id?.name]
+            if (boundMethodVal?.ast?.node?.loc) {
+              const hash = JSON.stringify(boundMethodVal.ast.node.loc)
               if (!processedRouteRegistry.has(hash)) {
                 processedRouteRegistry.add(hash)
-                controllerQids.add(boundMethodVal.__this._qid)
+                controllerQids.add(boundMethodVal._this?._qid)
                 const entryPoint = completeEntryPoint(boundMethodVal)
                 analyzer.entryPoints.push(entryPoint)
               }
@@ -264,12 +270,12 @@ class BeegoEntrypointCollectChecker extends Checker {
           .forEach((stringVal) => {
             const methodName = stringVal.value.slice(1, -1).split(':')[1]
             flattenUnionValues([argvalues[1]]).forEach((controllerVal) => {
-              const controllerMethodVal = controllerVal.field?.[methodName]
-              if (controllerMethodVal?.ast.loc) {
-                const hash = JSON.stringify(controllerMethodVal.ast.loc)
+              const controllerMethodVal = controllerVal.value?.[methodName]
+              if (controllerMethodVal?.ast?.node?.loc) {
+                const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
                 if (!processedRouteRegistry.has(hash)) {
                   processedRouteRegistry.add(hash)
-                  controllerQids.add(controllerMethodVal.__this._qid)
+                  if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
                   const entryPoint = completeEntryPoint(controllerMethodVal)
                   analyzer.entryPoints.push(entryPoint)
                 }
@@ -293,14 +299,14 @@ class BeegoEntrypointCollectChecker extends Checker {
       case 'NSOptions':
       case 'NSPatch':
       case 'NSPut':
-        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[1], '0')
+        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[1], '0', 'GO_INPUT')
         break
       case 'NSCond':
-        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0')
+        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0', 'GO_INPUT')
         break
       case 'NSBefore':
       case 'NSAfter':
-        argvalues.forEach((val) => processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, val, '0'))
+        argvalues.forEach((val) => processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, val, '0', 'GO_INPUT'))
         break
       case 'ErrorController':
         this.handleErrorControllerArgVal(analyzer, argvalues[0])
@@ -323,10 +329,10 @@ class BeegoEntrypointCollectChecker extends Checker {
       case 'Filter':
         argvalues
           .slice(1)
-          .forEach((val) => processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, val, '0'))
+          .forEach((val) => processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, val, '0', 'GO_INPUT'))
         break
       case 'Cond':
-        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0')
+        processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0', 'GO_INPUT')
         break
       default:
         break
@@ -340,15 +346,15 @@ class BeegoEntrypointCollectChecker extends Checker {
    */
   handleErrorControllerArgVal(analyzer: any, controllerArgVal: Unit) {
     flattenUnionValues([controllerArgVal])
-      .flatMap((v) => Object.entries(v.field))
+      .flatMap((v) => Object.entries(v.value))
       .filter(([fieldName, fieldVal]) => this.isControllerMethod(fieldName, fieldVal) && fieldName.startsWith('Error'))
       .map(([, controllerMethodVal]) => controllerMethodVal as Unit)
       .forEach((controllerMethodVal) => {
-        if (controllerMethodVal?.ast.loc) {
-          const hash = JSON.stringify(controllerMethodVal.ast.loc)
+        if (controllerMethodVal?.ast?.node?.loc) {
+          const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
           if (!processedRouteRegistry.has(hash)) {
             processedRouteRegistry.add(hash)
-            controllerQids.add(controllerMethodVal.__this._qid)
+            if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
             const entryPoint = completeEntryPoint(controllerMethodVal)
             analyzer.entryPoints.push(entryPoint)
           }
@@ -363,15 +369,15 @@ class BeegoEntrypointCollectChecker extends Checker {
    */
   handleAutoControllerArgVal(analyzer: any, controllerArgVal: Unit) {
     flattenUnionValues([controllerArgVal])
-      .flatMap((v) => Object.entries(v.field))
+      .flatMap((v) => Object.entries(v.value))
       .filter(([fieldName, fieldVal]) => this.isControllerMethod(fieldName, fieldVal))
       .map(([, controllerMethodVal]) => controllerMethodVal as Unit)
       .forEach((controllerMethodVal) => {
-        if (controllerMethodVal?.ast.loc) {
-          const hash = JSON.stringify(controllerMethodVal.ast.loc)
+        if (controllerMethodVal?.ast?.node?.loc) {
+          const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
           if (!processedRouteRegistry.has(hash)) {
             processedRouteRegistry.add(hash)
-            controllerQids.add(controllerMethodVal.__this._qid)
+            if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
             const entryPoint = completeEntryPoint(controllerMethodVal)
             analyzer.entryPoints.push(entryPoint)
           }

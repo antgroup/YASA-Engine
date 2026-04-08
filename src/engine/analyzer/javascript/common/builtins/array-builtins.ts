@@ -1,4 +1,4 @@
-const FunctionValue = require('../../../common/value/function')
+import { FunctionValue } from '../../../common/value/function'
 const { getDataFromScope } = require('../../../../../util/common-util')
 
 /**
@@ -19,7 +19,7 @@ function processVisitArrayBuiltins(this: any, fclos: any, argvalues: any[], stat
   const resArray = []
   if (forEachHandle && Array.isArray(arrItems) && arrItems.length > 0) {
     for (const arrItem of arrItems) {
-      const res = (this as any).executeCall(node, forEachHandle, [arrItem], state, scope)
+      const res = (this as any).executeCall(node, forEachHandle, state, scope, { callArgs: (this as any).buildCallArgs(node, [arrItem], forEachHandle) })
       resArray.push(res)
     }
   }

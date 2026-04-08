@@ -12,6 +12,177 @@ const path = require('path')
 const Config = require('../../../../config')
 const handleException = require('../../common/exception-handler')
 
+const normalizePath = (filePath: string) => path.normalize(filePath)
+
+/**
+ * 文件列表缓存结构
+ * 存储规范化后的文件路径集合和相关元数据
+ */
+let fileListCache: {
+  normalizedFileSet: Set<string>
+  fileListHash: string
+  projectRoot: string
+  subDirs: Set<string>
+} | null = null
+
+/**
+ * 搜索路径缓存
+ * 按目录路径存储对应的搜索路径列表（同目录下的文件共享相同的搜索路径）
+ */
+const searchPathsCache = new Map<string, string[]>()
+
+/**
+ * 导入解析结果缓存
+ * 按导入路径和目录组合存储解析结果（同目录下的文件共享缓存）
+ */
+const resolveCache = new Map<string, string | null>()
+
+/**
+ * 目录规范化缓存
+ * 缓存已规范化的目录路径，避免重复调用 path.dirname 和 path.normalize
+ */
+const dirCache = new Map<string, string>()
+
+/**
+ * 模块候选路径缓存
+ * 按 baseDir + modulePath + fieldName 组合缓存候选结果
+ */
+const moduleCandidatesCache = new Map<string, string[]>()
+
+/**
+ * 生成文件列表的哈希标识
+ * 用于判断文件列表是否发生变化
+ * @param fileList
+ */
+function getFileListHash(fileList: string[]): string {
+  return `${fileList.length}_${fileList[0] || ''}_${fileList[fileList.length - 1] || ''}`
+}
+
+/**
+ * 获取文件所在的规范化目录
+ * 使用缓存避免重复的 dirname 和 normalize 调用
+ * @param filePath
+ */
+function getNormalizedDir(filePath: string): string {
+  const cached = dirCache.get(filePath)
+  if (cached !== undefined) {
+    return cached
+  }
+  const normalized = path.normalize(path.dirname(filePath))
+  dirCache.set(filePath, normalized)
+  return normalized
+}
+
+/**
+ * 初始化或更新文件列表缓存
+ * 将文件列表规范化并建立索引，同时提取项目的子目录结构
+ * @param fileList
+ * @param projectRoot
+ */
+function ensureFileListCache(fileList: string[], projectRoot: string): void {
+  const hash = getFileListHash(fileList)
+
+  if (fileListCache && fileListCache.fileListHash === hash && fileListCache.projectRoot === projectRoot) {
+    return // 缓存仍然有效
+  }
+
+  // 重建缓存
+  const normalizedFileSet = new Set<string>()
+  const subDirs = new Set<string>()
+  const normalizedProjectRoot = path.normalize(projectRoot.replace(/\/$/, ''))
+  const normalizedProjectRootWithSep = normalizedProjectRoot + path.sep
+
+  for (const file of fileList) {
+    const normalizedFile = path.normalize(file)
+    normalizedFileSet.add(normalizedFile)
+
+    // 提取子目录
+    if (normalizedFile.startsWith(normalizedProjectRootWithSep)) {
+      const relativePath = normalizedFile.substring(normalizedProjectRootWithSep.length)
+      const firstDirIndex = relativePath.indexOf(path.sep)
+      if (firstDirIndex > 0) {
+        const firstDir = relativePath.substring(0, firstDirIndex)
+        const subDirPath = path.normalize(path.join(normalizedProjectRoot, firstDir))
+        subDirs.add(subDirPath)
+      }
+    }
+  }
+
+  fileListCache = {
+    normalizedFileSet,
+    fileListHash: hash,
+    projectRoot: normalizedProjectRoot,
+    subDirs,
+  }
+
+  // 清空依赖缓存
+  searchPathsCache.clear()
+  resolveCache.clear()
+  dirCache.clear()
+  moduleCandidatesCache.clear()
+}
+
+/**
+ * 检查文件是否存在
+ * 优先通过规范化路径集合进行查找
+ * @param fileList
+ * @param filePath
+ */
+function fileExists(_fileList: string[] | undefined, filePath: string): boolean {
+  const normalizedPath = path.normalize(filePath)
+  // 直接用 Set 查找，去掉 O(n) 线性扫描 fallback
+  return fileListCache?.normalizedFileSet.has(normalizedPath) ?? false
+}
+
+const buildModuleCandidates = (
+  baseDir: string,
+  modulePath: string,
+  fileList: string[],
+  fieldName?: string
+): string[] => {
+  const cacheKey = `${baseDir}|${modulePath}|${fieldName || ''}`
+  const cached = moduleCandidatesCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const candidates: string[] = []
+  const fsPath = modulePath.replace(/\./g, path.sep)
+
+  // 候选路径1：作为文件查找
+  const filePath = path.join(baseDir, `${fsPath}.py`)
+  const normalizedFilePath = path.normalize(filePath)
+  if (fileExists(fileList, normalizedFilePath)) {
+    candidates.push(normalizedFilePath)
+  }
+
+  // 候选路径2：作为包目录查找（包含 __init__.py）
+  const packagePath = path.join(baseDir, fsPath)
+  const normalizedPackagePath = path.normalize(packagePath)
+  const initFile = path.join(normalizedPackagePath, '__init__.py')
+  if (fileExists(fileList, initFile)) {
+    candidates.push(normalizedPackagePath)
+
+    // 如果指定了字段名，也查找包内的子模块文件（例如：package/module.py）
+    if (fieldName) {
+      const subModulePath = path.join(normalizedPackagePath, `${fieldName}.py`)
+      const normalizedSubModulePath = path.normalize(subModulePath)
+      if (fileExists(fileList, normalizedSubModulePath)) {
+        candidates.push(normalizedSubModulePath)
+      }
+    }
+  }
+
+  // 候选路径3：查找包内的模块文件（例如：A/module.py）
+  const packageModulePath = path.join(normalizedPackagePath, `${path.basename(fsPath)}.py`)
+  if (fileExists(fileList, packageModulePath)) {
+    candidates.push(packageModulePath)
+  }
+
+  moduleCandidatesCache.set(cacheKey, candidates)
+  return candidates
+}
+
 /**
  * 构建搜索路径列表
  * 参考 Python 的 sys.path 机制，按优先级排序：
@@ -33,13 +204,21 @@ function buildSearchPaths(sourceFile: string, fileList: string[], projectRoot: s
   }
 
   try {
-    const normalizedProjectRoot = path.normalize(projectRoot.replace(/\/$/, ''))
+    ensureFileListCache(fileList, projectRoot)
 
     // 1. 当前文件所在目录（最高优先级）
-    const currentDir = path.dirname(sourceFile)
+    const currentDir = getNormalizedDir(sourceFile)
+    const cached = searchPathsCache.get(currentDir)
+    if (cached) {
+      return cached
+    }
+
+    const normalizedProjectRoot = fileListCache!.projectRoot
+
     if (currentDir && !searchPaths.includes(currentDir)) {
       searchPaths.push(currentDir)
     }
+    const seenPaths = new Set<string>(searchPaths)
 
     // 2. 从当前文件向上查找所有包含 __init__.py 的包目录
     let dir = currentDir
@@ -47,84 +226,46 @@ function buildSearchPaths(sourceFile: string, fileList: string[], projectRoot: s
     const maxLoops = 10 // 防止无限循环
 
     while (dir && dir !== normalizedProjectRoot && dir !== path.dirname(dir) && loopCount < maxLoops) {
-      try {
-        const initFile = path.join(dir, '__init__.py')
-        if (
-          fileList.some((f: string) => {
-            return path.normalize(f) === path.normalize(initFile)
-          }) &&
-          !searchPaths.includes(dir)
-        ) {
-          searchPaths.push(dir)
-        }
-        const parentDir = path.dirname(dir)
-        if (parentDir === dir) break
-        dir = parentDir
-        loopCount++
-      } catch (e) {
-        handleException(
-          e,
-          `[buildSearchPaths] Error searching package directories at ${dir}`,
-          `[buildSearchPaths] Error searching package directories at ${dir}`
-        )
-        break
+      const initFile = path.normalize(path.join(dir, '__init__.py'))
+      if (fileExists(fileList, initFile) && !seenPaths.has(dir)) {
+        searchPaths.push(dir)
+        seenPaths.add(dir)
       }
+      const parentDir = path.dirname(dir)
+      if (parentDir === dir) break
+      dir = parentDir
+      loopCount++
     }
 
     // 3. 项目根目录
-    if (normalizedProjectRoot && !searchPaths.includes(normalizedProjectRoot)) {
+    if (normalizedProjectRoot && !seenPaths.has(normalizedProjectRoot)) {
       searchPaths.push(normalizedProjectRoot)
+      seenPaths.add(normalizedProjectRoot)
     }
 
-    // 4. 项目根目录的所有直接子目录（如果包含 Python 文件）
-    try {
-      const subDirsWithPythonFiles = new Set<string>()
-      const normalizedProjectRootWithSep = normalizedProjectRoot + path.sep
-
-      for (const file of fileList) {
-        try {
-          const normalizedFile = path.normalize(file)
-          if (normalizedFile.startsWith(normalizedProjectRootWithSep)) {
-            const relativePath = normalizedFile.substring(normalizedProjectRootWithSep.length)
-            const firstDirIndex = relativePath.indexOf(path.sep)
-
-            if (firstDirIndex > 0) {
-              // 文件在子目录中，提取第一个目录名
-              const firstDir = relativePath.substring(0, firstDirIndex)
-              const subDirPath = path.join(normalizedProjectRoot, firstDir)
-              subDirsWithPythonFiles.add(path.normalize(subDirPath))
-            }
-          }
-        } catch (e) {
-          handleException(
-            e,
-            `[buildSearchPaths] Error processing file in subdirectory search: ${e}, file: ${file}`,
-            `[buildSearchPaths] Error processing file in subdirectory search: ${e}, file: ${file}`
-          )
-          continue
-        }
+    // 4. 项目根目录的所有直接子目录（从缓存读取）
+    for (const subDir of fileListCache!.subDirs) {
+      if (!seenPaths.has(subDir)) {
+        searchPaths.push(subDir)
+        seenPaths.add(subDir)
       }
-
-      for (const subDir of subDirsWithPythonFiles) {
-        if (!searchPaths.includes(subDir)) {
-          searchPaths.push(subDir)
-        }
-      }
-    } catch (e) {
-      handleException(
-        e,
-        `[buildSearchPaths] Error processing subdirectories of ${normalizedProjectRoot}`,
-        `[buildSearchPaths] Error processing subdirectories of ${normalizedProjectRoot}`
-      )
     }
   } catch (e) {
     // 如果整个函数出错，至少返回当前目录
-    const currentDir = path.dirname(sourceFile)
+    const currentDir = getNormalizedDir(sourceFile)
     if (currentDir && !searchPaths.includes(currentDir)) {
       searchPaths.push(currentDir)
     }
+    handleException(
+      e,
+      `[buildSearchPaths] Error building search paths for ${sourceFile}`,
+      `[buildSearchPaths] Error building search paths for ${sourceFile}`
+    )
   }
 
+  // 按目录缓存结果，同目录下的文件可以共享
+  const currentDir = getNormalizedDir(sourceFile)
+  searchPathsCache.set(currentDir, searchPaths)
   return searchPaths
 }
 
@@ -136,6 +277,10 @@ function buildSearchPaths(sourceFile: string, fileList: string[], projectRoot: s
  * @returns 项目根目录
  */
 function findProjectRoot(fileList: string[], startDir: string): string {
+  const hash = getFileListHash(fileList || [])
+  if (fileListCache && fileListCache.fileListHash === hash && fileListCache.projectRoot) {
+    return fileListCache.projectRoot
+  }
   if (!fileList || fileList.length === 0) {
     return startDir || process.cwd()
   }
@@ -205,6 +350,38 @@ function findProjectRoot(fileList: string[], startDir: string): string {
 }
 
 /**
+ * 获取绝对导入的所有候选路径（按优先级排序）
+ *
+ * @param modulePath - 模块路径
+ * @param searchPaths - 搜索路径列表
+ * @param fileList - 所有 Python 文件的列表
+ * @param fieldName - 可选的字段名（用于 `from module import fieldName` 的情况）
+ * @returns 候选路径数组（按优先级排序）
+ */
+function getAllAbsoluteImportCandidates(
+  modulePath: string,
+  searchPaths: string[],
+  fileList: string[],
+  fieldName?: string
+): string[] {
+  const candidates: string[] = []
+  if (!modulePath || !searchPaths || !fileList) {
+    return candidates
+  }
+
+  if (!fileListCache) {
+    const root = findProjectRoot(fileList, Config.maindir || process.cwd())
+    ensureFileListCache(fileList, root)
+  }
+
+  for (const searchPath of searchPaths) {
+    candidates.push(...buildModuleCandidates(searchPath, modulePath, fileList, fieldName))
+  }
+
+  return candidates
+}
+
+/**
  * 解析绝对导入路径
  * 从所有搜索路径中查找模块
  *
@@ -214,32 +391,114 @@ function findProjectRoot(fileList: string[], startDir: string): string {
  * @returns 解析后的文件路径，如果找不到返回 null
  */
 function resolveAbsoluteImport(modulePath: string, searchPaths: string[], fileList: string[]): string | null {
-  const fsPath = modulePath.replace(/\./g, path.sep)
+  const candidates = getAllAbsoluteImportCandidates(modulePath, searchPaths, fileList)
+  return candidates.length > 0 ? candidates[0] : null
+}
 
-  for (const searchPath of searchPaths) {
-    // 尝试作为文件查找
-    const filePath = path.join(searchPath, `${fsPath}.py`)
-    const normalizedFilePath = path.normalize(filePath)
-    if (fileList.some((f) => path.normalize(f) === normalizedFilePath)) {
-      return normalizedFilePath
+const resolveRelativeTarget = (
+  relativePath: string,
+  currentFile: string
+): { targetDir: string | null; modulePath: string; invalid: boolean } => {
+  const currentDir = path.dirname(path.normalize(currentFile))
+  let modulePath = relativePath
+
+  // 计算前导点号的数量
+  let upLevels = 0
+  let dotIndex = 0
+
+  while (dotIndex < modulePath.length && modulePath[dotIndex] === '.') {
+    upLevels++
+    dotIndex++
+  }
+
+  // 计算目标目录
+  let targetDir = currentDir
+  if (upLevels > 1) {
+    const levelsToGoUp = upLevels - 1
+    const normalizedDir = path.normalize(currentDir)
+    const isAbsolute = path.isAbsolute(normalizedDir)
+    const parts = normalizedDir.split(path.sep).filter((p: string) => p !== '')
+
+    const targetLevel = parts.length - levelsToGoUp
+
+    if (targetLevel < 0) {
+      return { targetDir: null, modulePath: '', invalid: true }
     }
 
-    // 尝试作为包目录查找（包含 __init__.py）
-    const packagePath = path.join(searchPath, fsPath)
-    const normalizedPackagePath = path.normalize(packagePath)
-    const initFile = path.join(normalizedPackagePath, '__init__.py')
-    if (fileList.some((f) => path.normalize(f) === path.normalize(initFile))) {
-      return normalizedPackagePath
+    if (targetLevel === 0) {
+      targetDir = isAbsolute ? path.sep : '.'
+    } else {
+      const targetParts = parts.slice(0, targetLevel)
+      if (isAbsolute) {
+        targetDir = path.sep + targetParts.join(path.sep)
+      } else {
+        targetDir = targetParts.join(path.sep) || '.'
+      }
     }
 
-    // 尝试查找包内的模块文件
-    const packageModulePath = path.join(normalizedPackagePath, `${path.basename(fsPath)}.py`)
-    if (fileList.some((f) => path.normalize(f) === path.normalize(packageModulePath))) {
-      return packageModulePath
+    const normalizedTarget = path.normalize(targetDir)
+    if (normalizedTarget === normalizedDir && levelsToGoUp > 0) {
+      return { targetDir: null, modulePath: '', invalid: true }
     }
   }
 
-  return null
+  if (dotIndex > 0) {
+    modulePath = modulePath.substring(dotIndex).replace(/^\/+/, '')
+  }
+
+  return { targetDir, modulePath, invalid: false }
+}
+
+const getRelativeCandidates = (
+  targetDir: string,
+  modulePath: string,
+  fileList: string[],
+  fieldName?: string
+): string[] => {
+  return buildModuleCandidates(targetDir, modulePath, fileList, fieldName)
+}
+/**
+ * 获取相对导入的所有候选路径（按优先级排序）
+ *
+ * @param relativePath - 相对路径（如 ".module" 或 "..parent.module"）
+ * @param currentFile - 当前文件的绝对路径
+ * @param fileList - 所有 Python 文件的列表
+ * @param moduleName - 可选的模块名（用于 `from .. import moduleName` 的情况）
+ * @param fieldName - 可选的字段名（用于 `from .module import fieldName` 的情况）
+ * @returns 候选路径数组（按优先级排序）
+ */
+function getAllRelativeImportCandidates(
+  relativePath: string,
+  currentFile: string,
+  fileList: string[],
+  moduleName?: string,
+  fieldName?: string
+): string[] {
+  const candidates: string[] = []
+  if (!relativePath || !currentFile || !fileList) {
+    return candidates
+  }
+
+  if (!fileListCache) {
+    const root = findProjectRoot(fileList, Config.maindir || process.cwd())
+    ensureFileListCache(fileList, root)
+  }
+
+  const { targetDir, modulePath: parsedModulePath, invalid } = resolveRelativeTarget(relativePath, currentFile)
+  if (invalid || !targetDir) {
+    return candidates
+  }
+
+  // 处理 `from .. import moduleName` 的情况
+  let modulePath = parsedModulePath
+  if (!modulePath && moduleName) {
+    modulePath = moduleName
+  }
+
+  if (!modulePath) {
+    return candidates
+  }
+  return getRelativeCandidates(targetDir, modulePath, fileList, fieldName)
 }
 
 /**
@@ -266,58 +525,14 @@ function resolveRelativeImport(
     return null
   }
 
-  const currentDir = path.dirname(path.normalize(currentFile))
-
-  let modulePath = relativePath
-
-  // 计算前导点号的数量
-  let upLevels = 0
-  let dotIndex = 0
-
-  while (dotIndex < modulePath.length && modulePath[dotIndex] === '.') {
-    upLevels++
-    dotIndex++
-  }
-
-  // 计算目标目录
-  let targetDir = currentDir
-  if (upLevels > 1) {
-    const levelsToGoUp = upLevels - 1
-    const normalizedDir = path.normalize(currentDir)
-    const isAbsolute = path.isAbsolute(normalizedDir)
-    const parts = normalizedDir.split(path.sep).filter((p: string) => p !== '')
-
-    const targetLevel = parts.length - levelsToGoUp
-
-    if (targetLevel < 0) {
-      return null
-    }
-
-    if (targetLevel === 0) {
-      // 到达根目录
-      targetDir = isAbsolute ? path.sep : '.'
-    } else {
-      const targetParts = parts.slice(0, targetLevel)
-      if (isAbsolute) {
-        targetDir = path.sep + targetParts.join(path.sep)
-      } else {
-        targetDir = targetParts.join(path.sep) || '.'
-      }
-    }
-
-    const normalizedTarget = path.normalize(targetDir)
-    if (normalizedTarget === normalizedDir && levelsToGoUp > 0) {
-      // 路径没有变化，说明已经到达根目录但还需要向上（用于验证）
-      return null
-    }
-  }
-
-  if (dotIndex > 0) {
-    modulePath = modulePath.substring(dotIndex).replace(/^\/+/, '')
+  const { targetDir, modulePath: parsedModulePath, invalid } = resolveRelativeTarget(relativePath, currentFile)
+  if (invalid || !targetDir) {
+    return null
   }
 
   // 处理 `from .. import moduleName` 的情况
   // 如果 relativePath 只有点号（如 ".."），使用 moduleName
+  let modulePath = parsedModulePath
   if (!modulePath && moduleName) {
     modulePath = moduleName
   }
@@ -326,40 +541,8 @@ function resolveRelativeImport(
   if (!modulePath) {
     return targetDir
   }
-
-  const fsPath = modulePath.replace(/\./g, path.sep)
-
-  // 尝试作为文件查找
-  const filePath = path.join(targetDir, `${fsPath}.py`)
-  const normalizedFilePath = path.normalize(filePath)
-  const foundFile = fileList.find((f: string) => {
-    return path.normalize(f) === normalizedFilePath
-  })
-  if (foundFile) {
-    return normalizedFilePath
-  }
-
-  // 尝试作为包目录查找（包含 __init__.py）
-  const packagePath = path.join(targetDir, fsPath)
-  const normalizedPackagePath = path.normalize(packagePath)
-  const initFile = path.join(normalizedPackagePath, '__init__.py')
-  const foundInit = fileList.find((f: string) => {
-    return path.normalize(f) === path.normalize(initFile)
-  })
-  if (foundInit) {
-    return normalizedPackagePath
-  }
-
-  // 尝试查找包内的模块文件（例如：A/module.py）
-  const packageModulePath = path.join(normalizedPackagePath, `${path.basename(fsPath)}.py`)
-  const foundPackageModule = fileList.find((f: string) => {
-    return path.normalize(f) === path.normalize(packageModulePath)
-  })
-  if (foundPackageModule) {
-    return packageModulePath
-  }
-
-  return null
+  const candidates = getRelativeCandidates(targetDir, modulePath, fileList)
+  return candidates.length > 0 ? candidates[0] : null
 }
 
 /**
@@ -380,17 +563,31 @@ function resolveImportPath(
   if (!importPath) {
     return null
   }
-  const root = projectRoot || findProjectRoot(fileList, Config.maindir || process.cwd())
-  const searchPaths = buildSearchPaths(currentFile, fileList, root)
 
-  if (importPath.startsWith('.')) {
-    return resolveRelativeImport(importPath, currentFile, fileList)
+  const root = projectRoot || findProjectRoot(fileList, Config.maindir || process.cwd())
+  ensureFileListCache(fileList, root)
+
+  const currentDir = getNormalizedDir(currentFile)
+  const cacheKey = `${importPath}|${currentDir}`
+  const cached = resolveCache.get(cacheKey)
+  if (cached !== undefined) {
+    return cached
   }
-  return resolveAbsoluteImport(importPath, searchPaths, fileList)
+
+  const searchPaths = buildSearchPaths(currentFile, fileList, root)
+  const result = importPath.startsWith('.')
+    ? resolveRelativeImport(importPath, currentFile, fileList)
+    : resolveAbsoluteImport(importPath, searchPaths, fileList)
+
+  resolveCache.set(cacheKey, result)
+  return result
 }
 
 export = {
   resolveImportPath,
   resolveRelativeImport,
+  getAllRelativeImportCandidates,
+  getAllAbsoluteImportCandidates,
+  buildSearchPaths,
+  findProjectRoot,
 }
-

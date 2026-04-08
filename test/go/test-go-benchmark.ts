@@ -158,7 +158,7 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
 
   config.ruleConfigFile = __dirname + '/rule_config.json'
   config.checkerIds = ['taint_flow_test']
-  config.uastSDKPath = path.join(__dirname, '../../deps/uast4go/uast4go')
+  config.uastSDKPath = path.join(__dirname, '../../deps')
   config.language = 'golang'
   config.maindirPrefix = __dirname + '/benchmarks'
 

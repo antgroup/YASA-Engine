@@ -1,11 +1,13 @@
-const CheckerSyncOnceDo = require('../../common/checker')
+import { getLegacyArgValues, type CallInfo } from '../../../engine/analyzer/common/call-args'
+
+const Checker = require('../../common/checker')
 
 const done: Set<string> = new Set()
-const syncOnceDoQid: string = 'sync.Once<instance>.Do'
+const syncOnceDoQidRegex: RegExp = /sync\.Once<instance_.*?>\.Do/
 
 interface TriggerInfo {
   fclos: any
-  argvalues: any[]
+  callInfo: CallInfo | undefined
   [key: string]: any
 }
 
@@ -13,7 +15,7 @@ interface TriggerInfo {
  * sync.Once.Do bulitIn checker
  * 为Go内置库方法sync.Once.Do做建模，执行且只执行一次传给Do方法的funcDef
  */
-class syncOnceDoChecker extends CheckerSyncOnceDo {
+class syncOnceDoChecker extends Checker {
   /**
    * constructor
    * @param resultManager
@@ -31,12 +33,13 @@ class syncOnceDoChecker extends CheckerSyncOnceDo {
    * @param info
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: TriggerInfo): void {
-    const { fclos, argvalues } = info
-    if (fclos._qid !== syncOnceDoQid) return
+    const { fclos, callInfo } = info
+    if (!syncOnceDoQidRegex.test(fclos.qid)) return
     const hash: string = JSON.stringify(node.loc)
     if (done.has(hash)) return
     done.add(hash)
-    if (argvalues.length !== 1 && argvalues[0].vtype !== 'fclos') return
+    const argvalues = getLegacyArgValues(callInfo)
+    if (argvalues.length !== 1 || argvalues[0].vtype !== 'fclos') return
 
     const fDef = node.arguments[0]
     const fClos = argvalues[0]

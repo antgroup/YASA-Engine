@@ -4,7 +4,7 @@ const process = require('process')
 const log4jsLogger = require('log4js')
 const configLogger = require('../config')
 
-interface Logger {
+export interface Logger {
   trace(...args: any[]): void
   debug(...args: any[]): void
   info(...args: any[]): void
@@ -48,7 +48,7 @@ log4jsLogger.configure({
       alwaysIncludePattern: true,
       layout: {
         type: 'pattern',
-        pattern: '%d{yyyy-MM-dd hh:mm:ss.SSS} %p %c %m',
+        pattern: '%d{yyyy-MM-dd hh:mm:ss.SSS} %p %m',
         timezone: 'Asia/Shanghai',
       },
       compress: true,
@@ -60,7 +60,7 @@ log4jsLogger.configure({
       alwaysIncludePattern: true,
       layout: {
         type: 'pattern',
-        pattern: '%d{yyyy-MM-dd hh:mm:ss.SSS} %p %c %m',
+        pattern: '%d{yyyy-MM-dd hh:mm:ss.SSS} %p %m',
         timezone: 'Asia/Shanghai',
       },
       compress: true,
@@ -75,8 +75,8 @@ log4jsLogger.configure({
   },
   categories: {
     default: { appenders: ['stdoutFilter', 'infoFilter', 'errFilter'], level: logLevel },
-    // YASA 日志 category：只写入文件，不输出到控制台，使用默认的 file appender 保证顺序一致
-    console: { appenders: ['yasaFileOnly', 'yasaErrorFileOnly'], level: logLevel },
+    // YASA 日志 category：只写入文件，不输出到控制台
+    yasa: { appenders: ['yasaFileOnly', 'yasaErrorFileOnly'], level: logLevel },
   },
 })
 

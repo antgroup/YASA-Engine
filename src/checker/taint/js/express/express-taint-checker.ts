@@ -1,3 +1,5 @@
+import type { CallInfo } from '../../../../engine/analyzer/common/call-args'
+
 // checker加载逻辑重构后可打开，让stc不要用
 const _ = require('lodash')
 const Rules = require('../../../common/rules-basic-handler')
@@ -14,6 +16,7 @@ const SanitizerChecker = require('../../../sanitizer/sanitizer-checker')
 const TaintOutputStrategy = require('../../../common/output/taint-output-strategy')
 const { handleException } = require('../../../../engine/analyzer/common/exception-handler')
 const logger = require('../../../../util/logger')(__filename)
+const QidUnifyUtil = require('../../../../util/qid-unify-util')
 
 const TAINT_TAG_NAME = 'EXPRESS_INPUT'
 
@@ -63,7 +66,7 @@ class ExpressTaintChecker extends TaintChecker {
     if (config.analyzer !== 'JavaScriptAnalyzer') {
       return
     }
-    IntroduceTaint.introduceTaintAtIdentifier(node, info.res, this.sourceScope.value)
+    IntroduceTaint.introduceTaintAtIdentifier(analyzer, scope, node, info.res, this.sourceScope.value)
   }
 
   /**
@@ -108,12 +111,12 @@ class ExpressTaintChecker extends TaintChecker {
           const arr = loader.getFilePathProperties(filepath, { caseStyle: 'lower' })
           let fieldT = topScope
           arr.forEach((path: any) => {
-            fieldT = fieldT?.field[path]
+            fieldT = fieldT?.members?.get(path)
           })
           if (!fieldT || fieldT.vtype === 'undefine') {
-            for (const mod in topScope.moduleManager.field) {
-              if (mod.includes(entrypoint.filePath) && topScope.moduleManager.field[mod].ast?.type === 'CompileUnit') {
-                fieldT = topScope.moduleManager.field[mod]
+            for (const mod of topScope.context.modules.members.keys()) {
+              if (mod.includes(entrypoint.filePath) && topScope.context.modules.members.get(mod)?.ast?.node?.type === 'CompileUnit') {
+                fieldT = topScope.context.modules.members.get(mod)
                 break
               }
             }
@@ -137,12 +140,12 @@ class ExpressTaintChecker extends TaintChecker {
             entryPoint.entryPointSymVal = entryPointSymVal
             this.entryPoints.push(entryPoint)
           } else {
-            if (!fieldT.ast || fieldT.ast.type !== 'CompileUnit') continue
+            if (!fieldT.ast.node || fieldT.ast.node.type !== 'CompileUnit') continue
             const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
             entryPoint.scopeVal = fieldT
             entryPoint.argValues = undefined
             entryPoint.functionName = undefined
-            entryPoint.filePath = fieldT?.ast?.loc?.sourcefile
+            entryPoint.filePath = fieldT?.ast?.node?.loc?.sourcefile
             entryPoint.attribute = entrypoint.attribute
             entryPoint.packageName = undefined
             entryPoint.entryPointSymVal = fieldT
@@ -173,12 +176,12 @@ class ExpressTaintChecker extends TaintChecker {
       return
     }
 
-    const { fclos, argvalues } = info
+    const { fclos, callInfo } = info
 
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, argvalues, funcCallArgTaintSource)
-    this.checkSinkAtFunctionCall(node, fclos, argvalues)
-    this.checkByFieldMatch(node, fclos, argvalues, scope)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(fclos?.object, node, callInfo, funcCallArgTaintSource)
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
+    this.checkByFieldMatch(node, fclos, callInfo, scope, state)
   }
 
   /**
@@ -219,18 +222,19 @@ class ExpressTaintChecker extends TaintChecker {
    * @param node
    * @param fclos
    * @param argvalues
+   * @param state
    */
-  checkSinkAtFunctionCall(node: any, fclos: any, argvalues: any) {
+  checkSinkAtFunctionCall(node: any, fclos: any, callInfo: CallInfo | undefined, state?: any) {
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
     }
 
-    let rule = matchSinkAtFuncCall(node, fclos, rules)
+    let rule = matchSinkAtFuncCall(node, fclos, rules, callInfo)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {
-      const args = Rules.prepareArgs(argvalues, fclos, rule)
+      const args = Rules.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
         node,
@@ -257,7 +261,8 @@ class ExpressTaintChecker extends TaintChecker {
             fclos,
             TAINT_TAG_NAME,
             ruleName,
-            matchedSanitizerTags
+            matchedSanitizerTags,
+            state?.callstack
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
@@ -272,8 +277,9 @@ class ExpressTaintChecker extends TaintChecker {
    * @param fclos
    * @param argvalues
    * @param scope
+   * @param state
    */
-  checkByFieldMatch(node: any, fclos: any, argvalues: any, scope: any) {
+  checkByFieldMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
     let rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
     if (_.isEmpty(rules)) {
       return
@@ -342,7 +348,7 @@ class ExpressTaintChecker extends TaintChecker {
         create
       )
       if (matched) {
-        const args = Rules.prepareArgs(argvalues, fclos, rule)
+        const args = Rules.prepareArgs(callInfo, fclos, rule)
         const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
         const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
           node,
@@ -369,7 +375,8 @@ class ExpressTaintChecker extends TaintChecker {
               fclos,
               TAINT_TAG_NAME,
               ruleName,
-              matchedSanitizerTags
+              matchedSanitizerTags,
+              state?.callstack
             )
 
             if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
@@ -386,26 +393,25 @@ class ExpressTaintChecker extends TaintChecker {
    * @param fclos
    */
   getObj(fclos: any): any {
-    if (typeof fclos?._qid === 'undefined' && typeof fclos?._this === 'undefined') {
-      return fclos._sid?.replace('<instance>', '')
+    if (typeof fclos?.qid === 'undefined' && typeof fclos?._this === 'undefined') {
+      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fclos.sid)
     }
-    if (typeof fclos?._qid !== 'undefined') {
-      let qid = fclos._qid?.replace('Egg.Context', 'this.ctx')
-      qid = qid?.replace('Egg.Application', 'this.app')
-      qid = qid?.replace('this.app.service', 'this.ctx.service')
-      qid = qid?.replace('Egg.Request', 'this.ctx.request')
-      if (fclos.ast?.loc?.sourcefile && fclos.ast?.loc?.sourcefile.startsWith(config.maindirPrefix)) {
-        const prefix = fclos.ast.loc.sourcefile.substring(config.maindirPrefix.length).split('.')[0]
-        if (prefix) {
+    if (typeof fclos?.qid !== 'undefined') {
+      let { qid } = fclos
+      if (fclos.ast?.node?.loc?.sourcefile && fclos.ast?.node?.loc?.sourcefile.startsWith(config.maindirPrefix)) {
+        const prefix = fclos.ast.node.loc.sourcefile.substring(config.maindirPrefix.length)
+        const lastDotIndex = prefix.lastIndexOf('.')
+        const result = lastDotIndex >= 0 ? prefix.substring(0, lastDotIndex) : prefix
+        if (result) {
           qid = qid?.substring(prefix.length + 1)
         }
       }
-      return qid?.replace('<instance>', '')
+      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(qid)
     }
     if (!(fclos === fclos?._this)) {
       return this.getObj(fclos._this)
     }
-    return fclos._sid?.replace('<instance>', '')
+    return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fclos.sid)
   }
 }
 

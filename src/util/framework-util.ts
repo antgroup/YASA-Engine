@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs-extra'
 
 const logger = require('./logger')(__filename)
+const FileUtil = require('./file-util')
 
 /**
  egg sanity check, must follow the convention below
@@ -47,12 +48,10 @@ function detectAnalyzer(language: string, dir: string): string {
 
   if (language === 'java') {
     // 检查 Maven/Gradle 配置文件
-    const pomPath = path.join(dir, 'pom.xml')
-    const gradlePath = path.join(dir, 'build.gradle')
-    let content = ''
-    try {
-      if (fs.existsSync(pomPath)) {
-        content = fs.readFileSync(pomPath, 'utf8')
+    const mavenOrGradleFiles = FileUtil.loadAllFileTextGlobby(['**/pom.xml', '**/build.gradle'], dir)
+    for (const mavenOrGradleFile of mavenOrGradleFiles) {
+      try {
+        const { content } = mavenOrGradleFile
         if (
           (content &&
             content.trim() !== '' &&
@@ -62,22 +61,9 @@ function detectAnalyzer(language: string, dir: string): string {
             (content.includes('sofaboot') || content.includes('sofa-boot') || content.includes('sofa.web.mvc')))
         ) {
           analyzer = 'SpringAnalyzer'
+          break
         }
-      } else if (fs.existsSync(gradlePath)) {
-        content = fs.readFileSync(gradlePath, 'utf8')
-        if (
-          (content &&
-            content.trim() !== '' &&
-            content.includes('org.springframework') &&
-            (content.includes('spring-web') || content.includes('spring-boot'))) ||
-          (content.includes('com.alipay.sofa') &&
-            (content.includes('sofaboot') || content.includes('sofa-boot') || content.includes('sofa.web.mvc')))
-        ) {
-          analyzer = 'SpringAnalyzer'
-        }
-      }
-    } catch (e) {
-      logger.info("detect Java's Analyzer failed, use default JavaAnalyzer")
+      } catch (e) {}
     }
     if (analyzer === '') {
       analyzer = 'JavaAnalyzer'

@@ -29,15 +29,15 @@ function getBwdTrace(root: any, lines: TraceItem[], tagName?: string): void {
     const node = worklist.shift()
     if (!node || visited.has(node)) continue
     visited.add(node)
-    const { trace } = node
-    if (trace) {
+    const trace = node.taint.getFirstTrace()
+    if (trace && trace.length > 0) {
       for (let i = trace.length - 1; i >= 0; i--) {
         const item = trace[i]
         const prev_item = lines[lines.length - 1]
         if (!prev_item || prev_item.file !== item.file || prev_item.line !== item.line || prev_item.tag !== item.tag)
           lines.push(item)
       }
-      if (tagName && node?._tags.has(tagName)) {
+      if (tagName && node?.taint.containsTag(tagName)) {
         return
       }
     }
@@ -51,7 +51,7 @@ function getBwdTrace(root: any, lines: TraceItem[], tagName?: string): void {
     }
 
     if (!node.type) continue
-    if (!node.hasTagRec) continue
+    if (!node.taint?.isTaintedRec) continue
 
     switch (node.type) {
       case 'MemberAccess': {
@@ -59,7 +59,7 @@ function getBwdTrace(root: any, lines: TraceItem[], tagName?: string): void {
         worklist.push(node.property)
         break
       }
-      case 'BinaryOperation': {
+      case 'BinaryExpression': {
         worklist.push(node.left)
         worklist.push(node.right)
         break

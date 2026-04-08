@@ -1,5 +1,5 @@
 const List = require('./list-builtins')
-const UndefinedValueStack = require('../../../common/value/undefine')
+import { UndefinedValue } from '../../../common/value/undefine'
 
 /**
  * java.util.Stack
@@ -30,7 +30,7 @@ class Stack extends List {
    * @param scope
    */
   static empty(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    return new UndefinedValueStack()
+    return new UndefinedValue()
   }
 
   /**
@@ -73,7 +73,7 @@ class Stack extends List {
     if (argvalues.length > 0) {
       return argvalues[0]
     }
-    return new UndefinedValueStack()
+    return new UndefinedValue()
   }
 
   /**
@@ -85,7 +85,7 @@ class Stack extends List {
    * @param scope
    */
   static search(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    return new UndefinedValueStack()
+    return new UndefinedValue()
   }
 }
 

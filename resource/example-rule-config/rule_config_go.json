@@ -472,15 +472,6 @@
           "args": [
             "0"
           ],
-          "calleeType": "echo.Context",
-          "fsig": "Bind",
-          "scopeFile": "all",
-          "scopeFunc": "all"
-        },
-        {
-          "args": [
-            "0"
-          ],
           "calleeType": "*gin.Context",
           "fsig": "BindJSON",
           "scopeFile": "all",

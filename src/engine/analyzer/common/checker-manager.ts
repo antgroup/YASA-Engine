@@ -1,11 +1,12 @@
 const fs = require('fs')
 const path = require('path')
 const logger = require('../../../util/logger')(__filename)
-const statistics = require('../../../util/statistics')
+const statistics: { numChecks: number; checkFiringTime: number } = require('../../../util/statistics')
 const checkerKit = require('../../../checker/common/checker-kit')
 const ResultManager = require('./result-manager')
 const { getAbsolutePath, loadJSONfile, isPkgEnv } = require('../../../util/file-util')
 const { handleException } = require('./exception-handler')
+const { yasaLog } = require('../../../util/format-util')
 
 /**
  * Smart checker path resolution: prioritize src/.ts, then dist/.js
@@ -27,8 +28,6 @@ function resolveCheckerPath(checkerPath: string): string {
       projectRoot = path.resolve(path.dirname(mainFile), '..')
     }
   }
-
-  logger.info(`resolveCheckerPath projectRoot : ${projectRoot}`)
 
   // 优先加载dist/.js
   const distJsPath = path.join(projectRoot, 'dist', checkerPath.replace(/\.ts$/, '.js'))
@@ -111,7 +110,6 @@ class CheckerManager {
 
     if (!this.options) return
     const { yasaSeparator } = require('../../../util/format-util')
-    yasaSeparator('Register rules')
     try {
       this.kit = checkerKit
       this.resultManager = resultManager || new ResultManager()
@@ -145,9 +143,10 @@ class CheckerManager {
         }
       }
       for (let i = 0; i < targetCheckerPaths.length; i++) {
+        const checkerId = targetCheckerIds[i]
         let targetCheckerPath = targetCheckerPaths[i]
         targetCheckerPath = resolveCheckerPath(targetCheckerPath)
-        logger.info(`Resolved checker path :${targetCheckerPath}`)
+        yasaLog(`Loading checker: ${checkerId} from ${targetCheckerPath}`, 'init')
         const targetCheckerDesc = targetCheckerDescs[i]
         const checkerNames = this.registerAllCheckers(this, targetCheckerPath, targetCheckerDesc, this.resultManager)
         if (checkerNames) {
@@ -158,12 +157,11 @@ class CheckerManager {
           }
         }
       }
-      logger.info('load checkers:', loadCheckerNames)
+      const checkerCount = loadCheckerNames.length
+      yasaLog(`Successfully loaded ${checkerCount} checker(s): [${loadCheckerNames.join(', ')}]`, 'init')
     } catch (e) {
       handleException(e, 'Error occurred in CheckerManager_ctor', 'Error occurred in CheckerManager_ctor')
     }
-
-    yasaSeparator('')
   }
 
   /**
@@ -195,11 +193,11 @@ class CheckerManager {
             `Error occured in:${check_at_start_analyze[i].getCheckerId()}.triggerAtStartOfAnalyze! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -225,12 +223,12 @@ class CheckerManager {
             `Error occured in:${check_at_end_analyze[i].getCheckerId()}.triggerAtEndOfAnalyze! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -257,11 +255,11 @@ class CheckerManager {
             `Error occured in:${check_at_compile_unit[i].getCheckerId()}.triggerAtCompileUnit! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
     return interruptFlag
   }
 
@@ -287,11 +285,11 @@ class CheckerManager {
             `Error occured in:${check_at_end_compileunit[i].getCheckerId()}.triggerAtEndOfCompileUnit! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -316,11 +314,11 @@ class CheckerManager {
             `Error occured in:${check_at_binary_operation[i].getCheckerId()}.checkAtBinaryOperation! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -346,11 +344,11 @@ class CheckerManager {
             `Error occured in:${check_at_pre_declaration[i].getCheckerId()}.triggerAtPreDeclaration! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -376,12 +374,12 @@ class CheckerManager {
             `Error occured in:${check_at_funccall_syntax[i].getCheckerId()}.triggerAtFuncCallSyntax! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -418,12 +416,12 @@ class CheckerManager {
             `Error occured in:${check_at_function_call_before[i].getCheckerId()}.triggerAtFunctionCallBefore! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -450,12 +448,12 @@ class CheckerManager {
             `Error occured in:${check_at_function_call_after[i].getCheckerId()}.triggerAtFunctionCallAfter! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -481,12 +479,12 @@ class CheckerManager {
             `Error occured in:${check_new_expr[i].getCheckerId()}.triggerAtNewExpr! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -511,11 +509,11 @@ class CheckerManager {
             `Error occured in:${check_at_new_object[i].getCheckerId()}.triggerAtNewObject! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -541,12 +539,12 @@ class CheckerManager {
             `Error occured in:${check_new_expr_after[i].getCheckerId()}.triggerAtNewExprAfter! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -572,12 +570,12 @@ class CheckerManager {
             `Error occured in:${check_at_ifcondition[i].getCheckerId()}.triggerAtIfCondition! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -606,12 +604,12 @@ class CheckerManager {
             `Error occured in:${check_at_assignment[i].getCheckerId()}.triggerAtAssignment! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -638,12 +636,12 @@ class CheckerManager {
             `Error occured in:${check_at_end_block[i].getCheckerId()}.triggerAtEndOfBlock! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -669,12 +667,12 @@ class CheckerManager {
             `Error occured in:${check_at_identifier[i].getCheckerId()}.triggerAtIdentifier! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -700,12 +698,12 @@ class CheckerManager {
             `Error occured in:${check_at_member_access[i].getCheckerId()}.triggerAtMemberAccess! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -731,12 +729,12 @@ class CheckerManager {
             `Error occured in:${check_at_function_definition[i].getCheckerId()}.triggerAtFunctionDefinition! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -768,12 +766,12 @@ class CheckerManager {
             `Error occured in:${check_at_symbol_execute_of_entrypoint_before[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointBefore! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -805,12 +803,12 @@ class CheckerManager {
             `Error occured in:${check_at_symbol_execute_of_entrypoint_after[i].getCheckerId()}.triggerAtSymbolInterpretOfEntryPointAfter! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -838,8 +836,8 @@ class CheckerManager {
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**
@@ -865,12 +863,12 @@ class CheckerManager {
             `Error occured in:${check_at_end_of_node[i].getCheckerId()}.triggerAtEndOfNode! Stack detail has been logged in error log!`
           )
         }
-        ;(statistics as any).numChecks++
+        statistics.numChecks++
       }
     }
 
-    const end_time = (new Date() as any).getTime() as number
-    ;(statistics as any).checkFiringTime += end_time - start_time
+    const end_time = new Date().getTime()
+    statistics.checkFiringTime += end_time - start_time
   }
 
   /**

@@ -1,4 +1,6 @@
-export {}
+const _ = require('lodash')
+const QidUnifyUtil = require('../../../../../util/qid-unify-util')
+
 /**
  * move exist elements to buffer
  * @param _this
@@ -8,7 +10,7 @@ function moveExistElementsToBuffer(_this: any, startIndex?: number): void {
   if (!_this.getMisc('buffer')) {
     _this.setMisc('buffer', [])
   }
-  if (_this.value) {
+  if (_.isObject(_this.value)) {
     for (const key in _this.value) {
       if (Number(key) >= 0) {
         if (!startIndex || (typeof startIndex === 'number' && Number(key) >= startIndex)) {
@@ -55,7 +57,10 @@ function removeElementFromBuffer(_this: any, element: any): void {
   }
   const tmpBuffer: any[] = []
   for (const bufferElement of _this.getMisc('buffer')) {
-    if (bufferElement?._qid !== element?._qid) {
+    if (
+      bufferElement?.logicalQid !==
+      element?.logicalQid
+    ) {
       tmpBuffer.push(bufferElement)
     }
   }

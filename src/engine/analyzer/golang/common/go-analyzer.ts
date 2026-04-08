@@ -1,32 +1,39 @@
 import GoTypeRelatedInfoResolver from '../../../../resolver/go/go-type-related-info-resolver'
+import { buildNewCopiedWithTag } from '../../../../util/clone-util'
+import { BinaryExprValue } from '../../common/value/binary-expr'
+import type { Scope, State, Value, SymbolValue as SymbolValueType } from '../../../../types/analyzer'
+import type { CallExpression, VariableDeclaration, NewExpression, ThisExpression, CompileUnit, BinaryExpression, MemberAccess, Identifier, TupleExpression } from '../../../../types/uast'
+
+const path = require('path')
+const _ = require('lodash')
+const QidUnifyUtil = require('../../../../util/qid-unify-util')
 
 const logger = require('../../../../util/logger')(__filename)
-const Scope = require('../../common/scope')
-const { Analyzer } = require('../../common')
+const ScopeClass = require('../../common/scope')
+const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../../common/analyzer')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
-const _ = require('lodash')
-const GoParser = require('../../../parser/golang/go-ast-builder')
-const { cloneWithDepth } = require('../../../../util/clone-util')
+const Parser = require('../../../parser/parser')
 const {
   ValueUtil: { FunctionValue },
 } = require('../../../util/value-util')
+const { shallowCopyValue, buildNewValueInstance, lodashCloneWithTag } = require('../../../../util/clone-util')
 
 const {
   valueUtil: {
     ValueUtil: { Scoped, PackageValue, PrimitiveValue, UndefinedValue, SymbolValue, UnionValue },
   },
 } = require('../../common')
+import type { CallInfo } from '../../common/call-args'
+import { INTERNAL_CALL } from '../../common/call-args'
+const { getLegacyArgValues } = require('../../common/call-args')
 const Config = require('../../../../config')
 const SourceLine = require('../../common/source-line')
 const FileUtil = require('../../../../util/file-util')
-const { Errors } = require('../../../../util/error-code')
 const AstUtil = require('../../../../util/ast-util')
 const MemState = require('../../common/memState')
 const CheckerManager = require('../../common/checker-manager')
 const entryPointConfig = require('../../common/current-entrypoint')
 const { unionAllValues } = require('../../common/memStateBVT')
-const path = require('path')
-const { floor } = require('lodash')
 const constValue = require('../../../../util/constant')
 const { handleException } = require('../../common/exception-handler')
 
@@ -34,28 +41,6 @@ const { handleException } = require('../../common/exception-handler')
  *
  */
 class GoAnalyzer extends Analyzer {
-  options: any
-
-  mainEntryPoints: any[]
-
-  ruleEntrypoints: any[]
-
-  moduleManager: any
-
-  fileManager: Record<string, any> = {}
-
-  entry_fclos: any
-
-  thisFClos: any
-
-  entryPoints!: any[]
-
-  topScope: any
-
-  packageManager: any
-
-  ainfo: any
-
   /**
    *
    * @param options
@@ -90,9 +75,6 @@ class GoAnalyzer extends Analyzer {
       )
       process.exit(1)
     }
-    for (const mod of modules) {
-      SourceLine.storeCode(mod.file, mod.content)
-    }
   }
 
   /**
@@ -108,21 +90,31 @@ class GoAnalyzer extends Analyzer {
     let parseCodeEnded = false
     try {
       this.scanModules(dir)
-      this.moduleManager = await GoParser.parsePackage(dir, this.options)
-      const { numOfGoMod } = this.moduleManager
+      this.topScope.context.modules = await Parser.parseProject(dir, this.options, this.sourceCodeCache)
+
+      // 防御性检查：确保 moduleManager 不为 null
+      if (!this.topScope.context.modules) {
+        handleException(
+          null,
+          '[go-analyzer] parseProject returned null, Go AST parsing failed',
+          '[go-analyzer] parseProject returned null, Go AST parsing failed'
+        )
+        return
+      }
+      const { numOfGoMod } = this.topScope.context.modules
       if (numOfGoMod > 1) {
         logger.info(`[go-analyzer] found more than one go.mod files. The num of go.mod files is ${numOfGoMod}`)
       }
-      this.makeGoFileManager(this.moduleManager)
-      const { packageInfo, moduleName } = this.moduleManager
+      this.makeGoFileManager(this.topScope.context.modules)
+      const { packageInfo, moduleName } = this.topScope.context.modules
       if (Object.entries(packageInfo.files).length === 0 && Object.entries(packageInfo.subs).length === 0) {
         // 提前返回：没有文件需要处理，在 finally 中结束 parseCode
         return
       }
-      let { goModPath } = this.moduleManager
+      let { goModPath } = this.topScope.context.modules
       if (!goModPath) goModPath = ''
       // TODO 如果模块名叫code.alipay.com/antjail/antdpa，进去会截断
-      const modulePackageManager = defaultScope || this.packageManager.getSubPackage(moduleName, true)
+      const modulePackageManager = defaultScope || this.topScope.context.packages.getSubPackage(moduleName, true)
 
       // 计算项目模块根路径(go.mod所在目录)
       const moduleRootPath = this.getModuleRootPath(goModPath, Config.maindir)
@@ -134,8 +126,8 @@ class GoAnalyzer extends Analyzer {
           rootDir = rootDir.subs[dirName]
         }
       }
-      this.moduleManager.rootDir = rootDir
-      this.moduleManager.rootDirName = dirName
+      this.topScope.context.modules.rootDir = rootDir
+      this.topScope.context.modules.rootDirName = dirName
 
       // 正常流程：结束 parseCode 阶段
       this.performanceTracker.end('preProcess.parseCode')
@@ -305,12 +297,12 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processCallExpression(scope: any, node: any, state: any) {
+  override processCallExpression(scope: Scope, node: CallExpression, state: State): SymbolValueType {
     if (node._meta.defer) {
       const encloseFclos = this.getEncloseFclos(scope)
       if (encloseFclos) {
         encloseFclos._defers = encloseFclos._defers || []
-        const deferNode = _.clone(node) // 浅拷贝即可
+        const deferNode = _.clone(node)
         delete deferNode._meta.defer
         encloseFclos._defers.push(deferNode)
       }
@@ -319,11 +311,7 @@ class GoAnalyzer extends Analyzer {
     const fclos = this.processInstruction(scope, node.callee, state)
     let ret
     if (fclos?.vtype === 'class' && node.arguments.length === 1) {
-      const val = this.processInstruction(scope, node.arguments[0], state)
-      if (val) {
-        val.sort = fclos.id
-      }
-      ret = val
+      ret = this.processInstruction(scope, node.arguments[0], state)
     } else {
       const argvalues = []
       for (const arg of node.arguments) {
@@ -348,7 +336,7 @@ class GoAnalyzer extends Analyzer {
           ainfo: this.ainfo,
         })
       }
-      ret = super.processCallExpression(scope, node, state, fclos)
+      ret = super.processCallExpression(scope, node, state)
       if (ret && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
           fclos,
@@ -387,8 +375,8 @@ class GoAnalyzer extends Analyzer {
         if (globalScope.sid === '<global>') break
         globalScope = globalScope.parent
       }
-      if (Object.prototype.hasOwnProperty.call(globalScope.funcSymbolTable, targetQid)) {
-        return globalScope.funcSymbolTable[targetQid]
+      if (Object.prototype.hasOwnProperty.call(globalScope.context.funcs, targetQid)) {
+        return globalScope.context.funcs[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)]
       }
 
       let initFunctionValue = Object.prototype.hasOwnProperty.call(scope.value, 'init') ? scope.value.init : undefined
@@ -397,15 +385,15 @@ class GoAnalyzer extends Analyzer {
         scope.value.init = initFunctionValue
       }
 
-      const fclos = FunctionValue({
-        fdef: node, // record the function definition including its type and prototype information
+      const fclos = new FunctionValue('', {
         sid: 'init',
         qid: targetQid,
         decls: {},
         parent: scope,
         ast: node,
       })
-      globalScope.funcSymbolTable[targetQid] = fclos
+      fclos.ast.fdef = node
+      globalScope.context.funcs[QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(targetQid)] = fclos
 
       if (Array.isArray(initFunctionValue)) {
         initFunctionValue.push(fclos)
@@ -423,37 +411,40 @@ class GoAnalyzer extends Analyzer {
    * @param state
    */
   processImportDirect(scope: any, node: any, state: any) {
-    const { moduleName } = this.moduleManager
-    const { rootDirName } = this.moduleManager
+    const { moduleName } = this.topScope.context.modules
+    const { rootDirName } = this.topScope.context.modules
     const fromPath = node?.from?.value?.replace(/"/g, '')
 
     // 外部包返回空packageValue
     if (!fromPath.startsWith(`${moduleName}/`)) {
-      return PackageValue({
+      const packageVal = new PackageValue(this.topScope.context.packages.qid, {
         vtype: 'package',
         sid: fromPath,
-        qid: fromPath,
-        exports: Scoped({
-          sid: 'exports',
-          id: 'exports',
-          parent: null,
-        }),
-        parent: this.packageManager,
+        parent: this.topScope.context.packages,
       })
+      const exports = new Scoped(`${this.topScope.context.packages.qid}.${fromPath}`, {
+        sid: 'exports',
+        parent: packageVal,
+      })
+      packageVal.scope.exports = exports
+      return packageVal
     }
     const relativeFromPath = fromPath.slice(`${moduleName}/`.length)
     const dirs = relativeFromPath.split('/')
 
-    // 取该项目根目录的PackageValue：rootPackageValue(顶层Scope，即go.mod所在目录的packageValue)
-    const modulePackageValue = this.packageManager.getSubPackage(moduleName, false)
+    // 取该项目根目录的PackageValue：rootnew PackageValue(顶层Scope，即go.mod所在目录的packageValue)
+    const modulePackageValue = this.topScope.context.packages.getSubPackage(moduleName, false)
     const rootPackageValue = modulePackageValue.getSubPackage(`%dir_${rootDirName}`, false)
     let parentScope = modulePackageValue
 
     // packageManager按照import路径(即目录结构)存储。每个目录(不管是否是包)都视作一个PackageValue，其下可能有PackageValue、ClassScope、FuncScope等。
     for (const dir of dirs) {
+      const targetQid = ScopeClass.joinQualifiedName(parentScope.qid, dir)
       const currentScope = parentScope.getSubPackage(`%dir_${dir}`, true)
-      parentScope.exports.value[dir] = currentScope
-      currentScope.sort = currentScope.qid = Scope.joinQualifiedName(parentScope.qid, dir)
+      parentScope.scope.exports.value[dir] = currentScope
+      currentScope._qid = targetQid
+      currentScope.uuid = null
+      currentScope.calculateAndRegisterUUID()
       parentScope = currentScope
     }
     const targetScope = parentScope
@@ -472,7 +463,7 @@ class GoAnalyzer extends Analyzer {
    * @param state
    */
   addFdef(targetScope: any, dirs: any, state: any) {
-    const { rootDir } = this.moduleManager
+    const { rootDir } = this.topScope.context.modules
     if (!rootDir) {
       return
     }
@@ -507,24 +498,14 @@ class GoAnalyzer extends Analyzer {
     const initFCloses =
       AstUtil.satisfy(
         ImportedScope,
-        (n: any) => n.ast?.id?.name === 'init' && n.vtype === 'fclos',
+        (n: any) => n.ast?.node?.id?.name === 'init' && n.vtype === 'fclos',
         (node: any, prop: any, from: any) => node === from, // 只找当前包下的field
         null,
         true
       ) || []
     for (const initFClos of initFCloses) {
-      this.executeCall(initFClos.ast, initFClos, [], state, ImportedScope)
+      this.executeCall(initFClos.ast?.node, initFClos, state, ImportedScope, INTERNAL_CALL)
     }
-  }
-
-  private static knownPackageName: Record<string, string> = {}
-
-  /**
-   * Register known module name to package name mapping for default import variable name fix
-   * @param knownPackageName A map from module name to known package name
-   */
-  static registerKnownPackageNames(knownPackageName: Record<string, string>) {
-    GoAnalyzer.knownPackageName = { ...GoAnalyzer.knownPackageName, ...knownPackageName }
   }
 
   /**
@@ -533,10 +514,10 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processVariableDeclaration(scope: any, node: any, state: any) {
+  override processVariableDeclaration(scope: Scope, node: VariableDeclaration, state: State): SymbolValueType {
     const initialNode = node.init
-    const { id } = node
-    if (!id || id?.name === '_') return UndefinedValue() // e.g. in Go
+    const id = node.id  // LVal: Identifier | MemberAccess | TupleExpression
+    if (!id || (id.type === 'Identifier' && id.name === '_')) return new UndefinedValue() // e.g. in Go
 
     let initVal
     if (!initialNode) {
@@ -545,18 +526,24 @@ class GoAnalyzer extends Analyzer {
         cscope = this.processInstruction(scope, node.varType, state)
         // if (cscope && cscope.vtype !== 'undefine')
         if (cscope) {
-          initVal = this.buildNewObject(cscope?.fdef, undefined, cscope, state, node, scope)
+          initVal = this.buildNewObject(cscope?.ast.fdef, cscope, state, node, scope, INTERNAL_CALL)
         } else {
           initVal = this.createVarDeclarationScope(id, scope)
         }
       }
       initVal.uninit = !initialNode
-      initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', id.name)
+      initVal = SourceLine.addSrcLineInfo(
+        initVal,
+        id,
+        id.loc && id.loc.sourcefile,
+        'Var Pass: ',
+        id.type === 'Identifier' ? id.name : undefined
+      )
     } else {
       initVal = this.processInstruction(scope, initialNode, state)
-      if (node.cloned && !initVal?.refCount) {
-        initVal = cloneWithDepth(initVal)
-        initVal.value = cloneWithDepth(initVal.value)
+      if (node.cloned && !initVal?.runtime?.refCount) {
+        initVal = shallowCopyValue(initVal)
+        initVal.value = shallowCopyValue(initVal.value)
       }
       if (initVal?.rtype && initVal.rtype !== 'DynamicType') {
         const cscope = this.processInstruction(scope, initVal.rtype, state)
@@ -564,7 +551,13 @@ class GoAnalyzer extends Analyzer {
           initVal = this.buildTypeObject(initVal, cscope)
         }
       }
-      initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', id.name)
+      initVal = SourceLine.addSrcLineInfo(
+        initVal,
+        node,
+        node.loc && node.loc.sourcefile,
+        'Var Pass: ',
+        id.type === 'Identifier' ? id.name : undefined
+      )
     }
 
     if (this.checkerManager && this.checkerManager.checkAtPreDeclaration)
@@ -577,64 +570,54 @@ class GoAnalyzer extends Analyzer {
       })
     if (id.type === 'TupleExpression') {
       // 解构Tuple赋值，分别分发到Tuple里的每个元素
+      const tupleId = id as TupleExpression
       if (initVal.vtype === 'union') {
         const substates = MemState.forkStates(state, 1)
-        const pairs = floor(initVal.field.length / id.elements.length)
-        const scopes = new Array(id.elements.length)
-        for (let i = 0; i < id.elements.length; i++) {
+        const pairs = _.floor(initVal.value.length / tupleId.elements.length)
+        const scopes = new Array(tupleId.elements.length)
+        for (let i = 0; i < tupleId.elements.length; i++) {
           scopes[i] = new Array(pairs)
         }
         for (let i = 0; i < pairs; i++) {
-          for (let j = 0; j < id.elements.length; j++) {
-            scopes[j][i] = initVal.field[i * id.elements.length + j]
+          for (let j = 0; j < tupleId.elements.length; j++) {
+            scopes[j][i] = initVal.getFieldValue(String(i * tupleId.elements.length + j))
           }
         }
-        for (let i = 0; i < id.elements.length; i++) {
+        for (let i = 0; i < tupleId.elements.length; i++) {
           const union = unionAllValues(scopes[i], state)
-          this.saveVarInCurrentScope(scope, id.elements[i], union, state)
+          this.saveVarInCurrentScope(scope, tupleId.elements[i], union, state)
         }
-      } else if (Array.isArray(initVal.field) && initVal.field.length >= 1) {
-        const minLen = Math.min(id.elements.length, initVal.field.length)
+      } else if (Array.isArray(initVal.value) && initVal.value.length >= 1) {
+        const minLen = Math.min(tupleId.elements.length, initVal.value.length)
         for (let i = 0; i < minLen; i++) {
-          this.saveVarInCurrentScope(scope, id.elements[i], initVal.field[i], state)
+          this.saveVarInCurrentScope(scope, tupleId.elements[i], initVal.getFieldValue(String(i)), state)
         }
       } else {
-        for (const i in id.elements) {
-          this.saveVarInCurrentScope(scope, id.elements[i], initVal, state)
+        for (const i in tupleId.elements) {
+          this.saveVarInCurrentScope(scope, tupleId.elements[i], initVal, state)
         }
       }
     } else {
-      if (initialNode?.type === 'ImportExpression') {
-        // 处理 default import 情况
-        if (node._meta?.isDefaultImport === true && GoAnalyzer.knownPackageName[initialNode.from?.value]) {
-          id.name = GoAnalyzer.knownPackageName[initialNode.from?.value]
-        }
-        // 如果是import，则定义真正的包名而非目录名
-        if (initVal?.vtype === 'package' && initVal.name && id.name === initialNode.from?.value?.split('/').at(-1)) {
-          id.name = initVal.name
-        }
+      // 如果是import，则定义真正的包名而非目录名
+      if (
+        initialNode?.type === 'ImportExpression' &&
+        initVal?.vtype === 'package' &&
+        initVal.name &&
+        id.type === 'Identifier' &&
+        id.name === (initialNode as any).from?.value?.split('/').at(-1)
+      ) {
+        id.name = initVal.name
       }
       this.saveVarInCurrentScope(scope, id, initVal, state)
     }
 
     // set alias name if val itself has no identifier
-    if (initVal && !(initVal.name || (initVal.id && initVal.id !== '<anonymous>') || initVal.sid)) {
-      initVal.sid = id.name
-      delete initVal.id
+    if (initVal && !(initVal.name || initVal.sid)) {
+      initVal.sid = id.type === 'Identifier' ? id.name : ''
     }
 
-    scope.decls[id.name] = id
-
-    const typeQualifiedName = AstUtil.typeToQualifiedName(node.varType)
-    let declTypeVal
-    if (typeQualifiedName) {
-      declTypeVal = this.getMemberValue(scope, typeQualifiedName, state)
-    }
-
-    if (initVal && declTypeVal) {
-      // initVal.sort = (!id.typeName || id.typeName.name === 'var') ?
-      //     TypeUtil.inferType(initVal) : id.typeName;
-      initVal.sort = declTypeVal.sort
+    if (id.type === 'Identifier') {
+      scope.ast.setDecl(id.name, id)
     }
 
     if (this.checkerManager && this.checkerManager.checkAtVariableDeclaration) {
@@ -650,7 +633,7 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processNewExpression(scope: any, node: any, state: any) {
+  override processNewExpression(scope: Scope, node: NewExpression, state: State): SymbolValueType {
     return this.processNewObject(scope, node, state)
   }
 
@@ -661,7 +644,7 @@ class GoAnalyzer extends Analyzer {
    * @param state
    * @returns {*}
    */
-  processNewObject(scope: any, node: any, state: any) {
+  override processNewObject(scope: any, node: any, state: any) {
     // if (DEBUG) logger.info("processInstruction: NewExpression " + formatNode(node));
     const call = node
 
@@ -690,7 +673,7 @@ class GoAnalyzer extends Analyzer {
     const { fdef } = fclos
     // if (analysisutil.isInCallStack(fdef, state.callstack)) return;
 
-    const obj = this.buildNewObject(fdef, argvalues, fclos, state, node, scope)
+    const obj = this.buildNewObject(fdef, fclos, state, node, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
     if (logger.isTraceEnabled()) logger.trace(`new expression: ${this.formatScope(obj)}`)
 
     if (obj && this.checkerManager?.checkAtNewExprAfter) {
@@ -713,16 +696,15 @@ class GoAnalyzer extends Analyzer {
    * @param cdef
    * @param state
    */
-  preProcessClassDefinition(scope: any, cdef: any, state: any) {
-    if (!(cdef && cdef.body)) return UndefinedValue() // Should not happen
+  override preProcessClassDefinition(scope: any, cdef: any, state: any) {
+    if (!(cdef && cdef.body)) return new UndefinedValue() // Should not happen
 
     // pre-processing
     const fname = cdef.id?.name
 
-    const cscope = Scope.createSubScope(fname, scope, 'class') // class scope
-    cscope.cdef = cdef
-    // cscope.fdef = cdef
+    const cscope = ScopeClass.createSubScope(fname, scope, 'class') // class scope
     cscope.ast = cdef
+    cscope.ast.cdef = cdef
     cscope.__preprocess = true
     return cscope
   }
@@ -733,15 +715,16 @@ class GoAnalyzer extends Analyzer {
    * @param cdef
    * @param state
    */
-  processClassDefinition(scope: any, cdef: any, state: any) {
-    if (!(cdef && cdef.body)) return UndefinedValue() // Should not happen
+  override processClassDefinition(scope: any, cdef: any, state: any) {
+    if (!(cdef && cdef.body)) return new UndefinedValue() // Should not happen
 
     // pre-processing
     const fname = cdef.id?.name
 
-    const cscope = Scope.createSubScope(fname, scope, 'class') // class scope
-    cscope.cdef = cdef
-    if (cdef._meta?.isInterface) cscope.misc_.isInterface = true
+    const cscope = ScopeClass.createSubScope(fname, scope, 'class') // class scope
+    cscope.ast = cdef
+    cscope.ast.cdef = cdef
+    if (cdef._meta?.isInterface) cscope.isInterface = true
     cscope.modifier = {}
     cscope.inits = new Set() // for storing the variables initialized in the constructor
     this.resolveClassInheritance(cscope, state) // inherit base classes
@@ -769,8 +752,8 @@ class GoAnalyzer extends Analyzer {
    * @param fclos
    * @param state
    */
-  resolveClassInheritance(fclos: any, state: any) {
-    const fdef = fclos.cdef
+  override resolveClassInheritance(fclos: any, state: any) {
+    const fdef = fclos.ast.cdef
     const { supers } = fdef
     if (!supers || supers.length === 0) return
 
@@ -788,26 +771,27 @@ class GoAnalyzer extends Analyzer {
      * @param superId
      */
     function _resolveClassInheritance(this: any, fclos: any, superId: any) {
-      if (fclos?.id === superId?.name) {
+      if (fclos?.sid === superId?.name) {
         // to avoid self-referencing
         return
       }
       const superClos = this.processInstruction(scope, superId, state)
       // const superClos = this.getMemberValue(scope, superId, state);
-      if (!superClos) return UndefinedValue()
+      if (!superClos) return new UndefinedValue()
       fclos.super = superClos
 
       // inherit definitions
       // superValue is used to record values of super class, so that we can handle cases like super.xxx() or super()
-      const superValue = fclos.value.super || Scope.createSubScope('super', fclos, 'fclos')
+      const superValue = fclos.value.super || ScopeClass.createSubScope('super', fclos, 'fclos')
       // super's parent should be assigned to base, _this will track on fclos
       superValue.parent = superClos
       for (const fieldName in superClos.value) {
         if (fieldName === 'super') continue
         const v = superClos.value[fieldName]
-        if (v.readonly) continue
-        const v_copy = cloneWithDepth(v)
-        v_copy.inherited = true
+        if (v.runtime?.readonly) continue
+        const v_copy = shallowCopyValue(v)
+        if (!v_copy.func) v_copy.func = {}
+        v_copy.func.inherited = true
         v_copy._this = fclos
         v_copy._base = superClos
         fclos.value[fieldName] = v_copy
@@ -815,8 +799,8 @@ class GoAnalyzer extends Analyzer {
         superValue.value[fieldName] = v_copy
         // super fclos should fill its fdef with ctor definition
         if (fieldName === '_CTOR_') {
-          superValue.fdef = v_copy.fdef
-          superValue.overloaded = superValue.overloaded || []
+          superValue.ast.node = v_copy.ast.fdef
+          superValue.ast.fdef = v_copy.ast.fdef
           superValue.overloaded.push(fdef)
         }
 
@@ -824,9 +808,9 @@ class GoAnalyzer extends Analyzer {
       }
 
       // inherit declarations
-      for (const x in superClos.decls) {
-        const v = superClos.decls[x]
-        fclos.decls[x] = v
+      for (const x of superClos.ast.declKeys) {
+        const v = superClos.ast.getDecl(x)
+        fclos.ast.setDecl(x, v)
       }
       // inherit modifiers
       for (const x in superClos.modifier) {
@@ -855,15 +839,26 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processThisExpression(scope: any, node: any, state: any) {
-    this.thisFClos.misc_.pointer_reference = true
+  override processThisExpression(scope: Scope, node: ThisExpression, state: State): SymbolValueType {
+    this.thisFClos.pointerReference = true
     if (node._meta.type?.type === 'PointerType') {
       // 引用
       return this.thisFClos
     }
     // 值传递
     // TODO: 只深拷贝this.thisFClos.value即可，疑似循环依赖，待查
-    return cloneWithDepth(this.thisFClos, 5)
+    return buildNewValueInstance(
+      this,
+      this.thisFClos,
+      null,
+      this.thisFClos.parent,
+      (x: any) => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      }
+    )
   }
 
   /**
@@ -873,9 +868,9 @@ class GoAnalyzer extends Analyzer {
    * @param state
    * @param prePostFlag
    */
-  processInstruction(scope: any, node: any, state: any, prePostFlag?: any): any {
+  override processInstruction(scope: any, node: any, state: any, prePostFlag?: any): any {
     if (node?.name === 'error' || node?.name === 'err') {
-      return SymbolValue(node)
+      return new SymbolValue('', { sid: node.name, qid: `${scope.qid}.${node.name}`, ...node })
     }
     return super.processInstruction(scope, node, state, prePostFlag)
   }
@@ -902,7 +897,7 @@ class GoAnalyzer extends Analyzer {
    */
   convertRetValToObjectType(fclos: any, argvalues: any, state: any, node: any, scope: any, retVal: any) {
     if (retVal.vtype === 'union') {
-      const declRetType = fclos.ast.returnType
+      const declRetType = fclos.ast.node.returnType
       if (declRetType.type === 'TupleType') {
         const retNum = declRetType.elements.length
         for (const i in retVal.value) {
@@ -920,7 +915,7 @@ class GoAnalyzer extends Analyzer {
       } else {
         // declRetType.type !== 'TupleType'
         for (let rawValue of retVal.value) {
-          rawValue.rtype = fclos.ast.returnType
+          rawValue.rtype = fclos.ast.node.returnType
           if (rawValue.rtype !== 'DynamicType') {
             const cscope = this.processInstruction(scope, rawValue.rtype, state)
             if (cscope.vtype === 'class' && !(rawValue.type === 'Identifier' && rawValue.name === 'nil')) {
@@ -929,10 +924,10 @@ class GoAnalyzer extends Analyzer {
           }
         }
       }
-    } else if (_.isArray(retVal) && fclos.ast.returnType.type !== 'VoidType') {
+    } else if (_.isArray(retVal) && fclos.ast.node.returnType.type !== 'VoidType') {
       // TODO 这里YASA有bug，暂时先改为对VoidType特判
       for (const i in retVal) {
-        retVal[i].rtype = fclos.ast.returnType.elements[i]
+        retVal[i].rtype = fclos.ast.node.returnType.elements[i]
         if (retVal[i].rtype !== 'DynamicType') {
           let cscope
           if (retVal[i].rtype.type === 'PointerType') {
@@ -946,7 +941,7 @@ class GoAnalyzer extends Analyzer {
         }
       }
     } else {
-      retVal.rtype = fclos.ast.returnType
+      retVal.rtype = fclos.ast.node.returnType
       if (retVal.rtype !== 'DynamicType') {
         const cscope = this.processInstruction(scope, retVal.rtype, state)
         if (cscope.vtype === 'class') {
@@ -965,8 +960,9 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param scope
    */
-  executeSingleCall(fclos: any, argvalues: any, state: any, node: any, scope: any) {
-    const retVal = super.executeSingleCall(fclos, argvalues, state, node, scope)
+  override executeSingleCall(fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
+    const retVal = super.executeSingleCall(fclos, state, node, scope, callInfo)
+    const argvalues = getLegacyArgValues(callInfo)
     return this.convertRetValToObjectType(fclos, argvalues, state, node, scope, retVal)
   }
 
@@ -978,13 +974,25 @@ class GoAnalyzer extends Analyzer {
    */
   buildTypeObject(oldScope: any, fclos: any) {
     // clone the basic class object
-    const obj = _.clone(oldScope) // 浅拷贝即可
+    const obj = lodashCloneWithTag(oldScope) // 浅拷贝即可
     for (const x in fclos.value) {
       const v = fclos.value[x]
       if (!v) continue
-      const v_copy = cloneWithDepth(v)
-      if (obj.field.hasOwnProperty(x)) continue
-      obj.field[x] = v_copy
+      const v_copy = buildNewValueInstance(
+        this,
+        v,
+        null,
+        v.parent,
+        (x: any) => {
+          return false
+        },
+        (v: any) => {
+          return !v
+        }
+      )
+      if (obj.members?.has(x)) continue
+      if (!obj.members) continue  // Guard: skip if members is undefined
+      obj.members.set(x, v_copy)
       v_copy._this = obj
       v_copy.parent = obj
     }
@@ -997,9 +1005,9 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processCompileUnit(scope: any, node: any, state: any) {
+  override processCompileUnit(scope: Scope, node: CompileUnit, state: State): Value {
     // 避免同一compileUnit被重复处理(例如，已被init的全局变量会被覆盖定义)
-    if (node._meta.compileUnitProcessed) return
+    if (node._meta.compileUnitProcessed) return this.topScope.members.get('UndefinedValue')?.() as Value
     node._meta.compileUnitProcessed = true
     if (this.checkerManager && this.checkerManager.checkAtCompileUnit) {
       const interruptFlag = this.checkerManager.checkAtCompileUnit(this, scope, node, state, {
@@ -1007,7 +1015,7 @@ class GoAnalyzer extends Analyzer {
         entry_fclos: this.entry_fclos,
       })
       // 插件返回状态为：中断后续分析
-      if (interruptFlag) return
+      if (interruptFlag) return this.topScope.members.get('UndefinedValue')?.() as Value
     }
     return super.processCompileUnit(scope, node, state)
   }
@@ -1015,7 +1023,7 @@ class GoAnalyzer extends Analyzer {
   /**
    *
    */
-  startAnalyze() {
+  override startAnalyze() {
     if (this.checkerManager && this.checkerManager.checkAtStartOfAnalyze) {
       this.checkerManager.checkAtStartOfAnalyze(this, null, null, null, null)
     }
@@ -1053,27 +1061,37 @@ class GoAnalyzer extends Analyzer {
     let index = 0
     while (index < entryPoints.length) {
       const entryPoint = entryPoints[index++]
+      if (entryPoint.isPreProcess && this.isTmpSymbolTableOpen) {
+        this.restoreSymbolTable()
+      } else if (this.isTmpSymbolTableOpen) {
+        this.symbolTable.clear()
+      }
+
+      if (!entryPoint.isPreProcess && !this.isTmpSymbolTableOpen) {
+        this.switchToTemporarySymbolTable()
+      }
+
       if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) continue
       entryPointConfig.setCurrentEntryPoint(entryPoint)
       if (
         (isFromRule || entryPoint.functionName === 'main') &&
         hasAnalysised.includes(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
         )
       ) {
         continue
       }
 
       hasAnalysised.push(
-        `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?._qid}#${entryPoint.entryPointSymVal.ast.parameters}.${entryPoint.attribute}`
+        `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
       )
 
       logger.info(
         'EntryPoint [%s.%s] is executing',
         entryPoint.filePath?.substring(0, entryPoint?.filePath.lastIndexOf('.')),
         entryPoint.functionName ||
-          `<anonymousFunc_${entryPoint.entryPointSymVal?.ast.loc.start.line}_${
-            entryPoint.entryPointSymVal?.ast.loc.end.line
+          `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc.start?.line}_${
+            entryPoint.entryPointSymVal?.ast?.node?.loc.end?.line
           }>`
       )
 
@@ -1081,11 +1099,11 @@ class GoAnalyzer extends Analyzer {
 
       const argValues = []
 
-      for (const key in entryPoint.entryPointSymVal?.ast?.parameters) {
+      for (const key in entryPoint.entryPointSymVal?.ast?.node?.parameters) {
         argValues.push(
           this.processInstruction(
             entryPoint.entryPointSymVal,
-            entryPoint.entryPointSymVal?.ast?.parameters[key].id,
+            entryPoint.entryPointSymVal?.ast?.node?.parameters[key].id,
             state
           )
         )
@@ -1093,17 +1111,17 @@ class GoAnalyzer extends Analyzer {
 
       try {
         this.executeCall(
-          entryPoint.entryPointSymVal?.ast,
+          entryPoint.entryPointSymVal?.ast?.node,
           entryPoint.entryPointSymVal,
-          argValues,
           state,
-          entryPoint.scopeVal
+          entryPoint.scopeVal,
+          { callArgs: this.buildCallArgs(entryPoint.entryPointSymVal?.ast?.node, argValues, entryPoint.entryPointSymVal) }
         )
       } catch (e) {
         handleException(
           e,
-          `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log`,
-          `[${entryPoint.entryPointSymVal?.ast?.id?.name} symbolInterpret failed. Exception message saved in error log`
+          `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`,
+          `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`
         )
       }
       if (index === entryPoints.length && !isFromRule) {
@@ -1121,11 +1139,11 @@ class GoAnalyzer extends Analyzer {
    * @param fileName
    */
   preProcess4SingleFile(source: any, fileName: any) {
-    // 需要将source导入缓存，否则找不到trace
-    SourceLine.storeCode(fileName, source)
-    this.moduleManager = GoParser.parseSingleFile(fileName, this.options)
-    const { packageInfo, moduleName } = this.moduleManager
-    const pkgValue = this.packageManager.getSubPackage(moduleName, true)
+    // 先填充 sourceCodeCache，parser 会优先使用
+    this.sourceCodeCache.set(fileName, source.split(/\n/))
+    this.topScope.context.modules = Parser.parseSingleFile(fileName, this.options, this.sourceCodeCache)
+    const { packageInfo, moduleName } = this.topScope.context.modules
+    const pkgValue = this.topScope.context.packages.getSubPackage(moduleName, true)
     const state = this.initState(this.topScope)
     this._scanPackages(pkgValue, '__single_file__', packageInfo, state, true)
     this.pkgValue = pkgValue
@@ -1139,23 +1157,38 @@ class GoAnalyzer extends Analyzer {
    * @param argvalues
    * @param state
    */
-  executeFunctionInArguments(scope: any, caller: any, callsiteNode: any, argvalues: any, state: any) {
+  override executeFunctionInArguments(scope: any, caller: any, callsiteNode: any, argvalues: any, state: any) {
     const needInvoke = Config.invokeCallbackOnUnknownFunction
     if (needInvoke !== 1 && needInvoke !== 2) return
 
     for (let i = 0; i < argvalues.length; i++) {
       const arg = argvalues[i]
       if (arg && arg.vtype === 'object') {
-        const obj = _.clone(arg) // 浅拷贝即可
+        const obj = lodashCloneWithTag(arg) // 浅拷贝即可
         const newState = _.clone(state)
         newState.parent = state
         newState.callstack = state.callstack ? state.callstack.concat([caller]) : [caller]
+        newState.callsites = state.callsites
+          ? state.callsites.concat([
+              {
+                code: AstUtil.getRawCode(callsiteNode).slice(0, 100),
+                nodeHash: callsiteNode._meta?.nodehash,
+                loc: callsiteNode.loc,
+              },
+            ])
+          : [
+              {
+                code: AstUtil.prettyPrintAST(callsiteNode).slice(0, 100),
+                nodeHash: callsiteNode._meta?.nodehash,
+                loc: callsiteNode.loc,
+              },
+            ]
         Object.values(obj.value).forEach((field: any) => {
           if (field?.vtype === 'fclos') {
             // only override methods will be concerned
-            if (!field.ast) return
-            if (!field?.ast?._meta?.modifiers?.includes('@Override')) return
-            this.executeCall(callsiteNode, field, [], newState, scope)
+            if (!field.ast.node) return
+            if (!field?.ast?.node?._meta?.modifiers?.includes('@Override')) return
+            this.executeCall(callsiteNode, field, newState, scope, INTERNAL_CALL)
           }
         })
       }
@@ -1184,36 +1217,33 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processBinaryExpression(scope: any, node: any, state: any) {
-    /*
-   { operator,
-     left,
-     right
-    }
-    */
-    const newNode = _.clone(node)
-    newNode.ast = node
-    const newLeft = (newNode.left = this.processInstruction(scope, node.left, state))
-    const newRight = (newNode.right = this.processInstruction(scope, node.right, state))
+  override processBinaryExpression(scope: Scope, node: BinaryExpression, state: State): BinaryExprValue {
+    const newLeft = this.processInstruction(scope, node.left, state)
+    const newRight = this.processInstruction(scope, node.right, state)
 
     if (node.operator === 'push') {
       this.processOperator(newLeft, node.left, newRight, node.operator, state)
     }
+
+    const hasTag = (newLeft && newLeft.taint?.isTaintedRec) || (newRight && newRight.taint?.isTaintedRec)
+
+    // checkerManager 需要 newNode 兼容对象
+    const newNode: any = { ...node, ast: node, left: newLeft, right: newRight, isTainted: hasTag || null }
     if (node.operator === 'instanceof') {
-      newNode._meta.type = node.right
-      // TODO 250805 用.value修改
-      newNode.field = newLeft.field
+      newNode._meta = { ...node._meta, type: node.right }
+      newNode.value = newLeft.value
     }
-
-    const hasTag = (newLeft && newLeft.hasTagRec) || (newRight && newRight.hasTagRec)
-    if (hasTag) {
-      newNode.hasTagRec = hasTag
-    }
-
     if (this.checkerManager && this.checkerManager.checkAtBinaryOperation)
       this.checkerManager.checkAtBinaryOperation(this, scope, node, state, { newNode })
 
-    return SymbolValue(newNode)
+      const result = new BinaryExprValue(scope.qid, node.operator, newLeft, newRight, node, node.loc) as any
+    if (hasTag) {
+      result.taint?.mergeFrom([newLeft, newRight])
+    }
+    if (node.operator === 'instanceof') {
+      result.value = newLeft.value
+    }
+    return result
   }
 
   /**
@@ -1229,9 +1259,9 @@ class GoAnalyzer extends Analyzer {
     switch (operator) {
       case 'push': {
         this.saveVarInCurrentScope(scope, node, right, state)
-        const hasTag = (scope && scope.hasTagRec) || (right && right.hasTagRec)
+        const hasTag = (scope && scope.taint?.isTaintedRec) || (right && right.taint?.isTaintedRec)
         if (hasTag) {
-          scope.hasTagRec = hasTag
+          scope.taint?.mergeFrom([scope, right])
         }
       }
     }
@@ -1243,10 +1273,10 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processMemberAccess(scope: any, node: any, state: any) {
+  override processMemberAccess(scope: Scope, node: MemberAccess, state: State): SymbolValueType {
     const defscope = this.processInstruction(scope, node.object, state)
     if (defscope.vtype === 'union' && Array.isArray(defscope.value)) {
-      const ret = UnionValue()
+      const ret = new UnionValue(undefined, undefined, `${scope.qid}.<union@go_mem:${node.loc?.start?.line}:${node.loc?.start?.column}>`, node)
       defscope.value.forEach((defScp: any) => {
         ret.appendValue(this.accessValueFromDefScope(scope, node, state, defScp))
       })
@@ -1276,7 +1306,13 @@ class GoAnalyzer extends Analyzer {
     }
     // 模糊类型补充
     if (resolvedProp) {
+      if (!defscope || typeof defscope !== 'object' || !defscope.vtype) {
+        return new UndefinedValue()
+      }
       const res = this.getMemberValue(defscope, resolvedProp, state)
+      if (node.object.type !== 'SuperExpression' && (res.vtype !== 'union' || !Array.isArray(res.value))) {
+        res._this = defscope
+      }
       if (defscope.rtype && defscope.rtype !== 'DynamicType' && res && res.rtype === undefined) {
         res.rtype = { type: undefined }
         res.rtype.definiteType = defscope.rtype.type ? defscope.rtype : defscope.rtype.definiteType
@@ -1313,8 +1349,8 @@ class GoAnalyzer extends Analyzer {
    * @param scope
    * @param state
    */
-  processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any) {
-    const ret = super.processLibArgToRet(node, fclos, argvalues, scope, state)
+  override processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any, callInfo: CallInfo) {
+    const ret = super.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
     // 将fclos的rtype信息保留给返回值
     if (fclos.rtype) ret.rtype = fclos.rtype
     return ret
@@ -1326,8 +1362,8 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  processIdentifier(scope: any, node: any, state: any) {
-    if (node.name === 'nil') return PrimitiveValue({ ...node, ast: node, value: undefined })
+  override processIdentifier(scope: Scope, node: Identifier, state: State): SymbolValueType {
+    if (node.name === 'nil') return new PrimitiveValue(scope.qid, 'nil', undefined, null, node.type, node.loc, node)
     const res = super.processIdentifier(scope, node, state)
     if (res && this.checkerManager) {
       this.checkerManager.checkAtIdentifier(this, scope, node, state, { res })

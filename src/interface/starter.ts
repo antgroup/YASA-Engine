@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, import/no-commonjs, @typescript-eslint/no-use-before-define */
+
+import { yasaLog } from "../util/format-util"
+
 const fs = require('fs-extra')
 const path = require('path')
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const _ = require('lodash')
 const { Command } = require('commander')
 const Config = require('../config')
-const Parsing = require('../engine/parser/parsing')
+const Parser = require('../engine/parser/parser')
 const Stat = require('../util/statistics')
 const logger = require('../util/logger')(__filename)
 const FileUtil = require('../util/file-util')
@@ -14,29 +17,43 @@ const FrameworkUtil = require('../util/framework-util')
 const { handleException } = require('../engine/analyzer/common/exception-handler')
 const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-strategy-auto-register')
 const { yasaWarning } = require('../util/format-util')
+const { logScanSummary, logScanInit } = require('../util/diagnostics-log-util')
+const { performanceTracker } = require('../util/performance-tracker')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { YASA_VERSION } = require('../util/constant')
 
 /**
  * the main entry point of the usual scan
  * @param {any} dir - Source directory or file path
  * @param {any[]} args - Command line arguments (default: [])
  * @param {any} printf - Print function for output (optional)
- * @param {any} isSync - Whether to run synchronously (optional)
  * @returns {Promise<any>} Analyzer results or undefined
  */
-async function execute(dir: any, args: any[] = [], printf?: any, isSync?: any) {
+async function execute(dir: any, args: any[] = [], printf?: any) {
+  // 记录整个程序开始时间（端到端时间）
+  performanceTracker.start()
+  let result: any
+
+  // 为了保证兼容性，目前 analyzer 只有 yasa analyzer 和 null 两种
   const analyzer = await initAnalyzer(dir, args, printf)
+
   if (analyzer) {
     const processingDir = Config.maindir
-    let isSuccess = false
-    if (!isSync) {
-      isSuccess = await executeAnalyzerAsync(analyzer, processingDir)
-    } else {
-      isSuccess = executeAnalyzer(analyzer, processingDir)
-    }
-    if (isSuccess) {
-      return outputAnalyzerResult(analyzer, printf)
+    const exitCode = await executeAnalyzer(analyzer, processingDir)
+    process.exitCode = exitCode
+    if (exitCode === 0) {
+      result = await outputAnalyzerResult(analyzer, printf)
     }
   }
+
+  // 输出性能报告（如果执行过 collectAnalysisData(analyzer) 则输出 overview，否则只输出 summary）
+  performanceTracker.outputPerformanceReport()
+
+  if (analyzer) {
+    logScanSummary(analyzer, performanceTracker)
+  }
+
+  return result
 }
 
 /**
@@ -45,7 +62,7 @@ async function execute(dir: any, args: any[] = [], printf?: any, isSync?: any) {
  * @param {any} printf - Print function for output
  * @returns {any} All findings or null
  */
-function outputAnalyzerResult(analyzer: any, printf: any) {
+async function outputAnalyzerResult(analyzer: any, printf: any) {
   if (!printf || typeof printf !== 'function') {
     printf = logger.info.bind(logger)
   }
@@ -66,6 +83,7 @@ function outputAnalyzerResult(analyzer: any, printf: any) {
     yasaSeparator('')
   }
   logger.info('analyze done')
+
   return allFindings
 }
 
@@ -85,6 +103,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   }
   // 标记是否显式设置了 --intermediate-dir
   let intermediateDirExplicitlySet = false
+  // 标记是否显式设置了 --context-environment-dir
+  let contextEnvironmentDirExplicitlySet = false
 
   // load the basic configuration from e.g. 'config.json'
   loadConfig(Config.configFilePath)
@@ -139,7 +159,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     .option('--ruleConfigFile <file>', '指定规则配置文件', (file: any) => {
       const ruleConfigFile = path.isAbsolute(file) ? file : path.resolve(path.join(process.cwd(), file))
       Config.ruleConfigFile = ruleConfigFile
-      logger.info('Rule config file: ', ruleConfigFile)
+      yasaLog(`Using rule config file: ${ruleConfigFile}`, 'init')
     })
     .option('--entrypointMode <mode>', '指定入口点模式（BOTH/SELF_COLLECT/ONLY_CUSTOM）', (mode: any) => {
       const validModes = ['BOTH', 'SELF_COLLECT', 'ONLY_CUSTOM']
@@ -152,17 +172,17 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       } else {
         Config.entryPointMode = mode
       }
-      logger.info('EntrypointMode set: ', mode)
+      yasaLog(`EntrypointMode set: ${mode}`, 'init')
     })
     .option('--checkerIds <list>', '指定检查器id列表（逗号分隔）', (list: any) => {
       const checkerIds = list.split(',')
       Config.checkerIds = _.assign(Config.checkerIds, checkerIds)
-      logger.info('Specific checkerIds:', checkerIds)
+      yasaLog(`Specified checker IDs: [${checkerIds.join(', ')}]`, 'init')
     })
     .option('--checkerPackIds <list>', '指定检查器组id列表（逗号分隔）', (list: any) => {
       const checkerPackIds = list.split(',')
       Config.checkerPackIds = _.assign(Config.checkerPackIds, checkerPackIds)
-      logger.info('Specific checkerPackIds:', checkerPackIds)
+      yasaLog(`Specified checker pack IDs: [${checkerPackIds.join(', ')}]`, 'init')
     })
     .option('--dumpAST', 'dump单文件AST', () => {
       Config.dumpAST = true
@@ -254,6 +274,50 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     .option('--cgAlgo <cgAlgo>', '指定构建CallGraph的算法', (cgAlgo: any) => {
       Config.cgAlgo = cgAlgo
     })
+    .option('--taintTraceOutputStrategy <strategy>', '污点追踪输出策略（callstack-only/full）', (strategy: any) => {
+      Config.taintTraceOutputStrategy = strategy
+    })
+    .option('--workerCount <count>', '指定Worker数量（0表示自动计算，>0表示使用设置的值）', (count: any) => {
+      const workerCount = parseInt(count, 10)
+      if (Number.isNaN(workerCount) || workerCount < 0) {
+        handleException(
+          null,
+          'ERROR: --workerCount must be a non-negative integer',
+          'ERROR: --workerCount must be a non-negative integer'
+        )
+        process.exit(1)
+      }
+      Config.workerCount = workerCount
+    })
+    .option('--contextEnvironmentDir <directory>', '指定上下文环境缓存目录路径', (contextEnvironmentDir: any) => {
+      contextEnvironmentDirExplicitlySet = true
+      // 检查如果目录为空，提示错误并禁用上下文环境功能
+      if (!contextEnvironmentDir || contextEnvironmentDir.trim() === '') {
+        handleException(
+          null,
+          'ERROR: --contextEnvironmentDir cannot be empty. Context environment features will be disabled.',
+          'ERROR: --contextEnvironmentDir cannot be empty. Context environment features will be disabled.'
+        )
+        Config.saveContextEnvironment = false
+        Config.miniSaveContextEnvironment = false
+        Config.loadContextEnvironment = false
+        Config.contextEnvironmentDir = ''
+      } else {
+        Config.contextEnvironmentDir = contextEnvironmentDir
+      }
+    })
+    .option('--saveContextEnvironment', '保存上下文环境模式', () => {
+      Config.saveContextEnvironment = true
+    })
+    .option('--miniSaveContextEnvironment', '保存上下文环境模式', () => {
+      Config.miniSaveContextEnvironment = true
+    })
+    .option('--loadContextEnvironment', '加载上下文环境模式', () => {
+      Config.loadContextEnvironment = true
+    })
+    .option('--loadContextEnvironmentId <id>', '加载上下文环境模式', (id: any) => {
+      Config.loadContextEnvironmentId = id
+    })
   // 处理非选项参数（如直接传入的目录）
   program.arguments('[paths...]').action((paths: any) => {
     if (paths.length > 0) {
@@ -279,7 +343,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   })
 
   // 处理未知选项
-  program.allowUnknownOption(false)
+  program.allowUnknownOption(true)
   program.allowExcessArguments()
 
   // 处理帮助信息
@@ -287,7 +351,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     printHelp()
   })
 
-  program.version('0.2.6-inner')
+  program.version(YASA_VERSION)
 
   // 解析命令行参数
   program.parse(args, { from: 'user' })
@@ -305,6 +369,20 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     Config.intermediateDir = ''
   }
 
+  // 检查如果启用了保存或加载上下文环境，但 --context-environment-dir 未设置或为空，则禁用相关功能
+  if (
+    (Config.saveContextEnvironment || Config.loadContextEnvironment || Config.miniSaveContextEnvironment) &&
+    (!contextEnvironmentDirExplicitlySet || !Config.contextEnvironmentDir || Config.contextEnvironmentDir.trim() === '')
+  ) {
+    yasaWarning(
+      '--context-environment-dir must be specified when save-context-environment or load-context-environment is enabled. Context environment features will be disabled.'
+    )
+    Config.saveContextEnvironment = false
+    Config.loadContextEnvironment = false
+    Config.miniSaveContextEnvironment = false
+    Config.contextEnvironmentDir = ''
+  }
+
   Stat.parsingTime = 0
 
   // 解析分析目标
@@ -320,7 +398,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
         maindir += '/'
       }
       // record the main directory
-      logger.info(`source path: ${maindir}`)
+      yasaLog(`Source path: ${maindir}`, 'init')
       Config.maindir = maindir
       Config.maindirPrefix = maindir.substring(0, maindir.lastIndexOf('/'))
     } catch (e: any) {
@@ -375,7 +453,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
           fs.mkdirSync(reportPathAbs, { recursive: true })
         }
       }
-      logger.info('Report directory:', Config.reportDir)
+      yasaLog(`Report directory: ${Config.reportDir}`, 'init')
     }
   }
 
@@ -395,9 +473,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       return
     }
     if (Config.ASTFileOutput) {
-      dumpAST(apps, fs.writeFileSync)
+      await dumpAST(apps, fs.writeFileSync)
     } else {
-      dumpAST(apps, logger.info.bind(logger))
+      await dumpAST(apps, logger.info.bind(logger))
     }
     process.exit(0)
   }
@@ -405,7 +483,14 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   // dump all AST
   if (Config.dumpAllAST) {
     try {
-      await Parsing.parseDirectory(Config.maindir, Config)
+      // 确保 reportDir 存在
+      if (!Config.reportDir) {
+        Config.reportDir = './uastParseDir'
+      }
+
+      // 使用统一接口导出所有 AST
+      await Parser.dumpAllAST(Config.maindir, Config.reportDir, Config)
+
       logger.info('parseDirectory UAST success!')
       process.exit(0)
     } catch (e: any) {
@@ -485,55 +570,34 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     Config.analyzer = f
     Analyzer = (analyzerEnum as any)[Config.analyzer]
   }
-  logger.info(`Analyze Language: ${Config.language}`)
-  logger.info(`Analyze Analyer: ${Config.analyzer}`)
+  yasaLog(`Analysis language: ${Config.language}`, 'init')
+  yasaLog(`Analysis analyzer: ${Config.analyzer}`, 'init')
+  logScanInit(performanceTracker)
   return new Analyzer(Config)
 }
 
 /**
- * Execute analyzer asynchronously
+ * Execute analyzer
  * @param {any} analyzer - The analyzer instance
  * @param {any} processingDir - Directory to process
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<number>} Exit code: 0 for success, 1 for failure
  */
-async function executeAnalyzerAsync(analyzer: any, processingDir: any) {
+async function executeAnalyzer(analyzer: any, processingDir: any): Promise<number> {
   try {
     if (Config.single) {
       const source = fs.readFileSync(processingDir, 'utf8')
-      if (!analyzer.analyzeSingleFile(source, processingDir)) {
-        return false
+      const singleFileResult = await analyzer.analyzeSingleFile(source, processingDir)
+      if (!singleFileResult) {
+        return 1
       }
-    } else if (!(await analyzer.analyzeProjectAsync(processingDir))) {
-      return false
+    } else if (!(await analyzer.analyzeProject(processingDir))) {
+      return 1
     }
-    return true
+    return 0
   } catch (e: any) {
-    handleException(e, 'Error occurred in executeAnalyzerAsync!!!!', 'Error occurred in executeAnalyzerAsync!!!!')
+    handleException(e, 'Error occurred in executeAnalyzer!!!!', 'Error occurred in executeAnalyzer!!!!')
+    return 1
   }
-  return false
-}
-
-/**
- * Execute analyzer synchronously
- * @param {any} analyzer - The analyzer instance
- * @param {any} processingDir - Directory to process
- * @returns {boolean} Success status
- */
-function executeAnalyzer(analyzer: any, processingDir: any) {
-  try {
-    if (Config.single) {
-      const source = fs.readFileSync(processingDir, 'utf8')
-      if (!analyzer.analyzeSingleFile(source, processingDir)) {
-        return false
-      }
-    } else if (!analyzer.analyzeProject(processingDir)) {
-      return false
-    }
-    return true
-  } catch (e: any) {
-    handleException(e, 'Error in executeAnalyzerAsync occurred!!!!', 'Error in executeAnalyzerAsync occurred!!!!')
-  }
-  return false
 }
 
 // 递归函数，用于删除对象及其子对象中的 'parent' 属性
@@ -583,7 +647,9 @@ function loadSource(absdirs: any) {
     case 'js':
     case 'typescript':
     case 'ts':
-      fext = ['js', 'ts', 'cjs', 'mjs']
+    case 'jsx':
+    case 'tsx':
+      fext = ['js', 'ts', 'cjs', 'mjs', 'jsx', 'tsx']
       dirFilter.push('node_modules')
       break
     case 'java':
@@ -689,14 +755,20 @@ function printHelp() {
  * @param {any} apps - Array of application objects with file and content
  * @param {any} printf - Print function for output
  */
-function dumpAST(apps: any, printf: any) {
+async function dumpAST(apps: any, printf: any) {
+  const { deleteParent } = require('../util/ast-util')
   for (const app of apps) {
     if (!Config.ASTFileOutput) {
       printf('dump file AST:', app.file)
     }
     Config.sourcefile = app.file
-    const ast = Parsing.parseCodeRaw(app.file, app.content, Config)
-    // golang较为特殊，它是返回的是promise，单独处理
+    // 使用统一接口 parseSingleFile，传入源代码缓存对象，然后删除 parent 指针
+    // 创建 sourceCodeCache 对象，将文件路径映射到内容（存储为行数组）
+    const sourceCodeCache = new Map<string, string[]>()
+    sourceCodeCache.set(app.file, app.content.split(/\n/))
+    // eslint-disable-next-line no-await-in-loop
+    const ast = Parser.parseSingleFile(app.file, Config, sourceCodeCache)
+    deleteParent(ast)
     if (Config.language !== 'golang') {
       const parseResult = JSON.stringify(ast)
       if (Config.ASTFileOutput) {
@@ -748,6 +820,8 @@ function detectFileLanguage(filename: any) {
     case 'js':
     case 'mjs':
     case 'cjs':
+    case 'tsx':
+    case 'jsx':
       return 'javascript'
     case 'go':
       return 'golang'

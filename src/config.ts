@@ -33,6 +33,7 @@ export interface IConfig {
   invokeCallbackOnUnknownFunction?: number
   maxIterationTime?: number
   shareSourceLineSet?: boolean
+  workerCount?: number // Worker数量：0表示自动计算，>0表示使用设置的worker数量
 
   // Analysis
   stateUnionLevel?: number
@@ -53,6 +54,7 @@ export interface IConfig {
   entryPointAndSourceAtSameTime?: boolean
   entryPointMode?: string
   cgAlgo: string
+  taintTraceOutputStrategy?: string
 
   // Allow additional properties
   [key: string]: any
@@ -69,8 +71,12 @@ const configObject: IConfig = {
 
   dumpAST: false, // dump ast to json format
   dumpAllAST: false, // dump all ast to json format
-  intermediateDir: '', // 中间文件缓存目录路径（默认使用 reportDir/ast-output）
+  intermediateDir: '', // 增量扫描缓存目录路径（默认使用 reportDir/ast-output）
   incremental: false, // 增量分析模式（默认禁用，需要显式配置）
+  saveContextEnvironment: false, // 保存上下文缓存模式
+  miniSaveContextEnvironment: false, // 极简保存上下文缓存模式
+  loadContextEnvironment: false, // 加载上下文缓存模式
+  contextEnvironmentDir: '', // 上下文缓存文件目录
 
   //* *****************************  path and so on ***************************
 
@@ -104,6 +110,9 @@ const configObject: IConfig = {
   // multiple objects with the same source may share the same source line trace
   shareSourceLineSet: false,
 
+  // Worker数量：0表示自动计算，>0表示使用设置的worker数量
+  workerCount: 0,
+
   //* *****************************  analysis  ***************************
 
   stateUnionLevel: 2,
@@ -122,8 +131,21 @@ const configObject: IConfig = {
   entryPointAndSourceAtSameTime: true,
   entryPointMode: 'BOTH', // BOTH or ONLY_CUSTOM or SELF_COLLECT
 
+  // Taint trace output strategy: 'full' | 'callstack-only' (legacy alias: 'folded')
+  taintTraceOutputStrategy: 'callstack-only',
+
   // CallGraph
   cgAlgo: 'DEFAULT',
+
+  // Pruning
+  minEntryPointToEnablePrune: 200,
+
+  // Timeout
+  entryPointTimeoutMs: 300000,
+  entryPointTimeoutQuickMs: 120000,
+
+  // Prune parameters for aggressive prune mode
+  maxCallstackDepth: 12, // max callstack depth in aggressive prune mode
 }
 
 module.exports = configObject

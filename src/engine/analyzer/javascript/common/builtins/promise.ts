@@ -1,6 +1,6 @@
 const {
   valueUtil: {
-    ValueUtil: { FunctionValue: PromiseFunctionValue, UndefinedValue: PromiseUndefinedValue },
+    ValueUtil: { FunctionValue, UndefinedValue },
   },
 } = require('../../../common')
 
@@ -16,12 +16,12 @@ function processThen(this: any, fclos: any, argvalues: any[], state: any, node: 
   const handleFulfilled = argvalues && argvalues[0]
   const promise = fclos.parent
   if (handleFulfilled) {
-    if (promise && promise.sid === 'Promise') {
+    if (promise && (promise.sid === 'Promise' || promise.sid.includes('Promise<instance'))) {
       let resolve = promise.getMisc('promise')?.resolve
       if (!resolve) {
-        resolve = PromiseUndefinedValue()
+        resolve = new UndefinedValue()
       }
-      const thenRes = (this as any).executeCall(node, handleFulfilled, [resolve], state, scope)
+      const thenRes = (this as any).executeCall(node, handleFulfilled, state, scope, { callArgs: (this as any).buildCallArgs(node, [resolve], handleFulfilled) })
       if (thenRes && promise.getMisc('promise')) {
         promise.getMisc('promise').resolve = thenRes
       }
@@ -42,14 +42,14 @@ function processCatch(this: any, fclos: any, argvalues: any[], state: any, node:
   const handleFulfilled = argvalues && argvalues[0]
   const promise = fclos.parent
   if (handleFulfilled) {
-    if (promise && promise.sid === 'Promise') {
+    if (promise && (promise.sid === 'Promise' || promise.sid.includes('Promise<instance'))) {
       // 存到reject的参数
       let reject = promise.getMisc('promise')?.reject
       if (!reject) {
-        reject = PromiseUndefinedValue()
+        reject = new UndefinedValue()
       }
       // 把catch的参数值当成 fclos 参数error替换成reject接受的参数信息
-      (this as any).executeCall(node, handleFulfilled, [reject], state, scope)
+      ;(this as any).executeCall(node, handleFulfilled, state, scope, { callArgs: (this as any).buildCallArgs(node, [reject], handleFulfilled) })
     }
   }
   return promise
@@ -97,26 +97,26 @@ module.exports = {
     }
 
     const executorArgs = [
-      PromiseFunctionValue({
+      new FunctionValue('', {
         sid: 'resolve',
         qid: 'promise.resolve',
         parent: null,
-        execute: processResolve,
+        runtime: { execute: processResolve },
       }),
-      PromiseFunctionValue({
+      new FunctionValue('', {
         sid: 'reject',
         qid: 'promise.reject',
         parent: null,
-        execute: processReject,
+        runtime: { execute: processReject },
       }),
     ]
 
     promise.setFieldValue(
       'then',
-      PromiseFunctionValue({
+      new FunctionValue('', {
         sid: 'then',
         qid: 'promise.then',
-        execute: processThen,
+        runtime: { execute: processThen },
         parent: promise,
       })
     )
@@ -125,17 +125,17 @@ module.exports = {
     // 新增对catch的建模以后就能执行到catch的处理
     promise.setFieldValue(
       'catch',
-      PromiseFunctionValue({
+      new FunctionValue('', {
         sid: 'catch',
         qid: 'promise.catch',
-        execute: processCatch,
+        runtime: { execute: processCatch },
         parent: promise,
       })
     )
 
     const executor = argvalues && argvalues[0]
     if (executor) {
-      this.executeCall(node, executor, executorArgs, state, scope)
+      this.executeCall(node, executor, state, scope, { callArgs: this.buildCallArgs(node, executorArgs, executor) })
     }
   },
 }

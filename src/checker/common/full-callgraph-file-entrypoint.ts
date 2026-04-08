@@ -11,6 +11,7 @@ const options = require('../../config')
 const { Graph } = require('../../util/graph')
 const logger = require('../../util/logger')(__filename)
 const sourceLine = require('../../engine/analyzer/common/source-line')
+const { performanceTracker } = require('../../util/performance-tracker')
 
 /**
  *
@@ -23,8 +24,8 @@ function printLoc(ast: any): string {
     const splits = sourcefile.split('/')
     sourcefile = splits[splits.length - 1]
   }
-  const startLine = ast && ast.loc.start.line
-  const endLine = ast && ast.loc.end.line
+  const startLine = ast && ast?.loc?.start.line
+  const endLine = ast && ast?.loc?.end.line
 
   return ` \\n[${sourcefile} : ${startLine}_${endLine}]`
 }
@@ -60,13 +61,16 @@ function prettyPrint(
     // pretty print fdef
     name = fdef.name || '<anonymous>'
     // try to attach namespace
-    if (fclos && fclos.__proto__.constructor.name !== 'BVT') {
+    if (fclos && fclos.__proto__.constructor.name !== 'BVTValue') {
       if (fclos.vtype === 'class') {
         // e.g. javascript function class
         name = `new ${name}`
-      } else if (fclos.parent?.vtype === 'class' || fclos.parent?.fdef?.type === 'ClassDefinition') {
-        const nsDef = fclos.parent.fdef
-        const nsName = nsDef?.name || '<anonymous>'
+      } else if (fclos.parent?.vtype === 'class' || fclos.parent?.ast.fdef?.type === 'ClassDefinition') {
+        const nsDef = fclos.parent.ast.fdef
+        let nsName = nsDef?.name || '<anonymous>'
+        if (fclos.parent.qid) {
+          nsName = fclos.parent.qid
+        }
         if (name === '_CTOR_') {
           name = `new ${nsName}`
         } else {
@@ -86,10 +90,25 @@ function prettyPrint(
     ret = `${ret.slice(0, 500)}...`
   }
   // attach loc
-  if (fdef) {
+  if (fdef && fdef?.loc) {
     ret += printLoc(fdef)
   }
   return ret
+}
+
+/**
+ * 从 nodehash 和 UUID 还原 funcDef 和 funcSymbol
+ * @param node callgraph 节点
+ * @param astManager AST 管理器
+ * @param symbolTable 符号表管理器
+ * @returns 包含 funcDef 和 funcSymbol 的对象
+ */
+function restoreNodeFromReferences(node: any, astManager?: any, symbolTable?: any): { funcDef: any; funcSymbol: any } {
+  const funcDef =
+    node.opts?.funcDefNodehash && astManager ? astManager.get(node.opts.funcDefNodehash) : node.opts?.funcDef
+  const funcSymbol =
+    node.opts?.funcSymbolUuid && symbolTable ? symbolTable.get(node.opts.funcSymbolUuid) : node.opts?.funcSymbol
+  return { funcDef, funcSymbol }
 }
 
 /**
@@ -97,7 +116,7 @@ function prettyPrint(
  * @param analyzer
  */
 function makeFullCallGraph(analyzer: any): void {
-  analyzer.performanceTracker.start(`makeFullCallGraph(BySymbolInterpret)`)
+  performanceTracker.start(`startAnalyze.makeFullCallGraph(BySymbolInterpret)`)
   config.loadDefaultRule = false
   config.loadExternalRule = false
   config.makeAllCG = true
@@ -108,20 +127,24 @@ function makeFullCallGraph(analyzer: any): void {
   const backupCheckerManager = analyzer.checkerManager
   analyzer.checkerManager = newCheckerManager
   analyzer.ainfo.callgraph = analyzer.ainfo.callgraph || new Graph()
-  if (analyzer.ainfo.callgraph && Object.keys(analyzer.funcSymbolTable).length > 0) {
+  if (analyzer.ainfo.callgraph && Object.keys(analyzer.topScope.context.funcs).length > 0) {
     const alreadyCheckList: any[] = [] // 分析过的callnode一定会出现在nodes中
     for (const node of analyzer.ainfo.callgraph.nodes.values()) {
-      if (node.opts?.funcSymbol) {
-        alreadyCheckList.push(node.opts?.funcSymbol)
+      // 从 UUID 还原 funcSymbol
+      if (node.opts?.funcSymbolUuid) {
+        const funcSymbol = analyzer.symbolTable.get(node.opts.funcSymbolUuid)
+        if (funcSymbol) {
+          alreadyCheckList.push(funcSymbol)
+        }
       }
     }
     let totalCount = 0
-    Object.entries(analyzer.funcSymbolTable).forEach(([key, funcSymbol]) => {
+    Object.entries(analyzer.topScope.context.funcs).forEach(([key, funcSymbol]) => {
       const funcSymbolAny = funcSymbol as any
       if (
         !alreadyCheckList.includes(funcSymbolAny) &&
-        funcSymbolAny.fdef &&
-        funcSymbolAny.fdef.type === 'FunctionDefinition'
+        funcSymbolAny.ast.fdef &&
+        funcSymbolAny.ast.fdef.type === 'FunctionDefinition'
       ) {
         totalCount += 1
       }
@@ -131,7 +154,7 @@ function makeFullCallGraph(analyzer: any): void {
     let already30Percent = false
     let already70Percent = false
     logger.info('makeAllCG-start')
-    Object.entries(analyzer.funcSymbolTable).forEach(([key, funcSymbol]) => {
+    Object.entries(analyzer.topScope.context.funcs).forEach(([key, funcSymbol]) => {
       analyzedCount += 1
       if (analyzedCount > totalCount * 0.1 && !already10Percent) {
         logger.info('\tmakeAllCG-10%')
@@ -149,15 +172,13 @@ function makeFullCallGraph(analyzer: any): void {
       const funcSymbolAny2 = funcSymbol as any
       if (
         !alreadyCheckList.includes(funcSymbolAny2) &&
-        funcSymbolAny2.fdef &&
-        funcSymbolAny2.fdef.type === 'FunctionDefinition'
+        funcSymbolAny2.ast.fdef &&
+        funcSymbolAny2.ast.fdef.type === 'FunctionDefinition'
       ) {
         alreadyCheckList.push(funcSymbolAny2)
-        const argValues: any[] = []
         analyzer.executeCall(
-          funcSymbolAny2.fdef,
+          funcSymbolAny2.ast.fdef,
           funcSymbolAny2,
-          argValues,
           analyzer.initState(funcSymbolAny2.parent),
           funcSymbolAny2.parent
         )
@@ -167,7 +188,7 @@ function makeFullCallGraph(analyzer: any): void {
   }
   analyzer.checkerManager = backupCheckerManager
   config.makeAllCG = false
-  analyzer.performanceTracker.end(`makeFullCallGraph(BySymbolInterpret)`)
+  performanceTracker.end(`startAnalyze.makeFullCallGraph(BySymbolInterpret)`)
 }
 
 /**
@@ -176,14 +197,32 @@ function makeFullCallGraph(analyzer: any): void {
  * @param resolver
  */
 function makeFullCallGraphByType(analyzer: any, resolver: TypeRelatedInfoResolver) {
-  if (!resolver) {
+  if (!resolver || (resolver.resolveFinish && analyzer?.ainfo?.callgraph)) {
     return
   }
 
-  analyzer.performanceTracker.start('makeFullCallGraphByType')
+  performanceTracker.start('startAnalyze.makeFullCallGraphByType')
 
   if (!resolver.resolveFinish) {
     resolver.resolve(analyzer)
+  }
+
+  // Helper function to extract only location and name from AST to reduce memory usage
+  const extractFuncDefInfo = (ast: any): { loc?: any; name?: any; id?: any } | null => {
+    if (!ast) return null
+    return {
+      loc: ast.loc,
+      name: ast.name,
+      id: ast.id, // Store id for functionName access
+    }
+  }
+
+  // Helper function to extract only location from callSite AST to reduce memory usage
+  const extractCallSiteInfo = (callSite: any): { loc?: any } | null => {
+    if (!callSite) return null
+    return {
+      loc: callSite.loc,
+    }
   }
 
   const graph = new Graph()
@@ -201,7 +240,10 @@ function makeFullCallGraphByType(analyzer: any, resolver: TypeRelatedInfoResolve
               invocation.calleeType,
               invocation.fsig
             ),
-            { funcDef: invocation.fromScopeAst, funcSymbol: invocation.fromScope }
+            {
+              funcDef: extractFuncDefInfo(invocation.fromScopeAst),
+              funcSymbol: invocation.fromScope,
+            }
           )
           const toNode = graph.addNode(
             prettyPrint(
@@ -213,31 +255,45 @@ function makeFullCallGraphByType(analyzer: any, resolver: TypeRelatedInfoResolve
               invocation.fsig
             ),
             {
-              funcDef: invocation.toScopeAst,
+              funcDef: extractFuncDefInfo(invocation.toScopeAst),
               funcSymbol: invocation.toScope,
             }
           )
-          graph.addEdge(fromNode, toNode, { callSite: invocation.callSite })
+          graph.addEdge(fromNode, toNode, { callSite: extractCallSiteInfo(invocation.callSite) })
         }
       }
     }
   })
   analyzer.ainfo.callgraph = graph
 
-  analyzer.performanceTracker.end('makeFullCallGraphByType')
+  performanceTracker.end('startAnalyze.makeFullCallGraphByType')
 }
 
 /**
  * 从CallGraph中拿取边界作为全func类型的Entrypoint
  * @param callGraph
+ * @param analyzer
  */
-function getAllEntryPointsUsingCallGraph(callGraph: any): any[] {
+function getAllEntryPointsUsingCallGraph(callGraph: any, analyzer?: any): any[] {
   const entryPoints = {
     fclosEntryPoints: new Map<string, any>(),
   }
+  const astManager = analyzer?.astManager
+  const symbolTable = analyzer?.symbolTable
+
   for (const f of callGraph.nodes.keys()) {
     const thisNode = callGraph.nodes.get(f)
-    if (!thisNode.opts?.funcDef) {
+    // 从 nodehash 和 UUID 还原 funcDef 和 funcSymbol
+    const thisNodeFuncDef =
+      thisNode.opts?.funcDefNodehash && astManager
+        ? astManager.get(thisNode.opts.funcDefNodehash)
+        : thisNode.opts?.funcDef
+    const thisNodeFuncSymbol =
+      thisNode.opts?.funcSymbolUuid && symbolTable
+        ? symbolTable.get(thisNode.opts.funcSymbolUuid)
+        : thisNode.opts?.funcSymbol
+
+    if (!thisNodeFuncDef) {
       continue
     }
     let hasCalled = false
@@ -245,21 +301,27 @@ function getAllEntryPointsUsingCallGraph(callGraph: any): any[] {
       // 需要准确比较ast上的loc，因为函数符号值由于有new等问题不一定是同一个
       const targetNode = callGraph.nodes.get(callGraph.edges.get(ek).targetNodeId)
       if (thisNode && targetNode && !callGraph.edges.get(ek)?.sourceNodeId.includes('entry_point')) {
+        // 从 nodehash 还原 targetNode 的 funcDef
+        const targetNodeFuncDef =
+          targetNode.opts?.funcDefNodehash && astManager
+            ? astManager.get(targetNode.opts.funcDefNodehash)
+            : targetNode.opts?.funcDef
+
         if (
-          targetNode.opts?.funcDef?.loc?.sourcefile &&
-          targetNode.opts?.funcDef?.loc?.start?.line &&
-          targetNode.opts?.funcDef?.loc?.end?.line &&
-          targetNode.opts?.funcDef?.loc?.sourcefile === thisNode.opts?.funcDef?.loc?.sourcefile &&
-          targetNode.opts?.funcDef?.loc?.start?.line === thisNode.opts?.funcDef?.loc?.start?.line &&
-          targetNode.opts?.funcDef?.loc?.end?.line === thisNode.opts?.funcDef?.loc?.end?.line
+          targetNodeFuncDef?.loc?.sourcefile &&
+          targetNodeFuncDef?.loc?.start?.line &&
+          targetNodeFuncDef?.loc?.end?.line &&
+          targetNodeFuncDef?.loc?.sourcefile === thisNodeFuncDef?.loc?.sourcefile &&
+          targetNodeFuncDef?.loc?.start?.line === thisNodeFuncDef?.loc?.start?.line &&
+          targetNodeFuncDef?.loc?.end?.line === thisNodeFuncDef?.loc?.end?.line
         ) {
           hasCalled = true
           break
         }
       }
     }
-    if (!hasCalled) {
-      entryPoints.fclosEntryPoints.set(thisNode.id, thisNode.opts.funcSymbol)
+    if (!hasCalled && thisNodeFuncSymbol) {
+      entryPoints.fclosEntryPoints.set(thisNode.id, thisNodeFuncSymbol)
     }
   }
   const newEntryPointList: any[] = []
@@ -267,10 +329,10 @@ function getAllEntryPointsUsingCallGraph(callGraph: any): any[] {
     const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
     entryPoint.scopeVal = entry.parent
     entryPoint.argValues = []
-    entryPoint.functionName = entry.fdef?.id?.name
-    entryPoint.filePath = entry.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
-      ? entry.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
-      : entry.fdef?.loc?.sourcefile
+    entryPoint.functionName = entry.ast.fdef?.id?.name
+    entryPoint.filePath = entry.ast.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
+      ? entry.ast.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
+      : entry.ast.fdef?.loc?.sourcefile
     entryPoint.attribute = 'fullCallGraphMade'
     entryPoint.packageName = undefined
     entryPoint.entryPointSymVal = entry
@@ -281,19 +343,20 @@ function getAllEntryPointsUsingCallGraph(callGraph: any): any[] {
 
 /**
  * 若为弱类型脚本语言，则加入所有文件作为EntryPoint
- * @param fileManager
+ * @param analyzer
  */
-function getAllFileEntryPointsUsingFileManager(fileManager: any): any[] {
+function getAllFileEntryPointsUsingFileManager(analyzer: any): any[] {
   const entryPoints: any[] = []
   if (options.language === 'python' || options.language === 'javascript') {
-    if (fileManager) {
-      Object.values(fileManager).forEach((file: any) => {
-        if (!file.ast || file.ast.type !== 'CompileUnit') return
+    if (analyzer?.fileManager) {
+      Object.values(analyzer?.fileManager).forEach((fileUUid: any) => {
+        const file = analyzer.symbolTable.get(fileUUid)
+        if (!file.ast.node || file.ast.node.type !== 'CompileUnit') return
         const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = file?.ast?.loc?.sourcefile
+        entryPoint.filePath = file?.ast?.node?.loc?.sourcefile
         entryPoint.attribute = 'fullfileManagerMade'
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -309,30 +372,45 @@ function getAllFileEntryPointsUsingFileManager(fileManager: any): any[] {
  * @param keywords need an array
  * @param callGraph
  * @param fileManager
+ * @param analyzer
  */
-function getEntryPointsUsingCallGraphByKeyWords(keywords: string[], callGraph: any, fileManager: any): any[] {
+function getEntryPointsUsingCallGraphByKeyWords(
+  keywords: string[],
+  callGraph: any,
+  fileManager: any,
+  analyzer?: any
+): any[] {
   const newEntryPointList: any[] = []
   if (!callGraph || !keywords || !Array.isArray(keywords)) {
     return newEntryPointList
   }
+  const astManager = analyzer?.astManager
+  const symbolTable = analyzer?.symbolTable
 
   for (const keyword of keywords) {
     const alreadyCalculate: any[] = []
-    const nodes = getNodeInCallGraphByKeyword(keyword, callGraph.nodes)
+    const nodes = getNodeInCallGraphByKeyword(keyword, callGraph.nodes, astManager)
     for (const node of nodes) {
       // const node = getNodeInCallGraphByKeyword(keyword, callGraph.nodes)
       if (node) {
-        const fclosNodes = getFclosEntryPointsUsingCallGraphByTargetNode(node.id, callGraph, alreadyCalculate)
+        const fclosNodes = getFclosEntryPointsUsingCallGraphByTargetNode(
+          node.id,
+          callGraph,
+          alreadyCalculate,
+          astManager,
+          symbolTable
+        )
         if (fclosNodes && Array.isArray(fclosNodes) && fclosNodes.length > 0) {
           for (const f of fclosNodes) {
-            const entry = f.opts.funcSymbol
+            const { funcSymbol: entry } = restoreNodeFromReferences(f, astManager, symbolTable)
+            if (!entry) continue
             const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
             entryPoint.scopeVal = entry.parent
             entryPoint.argValues = []
-            entryPoint.functionName = entry.fdef?.id?.name
-            entryPoint.filePath = entry.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
-              ? entry.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
-              : entry.fdef?.loc?.sourcefile
+            entryPoint.functionName = entry.ast.fdef?.id?.name
+            entryPoint.filePath = entry.ast.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
+              ? entry.ast.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
+              : entry.ast.fdef?.loc?.sourcefile
             entryPoint.attribute = 'FuncEntryPointByLoc'
             entryPoint.packageName = undefined
             entryPoint.entryPointSymVal = entry
@@ -344,13 +422,13 @@ function getEntryPointsUsingCallGraphByKeyWords(keywords: string[], callGraph: a
 
     for (const file of Object.values(fileManager)) {
       // const file = fileManager[loc.sourcefile]
-      const content = sourceLine.getCodeBySourceFile((file as any)?.ast?.loc?.sourcefile)
+      const content = sourceLine.getCodeBySourceFile((file as any)?.ast?.node?.loc?.sourcefile)
       if (file && content.includes(keyword)) {
         const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = (file as any)?.ast?.sourcefile || (file as any)?.ast?.loc?.sourcefile
+        entryPoint.filePath = (file as any)?.ast?.node?.sourcefile || (file as any)?.ast?.node?.loc?.sourcefile
         entryPoint.attribute = 'FileEntryPointByLoc'
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -366,30 +444,41 @@ function getEntryPointsUsingCallGraphByKeyWords(keywords: string[], callGraph: a
  * @param locs need an array
  * @param callGraph
  * @param fileManager
+ * @param analyzer
  */
-function getEntryPointsUsingCallGraphByLoc(locs: any[], callGraph: any, fileManager: any): any[] {
+function getEntryPointsUsingCallGraphByLoc(locs: any[], callGraph: any, fileManager: any, analyzer?: any): any[] {
   const newEntryPointList: any[] = []
   if (!callGraph || !locs || !Array.isArray(locs)) {
     return newEntryPointList
   }
+  const astManager = analyzer?.astManager
+  const symbolTable = analyzer?.symbolTable
+
   for (const loc of locs) {
-    if (!loc.sourcefile || !loc.start?.line || !loc.end.line) {
+    if (!loc.sourcefile || !loc.start?.line || !loc.end?.line) {
       continue
     }
     const alreadyCalculate: any[] = []
-    const node = getNodeInCallGraphByLoc(loc, callGraph.nodes)
+    const node = getNodeInCallGraphByLoc(loc, callGraph.nodes, astManager)
     if (node) {
-      const fclosNodes = getFclosEntryPointsUsingCallGraphByTargetNode(node.id, callGraph, alreadyCalculate)
+      const fclosNodes = getFclosEntryPointsUsingCallGraphByTargetNode(
+        node.id,
+        callGraph,
+        alreadyCalculate,
+        astManager,
+        symbolTable
+      )
       if (fclosNodes && Array.isArray(fclosNodes) && fclosNodes.length > 0) {
         for (const f of fclosNodes) {
-          const entry = f.opts.funcSymbol
+          const { funcSymbol: entry } = restoreNodeFromReferences(f, astManager, symbolTable)
+          if (!entry) continue
           const entryPoint = new EntryPoint(constValue.ENGIN_START_FUNCALL)
           entryPoint.scopeVal = entry.parent
           entryPoint.argValues = []
-          entryPoint.functionName = entry.fdef?.id?.name
-          entryPoint.filePath = entry.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
-            ? entry.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
-            : entry.fdef?.loc?.sourcefile
+          entryPoint.functionName = entry.ast.fdef?.id?.name
+          entryPoint.filePath = entry.ast.fdef?.loc?.sourcefile?.startsWith(config.maindirPrefix)
+            ? entry.ast.fdef?.loc?.sourcefile?.substring(config.maindirPrefix.length)
+            : entry.ast.fdef?.loc?.sourcefile
           entryPoint.attribute = 'FuncEntryPointByLoc'
           entryPoint.packageName = undefined
           entryPoint.entryPointSymVal = entry
@@ -403,7 +492,7 @@ function getEntryPointsUsingCallGraphByLoc(locs: any[], callGraph: any, fileMana
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = (file as any)?.ast?.sourcefile || (file as any)?.ast?.loc?.sourcefile
+        entryPoint.filePath = (file as any)?.ast?.node?.sourcefile || (file as any)?.ast?.node?.loc?.sourcefile
         entryPoint.attribute = 'FileEntryPointByLoc'
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -419,11 +508,15 @@ function getEntryPointsUsingCallGraphByLoc(locs: any[], callGraph: any, fileMana
  * @param key
  * @param callGraph
  * @param alreadyCalculate
+ * @param astManager
+ * @param symbolTable
  */
 function getFclosEntryPointsUsingCallGraphByTargetNode(
   key: any,
   callGraph: any,
-  alreadyCalculate: any[]
+  alreadyCalculate: any[],
+  astManager?: any,
+  symbolTable?: any
 ): any[] | null {
   if (
     !key ||
@@ -444,8 +537,10 @@ function getFclosEntryPointsUsingCallGraphByTargetNode(
       continue
     }
     if (circularDetected.includes(n)) {
-      if (callGraph.nodes.get(n)?.opts?.funcDef) {
-        res.push(callGraph.nodes.get(n))
+      const node = callGraph.nodes.get(n)
+      const { funcDef } = restoreNodeFromReferences(node, astManager, symbolTable)
+      if (funcDef) {
+        res.push(node)
       }
       continue
     }
@@ -454,8 +549,10 @@ function getFclosEntryPointsUsingCallGraphByTargetNode(
     let hasFind = false
     for (const ek of callGraph.edges.keys()) {
       // 需要准确比较ast上的loc，因为函数符号值由于有new等问题不一定是同一个
-      const targetNodeAST = callGraph.nodes.get(callGraph.edges.get(ek).targetNodeId).opts?.funcDef
-      const thisNodeAST = callGraph.nodes.get(n).opts?.funcDef
+      const targetNode = callGraph.nodes.get(callGraph.edges.get(ek).targetNodeId)
+      const thisNode = callGraph.nodes.get(n)
+      const { funcDef: targetNodeAST } = restoreNodeFromReferences(targetNode, astManager, symbolTable)
+      const { funcDef: thisNodeAST } = restoreNodeFromReferences(thisNode, astManager, symbolTable)
       if (
         thisNodeAST &&
         targetNodeAST &&
@@ -473,8 +570,10 @@ function getFclosEntryPointsUsingCallGraphByTargetNode(
       }
     }
     if (!hasFind) {
-      if (callGraph.nodes.get(n)?.opts?.funcDef) {
-        res.push(callGraph.nodes.get(n))
+      const node = callGraph.nodes.get(n)
+      const { funcDef } = restoreNodeFromReferences(node, astManager, symbolTable)
+      if (funcDef) {
+        res.push(node)
       }
     }
   }
@@ -485,8 +584,9 @@ function getFclosEntryPointsUsingCallGraphByTargetNode(
  *
  * @param loc
  * @param nodes
+ * @param astManager
  */
-function getNodeInCallGraphByLoc(loc: any, nodes: any): any {
+function getNodeInCallGraphByLoc(loc: any, nodes: any, astManager?: any): any {
   let tempStartLine = -1
   let tempEndLine = Number.MAX_VALUE
   let tempKey
@@ -495,10 +595,12 @@ function getNodeInCallGraphByLoc(loc: any, nodes: any): any {
   }
   for (const key of nodes.keys()) {
     if (key.includes('\\n[')) {
-      const filename = nodes.get(key)?.opts?.funcDef?.loc?.sourcefile
-      const startLine = nodes.get(key)?.opts?.funcDef?.loc?.start?.line
-      const endLine = nodes.get(key)?.opts?.funcDef?.loc?.end?.line
-      if (loc.sourcefile === filename && loc.start.line >= startLine && loc.end.line <= endLine) {
+      const node = nodes.get(key)
+      const { funcDef } = restoreNodeFromReferences(node, astManager)
+      const filename = funcDef?.loc?.sourcefile
+      const startLine = funcDef?.loc?.start?.line
+      const endLine = funcDef?.loc?.end?.line
+      if (loc.sourcefile === filename && loc.start?.line >= startLine && loc.end?.line <= endLine) {
         if (startLine > tempStartLine && endLine < tempEndLine) {
           tempStartLine = startLine
           tempEndLine = endLine
@@ -515,19 +617,21 @@ function getNodeInCallGraphByLoc(loc: any, nodes: any): any {
  * 判断函数中是否包含关键字
  * @param keyword
  * @param nodes
+ * @param astManager
  */
-function getNodeInCallGraphByKeyword(keyword: string, nodes: any): any[] {
+function getNodeInCallGraphByKeyword(keyword: string, nodes: any, astManager?: any): any[] {
   const result: any[] = []
   if (keyword === '') {
     return result
   }
   for (const key of nodes.keys()) {
     if (key.includes('\\n[')) {
-      const funcDef = nodes.get(key)?.opts?.funcDef
+      const node = nodes.get(key)
+      const { funcDef } = restoreNodeFromReferences(node, astManager)
       if (funcDef) {
         const content = sourceLine.getCodeByLocation(funcDef?.loc)
         if (content.includes(keyword)) {
-          result.push(nodes.get(key))
+          result.push(node)
         }
       }
     }

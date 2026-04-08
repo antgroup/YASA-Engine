@@ -1,0 +1,52 @@
+[
+  {
+    "checkerIds": [
+      "callchain_go"
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": ["*"],
+          "attribute": "GoCommandInjection",
+          "calleeType": "",
+          "fsig": "exec.Command"
+        },
+        {
+          "args": ["*"],
+          "attribute": "GoSQLInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Query"
+        },
+        {
+          "args": ["*"],
+          "attribute": "GoSQLInjection",
+          "calleeType": "*database/sql.DB",
+          "fsig": "Query"
+        },
+        {
+          "args": ["*"],
+          "attribute": "GoSQLInjection",
+          "calleeType": "*sql.DB",
+          "fsig": "Exec"
+        },
+        {
+          "args": ["*"],
+          "attribute": "GoSQLInjection",
+          "calleeType": "*database/sql.DB",
+          "fsig": "Exec"
+        }
+      ]
+    },
+    "entrypoints": [
+      {
+        "filePath": "test_callchain.go",
+        "functionName": "TestSqlInjection"
+      },
+      {
+        "filePath": "test_callchain.go",
+        "functionName": "TestCommandInjection"
+      }
+    ]
+  }
+]

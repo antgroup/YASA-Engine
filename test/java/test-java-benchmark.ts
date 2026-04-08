@@ -1,5 +1,5 @@
 import * as path from 'path'
-import { describe, it } from 'mocha'
+import { describe, it, before } from 'mocha'
 const { execute } = require('../../src/interface/starter')
 const { ErrorCode } = require('../../src/util/error-code')
 const { recordFindingStr, readExpectRes, resolveFindingResult } = require('../test-utils')
@@ -8,20 +8,55 @@ import * as fs from 'fs'
 const logger = require('../../src/util/logger')(__filename)
 const { handleException } = require('../../src/engine/analyzer/common/exception-handler')
 
-async function runJavaBenchmark(dir: string): Promise<void> {
+function runJavaBenchmark(dir: string): void {
   const description = `YASA test Java benchmark`
-  describe(description, async function () {
-    let result = await getRunJavaBenchmarkResult(dir)
-    const { expectedRes, actualRes, expectedResMap, actualResMap } = result
-    this.timeout(10000)
+  const ruleConfigFile = path.join(path.resolve(dir), '../../rule_config_xast_java.json')
+  const repoName = path.basename(dir)
+  const expectPath = path.join(dir, '..', '..', 'expect', `${repoName}-expect.result`)
+  
+  // 先同步读取期望结果，用于注册测试用例
+  let expectedResForRegistration: any = null
+  let expectedResMapForRegistration: Map<string, any> = new Map()
+  if (fs.existsSync(expectPath)) {
+    expectedResForRegistration = readExpectRes(expectPath)
+    expectedResMapForRegistration = resolveFindingResult(expectedResForRegistration)
+  }
+  
+  describe(description, function () {
+    this.timeout(0)
+    let result: any
+    let expectedRes: any
+    let actualRes: any
+    let expectedResMap: Map<string, any>
+    let actualResMap: Map<string, any>
+    let benchmarkReady = false
+    
+    before(async function () {
+      result = await getRunJavaBenchmarkResult(dir)
+      expectedRes = result.expectedRes
+      actualRes = result.actualRes
+      expectedResMap = result.expectedResMap
+      actualResMap = result.actualResMap
+      benchmarkReady = true
+    })
 
     it(`check result data directly`, function () {
+      if (!benchmarkReady) {
+        this.skip()
+        return
+      }
       logger.info(actualRes)
       assert.strictEqual(actualRes, expectedRes, '当前靶场扫描结果与历史预期不一致,请逐个核对链路')
     })
+    
+    // 使用预先读取的期望结果注册测试用例
     let i = 1
-    expectedResMap.forEach((value, key) => {
+    expectedResMapForRegistration.forEach((value, key) => {
       it(`${i++}-entryPointName:${key}`, function () {
+        if (!benchmarkReady) {
+          this.skip()
+          return
+        }
         logger.info('expected:\n' + value)
         logger.info('actual:\n' + actualResMap.get(key))
         if (actualResMap.has(key)) {
@@ -32,17 +67,22 @@ async function runJavaBenchmark(dir: string): Promise<void> {
       })
     })
 
-    const actualChains = Array.from(actualResMap.keys())
-    let addChains = actualChains.filter((key) => !expectedResMap.has(key))
-    if (Array.isArray(addChains) && addChains.length > 0) {
-      for (const addChain of addChains) {
-        it(`new chain:${addChain}`, function () {
+    // 动态检查新增的链（在 before 执行后）
+    it(`check for new chains`, function () {
+      if (!benchmarkReady) {
+        this.skip()
+        return
+      }
+      const actualChains = Array.from(actualResMap.keys())
+      let addChains = actualChains.filter((key) => !expectedResMap.has(key))
+      if (Array.isArray(addChains) && addChains.length > 0) {
+        for (const addChain of addChains) {
           logger.info(`新增检出${addChain},请核对新增检出内容是否符合预期`)
           logger.info(actualResMap.get(addChain))
-          assert.fail(`new chain:${addChain}`)
-        })
+        }
+        assert.fail(`new chain:${addChains.length}`)
       }
-    }
+    })
   })
 }
 

@@ -100,7 +100,8 @@ function prepareLocation(
       nodeHash,
     },
   }
-  if (affectedNodeName) {
+  // TODO: 排查为什么会不是string
+  if (affectedNodeName && typeof affectedNodeName === 'string') {
     res.physicalLocation!.region.snippet.affectedNodeName = affectedNodeName
   }
   return res
@@ -157,22 +158,34 @@ function prepareSarifFormat(results: SarifResult[], graphs: any): Record<string,
 }
 
 /**
- *
+ * 将原始 callstack（fclos 数组）转换为 CallstackElement 数组
+ * 如果传入 sinkNode，会在末尾追加 sink 点（type: 1），与 callchain 的约定一致
+ * @param callstack
+ * @param sinkNode
  */
-function prepareCallstackElements(callstack: any[]): CallstackElement[] {
+function prepareCallstackElements(callstack: any[], sinkNode?: any): CallstackElement[] {
   const resultArray: CallstackElement[] = []
-  if (!callstack) {
+  if (!callstack && !sinkNode) {
     return resultArray
   }
 
-  for (const element of callstack) {
-    if (element.vtype === 'fclos') {
-      const callstackElement: CallstackElement = {
-        type: 0,
-        nodeHash: element.ast?._meta?.nodehash || '',
+  if (callstack) {
+    for (const element of callstack) {
+      if (element.vtype === 'fclos') {
+        const callstackElement: CallstackElement = {
+          type: 0,
+          nodeHash: element.ast?.node?._meta?.nodehash,
+        }
+        resultArray.push(callstackElement)
       }
-      resultArray.push(callstackElement)
     }
+  }
+
+  if (sinkNode) {
+    resultArray.push({
+      type: 1,
+      nodeHash: sinkNode._meta?.nodehash,
+    })
   }
 
   return resultArray

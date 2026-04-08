@@ -1,16 +1,16 @@
 const completeEntryPoint = require('../common-kit/entry-points-util')
-const configUrfaveCli = require('../../../config')
-const CheckerUrfaveCli = require('../../common/checker')
+const config = require('../../../config')
+const Checker = require('../../common/checker')
 
-const processedBuiltInRegistryUrfaveCli = new Set()
-const builtInOnjectListUrfaveCli = ['github.com/urfave/cli.NewApp()']
-const builtInPropertyListUrfaveCli = ['Action']
+const processedBuiltInRegistry = new Set()
+const builtInObjectList = ['github.com/urfave/cli.NewApp()']
+const builtInPropertyList = ['Action']
 
 /**
  * urfave.cli bulitIn checker
  * 为第三方库方法urfave.cli做建模，添加entryPoints
  */
-class urfaveCliChecker extends CheckerUrfaveCli {
+class urfaveCliChecker extends Checker {
   /**
    * constructor
    * @param resultManager
@@ -29,16 +29,15 @@ class urfaveCliChecker extends CheckerUrfaveCli {
    */
   triggerAtAssignment(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { lvalue, rvalue } = info
-    if (configUrfaveCli.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
+    if (config.entryPointMode === 'ONLY_CUSTOM') return // 不路由自采集
     if (!lvalue || !rvalue || rvalue.vtype !== 'fclos') return
     const { object, property } = lvalue
     if (!object || !property) return
-    if (!builtInOnjectListUrfaveCli.includes(object._qid) || !builtInPropertyListUrfaveCli.includes(property.name))
-      return
+    if (!builtInObjectList.includes(object.qid) || !builtInPropertyList.includes(property.name)) return
     const hash = JSON.stringify(node.right.loc)
-    if (processedBuiltInRegistryUrfaveCli.has(hash)) return
-    processedBuiltInRegistryUrfaveCli.add(hash)
-    analyzer.entryPoints.push(completeEntryPoint(rvalue))
+    if (processedBuiltInRegistry.has(hash)) return
+    processedBuiltInRegistry.add(hash)
+    analyzer.entryPoints.push(completeEntryPoint(rvalue, true))
   }
 }
 

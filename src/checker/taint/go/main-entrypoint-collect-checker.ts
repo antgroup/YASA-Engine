@@ -42,18 +42,18 @@ class MainEntrypointCollectChecker extends Checker {
   prepareEntryPoints(topScope: any): void {
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
     // 添加main入口
-    let mainEntryPoints = GoEntryPoint.getMainEntryPoints(topScope.packageManager)
+    let mainEntryPoints = GoEntryPoint.getMainEntryPoints(topScope.context.packages)
     if (_.isEmpty(mainEntryPoints)) {
       return
     }
     if (Array.isArray(mainEntryPoints)) {
-      mainEntryPoints = _.uniqBy(mainEntryPoints, (value: EntryPoint) => value.fdef)
+      mainEntryPoints = _.uniqBy(mainEntryPoints, (value: EntryPoint) => value.ast.fdef)
     } else {
       mainEntryPoints = [mainEntryPoints]
     }
     mainEntryPoints.forEach((main: EntryPoint) => {
       if (main) {
-        const entryPoint = completeEntryPoint(main)
+        const entryPoint = completeEntryPoint(main, true)
         this.entryPoints.push(entryPoint)
       }
     })

@@ -1,5 +1,7 @@
+import { buildNewValueInstance } from '../../../../../util/clone-util'
+
 const UastSpec = require('@ant-yasa/uast-spec')
-const UndefinedValue = require('../../../common/value/undefine')
+import { UndefinedValue } from '../../../common/value/undefine'
 const MemState = require('../../../common/memState')
 const MemSpace = require('../../../common/memSpace')
 
@@ -41,7 +43,7 @@ class CompletableFuture {
    * @param scope
    */
   static join(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !(this as any).executeCall) {
       return new UndefinedValue()
     }
@@ -53,7 +55,7 @@ class CompletableFuture {
       if (elementArgvalues?.length > 0) {
         elementArgvalues = [res]
       }
-      res = (this as any).executeCall(element.node, element.fclos, elementArgvalues, element.state, element.scope)
+      res = (this as any).executeCall(element.node, element.fclos, element.state, element.scope, { callArgs: (this as any).buildCallArgs(element.node, elementArgvalues, element.fclos) })
     }
 
     _this.setMisc('thenFuncsWithContext', [])
@@ -70,7 +72,7 @@ class CompletableFuture {
    * @param scope
    */
   static runAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    let instance = new UndefinedValue()
+    let instance: any = new UndefinedValue()
     if (
       !(this as any).processNewExpression ||
       argvalues.length < 1 ||
@@ -87,7 +89,19 @@ class CompletableFuture {
     }
     instance = (this as any).processNewExpression(scope, newExpression, state)
 
-    const futureScope = MemState.deepScopeClone(scope, () => true)
+    const futureScope = buildNewValueInstance(
+      this,
+      scope,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      },
+      2
+    )
     const thenFuncsWithContext: any[] = []
     const funcOldScope = argvalues[0].parent
     argvalues[0].parent = futureScope
@@ -117,7 +131,7 @@ class CompletableFuture {
    * @param scope
    */
   static supplyAsync(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    let instance = new UndefinedValue()
+    let instance: any = new UndefinedValue()
     if (
       !(this as any).processNewExpression ||
       argvalues.length < 1 ||
@@ -134,7 +148,19 @@ class CompletableFuture {
     }
     instance = (this as any).processNewExpression(scope, newExpression, state)
 
-    const futureScope = MemState.deepScopeClone(scope, () => true)
+    const futureScope = buildNewValueInstance(
+      this,
+      scope,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      },
+      2
+    )
     const thenFuncsWithContext: any[] = []
     const funcOldScope = argvalues[0].parent
     argvalues[0].parent = futureScope
@@ -165,12 +191,26 @@ class CompletableFuture {
    * @param scope
    */
   static thenRun(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).processAndCallFuncDef) {
       return new UndefinedValue()
     }
 
-    const futureScope = _this.getMisc('futureScope') || MemState.deepScopeClone(scope, () => true)
+    const futureScope =
+      _this.getMisc('futureScope') ||
+      buildNewValueInstance(
+        this,
+        scope,
+        node,
+        scope,
+        () => {
+          return false
+        },
+        (v: any) => {
+          return !v
+        },
+        2
+      )
     const thenFuncsWithContext = _this.getMisc('thenFuncsWithContext') || []
     const funcOldScope = argvalues[0].parent
     argvalues[0].parent = futureScope
@@ -211,17 +251,31 @@ class CompletableFuture {
    * @param scope
    */
   static thenApply(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
       return new UndefinedValue()
     }
 
-    const futureScope = _this.getMisc('futureScope') || MemState.deepScopeClone(scope, () => true)
+    const futureScope =
+      _this.getMisc('futureScope') ||
+      buildNewValueInstance(
+        this,
+        scope,
+        node,
+        scope,
+        () => {
+          return false
+        },
+        (v: any) => {
+          return !v
+        },
+        2
+      )
     const thenFuncsWithContext = _this.getMisc('thenFuncsWithContext') || []
     const funcOldScope = argvalues[0].parent
     argvalues[0].parent = futureScope
     let result = memSpaceUtil.getMemberValueNoCreate(_this, '_result', state)
-    result = (this as any).executeCall(node.arguments[0], argvalues[0], [result], state, futureScope)
+    result = (this as any).executeCall(node.arguments[0], argvalues[0], state, futureScope, { callArgs: (this as any).buildCallArgs(node.arguments[0], [result], argvalues[0]) })
     argvalues[0].parent = funcOldScope
     memSpaceUtil.saveVarInScope(_this, '_result', result, state)
     scope.value = MemState.unionScopeValues(scope, futureScope)
@@ -260,17 +314,31 @@ class CompletableFuture {
    * @param scope
    */
   static thenAccept(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || argvalues.length < 1 || argvalues[0].vtype !== 'fclos' || !(this as any).executeCall) {
       return new UndefinedValue()
     }
 
-    const futureScope = _this.getMisc('futureScope') || MemState.deepScopeClone(scope, () => true)
+    const futureScope =
+      _this.getMisc('futureScope') ||
+      buildNewValueInstance(
+        this,
+        scope,
+        node,
+        scope,
+        () => {
+          return false
+        },
+        (v: any) => {
+          return !v
+        },
+        2
+      )
     const thenFuncsWithContext = _this.getMisc('thenFuncsWithContext') || []
     const funcOldScope = argvalues[0].parent
     argvalues[0].parent = futureScope
     const result = memSpaceUtil.getMemberValueNoCreate(_this, '_result', state)
-    ;(this as any).executeCall(node.arguments[0], argvalues[0], [result], state, futureScope)
+    ;(this as any).executeCall(node.arguments[0], argvalues[0], state, futureScope, { callArgs: (this as any).buildCallArgs(node.arguments[0], [result], argvalues[0]) })
     argvalues[0].parent = funcOldScope
     scope.value = MemState.unionScopeValues(scope, futureScope)
     thenFuncsWithContext.push({

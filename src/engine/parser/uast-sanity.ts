@@ -68,7 +68,7 @@ const requiredFields: FieldMap = {
   TupleExpression: ['components'],
   // MemberAccess: [ 'expression', 'memberName' ],
   MemberAccess: ['expression', 'property'],
-  BinaryOperation: ['operator', 'left', 'right'],
+  BinaryExpression: ['operator', 'left', 'right'],
   IndexAccess: ['base', 'index'],
   Conditional: ['condition', 'trueExpression', 'falseExpression'],
   ForStatement: ['initExpression', 'conditionExpression', 'loopExpression', 'body'],

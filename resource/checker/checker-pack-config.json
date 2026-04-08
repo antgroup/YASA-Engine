@@ -6,7 +6,6 @@
       "taint_flow_go_input",
       "cobra.Command-builtIn",
       "go-restful-entryPoints-collect-checker",
-      "echo-entrypoint-collect-checker",
       "beego-entrypoint-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
@@ -24,6 +23,7 @@
       "taint_flow_gin_input_inner",
       "cobra.Command-builtIn",
       "go-restful-entryPoints-collect-checker",
+      "beego-entrypoint-collect-checker",
       "gorilla-mux-entrypoint-collect-checker",
       "gRpc-entryPoint-collect-checker",
       "go-main-entryPoints-collection",
@@ -125,7 +125,33 @@
       "callgraph"
     ],
     "description": "java的sdk-蚂蚁内部使用的规则包"
+  },
+  {
+    "checkerPackId": "callchain-java",
+    "checkerIds": [
+      "callchain_java"
+    ],
+    "description": "Java callchain checker - 只检测sink匹配"
+  },
+  {
+    "checkerPackId": "callchain-go",
+    "checkerIds": [
+      "callchain_go"
+    ],
+    "description": "Go callchain checker - 只检测sink匹配"
+  },
+  {
+    "checkerPackId": "callchain-js",
+    "checkerIds": [
+      "callchain_js"
+    ],
+    "description": "JavaScript callchain checker - 只检测sink匹配"
+  },
+  {
+    "checkerPackId": "callchain-python",
+    "checkerIds": [
+      "callchain_python"
+    ],
+    "description": "Python callchain checker - 只检测sink匹配"
   }
-
-
 ]

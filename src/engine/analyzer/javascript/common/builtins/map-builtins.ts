@@ -28,14 +28,14 @@ const SourceLine = require('../../../common/source-line')
  */
 function processMapGet(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
-  let res = UndefinedValue()
+  let res = new UndefinedValue()
   if (!argvalues || !Array.isArray(argvalues) || argvalues.length !== 1) return res
   const keyRef = getSymbolRef(argvalues[0])
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   if (!keyRefSet.has(keyRef)) return res
   const entryValue = mapObj.getFieldValue(keyRef)
-  if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-    res = entryValue.field[1] ?? res
+  if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+    res = entryValue.getFieldValue('1') ?? res
   }
   return res
 }
@@ -57,15 +57,13 @@ function processMapSet(fclos: any, argvalues: any[], state: any, node: any, scop
     // key 相同时 覆盖
     if (keyRefSet.has(keyRef)) {
       const entryValue = mapObj.getFieldValue(keyRef)
-      if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-        entryValue.field[1] = argvalues[1]
+      if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+        entryValue.setFieldValue('1', argvalues[1])
       }
     } else {
       // 否则新增
-      const kvPair = UnionValue({
-        sid: 'key-value-pair',
-        parent: mapObj,
-      })
+      const kvPair = new UnionValue(undefined, 'map-key-value-pair', `${mapObj.qid}.<map-kvp:${keyRef}>`, node)
+      kvPair.parent = mapObj
       kvPair.appendValue(argvalues[0])
       kvPair.appendValue(argvalues[1])
       mapObj.setFieldValue(keyRef, kvPair)
@@ -90,9 +88,9 @@ function processMapDelete(fclos: any, argvalues: any[], state: any, node: any, s
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   if (!keyRefSet.has(keyRef)) return
   const entryValue = mapObj.getFieldValue(keyRef)
-  if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
+  if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
     keyRefSet.delete(keyRef)
-    delete mapObj.field[keyRef]
+    mapObj.members.delete(keyRef)
   }
 }
 
@@ -109,8 +107,8 @@ function processMapClear(fclos: any, argvalues: any[], state: any, node: any, sc
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   for (const keyRef of keyRefSet) {
     const entryValue = mapObj.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      delete mapObj.field[keyRef]
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      mapObj.members.delete(keyRef)
     }
   }
   keyRefSet.clear()
@@ -126,17 +124,13 @@ function processMapClear(fclos: any, argvalues: any[], state: any, node: any, sc
  */
 function processMapKeys(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
-  const resSet = UnionValue({
-    id: `${mapObj.id}-keySet`,
-    sid: `${mapObj.sid}-keySet`,
-    qid: `${mapObj.qid}-keySet`,
-    parent: mapObj,
-  })
+  const resSet = new UnionValue(undefined, `${mapObj.sid}-keySet`, `${mapObj.qid}-keySet`, node)
+  resSet.parent = mapObj
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   for (const keyRef of keyRefSet) {
     const entryValue = mapObj.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      resSet.appendValue(entryValue.field[0])
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      resSet.appendValue(entryValue.getFieldValue('0'))
     }
   }
   return resSet
@@ -152,17 +146,13 @@ function processMapKeys(fclos: any, argvalues: any[], state: any, node: any, sco
  */
 function processMapValues(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
   const mapObj = fclos.parent
-  const resSet = UnionValue({
-    id: `${mapObj.id}-valueSet`,
-    sid: `${mapObj.sid}-valueSet`,
-    qid: `${mapObj.qid}-valueSet`,
-    parent: mapObj,
-  })
+  const resSet = new UnionValue(undefined, `${mapObj.sid}-valueSet`, `${mapObj.qid}-valueSet`, node)
+  resSet.parent = mapObj
   const keyRefSet = mapObj.getFieldValue('keyRefSet')
   for (const keyRef of keyRefSet) {
     const entryValue = mapObj.getFieldValue(keyRef)
-    if (Array.isArray(entryValue.field) && entryValue.field.length === 2) {
-      resSet.appendValue(entryValue.field[1])
+    if (Array.isArray(entryValue.value) && entryValue.value.length === 2) {
+      resSet.appendValue(entryValue.getFieldValue('1'))
     }
   }
   return resSet
@@ -200,7 +190,7 @@ function processNewMapBuiltins(map: any, argvalues: any[], state: any, node: any
   const keyRefSet = new Set()
   // 有参数初始化map
   if (Array.isArray(argvalues) && argvalues.length > 0) {
-    const entries = argvalues[0]?.field && Object.entries(argvalues[0]?.field)
+    const entries = argvalues[0]?.members && [...argvalues[0].members.entries()]
     // map的初始化
     // 通过数组显示初始化 可能有 ObjectValue符号值
     // 通过其他map初始化 可能有 keyRefSet UnionValue 还有prototype
@@ -212,27 +202,25 @@ function processNewMapBuiltins(map: any, argvalues: any[], state: any, node: any
         if (typeof entryValue === 'object' && (entryValue as any)?.vtype === 'object') {
           // 过滤prototype
           if ((entryValue as any).sid === 'prototype') continue
-          const kvPair = Object.values((entryValue as any).field)
+          const kvPair = [...(entryValue as any).members.values()]
           if (Array.isArray(kvPair) && kvPair.length === 2) {
             const keyRef = getSymbolRef(kvPair[0])
-            const kvPairValue = UnionValue({
-              sid: 'key-value-pair',
-              parent: map,
-            })
+            const kvPairValue = new UnionValue(undefined, 'map-key-value-pair', `${map.qid}.map-kvp.${keyRef}`, node)
+            kvPairValue.parent = map
             kvPairValue.appendValue(kvPair[0])
             kvPairValue.appendValue(kvPair[1])
             const newPairValue = SourceLine.addSrcLineInfo(
               kvPairValue,
               node,
               node.loc && node.loc.sourcefile,
-              'Arg Pass: ',
+              'ARG PASS: ',
               map.sid
             )
             map.setFieldValue(keyRef, newPairValue)
             keyRefSet.add(keyRef)
           }
         } else if (typeof entryValue === 'object' && (entryValue as any)?.vtype === 'union') {
-          if ((entryValue as any).field && Object.keys((entryValue as any).field).length === 2) {
+          if ((entryValue as any).value && (entryValue as any).value.length === 2) {
             map.setFieldValue(entry[0], entryValue)
           }
         } else if (entryValue && entryValue instanceof Set && entryValue.size > 0) {
@@ -241,7 +229,7 @@ function processNewMapBuiltins(map: any, argvalues: any[], state: any, node: any
       }
     }
   }
-  if (!map.field.hasOwnProperty('keyRefSet')) {
+  if (!map.members.has('keyRefSet')) {
     map.setFieldValue('keyRefSet', keyRefSet)
   }
   return map

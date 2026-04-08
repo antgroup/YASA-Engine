@@ -141,6 +141,11 @@
     "description": "python Tornado框架 entrypoint采集以及框架source添加"
   },
   {
+    "checkerId": "taint_flow_python_script_input",
+    "checkerPath": "checker/taint/python/script-taint-checker.ts",
+    "description": "Python脚本命令行参数source添加，支持argparse/sys.argv/input/os.environ/getopt等"
+  },
+  {
     "checkerId": "taint_flow_test",
     "checkerPath": "checker/taint/test-taint-checker.ts",
     "description": "taint_flow_test，回归测试使用，不推荐外部使用",
@@ -150,11 +155,6 @@
     "checkerId": "go-restful-entryPoints-collect-checker",
     "checkerPath": "checker/taint/go/restful-entrypoint-collect-checker.ts",
     "description": "go-restful entrypoint采集以及框架source添加"
-  },
-  {
-    "checkerId": "echo-entrypoint-collect-checker",
-    "checkerPath": "checker/taint/go/echo-entrypoint-collect-checker.ts",
-    "description": "echo entrypoint采集以及框架source添加"
   },
   {
     "checkerId": "beego-entrypoint-collect-checker",
@@ -170,5 +170,29 @@
     "checkerId": "get_ast_source_code",
     "checkerPath": "checker/sdk/get-ast-source-code-checker.ts",
     "description": "获取AST对应的源码"
+  },
+  {
+    "checkerId": "callchain_java",
+    "checkerPath": "checker/callchain/java/java-callchain-checker.ts",
+    "description": "Java callchain checker，只检测sink匹配并输出调用链路",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_java.json"
+  },
+  {
+    "checkerId": "callchain_go",
+    "checkerPath": "checker/callchain/go/go-callchain-checker.ts",
+    "description": "Go callchain checker，只检测sink匹配并输出调用链路",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
+  },
+  {
+    "checkerId": "callchain_js",
+    "checkerPath": "checker/callchain/js/js-callchain-checker.ts",
+    "description": "JavaScript callchain checker，只检测sink匹配并输出调用链路",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
+  },
+  {
+    "checkerId": "callchain_python",
+    "checkerPath": "checker/callchain/python/python-callchain-checker.ts",
+    "description": "Python callchain checker，只检测sink匹配并输出调用链路",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
   }
 ]

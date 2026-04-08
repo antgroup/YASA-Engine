@@ -1,8 +1,3 @@
-const {
-  valueUtil: {
-    ValueUtil: { ObjectValue: SetObjectValue, PrimitiveValue: SetPrimitiveValue, FunctionValue: SetFunctionValue },
-  },
-} = require('../../../common')
 const { getSymbolRef } = require('../../../../../util/common-util')
 
 /**
@@ -40,7 +35,7 @@ function processSetDelete(fclos: any, argvalues: any[], state: any, node: any, s
   const eleRef = getSymbolRef(argval)
   if (setObj.getFieldValue('curSet').has(eleRef)) {
     setObj.getFieldValue('curSet').delete(eleRef)
-    delete setObj.field[eleRef]
+    setObj.members.delete(eleRef)
   }
   return setObj
 }
@@ -57,13 +52,13 @@ function processSetClear(fclos: any, argvalues: any[], state: any, node: any, sc
   const setObj = fclos.parent
   const curSet = setObj.getFieldValue('curSet')
   for (const eleRef of curSet) {
-    delete setObj.field[eleRef]
+    setObj.members.delete(eleRef)
   }
   curSet.clear()
   // setObj.getFieldValue('curSet')?.clear()
-  // Object.values(setObj.field)
+  // Object.values(setObj.value)
   //     .filter(ele=>ele && ele?.vtype!=='fclos')
-  //     .forEach(ele=>{delete setObj.field[ele.sid]})
+  //     .forEach(ele=>{delete setObj.value[ele.sid]})
   return setObj
 }
 

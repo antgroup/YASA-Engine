@@ -4,7 +4,7 @@
 detect_platform() {
   OS=$(uname -s | tr '[:upper:]' '[:lower:]')
   ARCH=$(uname -m)
-  
+
   case "$OS" in
     linux)
       case "$ARCH" in
@@ -37,7 +37,6 @@ check_directory() {
 # Download binary files
 download_binaries() {
   PLATFORM=$1
-
   echo "[INFO] Downloading latest release binaries for platform: $PLATFORM..."
 
   # Create target directories

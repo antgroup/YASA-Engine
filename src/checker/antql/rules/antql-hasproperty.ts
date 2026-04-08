@@ -3,7 +3,7 @@ import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
 
 const LocationUtil = require('../util/location-util')
 const EntrypointUtil = require('../util/entrypoint-util')
-const QidUnifyUtil = require('../util/qid-unify-util')
+const QidUnifyUtil = require('../../../util/qid-unify-util')
 const Config = require('../../../config')
 const SymbolUtil = require('../util/symbol-util')
 const logger = require('../../../util/logger')(__filename)
@@ -22,7 +22,7 @@ class AntQLHasProperty extends Checker {
 
   output: string[]
 
-  symbolMap: Map<string, string[]>
+  antQLSymbolMap: Map<string, string[]>
 
   alreadyExecutedEntries: Map<string, boolean>
 
@@ -38,7 +38,7 @@ class AntQLHasProperty extends Checker {
     this.kit = mng.kit
     this.status = false
     this.output = []
-    this.symbolMap = new Map()
+    this.antQLSymbolMap = new Map()
     this.alreadyExecutedEntries = new Map()
   }
 
@@ -72,18 +72,18 @@ class AntQLHasProperty extends Checker {
     }
     if (this.input.includes('*') || this.input.includes('**')) {
       const output: string[] = []
-      const qidList = Array.from(this.symbolMap.keys())
+      const qidList = Array.from(this.antQLSymbolMap.keys())
       for (const qid of qidList) {
         if (SymbolUtil.matchPattern(qid, this.input)) {
-          const locations = this.symbolMap.get(qid)
+          const locations = this.antQLSymbolMap.get(qid)
           if (locations) {
             output.push(...locations)
           }
         }
       }
       finding.output = output.join(',')
-    } else if (this.symbolMap.has(this.input)) {
-      const locations = this.symbolMap.get(this.input)
+    } else if (this.antQLSymbolMap.has(this.input)) {
+      const locations = this.antQLSymbolMap.get(this.input)
       finding.output = locations ? locations.join(',') : ''
     }
     this.status = false
@@ -111,7 +111,8 @@ class AntQLHasProperty extends Checker {
       const fullCallGraphEntrypoint = fullCallGraphFileEntryPoint.getEntryPointsUsingCallGraphByKeyWords(
         [keyword],
         analyzer.ainfo?.callgraph,
-        analyzer.fileManager
+        analyzer.fileManager,
+        analyzer
       )
       const uniqueEntries = EntrypointUtil.mergeEntryPoints(fullCallGraphEntrypoint, analyzer.entryPoints)
       // analyzer.entryPoints = Array.from(uniqueEntries.values())
@@ -152,13 +153,13 @@ class AntQLHasProperty extends Checker {
    * @param info
    */
   private checkIsIdentifier(node: any, res: any, scope: any, info: any): void {
-    const checkQid = QidUnifyUtil.unify(res)
+    const checkQid = QidUnifyUtil.qidUnifyForQL(res)
     if (checkQid) {
       const nodeLoc = LocationUtil.convertUastLocationToString(node.loc, Config.prefixPath)
-      if (!this.symbolMap.has(checkQid)) {
-        this.symbolMap.set(checkQid, [])
+      if (!this.antQLSymbolMap.has(checkQid)) {
+        this.antQLSymbolMap.set(checkQid, [])
       }
-      const locations = this.symbolMap.get(checkQid)
+      const locations = this.antQLSymbolMap.get(checkQid)
       if (locations && !locations.includes(nodeLoc)) {
         locations.push(nodeLoc)
       }

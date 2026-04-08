@@ -17,8 +17,9 @@ class Timer {
       return
     }
     const maybeFn = (this as any).executeCall
-    if (argvalues[0].field?.run && _.isFunction(maybeFn)) {
-      ;(this as any).executeCall(node, argvalues[0].field?.run, [], state, scope)
+    const runMethod = argvalues[0].members?.get('run')
+    if (runMethod && _.isFunction(maybeFn)) {
+      ;(this as any).executeCall(node, runMethod, state, scope, { callArgs: (this as any).buildCallArgs(node, [], runMethod) })
     }
   }
 

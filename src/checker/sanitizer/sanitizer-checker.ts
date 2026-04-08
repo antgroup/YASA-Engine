@@ -1,3 +1,5 @@
+import type { CallInfo } from '../../engine/analyzer/common/call-args'
+
 const _ = require('lodash')
 const BasicRuleHandler = require('../common/rules-basic-handler')
 const SanitizerTag = require('../common/value/sanitizer-tag')
@@ -32,6 +34,10 @@ const callstackSanitizers = new Set()
  *
  */
 class SanitizerChecker extends Checker {
+  static sanitizerMap: Map<any, any> | undefined = undefined
+
+  static matchSanitizerResultMap = new Map()
+
   /**
    *
    * @param mng
@@ -71,7 +77,7 @@ class SanitizerChecker extends Checker {
    * @param info
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const { fclos, ret, argvalues } = info
+    const { fclos, ret, callInfo } = info
     const sanitizers = SanitizerChecker.findAllSanitizers()
     if (sanitizers) {
       SanitizerChecker.checkAddOrDeleteFunctionCallSanitizer(
@@ -79,7 +85,7 @@ class SanitizerChecker extends Checker {
         node,
         fclos,
         ret,
-        argvalues,
+        callInfo,
         scope,
         info?.callstack
       )
@@ -96,7 +102,7 @@ class SanitizerChecker extends Checker {
    * @param info
    */
   triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    const { fclos, ret, argvalues } = info
+    const { fclos, ret, callInfo } = info
     const sanitizers = SanitizerChecker.findAllSanitizers()
     if (sanitizers) {
       SanitizerChecker.checkAddOrDeleteFunctionCallSanitizer(
@@ -104,7 +110,7 @@ class SanitizerChecker extends Checker {
         node,
         fclos,
         ret,
-        argvalues,
+        callInfo,
         scope,
         info?.callstack
       )
@@ -140,7 +146,7 @@ class SanitizerChecker extends Checker {
    * @param node
    * @param fclos
    * @param ret
-   * @param argvalues
+   * @param callInfo
    * @param scope
    * @param callstack
    */
@@ -149,7 +155,7 @@ class SanitizerChecker extends Checker {
     node: any,
     fclos: any,
     ret: any,
-    argvalues: any[],
+    callInfo: CallInfo,
     scope: any,
     callstack: any
   ): void {
@@ -157,7 +163,7 @@ class SanitizerChecker extends Checker {
       return
     }
 
-    const matchedSanitizers = SanitizerChecker.findMatchedSanitizerOfFunctionCall(sanitizers, node, fclos, scope)
+    const matchedSanitizers = SanitizerChecker.findMatchedSanitizerOfFunctionCall(sanitizers, node, fclos, scope, callInfo)
     if (!matchedSanitizers) {
       return
     }
@@ -173,7 +179,7 @@ class SanitizerChecker extends Checker {
           }
           break
         case SANITIZER.SANITIZER_SCENARIO.VALIDATE_BY_FUNCTIONCALL:
-          const args = BasicRuleHandler.prepareArgs(argvalues, fclos, matchedSanitizer)
+          const args = BasicRuleHandler.prepareArgs(callInfo, fclos, matchedSanitizer)
           if (args) {
             for (const arg of args) {
               SanitizerChecker.addSanitizerInSymbolValue(matchedSanitizer, node, arg, callstack)
@@ -296,19 +302,36 @@ class SanitizerChecker extends Checker {
   }
 
   /**
+   * load and store all sanitizers from rule
+   */
+  static loadAndStoreAllSanitizersFromRule() {
+    if (!BasicRuleHandler.getPreprocessReady() || SanitizerChecker.sanitizerMap) {
+      return
+    }
+    SanitizerChecker.sanitizerMap = new Map()
+    if (Array.isArray(BasicRuleHandler.getRules()) && BasicRuleHandler.getRules().length > 0) {
+      for (const rule of BasicRuleHandler.getRules()) {
+        if (Array.isArray(rule.sanitizers)) {
+          for (const sanitizer of rule.sanitizers) {
+            SanitizerChecker.sanitizerMap.set(sanitizer.id, sanitizer)
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * find all sanitizers from rule
    * @returns {*}
    */
   static findAllSanitizers(): any[] {
-    const sanitizers: any[] = []
-    if (Array.isArray(BasicRuleHandler.getRules()) && BasicRuleHandler.getRules().length > 0) {
-      for (const rule of BasicRuleHandler.getRules()) {
-        if (Array.isArray(rule.sanitizers)) {
-          sanitizers.push(...rule.sanitizers)
-        }
-      }
+    if (!SanitizerChecker.sanitizerMap) {
+      SanitizerChecker.loadAndStoreAllSanitizersFromRule()
     }
-    return sanitizers
+    if (!SanitizerChecker.sanitizerMap) {
+      return []
+    }
+    return Array.from(SanitizerChecker.sanitizerMap.values())
   }
 
   /**
@@ -322,17 +345,19 @@ class SanitizerChecker extends Checker {
       return result
     }
 
-    if (Array.isArray(BasicRuleHandler.getRules()) && BasicRuleHandler.getRules().length > 0) {
-      for (const rule of BasicRuleHandler.getRules()) {
-        if (Array.isArray(rule.sanitizers)) {
-          for (const sanitizer of rule.sanitizers) {
-            if (sanitizerIds.includes(sanitizer.id)) {
-              result.push(sanitizer)
-            }
-          }
-        }
+    if (!SanitizerChecker.sanitizerMap) {
+      SanitizerChecker.loadAndStoreAllSanitizersFromRule()
+    }
+    if (!SanitizerChecker.sanitizerMap) {
+      return []
+    }
+
+    for (const sanitizerId of sanitizerIds) {
+      if (SanitizerChecker.sanitizerMap.has(sanitizerId)) {
+        result.push(SanitizerChecker.sanitizerMap.get(sanitizerId))
       }
     }
+
     return result
   }
 
@@ -374,23 +399,23 @@ class SanitizerChecker extends Checker {
         for (const obj of sanitizerTag.callstack) {
           const callstackElement = new SanitizerCallstackElement()
           callstackElement.id = index
-          if (obj.ast?.loc?.sourcefile) {
-            callstackElement.fileName = shortenSourceFile(obj.ast?.loc?.sourcefile, Config.maindir_prefix)
+          if (obj.ast?.node?.loc?.sourcefile) {
+            callstackElement.fileName = shortenSourceFile(obj.ast?.node?.loc?.sourcefile, Config.maindir_prefix)
           }
-          if (obj.ast?.loc?.start?.line) {
-            callstackElement.beginLine = obj.ast?.loc?.start?.line
+          if (obj.ast?.node?.loc?.start?.line) {
+            callstackElement.beginLine = obj.ast?.node?.loc?.start?.line
           }
-          if (obj.ast?.loc?.end?.line) {
-            callstackElement.endLine = obj.ast?.loc?.end?.line
+          if (obj.ast?.node?.loc?.end?.line) {
+            callstackElement.endLine = obj.ast?.node?.loc?.end?.line
           }
-          if (obj.ast?.loc?.start?.column) {
-            callstackElement.beginColumn = obj.ast?.loc?.start?.column
+          if (obj.ast?.node?.loc?.start?.column) {
+            callstackElement.beginColumn = obj.ast?.node?.loc?.start?.column
           }
-          if (obj.ast?.loc?.end?.column) {
-            callstackElement.endColumn = obj.ast?.loc?.end?.column
+          if (obj.ast?.node?.loc?.end?.column) {
+            callstackElement.endColumn = obj.ast?.node?.loc?.end?.column
           }
-          if (obj.ast) {
-            callstackElement.codeSnippet = prettyPrint(obj.fdef ? obj.fdef : obj.ast)
+          if (obj.ast.node) {
+            callstackElement.codeSnippet = prettyPrint(obj.ast.fdef ? obj.ast.fdef : obj.ast.node)
           }
           callstackElements.push(callstackElement)
           index += 1
@@ -412,7 +437,15 @@ class SanitizerChecker extends Checker {
    * @param scope
    * @returns {*[]}
    */
-  static findMatchedSanitizerOfFunctionCall(sanitizers: any[], node: any, fclos: any, scope: any): any[] {
+  static findMatchedSanitizerOfFunctionCall(sanitizers: any[], node: any, fclos: any, scope: any, callInfo: CallInfo): any[] {
+    if (!BasicRuleHandler.getPreprocessReady()) {
+      return []
+    }
+
+    if (node?._meta?.nodehash && SanitizerChecker.matchSanitizerResultMap.has(node._meta.nodehash)) {
+      return SanitizerChecker.matchSanitizerResultMap.get(node._meta.nodehash)
+    }
+
     const matchedSanitizers: any[] = []
 
     const sanitizersWithoutCalleeType = sanitizers.filter(
@@ -420,7 +453,7 @@ class SanitizerChecker extends Checker {
         sanitizer.sanitizerType === SANITIZER.SANITIZER_TYPE.FUNCTION_CALL_SANITIZER &&
         (!sanitizer.calleeType || sanitizer.calleeType.length === 0)
     )
-    const matchedSanitizersWithoutCalleeType = matchSinkAtFuncCall(node, fclos, sanitizersWithoutCalleeType)
+    const matchedSanitizersWithoutCalleeType = matchSinkAtFuncCall(node, fclos, sanitizersWithoutCalleeType, callInfo)
     if (matchedSanitizersWithoutCalleeType) {
       matchedSanitizers.push(...matchedSanitizersWithoutCalleeType)
     }
@@ -435,10 +468,15 @@ class SanitizerChecker extends Checker {
       node,
       fclos,
       sanitizersWithCalleeType,
-      scope
+      scope,
+      callInfo
     )
     if (matchedSanitizersWithCalleeType) {
       matchedSanitizers.push(...matchedSanitizersWithCalleeType)
+    }
+
+    if (node?._meta?.nodehash) {
+      SanitizerChecker.matchSanitizerResultMap.set(node._meta.nodehash, matchedSanitizers)
     }
 
     return matchedSanitizers
@@ -502,7 +540,7 @@ class SanitizerChecker extends Checker {
     if (!sanitizer || !sanitizer.id || !val) {
       return
     }
-    if (this.checkSanitizerTagExist(val._tags, sanitizer, node)) {
+    if (this.checkSanitizerTagExist(val.taint.getTags(), sanitizer, node)) {
       return
     }
 
@@ -558,7 +596,7 @@ class SanitizerChecker extends Checker {
       (sanitizer: any) => sanitizer.sanitizerScenario === SANITIZER.SANITIZER_SCENARIO.CONFIG_BY_FUNCTIONCALL
     )
     const fConfig = (nd: any) => {
-      const tags = nd?._tags
+      const tags = nd?.taint ? nd.taint.getTags() : undefined
       return tags && SanitizerChecker.findMatchedSanitizerTag(Configs, tags)?.length > 0
     }
 
@@ -566,13 +604,13 @@ class SanitizerChecker extends Checker {
     if (sanitizerNd) {
       if (Array.isArray(sanitizerNd)) {
         for (const n of sanitizerNd) {
-          const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, n._tags)
+          const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, n.taint ? n.taint.getTags() : undefined)
           if (matchedConfigSanitizerTags) {
             matchedSanitizerTagsForAllTrace.push(...matchedConfigSanitizerTags)
           }
         }
       } else {
-        const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, sanitizerNd._tags)
+        const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, sanitizerNd.taint ? sanitizerNd.taint.getTags() : undefined)
         if (matchedConfigSanitizerTags) {
           matchedSanitizerTagsForAllTrace.push(...matchedConfigSanitizerTags)
         }
@@ -586,8 +624,9 @@ class SanitizerChecker extends Checker {
         sanitizer.sanitizerScenario === SANITIZER.SANITIZER_SCENARIO.VALIDATE_BY_BINARYOPERATION
     )
     const fFlow = (nd: any) => {
-      const tags = nd?._tags
-      return _.isFunction(tags?.has) && tags.has(attribute)
+      const tagTraceMap = nd?.taint ? nd.taint.getTagTracesMap() : undefined
+      if (!tagTraceMap) return false
+      return tagTraceMap.has(attribute)
     }
     const filter = defaultFilter
     const satisfyCallback = (nd: any, from: any, parentMap: any) => {
@@ -610,7 +649,7 @@ class SanitizerChecker extends Checker {
         } while (currentNd)
       }
       for (const parentNd of parentNdList) {
-        const matchedFlowSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(flowSanitizers, parentNd._tags)
+        const matchedFlowSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(flowSanitizers, parentNd.taint ? parentNd.taint.getTags() : undefined)
         if (matchedFlowSanitizerTags) {
           matchedSanitizerTags.push(...matchedFlowSanitizerTags)
         }

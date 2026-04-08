@@ -9,7 +9,9 @@ export interface EntryPoint {
   argValues?: any[]
   entryPointSymVal?: {
     ast?: {
-      loc?: any
+      node?: {
+        loc?: any
+      }
     }
     [key: string]: any
   }

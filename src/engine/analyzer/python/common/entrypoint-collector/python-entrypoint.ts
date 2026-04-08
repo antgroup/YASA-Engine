@@ -6,6 +6,8 @@ const {
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
 const BasicRuleHandler = require('../../../../../checker/common/rules-basic-handler')
+const { loadPythonDefaultRule } = require('../../../../../checker/taint/python/python-taint-abstract-checker')
+const AstUtil = require('../../../../../util/ast-util')
 
 type FileManager = Record<string, any>
 
@@ -18,15 +20,16 @@ interface FindEntryPointResult {
  *
  * @param dir
  * @param fileManager
+ * @param analyzer
  */
-function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager): FindEntryPointResult {
+function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, analyzer: any): FindEntryPointResult {
   const pyFcEntryPointArray: any[] = []
   const pyFcEntryPointSourceArray: any[] = []
   const filenameAstObj: Record<string, any> = {}
   for (const filename in fileManager) {
-    const modClos = fileManager[filename]
-    if (modClos.hasOwnProperty('ast')) {
-      filenameAstObj[filename] = modClos.ast
+    const modClos = analyzer.symbolTable.get(fileManager[filename])
+    if (modClos.ast?.node?._meta?.nodehash !== undefined) {
+      filenameAstObj[filename] = modClos.ast?.node
     }
   }
 
@@ -98,6 +101,14 @@ function getSourceNameList(): string[] {
       }
     }
   }
+  const defaultRule = loadPythonDefaultRule()
+  if (Array.isArray(defaultRule) && defaultRule.length > 0) {
+    for (const rule of defaultRule) {
+      if (Array.isArray(rule.sources?.TaintSource)) {
+        sourceList.push(...rule.sources.TaintSource)
+      }
+    }
+  }
   if (!sourceList) {
     return sourceNameList
   }
@@ -110,8 +121,94 @@ function getSourceNameList(): string[] {
   return sourceNameList
 }
 
+/**
+ * 构建 fclos 索引
+ * 遍历 moduleManager 一次，建立 (filePath, functionName) -> fclos[] 的映射
+ * 用于加速后续的 entrypoint 查找
+ * 
+ * @param moduleManager 模块管理器
+ * @param dir 基础目录
+ * @param extractRelativePath 路径提取函数
+ * @returns fclos 索引 Map
+ */
+function buildFclosIndex(
+  moduleManager: any,
+  dir: string,
+  extractRelativePath: (path: string, dir: string) => string | null
+): Map<string, any[]> {
+  // 一次性遍历所有 fclos
+  const allFclos = AstUtil.satisfy(
+    moduleManager,
+    (n: any) => n.vtype === 'fclos',
+    (node: any, prop: any) => prop === '_field',
+    null,
+    true
+  )
+
+  // 构建索引：(filePath + '::' + functionName) -> fclos[]
+  const fclosIndex = new Map<string, any[]>()
+
+  if (Array.isArray(allFclos)) {
+    for (const fclos of allFclos) {
+      const sourcefile = extractRelativePath(fclos?.ast?.node?.loc?.sourcefile, dir)
+      const funcName = fclos?.ast?.node?.id?.name
+      
+      // 构建复合 key，需要区分 null, undefined, 空字符串和正常字符串
+      let fileKey
+      if (sourcefile === null) {
+        fileKey = '@@NULL@@'
+      } else if (sourcefile === undefined) {
+        fileKey = '@@UNDEFINED@@'
+      } else {
+        fileKey = sourcefile  // 保留空字符串和正常字符串
+      }
+      
+      const funcKey = funcName === null ? '@@NULL@@' : (funcName === undefined ? '@@UNDEFINED@@' : funcName)
+      const compositeKey = `${fileKey}::${funcKey}`
+      
+      if (!fclosIndex.has(compositeKey)) {
+        fclosIndex.set(compositeKey, [])
+      }
+      fclosIndex.get(compositeKey)!.push(fclos)
+    }
+  }
+
+  return fclosIndex
+}
+
+/**
+ * 从索引中查找 fclos
+ * 
+ * @param fclosIndex fclos 索引
+ * @param filePath 文件路径
+ * @param functionName 函数名
+ * @returns fclos 数组或 undefined
+ */
+function lookupFclos(
+  fclosIndex: Map<string, any[]>,
+  filePath: string | null | undefined,
+  functionName: string
+): any[] | undefined {
+  // 与 buildFclosIndex 保持完全一致的 key 构建逻辑
+  let fileKey
+  if (filePath === null) {
+    fileKey = '@@NULL@@'
+  } else if (filePath === undefined) {
+    fileKey = '@@UNDEFINED@@'
+  } else {
+    fileKey = filePath  // 保留空字符串和正常字符串
+  }
+  
+  const funcKey = functionName === null ? '@@NULL@@' : (functionName === undefined ? '@@UNDEFINED@@' : functionName)
+  const compositeKey = `${fileKey}::${funcKey}`
+  
+  return fclosIndex.get(compositeKey)
+}
+
 export = {
   findPythonFcEntryPointAndSource,
   findPythonFileEntryPoint,
   getSourceNameList,
+  buildFclosIndex,
+  lookupFclos,
 }

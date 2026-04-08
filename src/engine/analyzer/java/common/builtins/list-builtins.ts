@@ -1,8 +1,10 @@
-const { cloneWithDepth } = require('../../../../../util/clone-util')
+const { buildNewValueInstance } = require('../../../../../util/clone-util')
 const { addElementToBuffer, moveExistElementsToBuffer, removeElementFromBuffer, clearBuffer } = require('./buffer')
 const MemSpace = require('../../../common/memSpace')
 const Collection = require('./collection-builtins')
-const UndefinedValue = require('../../../common/value/undefine')
+const QidUnifyUtil = require('../../../../../util/qid-unify-util')
+
+import { UndefinedValue } from '../../../common/value/undefine'
 
 const memSpaceUtil = new MemSpace()
 
@@ -35,7 +37,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static add(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
       return new UndefinedValue()
     }
@@ -80,7 +82,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static addAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
       return new UndefinedValue()
     }
@@ -102,7 +104,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static addFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
       return
     }
@@ -135,7 +137,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static addLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
 
     if (!_this || !argvalues || argvalues.length === 0) {
       return
@@ -159,7 +161,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static clear(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return
     }
@@ -228,7 +230,7 @@ class List extends (Collection as any) {
    * @returns {{type, object, property}|*}
    */
   static get(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -248,7 +250,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static getFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -268,7 +270,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static getLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -329,12 +331,23 @@ class List extends (Collection as any) {
    * @param scope
    */
   static iterator(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
 
-    const newThis = cloneWithDepth(_this, 3)
+    const newThis = buildNewValueInstance(
+      this,
+      _this,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      }
+    )
     newThis._this = newThis
     newThis.setMisc('precise', false)
     moveExistElementsToBuffer(newThis)
@@ -371,7 +384,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static listIterator(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues) {
       return new UndefinedValue()
     }
@@ -380,7 +393,18 @@ class List extends (Collection as any) {
       return _this
     }
 
-    const newThis = cloneWithDepth(_this, 3)
+    const newThis = buildNewValueInstance(
+      this,
+      _this,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      }
+    )
     newThis._this = newThis
     newThis.setMisc('precise', false)
     newThis.length = 0
@@ -414,7 +438,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static remove(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length === 0) {
       return new UndefinedValue()
     }
@@ -445,7 +469,10 @@ class List extends (Collection as any) {
       needReturnObj = true
     } else {
       for (const indexKey of indexKeys) {
-        if (_this.value[indexKey]._qid === argvalues[0]._qid) {
+        if (
+          _this.value[indexKey].logicalQid ===
+          argvalues[0].logicalQid
+        ) {
           removeKey = indexKey
           break
         }
@@ -489,7 +516,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static removeAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (_this || !argvalues || argvalues.length === 0) {
       return new UndefinedValue()
     }
@@ -511,7 +538,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static removeFirst(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -551,7 +578,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static removeLast(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -589,7 +616,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static retainAll(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!argvalues || argvalues.length === 0) {
       return new UndefinedValue()
     }
@@ -609,7 +636,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static reversed(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return new UndefinedValue()
     }
@@ -640,7 +667,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static set(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
 
     if (!_this || !argvalues || argvalues.length !== 2) {
       return new UndefinedValue()
@@ -691,7 +718,7 @@ class List extends (Collection as any) {
    * @param scope
    */
   static sort(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return
     }
@@ -722,12 +749,23 @@ class List extends (Collection as any) {
    * @param scope
    */
   static subList(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this || !argvalues || argvalues.length !== 2) {
       return new UndefinedValue()
     }
 
-    const newThis = cloneWithDepth(_this, 3)
+    const newThis = buildNewValueInstance(
+      this,
+      _this,
+      node,
+      scope,
+      () => {
+        return false
+      },
+      (v: any) => {
+        return !v
+      }
+    )
     newThis._this = newThis
     if (newThis.getMisc('precise')) {
       let startIndex: number = 0
@@ -805,7 +843,7 @@ class List extends (Collection as any) {
    * @returns {*}
    */
   static toArray(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    return fclos.getThis()
+    return fclos.getThisObj()
   }
 
   /**
@@ -818,7 +856,7 @@ class List extends (Collection as any) {
    * @private
    */
   static _functionNotFoundCallback_(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
-    const _this = fclos.getThis()
+    const _this = fclos.getThisObj()
     if (!_this) {
       return
     }

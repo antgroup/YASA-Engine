@@ -1,5 +1,5 @@
 const MemSpaceAtomic = require('../../../common/memSpace')
-const UndefinedValueAtomic = require('../../../common/value/undefine')
+import { UndefinedValue } from '../../../common/value/undefine'
 
 const memSpaceUtilAtomic = new MemSpaceAtomic()
 
@@ -36,14 +36,23 @@ class AtomicReference {
    * @param node
    * @param scope
    */
-  static set(fclos: any, argvalues: any[], state: any, node: any, scope: any): void {
-    const _this = fclos.getThis()
-    if (!_this) {
-      return new UndefinedValueAtomic()
+  static set(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+    const _this = fclos.getThisObj()
+    if (!_this || !argvalues || argvalues.length === 0) {
+      return new UndefinedValue()
     }
 
-    memSpaceUtilAtomic.saveVarInScope(_this, '_value', argvalues[0], state)
-    _this.arguments = []
+    if (_this.vtype === 'union' && Array.isArray(_this.value)) {
+      for (const thisObj of _this.value) {
+        thisObj.arguments = []
+        memSpaceUtilAtomic.saveVarInScope(thisObj, '_value', argvalues[0], state)
+      }
+    } else {
+      _this.arguments = []
+      memSpaceUtilAtomic.saveVarInScope(_this, '_value', argvalues[0], state)
+    }
+
+    return new UndefinedValue()
   }
 }
 
