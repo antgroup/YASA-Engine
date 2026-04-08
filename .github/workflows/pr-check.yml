@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]  # PR 创建、更新（push）、重新打开 时触发
 
 env:
-  NODE_VERSION: 18
+  NODE_VERSION: 20
 
 jobs:
   # 构建检查
