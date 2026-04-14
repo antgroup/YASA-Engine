@@ -412,7 +412,11 @@ class PythonAnalyzer extends Analyzer {
       }
       return res
     }
-    const res = this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
+    // Python class without explicit __init__ should still produce an instance object.
+    // Falling back to processLibArgToRet() here loses class members/methods and breaks
+    // chained instance-method resolution (e.g. b = B(); b.predict(...)).
+    const classAst = fclos?.ast?.cdef || fclos?.ast?.fdef || fclos?.ast
+    const res = this.buildNewObject(classAst, fclos, state, node, scope, callInfo)
     if (res && this.checkerManager?.checkAtFunctionCallAfter) {
       this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
         callInfo,
