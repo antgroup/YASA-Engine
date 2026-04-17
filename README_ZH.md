@@ -1,81 +1,78 @@
-<img src="folder-img/logo.png" style="width:50%;" />
+<img src="folder-img/logo.png" style="width:50%;"  />
 
 #### [简体中文](README_ZH.md) / [English](README.md)
 
-**YASA**（**Y**et **A**nother **S**tatic **A**nalyzer, 读作“**亚萨**” ）是一个开源的静态程序分析项目。其核心是定义了一种多语言通用的中间表达——统一抽象语法树（**U**nified **A**bstract **S**yntax **T**ree，简称**UAST**），基于UAST实现了一套高精度的静态程序分析框架。用户可通过编写检查器（Checker）的方式，灵活实现诸如AST查询、数据流分析、函数调用图分析等多种程序分析任务，并通过SDK/自研统一声明式查询语言UQL/MCP等方式对外开放能力。
+**YASA** (**Y**et **A**nother **S**tatic **A**nalyzer, pronounced “**YA-sa**”) is an open-source static program analysis project. Its core innovation lies in a unified intermediate representation called the **U**nified **A**bstract **S**yntax **T**ree (UAST), designed to support multiple programming languages. Built on top of UAST, YASA provides a highly accurate static analysis framework. Users can extend its capabilities by writing custom checkers to perform various program analysis tasks—such as AST queries, data flow analysis, and function call graph analysis—and expose functionality through SDK, declarative query language (QL), or MCP.
 
-作为诞生于安全团队的开源项目，**YASA**也以Checker的形式内置了安全领域最重要的污点分析能力，用于安全漏洞的检测。
+As a project originally developed within a security team, YASA also comes with built-in taint analysis capabilities, implemented as a checker, to detect security vulnerabilities.
 
-## 核心组件介绍
-<img src="folder-img/Structure-ZH.jpg"  />
+## Components
+<img src="folder-img/Structure.jpg"  />
 
-### YASA-UAST 统一多语言抽象语法树
-[YASA-UAST](https://github.com/antgroup/YASA-UAST)（Unified Abstract Syntax Tree）是一种面向多语言程序分析的中间表示结构。UAST-Parser将不同编程语言的代码解析为统一的抽象语法格式，通过UAST，不同语言的源代码可以被转换为标准化的树形结构，从而实现多语言的统一分析和处理。
+### YASA-UAST: Unified Abstract Syntax Tree
+[YASA-UAST](https://github.com/antgroup/YASA-UAST) is an intermediate representation structure for multi-language program analysis. The UAST-Parser parses code from different programming languages into a unified abstract syntax format. Through UAST, source code in different languages can be converted into a standardized tree structure, enabling unified analysis and processing across multiple languages.
 
-### YASA-Engine 统一多语言分析引擎
-统一多语言分析引擎是现代化程序分析平台的核心组件，旨在通过一套统一分析框架和方法论，实现对多种编程语言的高效、精准分析。 同时借助AI能力，弥补了传统程序分析易断链、新场景适配成本高的问题。（AI部分暂未开源，敬请期待）
+### YASA-Engine: Unified multi-language Analysis Engine
+The unified multi-language analysis engine is the core component of a modern program analysis platform. It aims to achieve efficient and precise analysis of multiple programming languages through a unified analysis framework and methodology. Also, with the help of AI capabilities, it addresses issues such as broken chains in traditional program analysis and high adaptation costs for new scenarios. (The AI part is not open-sourced yet.)
 
-### YASA-UQL 统一声明式规则查询语言
-支持声明式的多语言统一查询式规则编写，兼容codeql语法，降低编写规则门槛同时统一多语言的规则集。
+### YASA-UQL: Unified Declarative Rule Query Language
+Supports declarative unified query rule writing for multiple languages, compatible with CodeQL syntax, lowering the barrier to rule writing while unifying rule sets across languages.
 
-### YASA-MCP 统一多语言程序分析MCP
-为大模型提供原子化的分析API，提供大模型友好的程序分析服务。
+### YASA-MCP: Unified multi-language Program Analysis MCP
+Provides atomic analysis APIs for LLM, offering program analysis services that are LLM-friendly.
 
-### YASA-SDK 统一多语言程序分析SDK
-为传统应用提供多语言支持的 SDK 包，内置多种原子化程序分析 API，便于集成和调用，为应用程序提供高效、易用的程序分析服务。
+### YASA-SDK: Unified multi-language Program Analysis SDK
+Provides SDK packages supporting multiple programming languages for traditional applications. It provides a variety of granular program analysis APIs, making integration easier and enabling efficient and user-friendly program analysis services within applications.
 
 ### xAST
-[xAST](https://github.com/alipay/ant-application-security-testing-benchmark)是一个开源的SAST/IAST/DAST工具能力评测体系。在YASA-Engine中作为变更后测试所用的回归靶场，并且在YASA研发的过程中，提供对语言语法支持的正向指引。
+[xAST](https://github.com/alipay/ant-application-security-testing-benchmark) is an open-source evaluation system for SAST/IAST/DAST tool capabilities. In YASA-Engine, it serves as the regression target for post-change testing, and during the process of multi-language adaptation, it provides positive guidance on language syntax support.
 
-## 技术优势
+## Technical Advantages
+### Low Cost for New Language Support
+- YASA is directly modeled and analyzed based on UAST. When adapting to a new language, once it is parsed into UAST, the general-layer analyzer's capabilities can be used. After supporting the new language's package structure, the new language's analysis is already supported.
 
-### 新语言支持成本低
-- YASA直接基于UAST进行建模分析，当适配新语言时，将其解析到UAST后，即可使用通用层分析器的分析能力，支持新语言的包结构后，即已支持新语言的分析。
-
-<img src="folder-img/newLanguage-ZH.jpg" style="width:90%;"  />
-
-
-### 分析精度高、可衡量、多语言统一
-- YASA基于统一多语言符号解释能力，在静态代码分析分析上具有高精度、可扩展的技术优势。针对静态分析领域中的域敏感、上下文敏感、对象敏感、路径敏感、流敏感天然具备较好的支持能力。
-
-- 在YASA研发的过程中，使用[xAST](https://github.com/alipay/ant-application-security-testing-benchmark)对YASA-Engine的能力进行评测与验证，达到'能力可衡量'的效果。我们对比了YASA以及其他开源程序分析工具在xAST评价体系上的表现:
-
-<img src="folder-img/xastTest-ZH.jpg" style="width:90%;"  />
-
-### 开放、友好
-- 推出统一声明式规则查询语言UQL，兼容codeql语法，并业界首创多语言统一的QL规则库，使程序分析更易用。
-
-- 推出YASA MCP（大模型友好）与SDK（应用使用友好）
+<img src="folder-img/newLanguage.jpg" style="width:90%;"  />
 
 
-## 快速开始
-[快速上手](https://www.yuque.com/u22090306/bebf6g/evyf4chw26deq8xq)
+### High Analysis Accuracy, Measurable, and Unified Multi-Languages
+- YASA is based on unified multi-language symbolic interpretation capabilities, offering high precision and scalability in static code analysis. It naturally supports field-sensitive, context-sensitive, object-sensitive, path-sensitive, and flow-sensitive capabilities in the field of static analysis.
 
-[安装部署](https://www.yuque.com/u22090306/bebf6g/gm7b32tcn9vosgll)
+- During YASA's development, we used [xAST](https://github.com/alipay/ant-application-security-testing-benchmark) to evaluate and verify our capabilities, achieving "measurable capabilities." We compared YASA's performance with other open-source program analysis tools under the xAST evaluation system:
 
-## 加入我们
-遇到问题欢迎提交issue！
+<img src="folder-img/xastTest.jpg" style="width:90%;"  />
 
-参与代码贡献，详见[CONTRIBUTION](https://www.yuque.com/u22090306/bebf6g/rgm1xmoa38wlfxzc)
+### Open and Friendly
+- Introduced the unified declarative rule query language YASA-UQL, compatible with CodeQL syntax, and pioneered a unified QL rule library for multiple languages, making program analysis more engineer-friendly.
 
-## 资源链接
-[官方文档](https://www.yuque.com/u22090306/bebf6g)
+- Launched YASA MCP (LLM-friendly) and SDK (App development-friendly).
 
-[教学资料](https://www.yuque.com/u22090306/bebf6g/sr0y5fqg0kcua5nf)
+## Quick Start
 
-[社区活动](https://www.yuque.com/u22090306/bebf6g/fn1rauxwtp7z0l1u)
+[Getting Started](https://www.yuque.com/u22090306/bebf6g/evyf4chw26deq8xq)
 
-## 开源协议
-Apache License 2.0 - 详情 LICENSE Apache-2.0
+[Installation and Deployment](https://www.yuque.com/u22090306/bebf6g/gm7b32tcn9vosgll)
 
-## 致谢
-感谢所有为YASA项目做出贡献的开发者！特别感谢开源社区的支持和反馈，让我们能够共同推动程序分析技术的发展。
+## Join Us
+Welcome to submit issues if you encounter any problems!
 
-YASA - 让代码分析更精确、更易用、更智能
+For code contributions, please refer to [CONTRIBUTION](CONTRIBUTION.md)
 
-## 联系我们
+## Resource Links
+[Official Documentation](https://www.yuque.com/u22090306/bebf6g)
 
-[社区官网](https://cybersec.antgroup.com/)
+[Learning Resources](https://www.yuque.com/u22090306/bebf6g/sr0y5fqg0kcua5nf)
+
+[Community Activities](https://www.yuque.com/u22090306/bebf6g/fn1rauxwtp7z0l1u)
+
+## Open Source License
+Apache License 2.0 - Details in LICENSE Apache-2.0.
+
+## Acknowledgments
+Thanks to all developers who have contributed to the YASA project! Special thanks to the open-source community for their support and feedback, enabling us to jointly advance the development of program analysis technology.
+
+YASA - Making code analysis more precise, easier, and smarter.
+
+## Contact Us
+[Official Website](https://cybersec.antgroup.com/station)
 
 <img src="folder-img/contactus.png" style="width:20%;" />
-
