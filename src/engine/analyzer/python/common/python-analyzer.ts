@@ -328,6 +328,18 @@ class PythonAnalyzer extends Analyzer {
       else argvalues.push(argv)
     }
 
+    if (this.hasClassmethodDecorator(fclos)) {
+      const cls = this.resolveClassForClassmethod(fclos)
+      if (cls) {
+        if (collectedArgs[0] === fclos.ast.fdef.parameters?.[0]) {
+          argvalues[0] = cls
+        } else {
+          collectedArgs.unshift(fclos?.ast?.fdef?.parameters?.[0])
+          argvalues.unshift(cls)
+        }
+      }
+    }
+
     // 构建结构化 callInfo，携带 keyword/spread/kwspread 信息
     const callInfo: CallInfo = { callArgs: this.buildPythonCallArgs(collectedArgs, argvalues, fclos, node) }
 
@@ -1475,7 +1487,7 @@ class PythonAnalyzer extends Analyzer {
    * @param fclos
    */
   hasClassmethodDecorator(fclos: any): boolean {
-    const decorators = fclos.fdef?._meta?.decorators || fclos.ast?._meta?.decorators
+    const decorators = fclos.fdef?._meta?.decorators || fclos.ast?._meta?.decorators || fclos?.decorators
     if (!Array.isArray(decorators)) return false
     return decorators.some(
       (d: any) =>
