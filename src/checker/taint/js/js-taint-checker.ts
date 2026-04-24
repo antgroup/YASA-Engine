@@ -278,6 +278,22 @@ class JsTaintChecker extends TaintChecker {
       }
     }
   }
+  
+  /**
+   *
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
+    if (config.analyzer !== 'JavaScriptAnalyzer') {
+      return
+    }
+    const { fclos, callInfo } = info
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
+  }
 
   /**
    *
