@@ -3550,6 +3550,21 @@ class Analyzer extends BaseAnalyzer {
         }
       })
 
+      const pythonReceiverFallback = callInfo?.callArgs?.receiver || fclos?.getThisObj?.()
+      if (
+        Config.language === 'python' &&
+        pythonReceiverFallback &&
+        fscope?.value &&
+        !Object.prototype.hasOwnProperty.call(fscope.value, 'self')
+      ) {
+        this.saveVarInCurrentScope(
+          fscope,
+          { type: 'Identifier', name: 'self', loc: fdecl?.loc },
+          pythonReceiverFallback,
+          new_state
+        )
+      }
+
       let objectVal
       if (node?.callee?.type === 'MemberAccess') {
         // objectVal = this.processInstruction(scope, node.callee.object, state)
@@ -3804,6 +3819,9 @@ class Analyzer extends BaseAnalyzer {
       const oldThisFClos = this.thisFClos
       this.thisFClos = obj
       ctorClos._this = obj
+      if (callInfo?.callArgs) {
+        callInfo.callArgs.receiver = obj
+      }
       this.executeCall(node, ctorClos, state, scope, callInfo)
       this.thisFClos = oldThisFClos
     }

@@ -89,6 +89,9 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
     const newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
     // @ts-ignore
     newVal.value = val.value
+    if ((val as any)?._this) {
+      ;(newVal as any)._this = (val as any)._this
+    }
     for (const eachVal of newVal) {
       const start_line = node.loc.start?.line
       const end_line = node.loc.end?.line
@@ -118,6 +121,9 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
     } else {
       newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
       newVal.value = val.value
+      if (val?._this) {
+        newVal._this = val._this
+      }
     }
     // CRITICAL: If traceItem exists and val has tags, add it to val FIRST
     // This handles the case where val itself has tags (first call where val === res)
@@ -130,6 +136,9 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
   }
   const newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
   newVal.value = val.value
+  if (val?._this) {
+    newVal._this = val._this
+  }
 
   // Pass traceItem to processFieldAndArguments for delayed addition
   processFieldAndArguments(newVal, newVal, 0, [], node, traceItem)
