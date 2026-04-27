@@ -36,7 +36,7 @@ const CheckerManager = require('../../common/checker-manager')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const Parser = require('../../../parser/parser')
 const {
-  ValueUtil: { Scoped, PrimitiveValue, UndefinedValue, UnionValue, SymbolValue, VoidValue },
+  ValueUtil: { ObjectValue, Scoped, PrimitiveValue, UndefinedValue, UnionValue, SymbolValue, VoidValue },
 } = require('../../../util/value-util')
 const logger: import('../../../../util/logger').Logger = require('../../../../util/logger')(__filename)
 const Config = require('../../../../config')
@@ -314,8 +314,13 @@ class PythonAnalyzer extends Analyzer {
         einfo: state.einfo,
       })
 
-    const fclos = this.processInstruction(scope, node.callee, state)
+    if (this.isPythonTypeFactoryInstantiation(node)) {
+      return this.buildPythonTypeFactoryObject(scope, node)
+    }
+
+    let fclos = this.processInstruction(scope, node.callee, state)
     if (!fclos) return new UndefinedValue()
+    this.recoverFunctionReceiverFromQid(fclos)
 
     const argvalues: any[] = []
     // 参数按原始顺序处理，由 buildPythonCallArgs 标记 kind，bindCallArgs 负责绑定
@@ -330,6 +335,10 @@ class PythonAnalyzer extends Analyzer {
 
     // 构建结构化 callInfo，携带 keyword/spread/kwspread 信息
     const callInfo: CallInfo = { callArgs: this.buildPythonCallArgs(collectedArgs, argvalues, fclos, node) }
+    const recoveredFclos = this.recoverMemberCallClosure(scope, node, state, fclos, callInfo)
+    if (recoveredFclos) {
+      fclos = recoveredFclos
+    }
 
     if (argvalues && this.checkerManager) {
       this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
@@ -381,6 +390,103 @@ class PythonAnalyzer extends Analyzer {
     return res
   }
 
+  isPythonTypeFactoryInstantiation(node: CallExpression): boolean {
+    if (!node || node.callee?.type !== 'CallExpression') return false
+    const innerCall = node.callee as CallExpression
+    return (
+      innerCall.callee?.type === 'Identifier' &&
+      innerCall.callee.name === 'type' &&
+      Array.isArray(innerCall.arguments) &&
+      innerCall.arguments.length >= 3
+    )
+  }
+
+  buildPythonTypeFactoryObject(scope: Scope, node: CallExpression): Value {
+    const classNameArg = (node.callee as CallExpression)?.arguments?.[0] as any
+    const className =
+      classNameArg?.type === 'Literal' && typeof classNameArg.value === 'string'
+        ? classNameArg.value
+        : `type_factory_${node.loc?.start?.line || 0}_${node.loc?.start?.column || 0}`
+    return new ObjectValue(scope.qid, {
+      sid: className,
+      qid: `${scope.qid}.${className}`,
+      parent: scope,
+      ast: node,
+    }) as Value
+  }
+
+  recoverMemberCallClosure(
+    scope: Scope,
+    node: CallExpression,
+    state: State,
+    fclos: any,
+    callInfo: CallInfo
+  ): any {
+    if (node?.callee?.type !== 'MemberAccess') return null
+    if (fclos?.vtype === 'fclos' || (fclos?.vtype === 'union' && Array.isArray(fclos.value))) return null
+    const member = node.callee as MemberAccess
+    const prop = member.property
+    if (prop?.type !== 'Identifier' && prop?.type !== 'Literal') return null
+
+    const receiver = this.processInstruction(scope, member.object, state)
+    const candidates = [
+      receiver,
+      this.resolveByQidFromSymbolTable(receiver?.qid),
+      this.resolveByQidFromSymbolTable(receiver?.sid),
+    ].filter(Boolean)
+
+    for (const recv of candidates) {
+      const method = this.getMemberValue(recv, prop, state)
+      if (method?.vtype === 'fclos') {
+        method._this = recv
+        if (callInfo?.callArgs) callInfo.callArgs.receiver = recv
+        return method
+      }
+      if (method?.vtype === 'union' && Array.isArray(method.value)) {
+        for (const each of method.value) {
+          if (each?.vtype === 'fclos') {
+            each._this = recv
+          }
+        }
+        if (callInfo?.callArgs) callInfo.callArgs.receiver = recv
+        return method
+      }
+    }
+    return null
+  }
+
+  recoverFunctionReceiverFromQid(fclos: any): void {
+    if (!fclos || fclos.vtype !== 'fclos') return
+    const currentThis = fclos._this || fclos.getThisObj?.()
+    if (currentThis && currentThis !== this.topScope && currentThis?.sid !== '<global>') return
+    const qid = typeof fclos.qid === 'string' ? fclos.qid : ''
+    const lastDot = qid.lastIndexOf('.')
+    if (lastDot <= 0) return
+    const receiver = this.resolveByQidFromSymbolTable(qid.substring(0, lastDot))
+    if (receiver) {
+      fclos._this = receiver
+    }
+  }
+
+  resolveByQidFromSymbolTable(qid: string | undefined): any {
+    if (!qid || typeof qid !== 'string') return null
+    const normalized = qid.replace(/^<global>\.?/, '')
+    const candidates = [qid, normalized, `.<${normalized}>`]
+
+    for (const [, val] of this.symbolTable.getMap()) {
+      if (!val || typeof val !== 'object') continue
+      const valQid = typeof val.qid === 'string' ? val.qid : ''
+      const valSid = typeof val.sid === 'string' ? val.sid : ''
+      if (candidates.includes(valQid) || candidates.includes(valSid)) {
+        return val
+      }
+      if (normalized && (valQid.endsWith(`.${normalized}`) || valSid.endsWith(`.${normalized}`))) {
+        return val
+      }
+    }
+    return null
+  }
+
   /**
    *
    * @param scope
@@ -412,7 +518,11 @@ class PythonAnalyzer extends Analyzer {
       }
       return res
     }
-    const res = this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
+    // Python class without explicit __init__ should still produce an instance object.
+    // Falling back to processLibArgToRet() here loses class members/methods and breaks
+    // chained instance-method resolution (e.g. b = B(); b.predict(...)).
+    const classAst = fclos?.ast?.cdef || fclos?.ast?.fdef || fclos?.ast
+    const res = this.buildNewObject(classAst, fclos, state, node, scope, callInfo)
     if (res && this.checkerManager?.checkAtFunctionCallAfter) {
       this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
         callInfo,
