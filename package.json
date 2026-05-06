@@ -5,9 +5,9 @@
   "main": "./dist/main.js",
   "bin": "./dist/main.js",
   "dependencies": {
-    "@ant-yasa/uast-parser-java-js": "^0.2.12",
-    "@ant-yasa/uast-parser-php": "^0.2.12",
-    "@ant-yasa/uast-spec": "^0.2.12",
+    "@ant-yasa/uast-parser-java-js": "^0.2.13",
+    "@ant-yasa/uast-parser-php": "^0.2.13",
+    "@ant-yasa/uast-spec": "^0.2.13",
     "@babel/core": "^7.14.6",
     "@babel/parser": "^7.16.4",
     "@babel/plugin-proposal-decorators": "^7.14.5",

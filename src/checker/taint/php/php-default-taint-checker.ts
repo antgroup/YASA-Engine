@@ -21,11 +21,11 @@ const {
   findSoaServiceEntryPoints,
 } = require('../../../engine/analyzer/php/soa/entrypoint-collector/soa-service-entrypoint')
 const {
-  findHaodfMvcControllerEntryPoints,
-} = require('../../../engine/analyzer/php/haodf/entrypoint-collector/haodf-mvc-controller-entrypoint')
+  findCustomMvcControllerEntryPoints,
+} = require('../../../engine/analyzer/php/custom/entrypoint-collector/custom-mvc-controller-entrypoint')
 const {
-  findHaodfDataBucketEntryPoints,
-} = require('../../../engine/analyzer/php/haodf/entrypoint-collector/haodf-databucket-entrypoint')
+  findCustomDataBucketEntryPoints,
+} = require('../../../engine/analyzer/php/custom/entrypoint-collector/custom-databucket-entrypoint')
 const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
 const entryPointConfig = require('../../../engine/analyzer/common/current-entrypoint')
 
@@ -88,16 +88,16 @@ class PhpDefaultTaintChecker extends TaintChecker {
       }
     }
 
-    // Haodf 自研 MVC（avatar 桶）：基于类签名约定识别
-    // - HaodfMvcController：controllers/ 下 Controller 后缀/继承 + public + params>=1 action
-    // - HaodfDataBucket：mobileapi/weixmpapi/wap 的 DataBucket 后缀/继承 + public + params>=1
-    // 两者合并 append（单个项目可能同时出现两类，如 wap 既有 Controller 又有 mobileapi/ 子目录 DataBucket）
+    // 自定义 MVC 框架：基于类签名约定识别
+    // - CustomMvcController：controllers/ 下 Controller 后缀/继承 + public + params>=1 action
+    // - CustomDataBucket：通过 __call 转发的 DataBucket 后缀/继承 + public + params>=1
+    // 两者合并 append（单个项目可能同时出现两类，例如既有 Controller 又有 DataBucket 子目录）
     if (this.entryPoints.length === 0) {
-      const mvcEntryPoints = findHaodfMvcControllerEntryPoints(analyzer, Config.maindirPrefix || Config.maindir)
+      const mvcEntryPoints = findCustomMvcControllerEntryPoints(analyzer, Config.maindirPrefix || Config.maindir)
       if (mvcEntryPoints.length > 0) {
         this.entryPoints.push(...mvcEntryPoints)
       }
-      const dataBucketEntryPoints = findHaodfDataBucketEntryPoints(analyzer, Config.maindirPrefix || Config.maindir)
+      const dataBucketEntryPoints = findCustomDataBucketEntryPoints(analyzer, Config.maindirPrefix || Config.maindir)
       if (dataBucketEntryPoints.length > 0) {
         this.entryPoints.push(...dataBucketEntryPoints)
       }
@@ -313,7 +313,7 @@ class PhpDefaultTaintChecker extends TaintChecker {
 
   /**
    * Entrypoint 参数 taint 注入：所有 PHP entrypoint 的入参统一全部标 source
-   * - SOAService / HaodfDataBucket / HaodfMvcController：所有参数都视为外部输入
+   * - SOAService / CustomDataBucket / CustomMvcController：所有参数都视为外部输入
    * @param analyzer
    * @param scope
    * @param node
@@ -323,7 +323,7 @@ class PhpDefaultTaintChecker extends TaintChecker {
   triggerAtSymbolInterpretOfEntryPointBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const currentEntryPoint = entryPointConfig.getCurrentEntryPoint()
     const attr = currentEntryPoint?.attribute
-    const TAINT_ATTRS = new Set(['SOAService', 'HaodfDataBucket', 'HaodfMvcController'])
+    const TAINT_ATTRS = new Set(['SOAService', 'CustomDataBucket', 'CustomMvcController'])
     if (!TAINT_ATTRS.has(attr)) return
     const epSym = currentEntryPoint.entryPointSymVal
     const parameters = epSym?.ast?.fdef?.parameters

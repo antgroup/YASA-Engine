@@ -1,19 +1,17 @@
 /**
- * Haodf 自研 MVC 框架 Controller entrypoint 采集器（路由中立）
+ * 自定义 MVC 框架 Controller entrypoint 采集器（路由中立）
  *
  * 背景：
- * - Haodf 自研 MVC（avatar 桶大多数项目）用 `mywebapp.php` 注册路由，但 `FixedRouterRule::create()->url('/<controller>/<action>')`
- *   catchall 兜底会把未在 NamedRouterRule 里注册的 public action 也调用到，
- *   所以不能用路由白名单做准入门票（会漏），改走"类签名约定"。
+ * - 部分 PHP 项目使用 catchall 路由把未在路由表中显式注册的 public action 也调用到，
+ *   不能用路由白名单做准入门票（会漏），改走"类签名约定"。
  *
  * 识别策略：
- * 1. 类名以 `Controller` 结尾（大小写不敏感，如 `Indexcontroller`/`AuditInfocontroller`），
- *    或继承链包含 `BaseController`/`Controller`。
- * 2. 方法：public 非魔术，参数数 >= 1（Haodf 主流 action 签名为 `($request, $response)`，
- *    但老代码存在 1 参和 3+ 参的真 action，只排 0 参）。
+ * 1. 类名以 `Controller` 结尾（大小写不敏感），或继承链包含 `BaseController`/`Controller`。
+ * 2. 方法：public 非魔术，参数数 >= 1（典型 action 签名为 `($request, $response)`，
+ *    也允许 1 参和 3+ 参的真 action，只排 0 参）。
  * 3. 排除 PHP 魔术方法 / setInstance / getInstance / DI 模板。
  *
- * 产出：完整 EntryPoint（带 entryPointSymVal），attribute='HaodfMvcController'。
+ * 产出：完整 EntryPoint（带 entryPointSymVal），attribute='CustomMvcController'。
  * taint 层只把第一个参数 `$request` 当 source（`$response` 是输出端）。
  */
 const { extractRelativePath } = require('../../../../../util/file-util')
@@ -30,7 +28,7 @@ const {
 const DI_METHOD_NAMES = new Set(['setinstance', 'getinstance'])
 
 /**
- * 判断方法是否为 Haodf MVC Controller 的合法 action
+ * 判断方法是否为自定义 MVC Controller 的合法 action
  * - 非魔术 / 非 DI 模板
  * - public 或未显式修饰（PHP 默认 public）
  * - 参数数 >= 1（0 参方法一般是工具函数，不采）
@@ -59,7 +57,7 @@ function isMvcActionMethod(funcDef: any): boolean {
  * @param analyzer PhpAnalyzer 实例
  * @param dir 项目根目录
  */
-function findHaodfMvcControllerEntryPoints(analyzer: any, dir: string): any[] {
+function findCustomMvcControllerEntryPoints(analyzer: any, dir: string): any[] {
   const entryPoints: any[] = []
   const moduleScopes: Map<string, any> = analyzer.moduleScopes || new Map()
 
@@ -100,7 +98,7 @@ function findHaodfMvcControllerEntryPoints(analyzer: any, dir: string): any[] {
         ep.argValues = []
         ep.functionName = methodName
         ep.filePath = shortFileName
-        ep.attribute = 'HaodfMvcController'
+        ep.attribute = 'CustomMvcController'
         ep.packageName = undefined
         ep.entryPointSymVal = methodFclos
         entryPoints.push(ep)
@@ -108,12 +106,12 @@ function findHaodfMvcControllerEntryPoints(analyzer: any, dir: string): any[] {
     }
   }
 
-  logger.info(`[HaodfMvcController] 发现 ${entryPoints.length} 个 MVC Controller action entrypoints`)
+  logger.info(`[CustomMvcController] 发现 ${entryPoints.length} 个 MVC Controller action entrypoints`)
   return entryPoints
 }
 
 module.exports = {
-  findHaodfMvcControllerEntryPoints,
+  findCustomMvcControllerEntryPoints,
   isMvcActionMethod,
   DI_METHOD_NAMES,
 }
