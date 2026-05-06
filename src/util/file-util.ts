@@ -198,18 +198,13 @@ function loadAllFileTextGlobby(srcFilter: string[], cwd: string): FileContent[] 
  */
 function loadJSONfile(filename: string): any {
   if (!fs.existsSync(filename)) {
-    handleException(
-      null,
-      `loading JSON file error: ${filename}. File does not exist`,
-      `loading JSON file error: ${filename}. File does not exist`
-    )
-    process.exit(1)
+    throw new Error(`JSON file not found: ${filename}`)
   }
   try {
     return jsonfile.readFileSync(filename)
   } catch (e) {
     handleException(e, `jsonfile parse error:${filename}`, `jsonfile parse error:${filename}`)
-    process.exit(1)
+    throw new Error(`Failed to parse JSON file: ${filename}`)
   }
 }
 

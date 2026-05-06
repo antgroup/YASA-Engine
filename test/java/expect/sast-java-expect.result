@@ -193,12 +193,6 @@ Trace:
   32:  CALL:              a.obj.set(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_001_T.java
   AffectedNodeName: get
-  33:  CALL:              String s = a.get(); // tainted
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_001_T.java
-  AffectedNodeName: a
-  33:  ARG PASS:              String s = a.get(); // tainted
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_001_T.java
-  AffectedNodeName: get
   33:  CALL RETURN:             String s = a.get(); // tainted
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_001_T.java
   AffectedNodeName: s
@@ -222,12 +216,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_005_T.java
   AffectedNodeName: set
   32:  CALL:              a.obj.set(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_005_T.java
-  AffectedNodeName: get
-  33:  CALL:              String s = a.obj.get(); // tainted
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_005_T.java
-  AffectedNodeName: a.obj
-  33:  ARG PASS:              String s = a.obj.get(); // tainted
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_005_T.java
   AffectedNodeName: get
   33:  CALL RETURN:             String s = a.obj.get(); // tainted
@@ -278,12 +266,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_007_T.java
   AffectedNodeName: set
   32:  CALL:              a.obj2.foo.set(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_007_T.java
-  AffectedNodeName: get
-  33:  CALL:              String s = b.get(); // tainted
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_007_T.java
-  AffectedNodeName: b
-  33:  ARG PASS:              String s = b.get(); // tainted
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/InnerClassAlias_007_T.java
   AffectedNodeName: get
   33:  CALL RETURN:             String s = b.get(); // tainted
@@ -546,18 +528,6 @@ Trace:
   AffectedNodeName: setCmd
   27:  CALL:              simpleBean.setCmd(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
-  AffectedNodeName: setCmd2
-  28:  CALL:              simpleBean.setCmd2("cd /");
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
-  AffectedNodeName: simpleBean
-  28:  ARG PASS:              simpleBean.setCmd2("cd /");
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
-  AffectedNodeName: getCmd
-  29:  CALL:              Runtime.getRuntime().exec(simpleBean.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
-  AffectedNodeName: simpleBean
-  29:  ARG PASS:              Runtime.getRuntime().exec(simpleBean.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
   AffectedNodeName: getCmd
   29:  CALL RETURN:             Runtime.getRuntime().exec(simpleBean.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
@@ -620,7 +590,7 @@ Trace:
   AffectedNodeName: doGet
   65:  CALL:          return doGet(url, null);
  /src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
-  AffectedNodeName: url
+  AffectedNodeName: doGet
   22:  ARG PASS:      public static String doGet(String url, Map<String, String> param) throws Exception {
  /src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
   AffectedNodeName: builder
@@ -751,12 +721,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java
   AffectedNodeName: setCmd
   28:  CALL:              a.setCmd(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java
-  AffectedNodeName: getCmd
-  30:  CALL:              Runtime.getRuntime().exec(a.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java
-  AffectedNodeName: a
-  30:  ARG PASS:              Runtime.getRuntime().exec(a.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java
   AffectedNodeName: getCmd
   30:  CALL RETURN:             Runtime.getRuntime().exec(a.getCmd());
@@ -921,12 +885,6 @@ Trace:
   27:  Var Pass:              PS ps = new PS(cmd, "~");
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java
   AffectedNodeName: getCmd
-  28:  CALL:              Runtime.getRuntime().exec(ps.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java
-  AffectedNodeName: ps
-  28:  ARG PASS:              Runtime.getRuntime().exec(ps.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java
-  AffectedNodeName: getCmd
   28:  CALL RETURN:             Runtime.getRuntime().exec(ps.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
@@ -956,6 +914,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java
   AffectedNodeName: t
   25:  ARG PASS:          t.start();
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java
+  AffectedNodeName: run
+  25:  CALL:          t.start();
+ /src/main/java/com/sast/astbenchmark/model/custom/T.java
+  AffectedNodeName: run
+  14:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/T.java
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -972,6 +936,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java
   AffectedNodeName: cmd
   24:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java
+  AffectedNodeName: run
+  26:  CALL:          new Thread(new Runnable() {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java
+  AffectedNodeName: run
+  28:  ARG PASS:              public void run() {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                      Runtime.getRuntime().exec(cmd);
@@ -1000,6 +970,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java
   AffectedNodeName: Executors.newCachedThreadPool()
   26:  ARG PASS:          Executors.newCachedThreadPool().execute(r);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java
+  AffectedNodeName: run
+  26:  CALL:          Executors.newCachedThreadPool().execute(r);
+ /src/main/java/com/sast/astbenchmark/model/custom/R.java
+  AffectedNodeName: run
+  14:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/R.java
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -1028,6 +1004,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java
   AffectedNodeName: timer
   27:  ARG PASS:          timer.schedule(tt, 2000);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java
+  AffectedNodeName: run
+  27:  CALL:          timer.schedule(tt, 2000);
+ /src/main/java/com/sast/astbenchmark/model/custom/TT.java
+  AffectedNodeName: run
+  16:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/TT.java
   AffectedNodeName: Runtime.getRuntime().exec
   18:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -1047,6 +1029,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
   AffectedNodeName: obj.a
   32:  Var Pass:                 obj.a = cmd;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_009_T.testcase.<anonymousFunc_36_37_45_9>
+  36:  CALL:          Thread thread2 = new Thread(() -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_009_T.testcase.<anonymousFunc_36_37_45_9>
+  36:  ARG PASS:          Thread thread2 = new Thread(() -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   39:  SINK:                      Runtime.getRuntime().exec(obj.a);
@@ -1088,12 +1076,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignObjectAttribute_002_T.java
   AffectedNodeName: setCmd
   29:  CALL:              b.setCmd(a);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignObjectAttribute_002_T.java
-  AffectedNodeName: getCmd
-  31:  CALL:              Runtime.getRuntime().exec(b.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignObjectAttribute_002_T.java
-  AffectedNodeName: b
-  31:  ARG PASS:              Runtime.getRuntime().exec(b.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignObjectAttribute_002_T.java
   AffectedNodeName: getCmd
   31:  CALL RETURN:             Runtime.getRuntime().exec(b.getCmd());
@@ -1705,12 +1687,6 @@ Trace:
   27:  Var Pass:              G<String> a = new G<>(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_001_T.java
   AffectedNodeName: getCmd
-  28:  CALL:              Runtime.getRuntime().exec(a.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_001_T.java
-  AffectedNodeName: a
-  28:  ARG PASS:              Runtime.getRuntime().exec(a.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_001_T.java
-  AffectedNodeName: getCmd
   28:  CALL RETURN:             Runtime.getRuntime().exec(a.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
@@ -1734,12 +1710,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_003_T.java
   AffectedNodeName: a
   26:  Var Pass:          G<?> a = new G<>(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_003_T.java
-  AffectedNodeName: getCmd
-  28:  CALL:              Runtime.getRuntime().exec((String) a.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_003_T.java
-  AffectedNodeName: a
-  28:  ARG PASS:              Runtime.getRuntime().exec((String) a.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_003_T.java
   AffectedNodeName: getCmd
   28:  CALL RETURN:             Runtime.getRuntime().exec((String) a.getCmd());
@@ -2271,12 +2241,6 @@ Trace:
   AffectedNodeName: setCmd
   34:  CALL:              ac.setCmd(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
-  AffectedNodeName: getCmd
-  35:  CALL:              Runtime.getRuntime().exec(ac.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
-  AffectedNodeName: ac
-  35:  ARG PASS:              Runtime.getRuntime().exec(ac.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
   AffectedNodeName: [return value]
   31:  Return Value:                      return this.cmd;
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
@@ -2304,12 +2268,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_001_T.java
   AffectedNodeName: a
   26:  Var Pass:          O a = new O(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_001_T.java
-  AffectedNodeName: getCmd
-  28:  CALL:              Runtime.getRuntime().exec(a.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_001_T.java
-  AffectedNodeName: a
-  28:  ARG PASS:              Runtime.getRuntime().exec(a.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_001_T.java
   AffectedNodeName: getCmd
   28:  CALL RETURN:             Runtime.getRuntime().exec(a.getCmd());
@@ -2351,12 +2309,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
   AffectedNodeName: cmd
   24:  SOURCE:      public Map<String, Object> testcase(@PathVariable String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
-  AffectedNodeName: <anonymousFunc_27_46_27_60>
-  28:  CALL:              Runtime.getRuntime().exec(s.getCmd("ls", cmd));
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
-  AffectedNodeName: b
-  27:  ARG PASS:              Inter s = (Serializable & Inter) (a, b) -> a + b;
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
   AffectedNodeName: <anonymousFunc_27_46_27_60>
   28:  CALL RETURN:             Runtime.getRuntime().exec(s.getCmd("ls", cmd));
@@ -2429,6 +2381,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java
   AffectedNodeName: t
   25:  ARG PASS:          t.start();
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java
+  AffectedNodeName: run
+  25:  CALL:          t.start();
+ /src/main/java/com/sast/astbenchmark/model/custom/T.java
+  AffectedNodeName: run
+  14:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/T.java
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -2445,6 +2403,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java
   AffectedNodeName: cmd
   24:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java
+  AffectedNodeName: run
+  26:  CALL:          new Thread(new Runnable() {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java
+  AffectedNodeName: run
+  28:  ARG PASS:              public void run() {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                      Runtime.getRuntime().exec(cmd);
@@ -2473,6 +2437,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java
   AffectedNodeName: Executors.newCachedThreadPool()
   26:  ARG PASS:          Executors.newCachedThreadPool().execute(r);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java
+  AffectedNodeName: run
+  26:  CALL:          Executors.newCachedThreadPool().execute(r);
+ /src/main/java/com/sast/astbenchmark/model/custom/R.java
+  AffectedNodeName: run
+  14:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/R.java
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -2501,6 +2471,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_007_T.java
   AffectedNodeName: timer
   27:  ARG PASS:          timer.schedule(tt, 2000);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_007_T.java
+  AffectedNodeName: run
+  27:  CALL:          timer.schedule(tt, 2000);
+ /src/main/java/com/sast/astbenchmark/model/custom/TT.java
+  AffectedNodeName: run
+  16:  ARG PASS:      public void run() {
  /src/main/java/com/sast/astbenchmark/model/custom/TT.java
   AffectedNodeName: Runtime.getRuntime().exec
   18:  SINK:              Runtime.getRuntime().exec(this.cmd);
@@ -2520,6 +2496,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
   AffectedNodeName: obj.a
   32:  Var Pass:                 obj.a = cmd;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_009_T.testcase.<anonymousFunc_36_37_45_9>
+  36:  CALL:          Thread thread2 = new Thread(() -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_009_T.testcase.<anonymousFunc_36_37_45_9>
+  36:  ARG PASS:          Thread thread2 = new Thread(() -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   39:  SINK:                      Runtime.getRuntime().exec(obj.a);
@@ -2582,6 +2564,12 @@ Trace:
   43:  CALL RETURN:                 return result.get();
   44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  CALL:              }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   47:  SINK:                      Runtime.getRuntime().exec(notCleanedResult);
 
@@ -2623,6 +2611,12 @@ Trace:
   42:  CALL RETURN:                 // 处理结果
   43:  CALL RETURN:                 return result.get();
   44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  CALL:              }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: Runtime.getRuntime()
   47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
@@ -2668,6 +2662,12 @@ Trace:
   42:  CALL RETURN:                 // 处理结果
   43:  CALL RETURN:                 return result.get();
   44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  CALL:              }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: Runtime.getRuntime()
   47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
@@ -2757,6 +2757,12 @@ Trace:
   42:  CALL RETURN:                 // 处理结果
   43:  CALL RETURN:                 return result.get();
   44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  CALL:              }).thenAccept(notCleanedResult -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
+  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: Runtime.getRuntime()
   47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
@@ -3743,12 +3749,6 @@ Trace:
   26:  Var Pass:              PS ps = new PS(cmd, "~");
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/override/Expression_Override_001_T.java
   AffectedNodeName: getCmd
-  27:  CALL:              Runtime.getRuntime().exec(ps.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/override/Expression_Override_001_T.java
-  AffectedNodeName: ps
-  27:  ARG PASS:              Runtime.getRuntime().exec(ps.getCmd());
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/override/Expression_Override_001_T.java
-  AffectedNodeName: getCmd
   27:  CALL RETURN:             Runtime.getRuntime().exec(ps.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/override/Expression_Override_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
@@ -3800,6 +3800,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_field_001_T.java
   AffectedNodeName: MyClass.data
   24:  Var Pass:         MyClass.data = __taint_src;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_field_001_T.java
+  AffectedNodeName: process
+  25:  CALL:          process();
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_field_001_T.java
+  AffectedNodeName: process
+  28:  ARG PASS:      private void process() {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_field_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(MyClass.data);
@@ -4002,25 +4008,11 @@ Trace:
   AffectedNodeName: add
   30:  CALL:              queue.add(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: <anonymousFunc_33_36_40_13>
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  CALL:              queue.stream().forEach(e -> {
-  34:  CALL:                  if (cmd.equals(e)) {
-  35:  CALL:                      try {
-  36:  CALL:                          Runtime.getRuntime().exec(e);
-  37:  CALL:                      } catch (IOException ex) {
-  38:  CALL:                      }
-  39:  CALL:                  }
-  40:  CALL:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: e
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  ARG PASS:              queue.stream().forEach(e -> {
-  34:  ARG PASS:                  if (cmd.equals(e)) {
-  35:  ARG PASS:                      try {
-  36:  ARG PASS:                          Runtime.getRuntime().exec(e);
-  37:  ARG PASS:                      } catch (IOException ex) {
-  38:  ARG PASS:                      }
-  39:  ARG PASS:                  }
-  40:  ARG PASS:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:                          Runtime.getRuntime().exec(e);
@@ -4037,6 +4029,12 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
   AffectedNodeName: cmd
   26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
+  33:  CALL:              queue.stream().forEach(e -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
+  33:  ARG PASS:              queue.stream().forEach(e -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
   AffectedNodeName: cmd
   34:  Var Pass:                  if (cmd.equals(e)) {
@@ -4060,25 +4058,11 @@ Trace:
   AffectedNodeName: add
   30:  CALL:              queue.add(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: <anonymousFunc_33_36_40_13>
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  CALL:              queue.stream().forEach(e -> {
-  34:  CALL:                  if (cmd.equals(e)) {
-  35:  CALL:                      try {
-  36:  CALL:                          Runtime.getRuntime().exec(e);
-  37:  CALL:                      } catch (IOException ex) {
-  38:  CALL:                      }
-  39:  CALL:                  }
-  40:  CALL:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: e
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  ARG PASS:              queue.stream().forEach(e -> {
-  34:  ARG PASS:                  if (cmd.equals(e)) {
-  35:  ARG PASS:                      try {
-  36:  ARG PASS:                          Runtime.getRuntime().exec(e);
-  37:  ARG PASS:                      } catch (IOException ex) {
-  38:  ARG PASS:                      }
-  39:  ARG PASS:                  }
-  40:  ARG PASS:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
   AffectedNodeName: cmd
   34:  Var Pass:                  if (cmd.equals(e)) {
@@ -4102,25 +4086,11 @@ Trace:
   AffectedNodeName: add
   30:  CALL:              queue.add(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: <anonymousFunc_33_36_40_13>
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  CALL:              queue.stream().forEach(e -> {
-  34:  CALL:                  if (cmd.equals(e)) {
-  35:  CALL:                      try {
-  36:  CALL:                          Runtime.getRuntime().exec(e);
-  37:  CALL:                      } catch (IOException ex) {
-  38:  CALL:                      }
-  39:  CALL:                  }
-  40:  CALL:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: e
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
   33:  ARG PASS:              queue.stream().forEach(e -> {
-  34:  ARG PASS:                  if (cmd.equals(e)) {
-  35:  ARG PASS:                      try {
-  36:  ARG PASS:                          Runtime.getRuntime().exec(e);
-  37:  ARG PASS:                      } catch (IOException ex) {
-  38:  ARG PASS:                      }
-  39:  ARG PASS:                  }
-  40:  ARG PASS:              });
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
   AffectedNodeName: cmd
   34:  Var Pass:                  if (cmd.equals(e)) {

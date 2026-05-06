@@ -275,7 +275,7 @@ class BeegoEntrypointCollectChecker extends Checker {
                 const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
                 if (!processedRouteRegistry.has(hash)) {
                   processedRouteRegistry.add(hash)
-                  if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
+                  controllerQids.add(controllerMethodVal._this?._qid ?? '')
                   const entryPoint = completeEntryPoint(controllerMethodVal)
                   analyzer.entryPoints.push(entryPoint)
                 }
@@ -354,7 +354,7 @@ class BeegoEntrypointCollectChecker extends Checker {
           const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
           if (!processedRouteRegistry.has(hash)) {
             processedRouteRegistry.add(hash)
-            if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
+            controllerQids.add(controllerMethodVal._this?._qid ?? '')
             const entryPoint = completeEntryPoint(controllerMethodVal)
             analyzer.entryPoints.push(entryPoint)
           }
@@ -377,7 +377,7 @@ class BeegoEntrypointCollectChecker extends Checker {
           const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
           if (!processedRouteRegistry.has(hash)) {
             processedRouteRegistry.add(hash)
-            if (controllerMethodVal._this?._qid) controllerQids.add(controllerMethodVal._this._qid)
+            controllerQids.add(controllerMethodVal._this?._qid ?? '')
             const entryPoint = completeEntryPoint(controllerMethodVal)
             analyzer.entryPoints.push(entryPoint)
           }

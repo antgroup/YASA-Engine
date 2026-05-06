@@ -206,8 +206,8 @@ class JsAnalyzer extends Analyzer {
           }
         } else {
           const { filePath } = entryPoint
-          entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath])
-          entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath])
+          entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath].uuid)
+          entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath].uuid)
           try {
             this.processCompileUnit(
               entryPoint.scopeVal,
@@ -258,7 +258,8 @@ class JsAnalyzer extends Analyzer {
         'find no target compileUnit of the project : no js/ts file found in source path',
         'find no target compileUnit of the project : no js/ts file found in source path'
       )
-      process.exit(0)
+      process.exitCode = ErrorCode.no_valid_source_file
+      return
     }
 
     // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
@@ -308,7 +309,6 @@ class JsAnalyzer extends Analyzer {
    */
   processModule(ast: any, filename: any) {
     if (!ast) {
-      process.exitCode = ErrorCode.fail_to_parse
       const sourceFile = filename
       Statistics.fileIssues[sourceFile] = 'Parsing Error'
       handleException(
@@ -330,7 +330,7 @@ class JsAnalyzer extends Analyzer {
     if (m && typeof m !== 'undefined' && typeof m === 'object') {
       m.ast = ast
       this.topScope.context.modules.members.set(filename, m)
-      this.fileManager[filename] = m.uuid
+      this.fileManager[filename] = { uuid: m.uuid, astNode: m.ast.node }
     }
     return m
   }

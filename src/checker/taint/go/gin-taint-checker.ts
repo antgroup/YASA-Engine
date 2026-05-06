@@ -126,6 +126,11 @@ class GinTaintChecker extends TaintChecker {
       }
     }
 
+    // 构建 classHierarchyMap（CHA fallback dispatch 需要）
+    if (Config.entryPointMode !== 'ONLY_CUSTOM' && analyzer.typeResolver?.findClassHierarchy) {
+      analyzer.classHierarchyMap = analyzer.typeResolver.findClassHierarchy(analyzer, null)
+    }
+
     // 添加source
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
       const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
@@ -203,7 +208,7 @@ class GinTaintChecker extends TaintChecker {
     const calleeObject = fclos.object
     this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource, fclos)
 
     if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const argvalues = getLegacyArgValues(callInfo)
@@ -262,7 +267,22 @@ class GinTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtSymbolInterpretOfEntryPointAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
-    if (info?.entryPoint.functionName === 'main') GinEntryPoint.clearProcessedRouteRegistry()
+    if (info?.entryPoint.functionName === 'main') {
+      GinEntryPoint.clearProcessedRouteRegistry()
+      // main 执行完后，检查是否有自动采集到的 gin 路由 entrypoint
+      // 若无（CLI 框架回调链导致路由注册代码不可达），使用 *gin.Context 参数签名全局搜索作为 fallback
+      const autoCollectedCount = analyzer.entryPoints.filter(
+        (ep: any) => ep.functionName !== 'main'
+      ).length
+      if (autoCollectedCount === 0) {
+        const { topScope } = analyzer
+        const fallbackEntrypoints = GinEntryPoint.getGinDefaultEntrypoint(topScope.context.packages)
+        if (!_.isEmpty(fallbackEntrypoints)) {
+          analyzer.entryPoints.push(...fallbackEntrypoints)
+          logger.info('[gin-taint-checker] route auto-collection found 0 routes after main, fallback to gin.Context signature scan: %d entrypoints', fallbackEntrypoints.length)
+        }
+      }
+    }
   }
 
   /**
@@ -301,7 +321,8 @@ class GinTaintChecker extends TaintChecker {
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -312,7 +333,8 @@ class GinTaintChecker extends TaintChecker {
             TAINT_TAG_NAME_GIN,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)

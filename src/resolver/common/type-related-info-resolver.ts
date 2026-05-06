@@ -167,7 +167,7 @@ export default class TypeRelatedInfoResolver extends MemSpace {
             defScopeType
           )
         )
-      } else if (val.vtype === 'fclos' && val.overloaded.length > 0 && Array.isArray(state.argumentTypes)) {
+      } else if (val.vtype === 'fclos' && (val.overloaded?.length ?? 0) > 0 && Array.isArray(state.argumentTypes)) {
         funcDef = this.findMatchedFuncDef(val, state.argumentTypes)
         const funcReturnTypeArray = this.resolveInstruction(analyzer, scope, funcDef.returnType, state)
         for (const funcReturnType of funcReturnTypeArray) {

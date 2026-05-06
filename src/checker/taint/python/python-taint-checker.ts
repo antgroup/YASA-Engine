@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker')
 const CommonUtil = require('../../../util/common-util')
+const { lodashCloneWithTag } = require('../../../util/clone-util')
 const {
   findPythonFcEntryPointAndSource,
   buildFclosIndex,
@@ -95,6 +96,9 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
           entryPoint.filePath = entrypoint.filePath
           entryPoint.functionName = entrypoint.functionName
           entryPoint.attribute = entrypoint.attribute
+          // 透传函数定义行号，用于精确匹配 overloaded 同名函数
+          entryPoint.funcLocStart = entrypoint.funcLocStart
+          entryPoint.funcLocEnd = entrypoint.funcLocEnd
           funCallEntryPoints.push(entryPoint)
         } else {
           const entryPoint = new EntryPoint(Constant.ENGIN_START_FILE_BEGIN)
@@ -117,16 +121,63 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
         continue
       }
 
-      // 去重
-      valFuncs = _.uniqBy(valFuncs, (value: any) => value.ast.fdef)
+      // 去重，并过滤掉 ast.node 为 null 的 fclos（防止 executeSingleCall 崩溃）
+      valFuncs = _.uniqBy(valFuncs, (value: any) => value.ast?.fdef)
+      valFuncs = valFuncs.filter((value: any) => value?.ast?.node != null)
 
       for (const valFunc of valFuncs) {
-        const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
-        entryPoint.filePath = funCallEntryPoint.filePath
-        entryPoint.functionName = funCallEntryPoint.functionName
-        entryPoint.attribute = funCallEntryPoint.attribute
-        entryPoint.entryPointSymVal = valFunc
-        this.entryPoints.push(entryPoint)
+        // 当 entrypoint 携带函数行号且 fclos 存在 overloaded 时，精确匹配对应的函数体
+        const overloaded = valFunc.overloaded
+        if (funCallEntryPoint.funcLocStart != null && overloaded != null && overloaded.length > 0) {
+          // overloaded 可能是 AstRefList（无 find 方法），用 filter 查找行号匹配的函数体
+          const matched = overloaded.filter(
+            (ol: any) => ol.loc?.start?.line === funCallEntryPoint.funcLocStart
+          )
+          const matchedOverload = matched.length > 0 ? matched[0] : null
+          // 也检查主函数体是否匹配
+          const mainMatches = valFunc.ast?.node?.loc?.start?.line === funCallEntryPoint.funcLocStart
+          if (matchedOverload) {
+            // overloaded 列表中找到匹配，用匹配的函数体创建精确 entrypoint
+            const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+            entryPoint.filePath = funCallEntryPoint.filePath
+            entryPoint.functionName = funCallEntryPoint.functionName
+            entryPoint.attribute = funCallEntryPoint.attribute
+            // 使用与 python-analyzer.ts symbolInterpret 相同的克隆模式
+            const cloned = lodashCloneWithTag(valFunc)
+            const clonedDef = _.clone(matchedOverload)
+            cloned.ast.fdef = clonedDef
+            cloned.ast = clonedDef
+            cloned.overloaded = []
+            entryPoint.entryPointSymVal = cloned
+            this.entryPoints.push(entryPoint)
+          } else if (mainMatches) {
+            // 主函数体匹配，清空 overloaded 避免遍历其他同名函数
+            const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+            entryPoint.filePath = funCallEntryPoint.filePath
+            entryPoint.functionName = funCallEntryPoint.functionName
+            entryPoint.attribute = funCallEntryPoint.attribute
+            const cloned = lodashCloneWithTag(valFunc)
+            cloned.overloaded = []
+            entryPoint.entryPointSymVal = cloned
+            this.entryPoints.push(entryPoint)
+          } else {
+            // 行号不匹配任何函数体，回退到原有行为
+            const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+            entryPoint.filePath = funCallEntryPoint.filePath
+            entryPoint.functionName = funCallEntryPoint.functionName
+            entryPoint.attribute = funCallEntryPoint.attribute
+            entryPoint.entryPointSymVal = valFunc
+            this.entryPoints.push(entryPoint)
+          }
+        } else {
+          // 无行号信息或无 overloaded，保持原有行为（向后兼容）
+          const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+          entryPoint.filePath = funCallEntryPoint.filePath
+          entryPoint.functionName = funCallEntryPoint.functionName
+          entryPoint.attribute = funCallEntryPoint.attribute
+          entryPoint.entryPointSymVal = valFunc
+          this.entryPoints.push(entryPoint)
+        }
       }
     }
 

@@ -454,7 +454,7 @@ class PerformanceTracker {
 
       // 使用 AST 估算代码行数
       for (const filename of filesToCount) {
-        const { ast } = analyzer.symbolTable.get(analyzer.fileManager[filename]) || {}
+        const ast = analyzer.fileManager[filename]?.astNode
         if (ast) {
           if (ast.loc?.end?.line) {
             totalLines += ast.loc.end.line

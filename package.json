@@ -5,8 +5,9 @@
   "main": "./dist/main.js",
   "bin": "./dist/main.js",
   "dependencies": {
-    "@ant-yasa/uast-parser-java-js": "^0.2.9",
-    "@ant-yasa/uast-spec": "^0.2.9",
+    "@ant-yasa/uast-parser-java-js": "^0.2.12",
+    "@ant-yasa/uast-parser-php": "^0.2.12",
+    "@ant-yasa/uast-spec": "^0.2.12",
     "@babel/core": "^7.14.6",
     "@babel/parser": "^7.16.4",
     "@babel/plugin-proposal-decorators": "^7.14.5",
@@ -84,16 +85,23 @@
   },
   "scripts": {
     "test-js": "npx mocha --require tsx/cjs test/javascript/test-js-benchmark.ts",
+    "test-egg": "npx mocha --require tsx/cjs test/javascript/test-egg-benchmark.ts",
     "test-java": "npx mocha --require tsx/cjs test/java/test-java-benchmark.ts",
     "test-go": "npx mocha --require tsx/cjs test/go/test-go-benchmark.ts",
     "test-python": "npx mocha --require tsx/cjs test/python/test-python-benchmark.ts",
     "test-callchain": "npx mocha --require tsx/cjs test/callchain/test-callchain-benchmark.ts",
     "test-callargs": "npx mocha --require tsx/cjs test/callargs/test-callargs.ts",
-    "test-all": "npm run test-callargs && npm run test-js && npm run test-java && npm run test-go && npm run test-python && npm run test-callchain",
+    "test-match-field": "npx mocha --require tsx/cjs test/rules-basic-handler/test-match-field.ts",
+    "test-sink-util-new-expr": "npx mocha --require tsx/cjs test/rules-basic-handler/test-sink-util-new-expr.ts",
+    "test-php-checker": "npx mocha --require tsx/cjs test/php/test-php-checker.ts",
+    "test-php": "npx mocha --require tsx/cjs test/php/test-php-benchmark.ts",
+    "test-all": "npm run test-callargs && npm run test-match-field && npm run test-sink-util-new-expr && npm run test-js && npm run test-egg && npm run test-java && npm run test-go && npm run test-python && npm run test-callchain && npm run test-php",
     "build": "bash build.sh",
     "lint": "eslint .",
     "lint:duplicates": "jscpd .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "trace-accuracy": "npx tsx test/trace-accuracy.ts",
+    "trace-accuracy-all": "NODE_OPTIONS='--max-old-space-size=13312' npx tsx test/trace-accuracy-all.ts"
   },
   "install": "npm install",
   "files": [
@@ -173,7 +181,9 @@
       "dist/**/*",
       "resource/**/*",
       "deps/uast4go/uast4go",
-      "deps/uast4py/uast4py"
+      "deps/uast4py/uast4py",
+      "node_modules/tree-sitter-php/*.wasm",
+      "node_modules/web-tree-sitter/web-tree-sitter.wasm"
     ],
     "targets": [
       "node18-macos-arm64",

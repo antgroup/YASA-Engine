@@ -41,6 +41,13 @@ if ! npm install --package-lock=false > /dev/null; then
 fi
 success "依赖安装完成"
 
+# 步骤 1.5: patch @ant-yasa/uast-parser-php 规避 pkg 对 require.resolve('*.wasm') 的 UTF-8 mangle
+info "步骤 1.5/8: patch uast-parser-php (node scripts/patch-uast-parser-php.js)"
+if ! node scripts/patch-uast-parser-php.js; then
+    alert "uast-parser-php patch 失败"
+fi
+success "uast-parser-php patch 完成"
+
 # 步骤 2: 类型检查
 info "步骤 2/8: 类型检查 (npx tsc --noEmit)"
 # 只重定向 stdout，保留 stderr 以便显示错误信息
@@ -110,7 +117,7 @@ EOF
 info "步骤 7/8: 打包二进制 (npx pkg)"
 # 只重定向 stdout，保留 stderr 以便显示错误信息
 set +e
-npx pkg . --options max-old-space-size=12288 > /dev/null
+npx pkg . --options max-old-space-size=11264 > /dev/null
 PKG_EXIT_CODE=$?
 set -e
 if [ $PKG_EXIT_CODE -ne 0 ]; then

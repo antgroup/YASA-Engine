@@ -10,6 +10,7 @@ const { addSrcLineInfo } = require('./source-line')
 const ASTUtil = require('../../../util/ast-util')
 
 import type Unit from './value/unit'
+import { AstRefList } from './value/ast-ref-list'
 import { TaintRecord } from './value/taint-record'
 
 //* *****************************  Scope Management ********************************************
@@ -208,12 +209,15 @@ class Scope {
       const parametersType = this.getParameterType(node)
       let matched = false
       if (funcName === '_CTOR_') {
+        if (!fclos.overloaded) {
+          fclos.overloaded = new AstRefList(() => fclos.getASTManager())
+        }
         fclos.overloaded.push(node)
         return fclos
       }
 
-      for (let k = 0; k < fclos.overloaded.length; k++) {
-        const resolved = fclos.overloaded.get(k)
+      for (let k = 0; k < (fclos.overloaded?.length ?? 0); k++) {
+        const resolved = fclos.overloaded!.get(k)
         if (!resolved) continue
         const param = resolved.parameters
         const overloadedLen = Array.isArray(param) ? param.length : param.parameters.length
@@ -227,13 +231,16 @@ class Scope {
             }
           }
           if (typeMatch) {
-            fclos.overloaded.set(k, node)
+            fclos.overloaded!.set(k, node)
             matched = true
             break
           }
         }
       }
       if (!matched) {
+        if (!fclos.overloaded) {
+          fclos.overloaded = new AstRefList(() => fclos.getASTManager())
+        }
         fclos.overloaded.push(node)
       }
       fclos = lodashCloneWithTag(fclos)

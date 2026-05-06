@@ -236,6 +236,14 @@ class QidUnifyUtil {
   static removeInstanceFromString(value: string): string {
     return new QidUnifyUtil(value).removeInstance().removeCopied().get()
   }
+
+  /**
+   * 静态方法，去掉字符串中的圆括号及其内容
+   * @param value 要处理的字符串
+   */
+  static removeParenthesesFromString(value: string): string {
+    return new QidUnifyUtil(value).removeParentheses().get()
+  }
 }
 
 module.exports = QidUnifyUtil

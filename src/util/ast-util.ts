@@ -218,6 +218,10 @@ function addNodeHashInternal(obj: any, visited: WeakSet<any>): void {
   if (obj.type) {
     const { loc } = obj
     let content = getRawCode(obj)
+    // 防御：确保 content 为 string（getRawCode 可能返回非 string 值）
+    if (typeof content !== 'string') {
+      content = String(content ?? '')
+    }
 
     // 非常重要的性能优化，尽量保留，对于特殊程序，如（content超过4000字符），可能快 10 倍
     const MAX_CONTENT_LENGTH = 128
@@ -844,7 +848,8 @@ function prettyPrint(node: any): string {
       return `${prettyPrint(node.label)}: {${prettyPrint(node.body)}`
     }
     case 'Literal': {
-      return node.value
+      // Literal 值可能是 number/boolean，必须转为 string
+      return String(node.value)
     }
     case 'MemberAccess': {
       return `${prettyPrint(node.object)}.${prettyPrint(node.property)}`

@@ -32,6 +32,8 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
       const oldTree = tree
       tree = new BVTValue('', `<BVT_create>`, {})
       tree.raw_value = oldTree
+      // 保留原始值的类型信息
+      if (oldTree?.rtype) tree.rtype = oldTree.rtype
       parentBvt.setChild(pname, tree)
     }
     if (i < br.length - 1) {
@@ -55,9 +57,11 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
       old_value = new BVTValue(scope.qid, `<BVT_${index}>`, {})
       old_value.raw_value = oldValue  // 直接设置 raw_value，不通过 setter
     } else if (old_value.vtype !== 'BVT') {
-      old_value = createBVT(scope.qid, br, old_value, value.ast?.node)
+      old_value = createBVT(scope.qid, br, old_value, value.ast?.node, index)
     }
     fields[index] = old_value
+    // 标记此 scope 有 BVT 字段，供 mergeLeafValues parent 链跳跃使用
+    scope._hasBVTFields = true
     write(old_value, br, br_index, old_value, index)
   } else if (scope.pointerReference) {
     // overwrite directly
@@ -74,7 +78,7 @@ function writeValueBVT(fields: any, index: any, value: any, br: any, br_index: a
  * @param old_value
  * @param node
  */
-function createBVT(qidPrefix: string, br: any, old_value: any, node: any): any {
+function createBVT(qidPrefix: string, br: any, old_value: any, node: any, fieldIndex?: string): any {
   if (!br || br.length === 0) {
     return old_value
   }
@@ -86,8 +90,12 @@ function createBVT(qidPrefix: string, br: any, old_value: any, node: any): any {
   if (node?.loc?.sourcefile && typeof node?.loc?.sourcefile === 'string') {
     sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
   }
-  
-  return new BVTValue(qidPrefix, `<BVT_${sig}>`, { [currentChar]: nestedBVT })
+  // 字段索引加入 sig，避免同一对象不同字段写入因共享 AST 节点位置导致 UUID 碰撞
+  const indexPart = fieldIndex ? `_${fieldIndex}` : ''
+  const bvt = new BVTValue(qidPrefix, `<BVT_${sig}${indexPart}_${br}>`, { [currentChar]: nestedBVT })
+  // 保留原始值的类型信息，供分支读取时传播
+  if (old_value?.rtype) bvt.rtype = old_value.rtype
+  return bvt
 }
 
 /**
@@ -122,11 +130,14 @@ function readValue(value: any, br: any, br_index: any): any {
         if (value.vtype) {
           return value
         }
-        return new SymbolValue('', {
+        const sv = new SymbolValue('', {
           sid: `<treeBranch_br${i}>${tree.sid}`,
           qid: `<treeBranch_br${i}>${tree.qid}`,
           field: value,
         })
+        // 分支回退时保留 BVT 上保存的类型信息
+        if (tree.rtype) sv.rtype = tree.rtype
+        return sv
       }
       return read(children[c], br, i + 1)
     }
@@ -146,11 +157,14 @@ function readValue(value: any, br: any, br_index: any): any {
     if (pval.vtype) {
       return pval
     }
-    return new SymbolValue('', {
+    const sv2 = new SymbolValue('', {
       sid: `<treeBranch_br${i}>${tree.sid}`,
       qid: `<treeBranch_br${i}>${tree.qid}`,
       field: pval,
     })
+    // 分支回退时保留 BVT 上保存的类型信息
+    if (tree.rtype) sv2.rtype = tree.rtype
+    return sv2
   }
 
   if (!value) return value
@@ -191,15 +205,25 @@ function unionValue(v1: any, v2: any): any {
   }
   if (v1.vtype === 'union') {
     if (v2.vtype === 'union') {
-      const vs = v1.value.concat(v2.value)
+      // 按 uuid 去重合并两个 Union 的元素
+      const seen = new Set<string>()
+      const vs: any[] = []
+      for (const val of v1.value) {
+        const uid = val?.uuid || val
+        if (typeof uid === 'string' && seen.has(uid)) continue
+        if (typeof uid === 'string') seen.add(uid)
+        vs.push(val)
+      }
+      for (const val of v2.value) {
+        const uid = val?.uuid || val
+        if (typeof uid === 'string' && seen.has(uid)) continue
+        if (typeof uid === 'string') seen.add(uid)
+        vs.push(val)
+      }
       return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
     }
     const vs = v1.value.slice()
-    if (
-      !vs.some(function (x: any) {
-        x === v2
-      })
-    )
+    if (!vs.some((x: any) => x === v2))
       vs.push(v2)
     return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
   }
@@ -243,17 +267,23 @@ function mergeLeafValues(scope: any, brs: any, br_index: any, parent: any, visit
     return vs // scope;
   }
   if (scope.vtype === 'object' || scope.vtype === 'fclos' || scope.vtype === 'scope') {
-    // 深度优先递归合并scope的所有children元素
+    // 深度优先递归合并 scope 的所有字段
     for (const field in scope.value) {
-      // if (field === 'parent') continue;
       const v = scope.value[field]
       if (visited.has(v)) continue
       scope.value[field] = mergeLeafValues(v, brs, br_index, parent, visited)
     }
-    // TODO:check以下这段逻辑，parent为什么要合并？是否有污染问题
-    const parent_scope = scope.parent
-    if (parent_scope && !visited.has(parent_scope))
-      scope.parent = mergeLeafValues(parent_scope, brs, br_index, parent, visited)
+    // 沿 parent 链跳跃合并：只处理 writeValueBVT 标记过的 scope（_hasBVTFields），
+    // 跳过无 BVT 修改的中间 parent，避免对大型 global scope 的无效遍历。
+    let p = scope.parent
+    while (p && !visited.has(p)) {
+      if (p._hasBVTFields) {
+        mergeLeafValues(p, brs, br_index, parent, visited)
+        break // 更深层的 parent 会在 mergeLeafValues(p, ...) 的递归中处理
+      }
+      visited.add(p) // 标记已跳过，避免重复遍历
+      p = p.parent
+    }
     return scope
   }
   if (Array.isArray(scope)) {

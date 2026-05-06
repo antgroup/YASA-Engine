@@ -46,12 +46,7 @@ function defaultCamelize(filepath: string, caseStyle: 'lower' | 'upper' | 'camel
     //     }).join('');
     // }
     if (!/^[a-z0-9][a-z0-9._-]*$/i.test(property)) {
-      handleException(
-        new Error(`${property} is not match 'a-z0-9_-' in ${filepath}`),
-        `Error: ${property} is not match 'a-z0-9_-' in ${filepath}`,
-        `Error: ${property} is not match 'a-z0-9_-' in ${filepath}`
-      )
-      process.exit(1)
+      throw new Error(`File path does not match naming convention: ${property} in ${filepath}`)
     }
 
     // use default camelize, will capitalize the first letter

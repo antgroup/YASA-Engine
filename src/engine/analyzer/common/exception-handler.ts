@@ -1,5 +1,26 @@
 const logger = require('../../../util/logger')(__filename)
 
+interface ErrorStats {
+  parseErrors: number
+  nodeErrors: number
+  checkerErrors: number
+  otherErrors: number
+}
+
+let errorStats: ErrorStats = { parseErrors: 0, nodeErrors: 0, checkerErrors: 0, otherErrors: 0 }
+
+function incrementErrorStat(category: keyof ErrorStats): void {
+  errorStats[category]++
+}
+
+function getErrorStats(): ErrorStats {
+  return { ...errorStats }
+}
+
+function clearErrorStats(): void {
+  errorStats = { parseErrors: 0, nodeErrors: 0, checkerErrors: 0, otherErrors: 0 }
+}
+
 let totalErrors: any[]
 /**
  *
@@ -26,6 +47,7 @@ function handleException(error: any, infoMsg: any, errorMsg: any): void {
  */
 function clearTotalErrorsExceptionHandler(): void {
   totalErrors = []
+  clearErrorStats()
 }
 
 /**
@@ -38,10 +60,18 @@ function outputTotalErrorsExceptionHandler(): void {
       logger.info(error.error)
     }
   }
+  // 输出分类错误统计
+  const stats = getErrorStats()
+  const totalCount = stats.parseErrors + stats.nodeErrors + stats.checkerErrors + stats.otherErrors
+  if (totalCount > 0) {
+    logger.info(`Error statistics: parse=${stats.parseErrors}, node=${stats.nodeErrors}, checker=${stats.checkerErrors}, other=${stats.otherErrors}, total=${totalCount}`)
+  }
 }
 
 export {
   handleException,
   clearTotalErrorsExceptionHandler as clearTotalErrors,
   outputTotalErrorsExceptionHandler as outputTotalErrors,
+  incrementErrorStat,
+  getErrorStats,
 }

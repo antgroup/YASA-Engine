@@ -63,8 +63,8 @@ class GetFileAstChecker extends Checker {
       if (typeof fileValue === 'string' && fileValue.startsWith('symuuid_')) {
         fileValue = this.symbolTable.get(this.fileManager[this.input])
       }
-      if (fileValue?.ast?.node) {
-        finding.output = JSON.stringify(fileValue.ast?.node, (key: string, value: any) => {
+      if (fileValue?.astNode) {
+        finding.output = JSON.stringify(fileValue.astNode, (key: string, value: any) => {
           // 如果属性名是 'parent'，则返回 undefined 表示排除
           if (key === 'parent') {
             return undefined

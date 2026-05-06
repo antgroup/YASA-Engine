@@ -303,7 +303,8 @@ class GinDefaultTaintChecker extends TaintChecker {
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -314,7 +315,8 @@ class GinDefaultTaintChecker extends TaintChecker {
             TAINT_TAG_NAME_GIN_DEFAULT,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
           if (!TaintOutputStrategyGinDefault.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyGinDefault.outputStrategyId)

@@ -141,9 +141,20 @@
     "description": "python Tornado框架 entrypoint采集以及框架source添加"
   },
   {
+    "checkerId": "taint_flow_python_httpserver_input",
+    "checkerPath": "checker/taint/python/httpserver-taint-checker.ts",
+    "description": "python http.server框架 entrypoint采集以及框架source添加"
+  },
+  {
     "checkerId": "taint_flow_python_script_input",
     "checkerPath": "checker/taint/python/script-taint-checker.ts",
     "description": "Python脚本命令行参数source添加，支持argparse/sys.argv/input/os.environ/getopt等"
+  },
+  {
+    "checkerId": "taint_flow_php_input",
+    "checkerPath": "checker/taint/php/php-default-taint-checker.ts",
+    "description": "PHP污点分析checker，会使用CallGraph边界制作entrypoint",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_php.json"
   },
   {
     "checkerId": "taint_flow_test",
@@ -194,5 +205,11 @@
     "checkerPath": "checker/callchain/python/python-callchain-checker.ts",
     "description": "Python callchain checker，只检测sink匹配并输出调用链路",
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_python.json"
+  },
+  {
+    "checkerId": "callchain_php",
+    "checkerPath": "checker/callchain/php/php-callchain-checker.ts",
+    "description": "PHP callchain checker，只检测sink匹配并输出调用链路",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_php.json"
   }
 ]

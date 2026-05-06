@@ -10,6 +10,7 @@ const { getGlobalSymbolTable, getGlobalASTManager } = require('../../../../util/
 const { yasaWarning } = require('../../../../util/format-util')
 const QidUnifyUtil = require('../../../../util/qid-unify-util')
 
+
 class Unit {
   // Allows subclass properties assigned via constructor opts
   [key: string]: any
@@ -19,7 +20,7 @@ class Unit {
   uuid: string = ''
   declsNodehash: any = undefined
   _taint: TaintRecord | null = null
-  misc_: Record<string, any> = {}
+  misc_?: Record<string, any>
 
   // ===== Private fields =====
   _sid: string = ''
@@ -51,21 +52,18 @@ class Unit {
 
     this._field = _field ?? {}
 
-    this.misc_ = new Object()
-
-    this._ast = new AstBinding(this)
+    // _ast 懒创建：只在有 decls 时提前初始化
     const oldDecls = opts.decls
     if (oldDecls && typeof oldDecls === 'object' && !Array.isArray(oldDecls)) {
-      this._ast.initDecls(oldDecls)
+      this.ast.initDecls(oldDecls)
     }
 
-    this._scopeCtx = new ScopeCtx(this)
+    // _scopeCtx 懒创建：不再在构造函数中分配
 
-    const getAM = () => this.getASTManager()
     const oldOverloaded = opts.overloaded
-    this.overloaded = oldOverloaded && Array.isArray(oldOverloaded)
-      ? AstRefList.from(oldOverloaded, getAM)
-      : new AstRefList(getAM)
+    if (oldOverloaded && Array.isArray(oldOverloaded)) {
+      this.overloaded = AstRefList.from(oldOverloaded, () => this.getASTManager())
+    }
 
     if (opts.parent !== undefined) this.parent = opts.parent
 
@@ -84,7 +82,7 @@ class Unit {
 
     if (opts.ast !== undefined) this.ast = opts.ast
 
-    if (opts.exports !== undefined) this._scopeCtx.exports = opts.exports
+    if (opts.exports !== undefined) this.scope.exports = opts.exports
 
     this._isConstructing = true
 
@@ -344,11 +342,12 @@ class Unit {
   }
 
   setMisc(key: string, value: any): void {
+    if (!this.misc_) this.misc_ = {}
     this.misc_[key] = value
   }
 
   getMisc(key: string): any {
-    return this.misc_[key]
+    return this.misc_?.[key]
   }
 
   reset(): void {
@@ -419,15 +418,18 @@ class Unit {
   }
 
   get ast(): AstBinding {
-    return this._ast!
+    if (!this._ast) this._ast = new AstBinding(this)
+    return this._ast
   }
 
   set ast(astNode: any) {
-    if (this._ast) this._ast.node = astNode
+    if (!this._ast) this._ast = new AstBinding(this)
+    this._ast.node = astNode
   }
 
   get scope(): ScopeCtx {
-    return this._scopeCtx!
+    if (!this._scopeCtx) this._scopeCtx = new ScopeCtx(this)
+    return this._scopeCtx
   }
 
   get parent(): Unit | null { return this._resolveValueRef(this._parentRef) }

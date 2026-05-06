@@ -5,6 +5,7 @@ const {
   findInferenceTritonEntryPointAndSource,
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
+const { findHttpServerEntryPointAndSource } = require('../../httpserver/entrypoint-collector/httpserver-entrypoint')
 const BasicRuleHandler = require('../../../../../checker/common/rules-basic-handler')
 const { loadPythonDefaultRule } = require('../../../../../checker/taint/python/python-taint-abstract-checker')
 const AstUtil = require('../../../../../util/ast-util')
@@ -27,11 +28,12 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, 
   const pyFcEntryPointSourceArray: any[] = []
   const filenameAstObj: Record<string, any> = {}
   for (const filename in fileManager) {
-    const modClos = analyzer.symbolTable.get(fileManager[filename])
-    if (modClos.ast?.node?._meta?.nodehash !== undefined) {
-      filenameAstObj[filename] = modClos.ast?.node
+    const fileEntry = fileManager[filename]
+    if (fileEntry?.astNode?._meta?.nodehash !== undefined) {
+      filenameAstObj[filename] = fileEntry.astNode
     }
   }
+
 
   const { flaskEntryPointArray, flaskEntryPointSourceArray } = findFlaskEntryPointAndSource(filenameAstObj, dir)
   if (flaskEntryPointArray) {
@@ -73,6 +75,17 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, 
   }
   if (mcpEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...mcpEntryPointSourceArray)
+  }
+
+  const { httpServerEntryPointArray, httpServerEntryPointSourceArray } = findHttpServerEntryPointAndSource(
+    filenameAstObj,
+    dir
+  )
+  if (httpServerEntryPointArray) {
+    pyFcEntryPointArray.push(...httpServerEntryPointArray)
+  }
+  if (httpServerEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...httpServerEntryPointSourceArray)
   }
 
   return { pyFcEntryPointArray, pyFcEntryPointSourceArray }

@@ -1,0 +1,68 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_egg_input",
+      "taint_flow_js_input",
+      "taint_flow_express_input"
+    ],
+    "entrypoints": [
+      {
+        "attribute": "HTTP",
+        "filePath": "/src/http/agent.ts",
+        "functionName": "agent"
+      }
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "data",
+          "scopeFile": "/src/http/agent.ts",
+          "scopeFunc": "agent"
+        }
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "*"
+          ],
+          "attribute": "NodejsLevelAuthority",
+          "fsig": "agent.streamChat",
+          "sanitizerIds": [
+            "SANITIZER_1"
+          ]
+        }
+      ]
+    },
+    "sanitizers": [
+      {
+        "id": "SANITIZER_1",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.VALIDATE_BY_FUNCTIONCALL",
+        "fsig": "agentWhiteList.includes",
+        "args": [
+          "0"
+        ]
+      },
+      {
+        "id": "SANITIZER_2",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.VALIDATE_BY_FUNCTIONCALL",
+        "fsig": "agentWhiteList.includes",
+        "args": [
+          "0"
+        ]
+      },
+      {
+        "id": "SANITIZER_3",
+        "sanitizerType": "FunctionCallSanitizer",
+        "sanitizerScenario": "SANITIZER.VALIDATE_BY_FUNCTIONCALL",
+        "fsig": "agentWhiteList.includes",
+        "args": [
+          "0"
+        ]
+      }
+    ]
+  }
+]

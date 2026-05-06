@@ -1,5 +1,7 @@
 import * as path from 'path'
 import { describe, it } from 'mocha'
+// @ts-ignore
+import { computeAccuracyFromSarif, AccuracyStats } from '../trace-accuracy'
 const { execute } = require('../../src/interface/starter')
 const { ErrorCode } = require('../../src/util/error-code')
 const { recordFindingStr, resolveTestFindingResult, readExpectRes } = require('../test-utils')
@@ -14,6 +16,7 @@ function calResult(
     actualRes: any
     expectedResMap: Map<string, any>
     actualResMap: Map<string, any>
+    accuracyStats: AccuracyStats | null
   },
   name: string
 ): void {
@@ -76,6 +79,21 @@ function calResult(
         })
       }
     }
+
+    it(`trace accuracy`, function () {
+      const { accuracyStats } = result
+      if (!accuracyStats) {
+        this.skip()
+        return
+      }
+      const pct =
+        accuracyStats.evaluableHops > 0
+          ? ((accuracyStats.accurateHops / accuracyStats.evaluableHops) * 100).toFixed(2)
+          : 'N/A'
+      logger.info(
+        `=== Trace Accuracy [Python Benchmark]: ${pct}% (${accuracyStats.accurateHops}/${accuracyStats.evaluableHops} hops, ${accuracyStats.totalFindings} findings) ===`
+      )
+    })
   })
 }
 
@@ -122,9 +140,11 @@ async function getRunPythonBenchmarkResult(
   actualRes: any
   expectedResMap: Map<string, any>
   actualResMap: Map<string, any>
+  accuracyStats: AccuracyStats | null
 }> {
   const ruleConfigFile = __dirname + '/rule_config_xast_python3.json'
   let expectPath = path.join(path.resolve(dir), '..', '..', 'expect', expectFile)
+  const reportDir = path.join(__dirname, 'report')
 
   const repoName = path.basename(dir)
   let expectedRes: any, actualRes: any, expectedResMap: Map<string, any>, actualResMap: Map<string, any>
@@ -141,6 +161,8 @@ async function getRunPythonBenchmarkResult(
     'taint_flow_test',
     '--uastSDKPath',
     path.join(__dirname, '../../deps'),
+    '--report',
+    reportDir,
   ]
 
   try {
@@ -160,11 +182,20 @@ async function getRunPythonBenchmarkResult(
   expectedResMap = resolveTestFindingResult(expectedRes)
   actualResMap = resolveTestFindingResult(actualRes)
 
+  // 计算 trace 准确率
+  let accuracyStats: AccuracyStats | null = null
+  const sarifPath = path.join(reportDir, 'report.sarif')
+  if (fs.existsSync(sarifPath)) {
+    const sarifData = JSON.parse(fs.readFileSync(sarifPath, 'utf-8'))
+    accuracyStats = computeAccuracyFromSarif(sarifData)
+  }
+
   return {
     expectedRes,
     actualRes,
     expectedResMap,
     actualResMap,
+    accuracyStats,
   }
 }
 

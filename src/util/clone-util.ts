@@ -2,6 +2,8 @@ const _ = require('lodash')
 import { RAW_TARGET } from '../engine/analyzer/common/value/symbols'
 
 let _instanceCounter = 0
+// 追踪同一 AST 位置创建的实例数量，用于去重：防止 func 多次调用时实例 QID 碰撞
+const _sigUsageCount: Map<string, number> = new Map()
 import { ObjectValue } from '../engine/analyzer/common/value/object'
 import { SymbolValue } from '../engine/analyzer/common/value/symbolic'
 import { PackageValue } from '../engine/analyzer/common/value/package'
@@ -130,7 +132,7 @@ function buildNewValueInstance(
     node?.loc?.end?.column
   ) {
     const filename = node.loc.sourcefile.split('/').pop()
-    sig = `${filename.substring(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length)}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
+    sig = `${filename.substring(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length)}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}_${++_instanceCounter}`
   } else if (
     node?.callee?.loc &&
     node?.callee?.loc?.sourcefile &&
@@ -140,12 +142,18 @@ function buildNewValueInstance(
     node?.callee?.loc?.end?.column
   ) {
     const filename = node.callee.loc.sourcefile.split('/').pop()
-    sig = `${filename.substring(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length)}_${node.callee.loc?.start?.line}_${node.callee.loc?.start?.column}_${node.callee.loc?.end?.line}_${node.callee.loc?.end?.column}`
+    sig = `${filename.substring(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length)}_${node.callee.loc?.start?.line}_${node.callee.loc?.start?.column}_${node.callee.loc?.end?.line}_${node.callee.loc?.end?.column}_${++_instanceCounter}`
   } else {
     sig = `<astloc_seq_${++_instanceCounter}>`
   }
-  opts._sid = `${originalObj.sid}<instance_${sig}_endtag>`
-  opts._qid = `${originalObj.qid}<instance_${sig}_endtag>${qidSuffix}`
+  // 同一 (originalObj.qid, sig) 组合被多次使用时，追加计数器以避免 UUID 碰撞
+  // 场景：同一函数被多次调用，每次在相同 AST 位置创建不同实例（如 Regist 被调用 21 次）
+  const dedupKey = `${originalObj.qid}|${sig}`
+  const dedupCount = (_sigUsageCount.get(dedupKey) ?? 0) + 1
+  _sigUsageCount.set(dedupKey, dedupCount)
+  const dedupSuffix = dedupCount > 1 ? `_x${dedupCount}` : ''
+  opts._sid = `${originalObj.sid}<instance_${sig}${dedupSuffix}_endtag>`
+  opts._qid = `${originalObj.qid}<instance_${sig}${dedupSuffix}_endtag>${qidSuffix}`
   opts._skipRegister = false
   const CtorClass = (!forceVtype || forceVtype === 'object') ? ObjectValue : (INSTANCE_CTOR_MAP[originalObj.constructor?.name] || ObjectValue)
   const obj = new CtorClass(opts)

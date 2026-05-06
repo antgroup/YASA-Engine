@@ -1,0 +1,1119 @@
+======================== Findings ========================
+
+------------- 1: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrf_app_rpcAndGet_ts.ts
+Line 6: this.ctx.curl(aa)
+SINK RULE:this.ctx.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrf_app_rpcAndGet_ts.ts","functionName":"testSsrf","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrf_app_rpcAndGet_ts.ts
+  AffectedNodeName: aa
+  5:   SOURCE:  	 async testSsrf(aa) {
+ /app/controller/ssrf_app_rpcAndGet_ts.ts
+  AffectedNodeName: this.ctx.curl
+  6:   SINK:  		const result = await this.ctx.curl(aa);
+
+------------- 2: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/level_test_2.ts
+Line [22, 25]: oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay({with(genBaseParams(ctx)), with(params)})
+SINK RULE:ctx.oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/level_test_2.ts","functionName":"count_day","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: params
+  19:  SOURCE:  	  params: any,
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay
+  22:  SINK:      const res = await oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay({
+  23:  SINK:        ...genBaseParams(ctx),
+  24:  SINK:        ...params,
+  25:  SINK:      });
+
+------------- 3: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/level_test_2.ts
+Line [22, 25]: oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay({with(genBaseParams(ctx)), with(params)})
+SINK RULE:ctx.oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/level_test_2.ts","functionName":"count_day","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: user.userId
+  8:   SOURCE:      operatorId: user?.userId || '',
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: <anonymousFunc_2_30_14_2>
+  23:  CALL RETURN:       ...genBaseParams(ctx),
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay
+  22:  SINK:      const res = await oneapi.insagentprod.AgentToDoQueryFacade.countAnchorDay({
+  23:  SINK:        ...genBaseParams(ctx),
+  24:  SINK:        ...params,
+  25:  SINK:      });
+
+------------- 4: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/LevelParamSelf2.js
+Line 9: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req)
+SINK RULE:this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/LevelParamSelf2.js","functionName":"paramself","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: instId
+  4:   SOURCE:      async paramself(advisorId,instId) {
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: req
+  5:   Var Pass:          const req = {
+  6:   Var Pass:              instId,
+  7:   Var Pass:              advisorId,
+  8:   Var Pass:          };
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+  9:   SINK:          this.ctx.body = await this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req);
+
+------------- 5: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/LevelParamSelf2.js
+Line 9: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req)
+SINK RULE:this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/LevelParamSelf2.js","functionName":"paramself","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: advisorId
+  4:   SOURCE:      async paramself(advisorId,instId) {
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: req
+  5:   Var Pass:          const req = {
+  6:   Var Pass:              instId,
+  7:   Var Pass:              advisorId,
+  8:   Var Pass:          };
+ /app/controller/Level_test/LevelParamSelf2.js
+  AffectedNodeName: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+  9:   SINK:          this.ctx.body = await this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req);
+
+------------- 6: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/LevelParamSelf3.js
+Line 9: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req)
+SINK RULE:this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/LevelParamSelf3.js","functionName":"paramself3","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: instId
+  4:   SOURCE:      async paramself3(advisorId: any,instId: any) {
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: req
+  5:   Var Pass:          const req = {
+  6:   Var Pass:              instId,
+  7:   Var Pass:              advisorId,
+  8:   Var Pass:          };
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+  9:   SINK:          this.ctx.body = await this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req);
+
+------------- 7: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/LevelParamSelf3.js
+Line 9: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req)
+SINK RULE:this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/LevelParamSelf3.js","functionName":"paramself3","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: advisorId
+  4:   SOURCE:      async paramself3(advisorId: any,instId: any) {
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: req
+  5:   Var Pass:          const req = {
+  6:   Var Pass:              instId,
+  7:   Var Pass:              advisorId,
+  8:   Var Pass:          };
+ /app/controller/Level_test/LevelParamSelf3.js
+  AffectedNodeName: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+  9:   SINK:          this.ctx.body = await this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req);
+
+------------- 8: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/level_test_2.ts
+Line 37: this.ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo(req)
+SINK RULE:this.ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/level_test_2.ts","functionName":"getAdvisorReservoirManagementInfo","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: this.ctx.request
+  35:  SOURCE:        ...this.ctx.request.query
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: req
+  34:  Var Pass:      const req = {
+  35:  Var Pass:        ...this.ctx.request.query
+  36:  Var Pass:      };
+ /app/controller/Level_test/level_test_2.ts
+  AffectedNodeName: this.ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo
+  37:  SINK:      const res = await this.ctx.proxy.AdvisorReservoirManagementFacade.getAdvisorReservoirManagementInfo(req);
+
+------------- 9: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/level_test_3.ts
+Line 11: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req)
+SINK RULE:this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/level_test_3.ts","functionName":"queryAdvisorRankListFacade","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/level_test_3.ts
+  AffectedNodeName: this.ctx.request
+  7:   SOURCE:        ...this.ctx.request.body,
+ /app/controller/Level_test/level_test_3.ts
+  AffectedNodeName: req
+  6:   Var Pass:      const req = {
+  7:   Var Pass:        ...this.ctx.request.body,
+  8:   Var Pass:        instId,
+  9:   Var Pass:        advisorId,
+  10:  Var Pass:      };
+ /app/controller/Level_test/level_test_3.ts
+  AffectedNodeName: this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList
+  11:  SINK:  	  this.ctx.body = await this.ctx.proxy.AdvisorRankListFacade.queryAdvisorRankList(req);
+
+------------- 10: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrfHttp.ts
+Line 17: this.ctx.curl(__ttt__)
+SINK RULE:this.ctx.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrfHttp.ts","functionName":"testhttp","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: this.ctx.request
+  15:  SOURCE:  	  const { abc } = this.ctx.request;
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: abc
+  15:  Var Pass:  	  const { abc } = this.ctx.request;
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: __ttt__
+  16:  Var Pass:  	  const { __ttt__ } = abc;
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: this.ctx.curl
+  17:  SINK:  	  const a = await this.ctx.curl(__ttt__);
+
+------------- 11: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrfHttp.ts
+Line 22: this.app.curl(this.ctx.params)
+SINK RULE:this.app.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrfHttp.ts","functionName":"testhttp3","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: this.ctx.params
+  22:  SOURCE:  		const appCurl = await this.app.curl(this.ctx.params);
+ /app/controller/ssrfHttp.ts
+  AffectedNodeName: this.app.curl
+  22:  SINK:  		const appCurl = await this.app.curl(this.ctx.params);
+
+------------- 12: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/vm2Test.js
+Line 7: new VM().run(a)
+SINK RULE:vm2.VM.run
+SINK Attribute:NodejsVm2Run
+entrypoint:
+{"filePath":"/app/controller/vm2Test.js","functionName":"testVm2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/vm2Test.js
+  AffectedNodeName: this.ctx.query
+  6:   SOURCE:          const a= this.ctx.query.a;
+ /app/controller/vm2Test.js
+  AffectedNodeName: a
+  6:   Var Pass:          const a= this.ctx.query.a;
+ /app/controller/vm2Test.js
+  AffectedNodeName: new VM().run
+  7:   SINK:          new VM().run(a)
+
+------------- 13: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/iteratorNextTest.js
+Line 11: it.next(this.ctx.query.a)
+SINK RULE:dom-iterator.next
+entrypoint:
+{"filePath":"/app/controller/iteratorNextTest.js","functionName":"testNext","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/iteratorNextTest.js
+  AffectedNodeName: this.ctx.query
+  11:  SOURCE:      while (next = it.next(this.ctx.query.a)) { }
+ /app/controller/iteratorNextTest.js
+  AffectedNodeName: it.next
+  11:  SINK:      while (next = it.next(this.ctx.query.a)) { }
+
+------------- 14: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/vm2Test.js
+Line 13: VMInstance.run(a)
+SINK RULE:vm2.VM.run
+SINK Attribute:NodejsVm2Run
+entrypoint:
+{"filePath":"/app/controller/vm2Test.js","functionName":"testVm21","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/vm2Test.js
+  AffectedNodeName: this.ctx.query
+  11:  SOURCE:          const a = this.ctx.query.a;
+ /app/controller/vm2Test.js
+  AffectedNodeName: a
+  11:  Var Pass:          const a = this.ctx.query.a;
+ /app/controller/vm2Test.js
+  AffectedNodeName: VMInstance.run
+  13:  SINK:          VMInstance.run(a)
+
+------------- 15: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/mysql2Test.js
+Line [20, 28]: conn.query(sql, function (var err:any, var result:any){{{conn.end(), if(err){{reject(err)}}, resolve(result)}}})
+SINK RULE:conn.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/mysql2Test.js","functionName":"test1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/mysql2Test.js
+  AffectedNodeName: sql
+  16:  SOURCE:      async test1(sql) {
+ /app/controller/mysql2Test.js
+  AffectedNodeName: /app/controller/mysql2Test.mysql2Test.test1.<anonymousFunc_19_28_29_10>
+  19:  CALL:          return new Promise(function (resolve, reject) {
+ /app/controller/mysql2Test.js
+  AffectedNodeName: /app/controller/mysql2Test.mysql2Test.test1.<anonymousFunc_19_28_29_10>
+  19:  ARG PASS:          return new Promise(function (resolve, reject) {
+ /app/controller/mysql2Test.js
+  AffectedNodeName: conn.query
+  20:  SINK:              conn.query(sql, function (err, result) {
+  21:  SINK:                  conn.end()
+  22:  SINK:
+  23:  SINK:                  if (err) {
+  24:  SINK:                      reject(err)
+  25:  SINK:                  }
+  26:  SINK:
+  27:  SINK:                  resolve(result)
+  28:  SINK:              })
+
+------------- 16: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/mysql2Test.js
+Line [33, 39]: createConnection({user:config.user, password:config.password, host:config.host, port:config.port, database:config.database}).query(sql)
+SINK RULE:mysql2.createConnection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/mysql2Test.js","functionName":"test2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/mysql2Test.js
+  AffectedNodeName: sql
+  32:  SOURCE:      async test2(sql) {
+ /app/controller/mysql2Test.js
+  AffectedNodeName: createConnection({user:config.user, password:config.password, host:config.host, port:config.port, database:config.database}).query
+  33:  SINK:          return createConnection({
+  34:  SINK:              user: config.user,
+  35:  SINK:              password: config.password,
+  36:  SINK:              host: config.host,
+  37:  SINK:              port: config.port,
+  38:  SINK:              database: config.database
+  39:  SINK:          }).query(sql)
+
+------------- 17: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/File.js
+Line 51: require(ssh2-sftp-client).get(Path)
+SINK RULE:ssh2-sftp-client.get
+SINK Attribute:NodejsFileOperator
+entrypoint:
+{"filePath":"/app/controller/File.js","functionName":"upload2SftpWhite2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/File.js
+  AffectedNodeName: this.ctx.request
+  32:  SOURCE:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: path
+  32:  Var Pass:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: fileName
+  36:  Var Pass:          const fileName = path;
+ /app/controller/File.js
+  AffectedNodeName: Path
+  40:  Var Pass:          const Path = `${bizType}/${instId}/creditmng/${moment().format('YYYYMMDD')}/${uuid()}/${fileName}`;
+ /app/controller/File.js
+  AffectedNodeName: require(ssh2-sftp-client).get
+  51:  SINK:              await require('ssh2-sftp-client').get(Path);
+
+------------- 18: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/File.js
+Line 74: sftp.put(stream, ossPath)
+SINK RULE:ssh2-sftp-client.put
+SINK Attribute:NodejsFileOperator
+entrypoint:
+{"filePath":"/app/controller/File.js","functionName":"upload2SftpBlack","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/File.js
+  AffectedNodeName: this.ctx.request
+  61:  SOURCE:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: path
+  61:  Var Pass:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: fileName
+  66:  Var Pass:          const fileName = path;
+ /app/controller/File.js
+  AffectedNodeName: ossPath
+  70:  Var Pass:          const ossPath = `${bizType}/${instId}/creditmng/${moment().format('YYYYMMDD')}/${uuid()}/${fileName}`;
+ /app/controller/File.js
+  AffectedNodeName: sftp.put
+  74:  SINK:              await sftp.put(stream, ossPath);
+
+------------- 19: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/File.js
+Line 97: require(ssh2-sftp-client).get(ossPath)
+SINK RULE:ssh2-sftp-client.get
+SINK Attribute:NodejsFileOperator
+entrypoint:
+{"filePath":"/app/controller/File.js","functionName":"upload2SftpBlack2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/File.js
+  AffectedNodeName: this.ctx.request
+  86:  SOURCE:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: path
+  86:  Var Pass:          const { path } = this.ctx.request;
+ /app/controller/File.js
+  AffectedNodeName: fileName
+  89:  Var Pass:          const fileName = path;
+ /app/controller/File.js
+  AffectedNodeName: ossPath
+  93:  Var Pass:          const ossPath = `${bizType}/${instId}/creditmng/${moment().format('YYYYMMDD')}/${uuid()}/${fileName}`;
+ /app/controller/File.js
+  AffectedNodeName: require(ssh2-sftp-client).get
+  97:  SINK:              await require('ssh2-sftp-client').get(ossPath);
+
+------------- 20: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 8: this.ctx.app.mysql.query(queryStr)
+SINK RULE:this.ctx.app.mysql.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggMysqlBlack1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  5:   SOURCE:      async eggMysqlBlack1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  6:   Var Pass:          let sqlString = `
+  7:   Var Pass:          SELECT uk_cluster_name,cluster_type
+  8:   Var Pass:          FROM cluster
+  9:   Var Pass:          WHERE uk_cluster_name LIKE '%${fuzzyStr}%'
+  10:  Var Pass:        `
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: query
+  11:  CALL:          let result = await ctx.service.sql.query(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  6:   ARG PASS:      async query(queryStr) {
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.query.<anonymousFunc_8_33_8_98>
+  8:   CALL:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.query.<anonymousFunc_8_33_8_98>
+  8:   ARG PASS:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: this.ctx.app.mysql.query
+  8:   SINK:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+
+------------- 21: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 13: connection.query(queryStr)
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggConnBlack1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  23:  SOURCE:      async eggConnBlack1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  24:  Var Pass:          let sqlString = "UPDATE posts SET title = "+ fuzzyStr
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: connQuery
+  25:  CALL:          let result = await this.ctx.service.sql.connQuery(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  11:  ARG PASS:      async connQuery(queryStr){
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.connQuery.<anonymousFunc_13_33_13_90>
+  13:  CALL:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.connQuery.<anonymousFunc_13_33_13_90>
+  13:  ARG PASS:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: connection.query
+  13:  SINK:          const record = await co(function * () { return yield connection.query(queryStr) })
+
+------------- 22: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 14: connection.query(queryStr)
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggConnBlack1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  23:  SOURCE:      async eggConnBlack1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  24:  Var Pass:          let sqlString = "UPDATE posts SET title = "+ fuzzyStr
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: connQuery
+  25:  CALL:          let result = await this.ctx.service.sql.connQuery(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  11:  ARG PASS:      async connQuery(queryStr){
+ /app/service/sql.js
+  AffectedNodeName: [return value]
+  13:  Return Value:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: <anonymousFunc_13_33_13_90>
+  13:  CALL RETURN:         const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: record
+  13:  Var Pass:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: connection.query
+  14:  SINK:          const res = connection.query(queryStr);
+
+------------- 23: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 8: this.ctx.app.mysql.query(queryStr)
+SINK RULE:this.ctx.app.mysql.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggMysqlWhite1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  14:  SOURCE:      async eggMysqlWhite1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  15:  Var Pass:          let sqlString = `
+  16:  Var Pass:          SELECT uk_cluster_name,cluster_type
+  17:  Var Pass:          FROM cluster
+  18:  Var Pass:          WHERE uk_cluster_name LIKE '%${mysql.escape(fuzzyStr)}%'
+  19:  Var Pass:        `
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: query
+  20:  CALL:          let result = await ctx.service.sql.query(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  6:   ARG PASS:      async query(queryStr) {
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.query.<anonymousFunc_8_33_8_98>
+  8:   CALL:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.query.<anonymousFunc_8_33_8_98>
+  8:   ARG PASS:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: this.ctx.app.mysql.query
+  8:   SINK:          const record = await co(function * () { return yield this.ctx.app.mysql.query(queryStr) })
+
+------------- 24: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 13: connection.query(queryStr)
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggConnWhite1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  27:  SOURCE:      async eggConnWhite1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  28:  Var Pass:          let sqlString = "UPDATE posts SET title = "+ mysql.escape(fuzzyStr)
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: connQuery
+  29:  CALL:          let result = await ctx.service.sql.connQuery(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  11:  ARG PASS:      async connQuery(queryStr){
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.connQuery.<anonymousFunc_13_33_13_90>
+  13:  CALL:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: /app/service/sql.Sql.connQuery.<anonymousFunc_13_33_13_90>
+  13:  ARG PASS:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: connection.query
+  13:  SINK:          const record = await co(function * () { return yield connection.query(queryStr) })
+
+------------- 25: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/service/sql.js
+Line 14: connection.query(queryStr)
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggConnWhite1","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  27:  SOURCE:      async eggConnWhite1(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: sqlString
+  28:  Var Pass:          let sqlString = "UPDATE posts SET title = "+ mysql.escape(fuzzyStr)
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: connQuery
+  29:  CALL:          let result = await ctx.service.sql.connQuery(sqlString)
+ /app/service/sql.js
+  AffectedNodeName: queryStr
+  11:  ARG PASS:      async connQuery(queryStr){
+ /app/service/sql.js
+  AffectedNodeName: [return value]
+  13:  Return Value:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: <anonymousFunc_13_33_13_90>
+  13:  CALL RETURN:         const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: record
+  13:  Var Pass:          const record = await co(function * () { return yield connection.query(queryStr) })
+ /app/service/sql.js
+  AffectedNodeName: connection.query
+  14:  SINK:          const res = connection.query(queryStr);
+
+------------- 26: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/sqlEggMysql.js
+Line 33: connection.query(mysql.escape(fuzzyStr))
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqlEggMysql.js","functionName":"eggConnWhite2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: fuzzyStr
+  31:  SOURCE:      async eggConnWhite2(fuzzyStr) {
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: /app/controller/sqlEggMysql.SqlEggMysql.eggConnWhite2.<anonymousFunc_33_33_33_104>
+  33:  CALL:          const record = await co(function * () { return yield connection.query(mysql.escape(fuzzyStr)) })
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: /app/controller/sqlEggMysql.SqlEggMysql.eggConnWhite2.<anonymousFunc_33_33_33_104>
+  33:  ARG PASS:          const record = await co(function * () { return yield connection.query(mysql.escape(fuzzyStr)) })
+ /app/controller/sqlEggMysql.js
+  AffectedNodeName: connection.query
+  33:  SINK:          const record = await co(function * () { return yield connection.query(mysql.escape(fuzzyStr)) })
+
+------------- 27: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/VariableCover/variable_cover_3.js
+Line 23: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(newParmas)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/VariableCover/variable_cover_3.js","functionName":"echo","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: ctx.userId
+  17:  SOURCE:          const { uid } = ctx.userId;
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: uid
+  17:  Var Pass:          const { uid } = ctx.userId;
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: newParmas
+  19:  Var Pass:          const newParmas = {
+  20:  Var Pass:              uid,
+  21:  Var Pass:              ...params,
+  22:  Var Pass:          };
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  23:  SINK:          const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(newParmas);
+
+------------- 28: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/VariableCover/variable_cover_3.js
+Line 23: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(newParmas)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/VariableCover/variable_cover_3.js","functionName":"echo","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: ctx.request
+  18:  SOURCE:          const params = ctx.request.body;
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: params
+  18:  Var Pass:          const params = ctx.request.body;
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: newParmas
+  19:  Var Pass:          const newParmas = {
+  20:  Var Pass:              uid,
+  21:  Var Pass:              ...params,
+  22:  Var Pass:          };
+ /app/controller/VariableCover/variable_cover_3.js
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  23:  SINK:          const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(newParmas);
+
+------------- 29: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrfHttpTwo.js
+Line 13: this.app.curl(this.ctx.params)
+SINK RULE:this.app.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrfHttpTwo.js","functionName":"testAppSsrf2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrfHttpTwo.js
+  AffectedNodeName: this.ctx.params
+  13:  SOURCE:          const appCurl = await this.app.curl(this.ctx.params);
+ /app/controller/ssrfHttpTwo.js
+  AffectedNodeName: this.app.curl
+  13:  SINK:          const appCurl = await this.app.curl(this.ctx.params);
+
+------------- 30: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrfHttpTwo.js
+Line 7: bb.curl(this.ctx.request)
+SINK RULE:this.ctx.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrfHttpTwo.js","functionName":"testSsrf2","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrfHttpTwo.js
+  AffectedNodeName: this.ctx.request
+  7:   SOURCE:          const a = await bb.curl(this.ctx.request);
+ /app/controller/ssrfHttpTwo.js
+  AffectedNodeName: bb.curl
+  7:   SINK:          const a = await bb.curl(this.ctx.request);
+
+------------- 31: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/module_deserialize_directly_call.js
+Line 14: require(node-serialize).unserialize(str)
+SINK RULE:node-serialize.unserialize
+SINK Attribute:NodejsModuleDeserialize
+entrypoint:
+{"filePath":"/app/controller/module_deserialize_directly_call.js","functionName":"moduleDeserializeTest","attribute":"HTTP","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/module_deserialize_directly_call.js
+  AffectedNodeName: ctx.request
+  13:  SOURCE:      const str = ctx.request.cookies.profile;
+ /app/controller/module_deserialize_directly_call.js
+  AffectedNodeName: str
+  13:  Var Pass:      const str = ctx.request.cookies.profile;
+ /app/controller/module_deserialize_directly_call.js
+  AffectedNodeName: require(node-serialize).unserialize
+  14:  SINK:      const obj = require('node-serialize').unserialize(str);
+
+------------- 32: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/cmd_mgw_ts.ts
+Line 14: eval(ctx.request.a)
+SINK RULE:eval
+SINK Attribute:NodejsExec
+entrypoint:
+{"filePath":"/app/controller/cmd_mgw_ts.ts","functionName":"eval_mgw","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/cmd_mgw_ts.ts
+  AffectedNodeName: ctx.request
+  14:  SOURCE:        const res = eval(ctx.request.a);
+ /app/controller/cmd_mgw_ts.ts
+  AffectedNodeName: eval
+  14:  SINK:        const res = eval(ctx.request.a);
+
+------------- 33: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/LevelParamSelf4.js
+Line 12: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(params.cardNo)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/LevelParamSelf4.js","functionName":"lps4","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/LevelParamSelf4.js
+  AffectedNodeName: params
+  10:  SOURCE:          params: { cardNo: string },
+ /app/controller/Level_test/LevelParamSelf4.js
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  12:  SINK:          const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(params.cardNo);
+
+------------- 34: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/Level_test.ts
+Line 12: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(params.cardNo)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/Level_test.ts","functionName":"hasHistRepayRecord","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/Level_test.ts
+  AffectedNodeName: params
+  10:  SOURCE:  		  params: { cardNo: string },
+ /app/controller/Level_test/Level_test.ts
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  12:  SINK:      const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(params.cardNo);
+
+------------- 35: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/Level_test/level_test_4.ts
+Line 9: this.ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum(trParams)
+SINK RULE:this.ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/Level_test/level_test_4.ts","functionName":"rpc_level_test_4","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/Level_test/level_test_4.ts
+  AffectedNodeName: params
+  5:   SOURCE:    async rpc_level_test_4(params: any) { // 224621
+ /app/controller/Level_test/level_test_4.ts
+  AffectedNodeName: trParams
+  6:   Var Pass:      const trParams = {
+  7:   Var Pass:  	    ...params,
+  8:   Var Pass:      };
+ /app/controller/Level_test/level_test_4.ts
+  AffectedNodeName: this.ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum
+  9:   SINK:      const result = await this.ctx.proxy.certificateSendOrderQueryFacade.countAvailableNum(trParams);
+
+------------- 36: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/mgw.ts
+Line 27: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/mgw.ts","functionName":"hello","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/mgw.ts
+  AffectedNodeName: ctx.userId
+  23:  SOURCE:  		  siteUserId: ctx.userId,//mmm
+ /app/controller/mgw.ts
+  AffectedNodeName: queryParams
+  22:  Var Pass:  	  const queryParams = {
+  23:  Var Pass:  		  siteUserId: ctx.userId,//mmm
+  24:  Var Pass:  		  ...params,
+  25:  Var Pass:
+  26:  Var Pass:  	  };
+ /app/controller/mgw.ts
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  27:  SINK:  	  const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams);
+
+------------- 37: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/mgw.ts
+Line 27: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/mgw.ts","functionName":"hello","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/mgw.ts
+  AffectedNodeName: params
+  20:  SOURCE:  	  params: { cardNo: string },
+ /app/controller/mgw.ts
+  AffectedNodeName: queryParams
+  22:  Var Pass:  	  const queryParams = {
+  23:  Var Pass:  		  siteUserId: ctx.userId,//mmm
+  24:  Var Pass:  		  ...params,
+  25:  Var Pass:
+  26:  Var Pass:  	  };
+ /app/controller/mgw.ts
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  27:  SINK:  	  const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams);
+
+------------- 38: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/module_deserialize_mrpc_directly_call.js
+Line 12: require(node-serialize).unserialize(str)
+SINK RULE:node-serialize.unserialize
+SINK Attribute:NodejsModuleDeserialize
+entrypoint:
+{"filePath":"/app/controller/module_deserialize_mrpc_directly_call.js","functionName":"moduleDeserializeMrpcTest","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/module_deserialize_mrpc_directly_call.js
+  AffectedNodeName: ctx.request
+  11:  SOURCE:      const str = ctx.request.cookies.profile;
+ /app/controller/module_deserialize_mrpc_directly_call.js
+  AffectedNodeName: str
+  11:  Var Pass:      const str = ctx.request.cookies.profile;
+ /app/controller/module_deserialize_mrpc_directly_call.js
+  AffectedNodeName: require(node-serialize).unserialize
+  12:  SINK:      const obj = require('node-serialize').unserialize(str);
+
+------------- 39: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/sqli_app_rpc_ts.ts
+Line [10, 12]: connection.query(SELECT * FROM projects WHERE id =+this.ctx.request.body.data, function (var err:any){{{if(err){throw err}}}}})
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sqli_app_rpc_ts.ts","functionName":"sqli_controller","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sqli_app_rpc_ts.ts
+  AffectedNodeName: this.ctx.request
+  10:  SOURCE:      connection.query('SELECT * FROM projects WHERE id =' + this.ctx.request.body.data, function (err) {
+ /app/controller/sqli_app_rpc_ts.ts
+  AffectedNodeName: connection.query
+  10:  SINK:      connection.query('SELECT * FROM projects WHERE id =' + this.ctx.request.body.data, function (err) {
+  11:  SINK:        if (err) throw err;
+  12:  SINK:      });
+
+------------- 40: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/sql_mgw_ts.ts
+Line [23, 25]: connection.query(SELECT * FROM projects WHERE id =+ctx.request.body.data, function (var err:any){{{if(err){throw err}}}}})
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/controller/sql_mgw_ts.ts","functionName":"sql_mgw","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/sql_mgw_ts.ts
+  AffectedNodeName: ctx.request
+  23:  SOURCE:        connection.query('SELECT * FROM projects WHERE id =' + ctx.request.body.data, function (err) {
+ /app/controller/sql_mgw_ts.ts
+  AffectedNodeName: connection.query
+  23:  SINK:        connection.query('SELECT * FROM projects WHERE id =' + ctx.request.body.data, function (err) {
+  24:  SINK:          if (err) throw err;
+  25:  SINK:        });
+
+------------- 41: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/ssrf_app_rpcAndGet_ts.ts
+Line 6: this.ctx.curl(aa)
+SINK RULE:this.ctx.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/controller/ssrf_app_rpcAndGet_ts.ts","functionName":"testSsrf","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/ssrf_app_rpcAndGet_ts.ts
+  AffectedNodeName: aa
+  5:   SOURCE:  	 async testSsrf(aa) {
+ /app/controller/ssrf_app_rpcAndGet_ts.ts
+  AffectedNodeName: this.ctx.curl
+  6:   SINK:  		const result = await this.ctx.curl(aa);
+
+------------- 42: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/VariableCover/variable_cover_2.js
+Line 17: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/VariableCover/variable_cover_2.js","functionName":"hhhh","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: ctx.userId
+  13:  SOURCE:              siteUserId: ctx.userId,//mmm
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: queryParams
+  12:  Var Pass:          const queryParams = {
+  13:  Var Pass:              siteUserId: ctx.userId,//mmm
+  14:  Var Pass:              ...params,
+  15:  Var Pass:
+  16:  Var Pass:          };
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  17:  SINK:          const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams);
+
+------------- 43: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/controller/VariableCover/variable_cover_2.js
+Line 17: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams)
+SINK RULE:ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+SINK Attribute:NodejsLevelAuthority
+entrypoint:
+{"filePath":"/app/controller/VariableCover/variable_cover_2.js","functionName":"hhhh","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: params
+  10:  SOURCE:          params: { cardNo: string },
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: queryParams
+  12:  Var Pass:          const queryParams = {
+  13:  Var Pass:              siteUserId: ctx.userId,//mmm
+  14:  Var Pass:              ...params,
+  15:  Var Pass:
+  16:  Var Pass:          };
+ /app/controller/VariableCover/variable_cover_2.js
+  AffectedNodeName: ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord
+  17:  SINK:          const result = await ctx.oneapi.ccrprod.repayBillQueryFacade.hasHistRepayRecord(queryParams);
+
+------------- 44: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/cmd_twa_js.js
+Line [19, 24]: childProcess.exec(this.ctx.request.body.cmd, function (var error:any, var stdout:any, var stderr:any){{{if(error){{reject(error)}}, resolve(stdout)}}})
+SINK RULE:child_process.exec
+SINK Attribute:NodejsExec
+entrypoint:
+{"filePath":"/app/rpc/cmd_twa_js.js","functionName":"eval01_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: this.ctx.request
+  19:  SOURCE:            childProcess.exec(this.ctx.request.body.cmd, (error, stdout, stderr) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: /app/rpc/cmd_twa_js.Cmd_one.eval01_twa.<anonymousFunc_18_38_25_8>
+  18:  CALL:        const body = await new Promise((resolve, reject) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: /app/rpc/cmd_twa_js.Cmd_one.eval01_twa.<anonymousFunc_18_38_25_8>
+  18:  ARG PASS:        const body = await new Promise((resolve, reject) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: childProcess.exec
+  19:  SINK:            childProcess.exec(this.ctx.request.body.cmd, (error, stdout, stderr) => {
+  20:  SINK:            if (error) {
+  21:  SINK:              reject(error);
+  22:  SINK:            }
+  23:  SINK:            resolve(stdout);
+  24:  SINK:          });
+
+------------- 45: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/cmd_twa_js.js
+Line [38, 43]: require(child_process).spawn(this.ctx.request.body.cmd, function (var error:any, var stdout:any, var stderr:any){{{if(error){{reject(error)}}, resolve(stdout)}}})
+SINK RULE:child_process.spawn
+SINK Attribute:NodejsExec
+entrypoint:
+{"filePath":"/app/rpc/cmd_twa_js.js","functionName":"eval02_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: this.ctx.request
+  38:  SOURCE:          require('child_process').spawn(this.ctx.request.body.cmd, (error, stdout, stderr) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: /app/rpc/cmd_twa_js.Cmd_one.eval02_twa.<anonymousFunc_37_38_44_8>
+  37:  CALL:        const body = await new Promise((resolve, reject) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: /app/rpc/cmd_twa_js.Cmd_one.eval02_twa.<anonymousFunc_37_38_44_8>
+  37:  ARG PASS:        const body = await new Promise((resolve, reject) => {
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: require(child_process).spawn
+  38:  SINK:          require('child_process').spawn(this.ctx.request.body.cmd, (error, stdout, stderr) => {
+  39:  SINK:            if (error) {
+  40:  SINK:              reject(error);
+  41:  SINK:            }
+  42:  SINK:            resolve(stdout);
+  43:  SINK:          });
+
+------------- 46: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/cmd_twa_js.js
+Line 6: eval(this.ctx.request.body.cmd)
+SINK RULE:eval
+SINK Attribute:NodejsExec
+entrypoint:
+{"filePath":"/app/rpc/cmd_twa_js.js","functionName":"eval_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: this.ctx.request
+  6:   SOURCE:        const body = eval(this.ctx.request.body.cmd);
+ /app/rpc/cmd_twa_js.js
+  AffectedNodeName: eval
+  6:   SINK:        const body = eval(this.ctx.request.body.cmd);
+
+------------- 47: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/sql_twa_js.js
+Line [15, 17]: connection.query(SELECT * FROM projects WHERE id =+this.ctx.request.body.data, function (var err:any){{{if(err){throw err}}}}})
+SINK RULE:connection.query
+SINK Attribute:NodejsSqlInjection
+entrypoint:
+{"filePath":"/app/rpc/sql_twa_js.js","functionName":"sql_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/sql_twa_js.js
+  AffectedNodeName: this.ctx.request
+  15:  SOURCE:        connection.query('SELECT * FROM projects WHERE id =' + this.ctx.request.body.data, function (err) {
+ /app/rpc/sql_twa_js.js
+  AffectedNodeName: connection.query
+  15:  SINK:        connection.query('SELECT * FROM projects WHERE id =' + this.ctx.request.body.data, function (err) {
+  16:  SINK:          if (err) throw err;
+  17:  SINK:        });
+
+------------- 48: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/ssrf_twa_js.js
+Line 23: this.app.curl(this.ctx.request.query.url)
+SINK RULE:this.app.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/rpc/ssrf_twa_js.js","functionName":"getProxy01_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: this.ctx.request
+  23:  SOURCE:      const result = await this.app.curl(this.ctx.request.query.url);
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: this.app.curl
+  23:  SINK:      const result = await this.app.curl(this.ctx.request.query.url);
+
+------------- 49: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/ssrf_twa_js.js
+Line 36: ctx.service.xdevapi.curl(url)
+SINK RULE:this.app.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/rpc/ssrf_twa_js.js","functionName":"getProxy02_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: ctx.query
+  35:  SOURCE:      const { url } = ctx.query;
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: url
+  35:  Var Pass:      const { url } = ctx.query;
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: ctx.service.xdevapi.curl
+  36:  SINK:      const result = await ctx.service.xdevapi.curl(url);
+
+------------- 50: taint_flow_egg_input-------------
+Description:JavaScript Egg框架污点分析checker
+File:/app/rpc/ssrf_twa_js.js
+Line [13, 18]: this.ctx.curl(url_test, {headers:{bakery-token:this.ctx.extraConfig.BAKERY_SPM_TOKEN}, data:this.ctx.query})
+SINK RULE:this.ctx.curl
+SINK Attribute:NodejsSSRF
+entrypoint:
+{"filePath":"/app/rpc/ssrf_twa_js.js","functionName":"ssrf_twa","attribute":"MRPC","type":"functionCall","funcReceiverType":""}
+Trace:
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: test_a
+  5:   SOURCE:    async ssrf_twa(test_a) {
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: UrlReq
+  6:   Var Pass:      const UrlReq = {
+  7:   Var Pass:        url: test_a,
+  8:   Var Pass:        userId: this.ctx.userId,
+  9:   Var Pass:      };
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: url_test
+  12:  Var Pass:      const url_test = UrlReq.url;
+ /app/rpc/ssrf_twa_js.js
+  AffectedNodeName: this.ctx.curl
+  13:  SINK:      const res = await this.ctx.curl(url_test, {
+  14:  SINK:        headers: {
+  15:  SINK:          'bakery-token': this.ctx.extraConfig.BAKERY_SPM_TOKEN,
+  16:  SINK:        },
+  17:  SINK:        data: this.ctx.query,
+  18:  SINK:      });
+==========================================================
+  #Total-findings:50
+==========================================================

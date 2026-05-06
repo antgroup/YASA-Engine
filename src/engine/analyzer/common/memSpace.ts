@@ -11,6 +11,7 @@ const {
 const AstUtil = require('../../../util/ast-util')
 const varUtil = require('../../../util/variable-util')
 const { handleException } = require('./exception-handler')
+const { getGlobalSymbolTable } = require('../../../util/global-registry')
 
 import type UnitType from './value/unit'
 type FilterFn = ((scope: UnitType) => boolean) | null
@@ -48,13 +49,27 @@ class MemSpace extends Scope {
   }
 
   /**
-   * calculate the indices of an object access; resolve non-atomic expressions
-   * for instance, expression A[x][y] will be converted into A[v1][v2] where v1 and v2 are values of x and y respectively
-   * need to calculate the index value upon the current scope
-   * @param scope
-   * @param node
-   * @param state
-   * @returns {*}
+   * 解析 lvalue 表达式节点，返回一个可被 taint 追踪的地址对象（Value 实例）或原 AST node。
+   *
+   * ⚠️ 返回类型不统一（历史鸭子类型设计）：
+   * - Identifier / Parameter — 返回 SymbolValue（sid=`<indice_${name}>`）
+   * - Literal — 返回 SymbolValue（sid=`<indice_${value}>`）
+   * - MemberAccess — 返回 MemberExprValue；若 index 与 object 皆无变化则短路返回原 node
+   * - ThisExpression / SuperExpression — 返回 SymbolValue
+   * - union（node.vtype） — 返回 UnionValue
+   * - VariableDeclaration / DereferenceExpression — 返回 SymbolValue
+   * - 其他 — 走 processInstruction 兜底，返回其结果
+   *
+   * 下游（saveVarInScopeRec）既读 AST 字段（.type / .name / .value）又读 Value 字段
+   * （.vtype === 'union'），两种结构共享字段名靠鸭子类型运行，属于设计债，
+   * 未来 Value 重设计任务中处理。
+   *
+   * ⚠️ 非幂等：对 resolveIndices 的结果再次调用会再生成一个 SymbolValue（因为
+   * SymbolValue 在构造时 spread 了原 node，保留了 node.type='Identifier' 等字段）。
+   * 同一 node 不要重复 resolve，调用链参见 saveVarInScope / saveVarInCurrentScope 注释。
+   *
+   * @param node AST node 或 Value 实例（字符串也会被包成 IdentifierRefValue）
+   * @returns SymbolValue | MemberExprValue | UnionValue | 原 AST node | processInstruction 结果
    */
   resolveIndices(scope: UnitType, node: any, state: any): any {
     if (!node) return node
@@ -69,6 +84,9 @@ class MemSpace extends Scope {
       let index: any
       let prop: any
       if (!node.computed) {
+        prop = index = node.property
+      } else if (node.property?.type === 'Noop') {
+        // 保留 Noop，让 saveVarInScopeRec 处理数组追加（PHP $arr[] = value）
         prop = index = node.property
       } else if (node.type === 'Literal') {
         prop = index = node.property
@@ -306,36 +324,54 @@ class MemSpace extends Scope {
   //* ***************************** Write Operations *************************************
 
   /**
-   * write the value of a variable into the scope; search the right scope when neccessary
+   * 写变量到正确的作用域（必要时沿作用域链向上找 def scope）
+   *
+   * 调用链：saveVarInScope → saveVarInCurrentScope（做 resolveIndices）→ saveVarInScopeRec。
+   * saveVarInCurrentScope 会对 node 做 resolveIndices，此处不再提前 resolve，避免重复分配 SymbolValue。
+   *
    * @param scope
-   * @param node: AST node
-   * @param value: value to be stored
-   * @param state: extra analysis data
-   * @param node
-   * @param value
-   * @param state
-   * @param oldVal
-   * @returns {*}
+   * @param node AST node
+   * @param value 待写入的 Value
+   * @param state 分析状态
+   * @param oldVal 旧值（用于继承 rtype）
    */
   saveVarInScope(scope: UnitType, node: any, value: UnitType, state: any, oldVal: UnitType | null = null): any {
     if (!value.rtype && oldVal && oldVal.rtype) value.rtype = oldVal.rtype
-    const resolvedNode = this.resolveIndices(scope, node, state)
-
     const defscope = this.getDefScope(scope, node)
 
     if (state && state.brs) state.br_index = 0
-    return this.saveVarInCurrentScope(defscope, resolvedNode, value, state)
+    return this.saveVarInCurrentScope(defscope, node, value, state)
   }
 
   /**
-   * write the value of a variable into the current scope
-   * @param scope
-   * @param node
-   * @param value
-   * @param state
-   * @returns {*}
+   * 写变量到当前作用域（入口点）
+   *
+   * 所有直接调用点（go/python/php/java/js-analyzer 等）都传入原始 AST node。
+   *
+   * 入口对 lvalue 做分派：
+   * - 简单 lvalue（Identifier / Parameter / Literal）：直接下发 AST node。
+   *   下游 saveVarInScopeRec 只读 node.type / node.name / node.value，
+   *   AST node 本身就有这些字段，无需经过 resolveIndices 的 SymbolValue 包装，
+   *   跳过可省一次 `new SymbolValue(..., { sid, ...node })` 分配。
+   * - 复杂 lvalue（MemberAccess / union / This / Super / VariableDeclaration /
+   *   DereferenceExpression / 其他）：走 resolveIndices 转为
+   *   MemberExprValue / UnionValue / SymbolValue，保证 MemberExprValue 的
+   *   qid 链完整以及下游对 Value 接口的依赖。
+   *
+   * resolveIndices 本身保持 release 语义不变（所有分支永远返回 Value）。
+   *
+   * @param scope 目标 scope
+   * @param node AST node
+   * @param value 待写入的 Value
+   * @param state 分析状态
    */
   saveVarInCurrentScope(scope: UnitType, node: any, value: UnitType, state: any): any {
+    if (node && (node.type === 'Identifier' || node.type === 'Parameter' || node.type === 'Literal')) {
+      if (value && node.rtype && !value.rtype) {
+        value.rtype = node.rtype
+      }
+      return this.saveVarInScopeRec(scope, node, value, state)
+    }
     const resolvedNode = this.resolveIndices(scope, node, state)
     if (value && resolvedNode?.rtype && !value?.rtype) {
       value.rtype = resolvedNode.rtype
@@ -431,6 +467,17 @@ class MemSpace extends Scope {
       case 'Literal': {
         if (scope.type === 'Literal') return
         saveVarInScopeDirect(scope, node.value, value, state)
+        return
+      }
+      case 'Noop': {
+        // 数组追加（PHP $arr[] = value）：计算下一个数字索引
+        const fields = scope.value || {}
+        let maxIdx = -1
+        for (const key of Object.keys(fields)) {
+          const n = parseInt(key, 10)
+          if (!isNaN(n) && n > maxIdx) maxIdx = n
+        }
+        saveVarInScopeDirect(scope, String(maxIdx + 1), value, state)
         return
       }
     }
@@ -560,6 +607,17 @@ class MemSpace extends Scope {
     if (!node) {
       return undefined
     }
+
+    // MemberAccess 递归解析：当 node 本身是 MemberExprValue（如 kmm.modules）时，
+    // 递归先解析 object，再从 object 中取 property，避免走 fallback 创建占位符
+    if (node.type === 'MemberAccess' && node.object && node.property) {
+      const objectVal = this._getMemberValueRec(scope, node.object, state, createIfNotExists)
+      if (objectVal && objectVal.type !== 'MemberAccess') {
+        // objectVal 已解析为实际对象，递归取 property
+        return this._getMemberValueDirect(objectVal, node.property, state, createIfNotExists, stack + 1, new Set())
+      }
+    }
+
     switch (node.type) {
       case 'Identifier':
       case 'Literal':
@@ -590,6 +648,14 @@ class MemSpace extends Scope {
         if (fields && _.has(fields, index)) {
           // todo 还需要判断当前的val 是否state匹配
           val = fields[index]
+          // UUID 字符串解析回实际符号值
+          if (val && typeof val === 'string' && val.startsWith('symuuid_')) {
+            const symbolTable = getGlobalSymbolTable()
+            const resolved = symbolTable?.get(val)
+            if (resolved) {
+              val = resolved
+            }
+          }
           if (val.func?.jumpLocate) {
             const targetVal = val.func.jumpLocate(val, qid, scope)
             if (targetVal) {

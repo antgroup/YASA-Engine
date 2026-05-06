@@ -58,6 +58,8 @@ export class ObjectValue extends EntityValue {
     if (this.taint === NULL_TAINT) this.taint = new TaintRecord(this)
     this.taint.markRecursive()
 
+    // ObjectValue 及子类需要 misc_ 共享语义（alias 间状态同步）
+    this.misc_ = {}
     // ObjectValue-specific properties
     if ('element' in finalOpts) this.element = finalOpts.element
     if ('uninit' in finalOpts) this.uninit = finalOpts.uninit

@@ -122,6 +122,9 @@ function findFlaskEntryPointAndSource(filenameAstObj: FilenameAstMap, dir: strin
             entryPoint.filePath = shortFileName
             entryPoint.functionName = funcName
             entryPoint.attribute = 'HTTP'
+            // 携带函数定义行号，用于精确匹配 overloaded 同名函数
+            entryPoint.funcLocStart = obj.loc?.start?.line as number | undefined
+            entryPoint.funcLocEnd = obj.loc?.end?.line as number | undefined
             flaskEntryPointArray.push(entryPoint)
 
             if (entryPointAndSourceAtSameTime) {

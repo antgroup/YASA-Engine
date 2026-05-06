@@ -88,6 +88,7 @@
       "taint_flow_python_input",
       "taint_flow_python_django_input",
       "taint_flow_python_tornado_input",
+      "taint_flow_python_httpserver_input",
       "callgraph",
       "sanitizer"
     ],
@@ -99,6 +100,7 @@
       "taint_flow_python_input_inner",
       "taint_flow_python_django_input",
       "taint_flow_python_tornado_input",
+      "taint_flow_python_httpserver_input",
       "callgraph",
       "sanitizer"
     ],
@@ -153,5 +155,21 @@
       "callchain_python"
     ],
     "description": "Python callchain checker - 只检测sink匹配"
+  },
+  {
+    "checkerPackId": "taint-flow-php-default",
+    "checkerIds": [
+      "taint_flow_php_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "PHP污点追踪-对外默认使用的规则包"
+  },
+  {
+    "checkerPackId": "callchain-php",
+    "checkerIds": [
+      "callchain_php"
+    ],
+    "description": "PHP callchain checker - 只检测sink匹配"
   }
 ]

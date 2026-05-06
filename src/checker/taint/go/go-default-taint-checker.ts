@@ -76,6 +76,10 @@ class GoDefaultTaintChecker extends TaintChecker {
 
     // 使用callGraph边界作为entrypoint
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
+      // 始终构建 classHierarchyMap，CHA fallback dispatch 需要
+      if (analyzer.typeResolver?.findClassHierarchy) {
+        analyzer.classHierarchyMap = analyzer.typeResolver.findClassHierarchy(analyzer, null)
+      }
       if (Config.cgAlgo === 'CHA' && analyzer.typeResolver) {
         FullCallGraphFileEntryPoint.makeFullCallGraphByType(analyzer, analyzer.typeResolver)
       } else {
@@ -167,7 +171,7 @@ class GoDefaultTaintChecker extends TaintChecker {
     const calleeObject = fclos?.object
     this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
-    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource)
+    IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource, fclos)
   }
 
   /**
@@ -221,7 +225,8 @@ class GoDefaultTaintChecker extends TaintChecker {
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = (rule as any).fsig
           if (typeof (rule as any).attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${(rule as any).attribute}`
+            const attrStr = Array.isArray((rule as any).attribute) ? (rule as any).attribute.join(',') : (rule as any).attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -232,7 +237,8 @@ class GoDefaultTaintChecker extends TaintChecker {
             TAINT_TAG_NAME,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
 
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue

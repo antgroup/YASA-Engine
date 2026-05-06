@@ -1,5 +1,7 @@
 import * as path from 'path'
 import { describe, it, before } from 'mocha'
+// @ts-ignore
+import { computeAccuracyFromSarif, AccuracyStats } from '../trace-accuracy'
 const { execute } = require('../../src/interface/starter')
 const { ErrorCode } = require('../../src/util/error-code')
 const { recordFindingStr, readExpectRes, resolveFindingResult } = require('../test-utils')
@@ -13,7 +15,7 @@ function runJavaBenchmark(dir: string): void {
   const ruleConfigFile = path.join(path.resolve(dir), '../../rule_config_xast_java.json')
   const repoName = path.basename(dir)
   const expectPath = path.join(dir, '..', '..', 'expect', `${repoName}-expect.result`)
-  
+
   // 先同步读取期望结果，用于注册测试用例
   let expectedResForRegistration: any = null
   let expectedResMapForRegistration: Map<string, any> = new Map()
@@ -21,7 +23,7 @@ function runJavaBenchmark(dir: string): void {
     expectedResForRegistration = readExpectRes(expectPath)
     expectedResMapForRegistration = resolveFindingResult(expectedResForRegistration)
   }
-  
+
   describe(description, function () {
     this.timeout(0)
     let result: any
@@ -29,14 +31,16 @@ function runJavaBenchmark(dir: string): void {
     let actualRes: any
     let expectedResMap: Map<string, any>
     let actualResMap: Map<string, any>
+    let accuracyStats: AccuracyStats | null = null
     let benchmarkReady = false
-    
+
     before(async function () {
       result = await getRunJavaBenchmarkResult(dir)
       expectedRes = result.expectedRes
       actualRes = result.actualRes
       expectedResMap = result.expectedResMap
       actualResMap = result.actualResMap
+      accuracyStats = result.accuracyStats
       benchmarkReady = true
     })
 
@@ -48,7 +52,7 @@ function runJavaBenchmark(dir: string): void {
       logger.info(actualRes)
       assert.strictEqual(actualRes, expectedRes, '当前靶场扫描结果与历史预期不一致,请逐个核对链路')
     })
-    
+
     // 使用预先读取的期望结果注册测试用例
     let i = 1
     expectedResMapForRegistration.forEach((value, key) => {
@@ -83,6 +87,20 @@ function runJavaBenchmark(dir: string): void {
         assert.fail(`new chain:${addChains.length}`)
       }
     })
+
+    it(`trace accuracy`, function () {
+      if (!benchmarkReady || !accuracyStats) {
+        this.skip()
+        return
+      }
+      const pct =
+        accuracyStats.evaluableHops > 0
+          ? ((accuracyStats.accurateHops / accuracyStats.evaluableHops) * 100).toFixed(2)
+          : 'N/A'
+      logger.info(
+        `=== Trace Accuracy [Java Benchmark]: ${pct}% (${accuracyStats.accurateHops}/${accuracyStats.evaluableHops} hops, ${accuracyStats.totalFindings} findings) ===`
+      )
+    })
   })
 }
 
@@ -91,9 +109,11 @@ async function getRunJavaBenchmarkResult(dir: string): Promise<{
   actualRes: any
   expectedResMap: Map<string, any>
   actualResMap: Map<string, any>
+  accuracyStats: AccuracyStats | null
 }> {
   const ruleConfigFile = path.join(path.resolve(dir), '../../rule_config_xast_java.json')
   const repoName = path.basename(dir)
+  const reportDir = path.join(__dirname, 'report')
 
   const expectPath = path.join(dir, '..', '..', 'expect', `${repoName}-expect.result`)
   let expectedRes: any, actualRes: any, expectedResMap: Map<string, any>, actualResMap: Map<string, any>
@@ -108,6 +128,8 @@ async function getRunJavaBenchmarkResult(dir: string): Promise<{
     'SpringAnalyzer',
     '--checkerPackIds',
     'taint-flow-java-inner',
+    '--report',
+    reportDir,
   ]
   await (async () => {
     try {
@@ -128,11 +150,20 @@ async function getRunJavaBenchmarkResult(dir: string): Promise<{
   expectedResMap = resolveFindingResult(expectedRes)
   actualResMap = resolveFindingResult(actualRes)
 
+  // 计算 trace 准确率
+  let accuracyStats: AccuracyStats | null = null
+  const sarifPath = path.join(reportDir, 'report.sarif')
+  if (fs.existsSync(sarifPath)) {
+    const sarifData = JSON.parse(fs.readFileSync(sarifPath, 'utf-8'))
+    accuracyStats = computeAccuracyFromSarif(sarifData)
+  }
+
   return {
     expectedRes,
     actualRes,
     expectedResMap,
     actualResMap,
+    accuracyStats,
   }
 }
 

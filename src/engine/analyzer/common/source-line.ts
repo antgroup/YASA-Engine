@@ -11,6 +11,10 @@ const VariableUtil = require('../../../util/variable-util')
 // 全局 analyzer 引用，用于访问 sourceCodeCache
 let globalAnalyzer: any = null
 
+// 无 analyzer 场景（如 dumpAllAST）共享的模块级单例 cache
+// 不能每次 new 一个新 Map，否则 storeCode 写入和 getCodeByLocation 读取用的是不同实例
+const fallbackSourceCodeCache: Map<string, string[]> = new Map<string, string[]>()
+
 /**
  * 设置全局 analyzer 实例
  * @param analyzer analyzer 实例
@@ -35,9 +39,11 @@ function getSourceCodeCache(): Map<string, string[]> {
   if (globalAnalyzer && globalAnalyzer.sourceCodeCache instanceof Map) {
     return globalAnalyzer.sourceCodeCache
   }
-  // 如果没有全局 analyzer，返回一个临时的 Map（向后兼容）
+  // 没有全局 analyzer 时（如 dumpAllAST），使用模块级单例 Map
+  // 修复：之前每次 new Map 导致 storeCode 写入和后续读取用的是不同实例，
+  // 使 addNodeHash 拿不到源码，走 prettyPrint fallback，与 analyzer 路径产生 hash 不一致
   if (!globalAnalyzer) {
-    return new Map<string, string[]>()
+    return fallbackSourceCodeCache
   }
   // 如果 sourceCodeCache 不是 Map，转换为 Map
   if (
@@ -56,7 +62,7 @@ function getSourceCodeCache(): Map<string, string[]> {
     globalAnalyzer.sourceCodeCache = map
     return map
   }
-  return new Map<string, string[]>()
+  return fallbackSourceCodeCache
 }
 
 

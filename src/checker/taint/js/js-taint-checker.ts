@@ -10,6 +10,7 @@ const constValue = require('../../../util/constant')
 const commonUtil = require('../../../util/common-util')
 const loader = require('../../../util/loader')
 const { matchSinkAtFuncCall } = require('../common-kit/sink-util')
+const { getOrBuildCallInfo } = require('../common-kit/call-info-util')
 const QidUnifyUtil = require('../../../util/qid-unify-util')
 const TaintChecker = require('../taint-checker')
 const config = require('../../../config')
@@ -211,6 +212,24 @@ class JsTaintChecker extends TaintChecker {
   }
 
   /**
+   * NewExpression 构造器调用后触发 sink 匹配，语义对齐 triggerAtFunctionCallBefore。
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
+    if (config.analyzer !== 'JavaScriptAnalyzer') {
+      return
+    }
+    const { fclos } = info
+    const callInfo = getOrBuildCallInfo(info)
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
+    this.checkByFieldMatch(node, fclos, callInfo, scope, state)
+  }
+
+  /**
    *
    * @param analyzer
    * @param scope
@@ -259,7 +278,8 @@ class JsTaintChecker extends TaintChecker {
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -270,7 +290,8 @@ class JsTaintChecker extends TaintChecker {
             TAINT_TAG_NAME_JS_TAINT,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
@@ -334,8 +355,7 @@ class JsTaintChecker extends TaintChecker {
         CallObj = CallFull.substring(0, lastIndexofCall)
       }
       if (CallObj !== RuleObj) {
-        const idx = CallObj.lastIndexOf('(')
-        const result = idx !== -1 ? CallObj.slice(0, idx) : CallObj
+        const result = QidUnifyUtil.removeParenthesesFromString(CallObj)
         if (result !== RuleObj) {
           if (!result.endsWith(`.${RuleObj}`) && !result.startsWith(`${RuleObj}.`)) {
             return false
@@ -372,7 +392,8 @@ class JsTaintChecker extends TaintChecker {
             const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
             let ruleName = rule.fsig
             if (typeof rule.attribute !== 'undefined') {
-              ruleName += `\n` + `SINK Attribute: ${rule.attribute}`
+              const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+              ruleName += `\n` + `SINK Attribute: ${attrStr}`
             }
             const taintFlowFinding = this.buildTaintFinding(
               this.getCheckerId(),
@@ -383,7 +404,8 @@ class JsTaintChecker extends TaintChecker {
               TAINT_TAG_NAME_JS_TAINT,
               ruleName,
               matchedSanitizerTags,
-              state?.callstack
+              state?.callstack,
+              state?.callsites
             )
 
             if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue

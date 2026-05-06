@@ -18,6 +18,14 @@ interface BenchmarkRepoUrls {
 }
 
 const JS_ALL_BENCHMARK_REPO_URLS: BenchmarkRepoUrls = {
+  yasaNodeJsBenchmark: {
+    gitRepoUrl: 'git@code.alipay.com:jiufo_test/yasaNodeJsBenchmark.git',
+    branch: 'master',
+  },
+  chairbenchmark: {
+    gitRepoUrl: 'git@code.alipay.com:jiufo_test/chairbenchmark.git',
+    branch: 'master',
+  },
   jsbenchmark: {
     gitRepoUrl: XAST_JS_BENCHMARK_REPO_URL,
     branch: 'main-forYasaTest',

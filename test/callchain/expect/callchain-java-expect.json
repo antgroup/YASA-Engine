@@ -12,7 +12,7 @@
       },
       "sinkInfo": {
         "sinkRule": "executeQuery",
-        "sinkAttribute": "JavaSQLInjection",
+        "sinkAttribute": ["JavaSQLInjection"],
         "callSite": {
           "code": "            stmt.executeQuery(query);",
           "file": "/TestCallchain.java",
@@ -67,7 +67,7 @@
       },
       "sinkInfo": {
         "sinkRule": "exec",
-        "sinkAttribute": "JavaCommandExec",
+        "sinkAttribute": ["JavaCommandExec"],
         "callSite": {
           "code": "            Runtime.getRuntime().exec(command);",
           "file": "/TestCallchain.java",

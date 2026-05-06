@@ -9,10 +9,12 @@ const {
   matchSinkAtFuncCallWithCalleeType: matchSinkAtFuncCallWithCalleeTypeJava,
   checkInvocationMatchSink,
 } = require('../common-kit/sink-util')
+const { getOrBuildCallInfo: getOrBuildCallInfoJava } = require('../common-kit/call-info-util')
 const RulesJava = require('../../common/rules-basic-handler')
 const SanitizerCheckerJava = require('../../sanitizer/sanitizer-checker')
 const TaintOutputStrategyJava = require('../../common/output/taint-output-strategy')
 
+const { satisfy, defaultFilter } = require('../../../util/ast-util')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
 
@@ -290,6 +292,21 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
   }
 
   /**
+   * NewExpression 构造器调用后触发 sink 匹配，语义对齐 triggerAtFunctionCallBefore。
+   * 兼容 legacy payload（argvalues）：common analyzer 已传 callInfo，其它 analyzer 兜底转换。
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
+    const { fclos } = info
+    const callInfo = getOrBuildCallInfoJava(info)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state, info, analyzer)
+  }
+
+  /**
    * check if sink or not by name and class
    * @param node
    * @param fclos
@@ -356,12 +373,50 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
         sanitizers
       )
       if (ndResultWithMatchedSanitizerTagsArray) {
+        // precondition 检查：sink rule 声明了 preconditionIds 时，taint 上命中任一 precondition tag（OR 语义）即保留 finding
+        const preconditionIds: string[] | undefined = rule.preconditionIds
+        if (preconditionIds && preconditionIds.length > 0) {
+          // 从 args 的 taint flow 中收集所有 tags，用于 precondition 匹配
+          const allTaintTags: unknown[] = []
+          const fCollectTags = (nd: { taint?: { tags?: unknown[]; tagTraces?: Map<string, unknown> } }): boolean => {
+            const tagTraceMap = nd?.taint?.tagTraces
+            if (!(tagTraceMap instanceof Map)) return false
+            return tagTraceMap.has(TAINT_TAG_NAME_JAVA)
+          }
+          const collectCallback = (nd: { taint?: { getTags?: () => unknown[] } }, _from: unknown, parentMap: WeakMap<object, object>): void => {
+            // 收集当前 nd 及其 parent 链上所有节点的 taint tags
+            const parentNdList: Array<{ taint?: { getTags?: () => unknown[] } }> = []
+            let currentNd: { taint?: { getTags?: () => unknown[] } } | undefined = nd
+            while (currentNd) {
+              if (parentNdList.includes(currentNd)) break
+              parentNdList.push(currentNd)
+              currentNd = parentMap.get(currentNd as object) as { taint?: { getTags?: () => unknown[] } } | undefined
+            }
+            for (const parentNd of parentNdList) {
+              // getTags() 返回 tagTraces 的 key 列表（含 SanitizerTag 对象）
+              const tags = parentNd.taint?.getTags?.()
+              if (tags && tags.length > 0) {
+                allTaintTags.push(...tags)
+              }
+            }
+          }
+          satisfy(args, fCollectTags, defaultFilter, undefined, true, 30, collectCallback)
+
+          const matchedPreconditionTags = SanitizerCheckerJava.findMatchedPreconditionTags(preconditionIds, allTaintTags)
+          // 多个 preconditionIds 采用 OR 语义：任一命中即保留 finding
+          const matchedIds = new Set(matchedPreconditionTags.map((t: { id?: string }) => t.id))
+          if (matchedIds.size === 0) {
+            continue
+          }
+        }
+
         for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
           const { nd } = ndResultWithMatchedSanitizerTags
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -372,7 +427,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
             TAINT_TAG_NAME_JAVA,
             ruleName,
             matchedSanitizerTags,
-            state.callstack
+            state.callstack,
+            state.callsites
           )
           if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyJava.outputStrategyId)
@@ -535,7 +591,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
             const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
             let ruleName = rule.fsig
             if (typeof rule.attribute !== 'undefined') {
-              ruleName += `\nSINK Attribute: ${rule.attribute}`
+              const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+              ruleName += `\nSINK Attribute: ${attrStr}`
             }
             const taintFlowFinding = this.buildTaintFinding(
               this.getCheckerId(),
@@ -546,7 +603,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
               TAINT_TAG_NAME_JAVA,
               ruleName,
               matchedSanitizerTags,
-              state.callstack
+              state.callstack,
+              state.callsites
             )
 
             if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue

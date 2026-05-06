@@ -5,6 +5,7 @@ import {
   getBoundCallFromInfo,
   type CallInfo,
 } from '../../engine/analyzer/common/call-args'
+import type { Precondition } from './value/precondition'
 
 const _ = require('lodash')
 const config = require('../../config')
@@ -72,6 +73,9 @@ function normalizeSelectors(
 let rules: any[]
 let preprocessReady: boolean = false
 
+/** 全局 precondition 存储，按 id 索引 */
+let preconditionMap: Map<string, Precondition> | undefined
+
 function normalizeTraceStrategy(strategy: any): string | undefined {
   if (strategy === 'folded') return 'callstack-only'
   if (strategy === 'callstack-only' || strategy === 'full') return strategy
@@ -82,7 +86,7 @@ function normalizeTraceStrategy(strategy: any): string | undefined {
  *
  * @param ruleConfigPath
  */
-function getRules(ruleConfigPath: string): any[] {
+function getRules(ruleConfigPath?: string): any[] {
   if (!rules) {
     try {
       if (ruleConfigPath) {
@@ -96,7 +100,7 @@ function getRules(ruleConfigPath: string): any[] {
         `Error in rule-basic-handler.getRules: json in ruleConfig is not correct, path is ${ruleConfigPath || config.ruleConfigFile}`,
         `Error in rule-basic-handler.getRules: json in ruleConfig is not correct, path is ${ruleConfigPath || config.ruleConfigFile}`
       )
-      process.exit(1)
+      throw new Error(`Failed to parse ruleConfig JSON: ${ruleConfigPath || config.ruleConfigFile}`)
     }
   }
   if (!rules) {
@@ -221,7 +225,7 @@ function initRules(): void {
  * @param i
  * @returns {boolean}
  */
-function matchField(node: any, marray: string[], i: number): boolean {
+export function matchField(node: any, marray: string[], i: number): boolean {
   /**
    *
    * @param el
@@ -235,6 +239,43 @@ function matchField(node: any, marray: string[], i: number): boolean {
         return false
       }
     } else return name === el
+  }
+
+  /**
+   * CallExpression 分支：链式调用中段匹配
+   * callee 是 MemberAccess 时，匹配方法名后 i===0 即成功（根对象任意），否则递归 callee.object
+   * callee 是 Identifier 时，匹配名称并要求 i===0
+   * @param el 当前待匹配的 fsig 段
+   * @param callNode CallExpression 节点
+   * @param segments fsig 段数组
+   * @param idx 当前段索引
+   * @returns {boolean} 是否匹配
+   */
+  function matchCallExpression(el: string, callNode: any, segments: string[], idx: number): boolean {
+    const { callee } = callNode
+    if (callee?.type === 'MemberAccess') {
+      if (!matchPrefix(el, callee.property?.name)) return false
+      if (idx === 0) return true
+      return matchField(callee.object, segments, idx - 1)
+    }
+    if (callee?.type === 'Identifier') {
+      return matchPrefix(el, callee.name) && idx === 0
+    }
+    return false
+  }
+
+  /**
+   * NewExpression 分支：构造器调用
+   * `new` 本身不占 fsig 段，直接把 callee（类名 Identifier 或 FQN MemberAccess）透传给 matchField
+   * 语义：fsig "Foo" 匹配 `new Foo(x)` 里的 Foo；fsig "java.io.File" 匹配 `new java.io.File(x)`
+   * @param el 当前待匹配的 fsig 段（由被调用方读取，本函数不消费）
+   * @param newNode NewExpression 节点
+   * @param segments fsig 段数组
+   * @param idx 当前段索引（透传，不 -1）
+   * @returns {boolean} 是否匹配
+   */
+  function matchNewExpression(el: string, newNode: any, segments: string[], idx: number): boolean {
+    return matchField(newNode.callee, segments, idx)
   }
 
   const el = marray[i]
@@ -253,8 +294,15 @@ function matchField(node: any, marray: string[], i: number): boolean {
     case 'ThisExpression': {
       return matchPrefix(el, 'this') && i === 0
     }
+    case 'CallExpression': {
+      return matchCallExpression(el, node, marray, i)
+    }
+    case 'NewExpression': {
+      return matchNewExpression(el, node, marray, i)
+    }
+    default:
+      return false
   }
-  return false
 }
 
 /**
@@ -320,6 +368,63 @@ function getFinding(type: string, description: string, node: any, argNode?: any)
 }
 
 /**
+ * 从所有规则中加载 preconditions 配置，构建全局索引
+ */
+function loadAndStoreAllPreconditions(): void {
+  if (preconditionMap) {
+    return
+  }
+  preconditionMap = new Map()
+  if (Array.isArray(getRules()) && getRules().length > 0) {
+    for (const rule of getRules()) {
+      if (Array.isArray(rule.preconditions)) {
+        for (const precondition of rule.preconditions) {
+          if (precondition.id) {
+            preconditionMap.set(precondition.id, precondition as Precondition)
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * 根据 id 列表查找 precondition 定义
+ */
+function findPreconditionByIds(ids: string[]): Precondition[] {
+  const result: Precondition[] = []
+  if (!ids || ids.length === 0) {
+    return result
+  }
+  if (!preconditionMap) {
+    loadAndStoreAllPreconditions()
+  }
+  if (!preconditionMap) {
+    return result
+  }
+  for (const id of ids) {
+    const p = preconditionMap.get(id)
+    if (p) {
+      result.push(p)
+    }
+  }
+  return result
+}
+
+/**
+ * 获取所有已加载的 preconditions
+ */
+function findAllPreconditions(): Precondition[] {
+  if (!preconditionMap) {
+    loadAndStoreAllPreconditions()
+  }
+  if (!preconditionMap) {
+    return []
+  }
+  return Array.from(preconditionMap.values())
+}
+
+/**
  *
  * @type {{getRule: (function(*, *): *), compileAttackTrace: *, introduceTaint: introduceTaint}}
  */
@@ -333,4 +438,7 @@ module.exports = {
   prepareArgsByType,
   matchPackageValueSink,
   getFinding,
+  loadAndStoreAllPreconditions,
+  findPreconditionByIds,
+  findAllPreconditions,
 }

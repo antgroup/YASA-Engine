@@ -157,6 +157,10 @@ class CheckerManager {
           }
         }
       }
+      // 0 个 checker 加载成功时抛出异常，无法继续分析
+      if (loadCheckerNames.length === 0) {
+        throw new Error('No checker loaded successfully, cannot proceed with analysis')
+      }
       const checkerCount = loadCheckerNames.length
       yasaLog(`Successfully loaded ${checkerCount} checker(s): [${loadCheckerNames.join(', ')}]`, 'init')
     } catch (e) {

@@ -71,7 +71,7 @@ function getEggHttpEntryPointsAndSources(fileManager: FileManager, analyzer: any
       continue
     }
     EggRouterVisitor.routerList = []
-    astUtil.visit(analyzer.symbolTable.get(fileManager[routerFile]).ast?.node, EggRouterVisitor)
+    astUtil.visit(fileManager[routerFile].astNode, EggRouterVisitor)
     uastUrlInfoList.push(...EggRouterVisitor.routerList)
   }
   if (uastUrlInfoList.length <= 0) {
@@ -87,7 +87,7 @@ function getEggHttpEntryPointsAndSources(fileManager: FileManager, analyzer: any
         uastUrlInfo.relativePath =
           filePath.indexOf('/app/') !== -1 ? filePath.slice(filePath.indexOf('/app/')) : filePath
         EggMethodVisitor.uastUrlInfo = uastUrlInfo
-        astUtil.visit(analyzer.symbolTable.get(fileManager[filePath]).ast?.node, EggMethodVisitor)
+        astUtil.visit(fileManager[filePath].astNode, EggMethodVisitor)
       }
     }
   }
@@ -136,7 +136,7 @@ function calcRouterFileList(fileManager: FileManager, analyzer: any): string[] {
   const routerFileList: string[] = []
 
   for (const file of Object.getOwnPropertyNames(fileManager)) {
-    const codeContent = astUtil.prettyPrintAST(analyzer.symbolTable.get(fileManager[file]).ast?.node)
+    const codeContent = astUtil.prettyPrintAST(fileManager[file].astNode)
     for (const method of httpMethodList) {
       if (codeContent.includes(`.${method}(`)) {
         routerFileList.push(file)

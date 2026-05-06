@@ -1,0 +1,158 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_test"
+    ],
+    "sources": {
+      "TaintSource": [
+        {
+          "path": "__taint_src"
+        },
+        {
+          "path": "_POST"
+        },
+        {
+          "path": "_GET"
+        },
+        {
+          "path": "_REQUEST"
+        },
+        {
+          "path": "_COOKIE"
+        },
+        {
+          "path": "_SERVER"
+        },
+        {
+          "path": "_SESSION"
+        }
+      ]
+    },
+    "sanitizers": {
+      "FunctionCallSanitizer": [
+        {
+          "fsig": "validateTaint",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R",
+            "P0"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "htmlspecialchars",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "htmlentities",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "intval",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "escapeshellarg",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "escapeshellcmd",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "addslashes",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "strip_tags",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "str_replace",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        },
+        {
+          "fsig": "strlen",
+          "args": [
+            "*"
+          ],
+          "from": "P0",
+          "to": [
+            "R"
+          ],
+          "isContinue": true
+        }
+      ]
+    },
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "fsig": "__taint_sink",
+          "args": [
+            0
+          ],
+          "sanitizerIds": ["htmlspecialchars", "htmlentities", "intval", "escapeshellarg", "escapeshellcmd", "addslashes", "strip_tags", "str_replace", "strlen"]
+        }
+      ]
+    }
+  }
+]

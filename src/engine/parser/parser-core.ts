@@ -9,7 +9,9 @@ const AstUtil = require('../../util/ast-util')
 const SourceLine = require('../analyzer/common/source-line')
 const { Errors } = require('../../util/error-code')
 const { addNodeHash } = require('../../util/ast-util')
+const { getGlobalASTManager } = require('../../util/global-registry')
 const { md5 } = require('../../util/hash-util')
+const { handleException } = require('../analyzer/common/exception-handler')
 const logger = require('../../util/logger')(__filename)
 
 // 语言解析器配置接口
@@ -31,6 +33,7 @@ const parsers: Record<string, ((code: string, options: Record<string, any>) => a
   js: null,
   python: null,
   golang: null,
+  php: null,
 }
 
 /**
@@ -80,6 +83,12 @@ function getParser(language: string): ((code: string, options: Record<string, an
       parsers.golang = parser
       break
     }
+    case 'php': {
+      const PhpParser = require('./php/php-ast-builder')
+      parser = (c: string, opts: Record<string, any>) => PhpParser.parseSingleFile(c, opts)
+      parsers.php = parser
+      break
+    }
     default:
       throw new Error(`Unsupported language: ${language}`)
   }
@@ -125,6 +134,38 @@ function hasValidNodeHash(ast: any, expectedSourcefile: string): boolean {
 }
 
 /**
+ * 遍历 AST 树，将已有 nodehash 的节点注册到 astManager（不重新计算 hash）
+ * 用于 Worker 子进程返回的 AST：hash 已在子进程计算，但未注册到主进程 astManager
+ */
+function registerExistingHashes(obj: any, astManager: any, visited?: Set<any>): void {
+  if (!obj || typeof obj !== 'object') return
+  if (!visited) visited = new Set()
+  if (visited.has(obj)) return
+  visited.add(obj)
+
+  if (obj._meta?.nodehash) {
+    astManager.register(obj)
+  }
+
+  for (const key in obj) {
+    if (key === 'parent') continue
+    if (key === '_meta') {
+      if (Array.isArray(obj._meta?.annotations) && obj._meta.annotations.length > 0) {
+        for (const ann of obj._meta.annotations) registerExistingHashes(ann, astManager, visited)
+      }
+      if (Array.isArray(obj._meta?.decorators) && obj._meta.decorators.length > 0) {
+        for (const dec of obj._meta.decorators) registerExistingHashes(dec, astManager, visited)
+      }
+      continue
+    }
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue
+    const subObj = obj[key]
+    if (!subObj || typeof subObj !== 'object') continue
+    registerExistingHashes(subObj, astManager, visited)
+  }
+}
+
+/**
  * AST 后处理：设置 sourcefile、添加 parent 指针、添加节点哈希
  *
  * 重要：此函数会为 AST 添加 parent 属性
@@ -151,20 +192,36 @@ function processAst(
   const fname = code != null ? SourceLine.storeCode(options?.sourcefile, code) : options?.sourcefile || ''
 
   if (shouldSetSourcefile) {
-    // annotateAST 会调用 adjustASTNode，为所有节点添加 parent 指针
-    AstUtil.annotateAST(ast, options ? { sourcefile: fname } : null)
-    if (!ast.loc) ast.loc = {}
-    ast.loc.sourcefile = fname
+    try {
+      // annotateAST 会调用 adjustASTNode，为所有节点添加 parent 指针
+      AstUtil.annotateAST(ast, options ? { sourcefile: fname } : null)
+      if (!ast.loc) ast.loc = {}
+      ast.loc.sourcefile = fname
+    } catch (e) {
+      handleException(e, `[processAst] annotateAST 失败: ${fname}`, `[processAst] annotateAST 失败: ${fname}`)
+    }
   } else {
-    // 即使不设置 sourcefile，也会添加 parent 指针
-    AstUtil.annotateAST(ast, { skipSourcefile: true })
+    try {
+      // 即使不设置 sourcefile，也会添加 parent 指针
+      AstUtil.annotateAST(ast, { skipSourcefile: true })
+    } catch (e) {
+      handleException(e, `[processAst] annotateAST 失败: ${fname}`, `[processAst] annotateAST 失败: ${fname}`)
+    }
   }
 
-  if (skipHashIfExists && hasValidNodeHash(ast, fname)) {
-    // hash 已存在且有效（sourcefile 匹配），跳过重新计算
-    // 这样可以避免对缓存加载的 AST 重复计算 hash，显著提升性能
-  } else {
-    addNodeHash(ast)
+  try {
+    if (skipHashIfExists && hasValidNodeHash(ast, fname)) {
+      // hash 已存在且有效，跳过重新计算，但补注册到 astManager
+      // Worker 子进程计算了 hash 但无法注册（子进程没有 astManager），主进程需要补注册
+      const astManager = getGlobalASTManager()
+      if (astManager) {
+        registerExistingHashes(ast, astManager)
+      }
+    } else {
+      addNodeHash(ast)
+    }
+  } catch (e) {
+    handleException(e, `[processAst] addNodeHash 失败: ${fname}`, `[processAst] addNodeHash 失败: ${fname}`)
   }
 
   return ast
@@ -438,8 +495,12 @@ function processProjectAst(
   }
 
   for (const { ast, filename } of astList) {
-    const sourceCode = sourceCodeCache[filename] || null
-    processParsedAst(ast, sourceCode, { sourcefile: filename, ...options }, config)
+    try {
+      const sourceCode = sourceCodeCache[filename] || null
+      processParsedAst(ast, sourceCode, { sourcefile: filename, ...options }, config)
+    } catch (e) {
+      handleException(e, `[processProjectAst] 文件后处理失败: ${filename}`, `[processProjectAst] 文件后处理失败: ${filename}`)
+    }
   }
 }
 

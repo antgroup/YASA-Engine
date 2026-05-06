@@ -19,12 +19,7 @@ let uastFilePath = './uast.json'
 function buildUASTGo(rootDir: any, options: Record<string, any>) {
   options = options || {}
   if (options.language && options.language !== LanguageType.LANG_GO && options.language !== 'golang') {
-    handleException(
-      new Error(`Go AST Builder received wrong language type: ${options.language}`),
-      `Error: Go AST Builder received wrong language type: ${options.language}`,
-      `Error: Go AST Builder received wrong language type: ${options.language}`
-    )
-    process.exit(1)
+    throw new Error(`Go AST Builder received wrong language type: ${options.language}`)
   }
 
   let isSingle = ''
@@ -43,12 +38,7 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
 
   // if uast4goPath does not exist, exit with error
   if (!uast4go_path || !fs.existsSync(uast4go_path)) {
-    handleException(
-      null,
-      `uast4go not found. Please set --uastSDKPath to the binary or deps directory, or install it under deps/uast4go/uast4go`,
-      `uast4go not found. Please set --uastSDKPath to the binary or deps directory, or install it under deps/uast4go/uast4go`
-    )
-    process.exit(1)
+    throw new Error('uast4go binary not found, please check uastSDKPath configuration')
   }
 
   if (options.ASTFileOutput) {

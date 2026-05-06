@@ -13,6 +13,7 @@ type ErrorConstructor = (message: string, headMsg?: string, opts?: { no_throw?: 
 
 const ErrorCode = {
   normal: 0,
+  config_error: 10,
 
   no_valid_source_file: 11,
   fail_to_parse: 12,
@@ -25,6 +26,8 @@ const ErrorCode = {
 
   toString(code: number): string {
     switch (code) {
+      case 10:
+        return 'configuration or parameter error'
       case 11:
         return 'no valid source file is found within the given directory'
       case 12:
@@ -215,4 +218,12 @@ function errorTolerance(err: Error): boolean {
   return !(builtin_error_report || base_error_report)
 }
 
-export { Errors, ErrorCode, BaseError }
+/**
+ * 安全设置退出码：非零退出码不会被零覆盖
+ */
+function setExitCode(code: number): void {
+  if (code === 0 && process.exitCode && process.exitCode !== 0) return
+  process.exitCode = code
+}
+
+export { Errors, ErrorCode, BaseError, setExitCode }
