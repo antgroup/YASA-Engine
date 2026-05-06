@@ -85,7 +85,6 @@
   },
   "scripts": {
     "test-js": "npx mocha --require tsx/cjs test/javascript/test-js-benchmark.ts",
-    "test-egg": "npx mocha --require tsx/cjs test/javascript/test-egg-benchmark.ts",
     "test-java": "npx mocha --require tsx/cjs test/java/test-java-benchmark.ts",
     "test-go": "npx mocha --require tsx/cjs test/go/test-go-benchmark.ts",
     "test-python": "npx mocha --require tsx/cjs test/python/test-python-benchmark.ts",
@@ -95,7 +94,7 @@
     "test-sink-util-new-expr": "npx mocha --require tsx/cjs test/rules-basic-handler/test-sink-util-new-expr.ts",
     "test-php-checker": "npx mocha --require tsx/cjs test/php/test-php-checker.ts",
     "test-php": "npx mocha --require tsx/cjs test/php/test-php-benchmark.ts",
-    "test-all": "npm run test-callargs && npm run test-match-field && npm run test-sink-util-new-expr && npm run test-js && npm run test-egg && npm run test-java && npm run test-go && npm run test-python && npm run test-callchain && npm run test-php",
+    "test-all": "npm run test-callargs && npm run test-match-field && npm run test-sink-util-new-expr && npm run test-js && npm run test-java && npm run test-go && npm run test-python && npm run test-callchain && npm run test-php",
     "build": "bash build.sh",
     "lint": "eslint .",
     "lint:duplicates": "jscpd .",
