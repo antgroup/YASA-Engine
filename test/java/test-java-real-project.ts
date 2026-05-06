@@ -2,8 +2,6 @@ import path from 'path'
 import fs from 'fs'
 import { before, describe, it } from 'mocha'
 import assert from 'assert'
-// @ts-ignore
-import { computeAccuracyFromSarif, AccuracyStats } from '../trace-accuracy'
 const { execute } = require('../../src/interface/starter')
 const { handleException } = require('../../src/engine/analyzer/common/exception-handler')
 const { ErrorCode } = require('../../src/util/error-code')
@@ -28,7 +26,6 @@ function runSingleProject(dir: string, ruleConfigFile: string, expectPath: strin
     let actualRes: any
     let expectedResMap: Map<string, any>
     let actualResMap: Map<string, any>
-    let accuracyStats: AccuracyStats | null = null
     let benchmarkReady = false
 
     before(async function () {
@@ -37,7 +34,6 @@ function runSingleProject(dir: string, ruleConfigFile: string, expectPath: strin
       actualRes = result.actualRes
       expectedResMap = result.expectedResMap
       actualResMap = result.actualResMap
-      accuracyStats = result.accuracyStats
       benchmarkReady = true
     })
 
@@ -84,20 +80,6 @@ function runSingleProject(dir: string, ruleConfigFile: string, expectPath: strin
         assert.fail(`new chain:${addChains.length}`)
       }
     })
-
-    it(`trace accuracy`, function () {
-      if (!benchmarkReady || !accuracyStats) {
-        this.skip()
-        return
-      }
-      const pct =
-        accuracyStats.evaluableHops > 0
-          ? ((accuracyStats.accurateHops / accuracyStats.evaluableHops) * 100).toFixed(2)
-          : 'N/A'
-      logger.info(
-        `=== Trace Accuracy [${repoName}]: ${pct}% (${accuracyStats.accurateHops}/${accuracyStats.evaluableHops} hops, ${accuracyStats.totalFindings} findings) ===`
-      )
-    })
   })
 }
 
@@ -121,10 +103,8 @@ async function getRunJavaBenchmarkResult(
   actualRes: any
   expectedResMap: Map<string, any>
   actualResMap: Map<string, any>
-  accuracyStats: AccuracyStats | null
 }> {
   const repoName = path.basename(dir)
-  const reportDir = path.join(__dirname, 'report', repoName)
 
   let expectedRes: any, actualRes: any, expectedResMap: Map<string, any>, actualResMap: Map<string, any>
   let recorder = recordFindingStr()
@@ -140,8 +120,6 @@ async function getRunJavaBenchmarkResult(
     'taint-flow-java-inner',
     '--entrypointMode',
     'ONLY_CUSTOM',
-    '--report',
-    reportDir,
   ]
   await (async () => {
     try {
@@ -162,20 +140,11 @@ async function getRunJavaBenchmarkResult(
   expectedResMap = resolveFindingResult(expectedRes)
   actualResMap = resolveFindingResult(actualRes)
 
-  // 计算 trace 准确率
-  let accuracyStats: AccuracyStats | null = null
-  const sarifPath = path.join(reportDir, 'report.sarif')
-  if (fs.existsSync(sarifPath)) {
-    const sarifData = JSON.parse(fs.readFileSync(sarifPath, 'utf-8'))
-    accuracyStats = computeAccuracyFromSarif(sarifData)
-  }
-
   return {
     expectedRes,
     actualRes,
     expectedResMap,
     actualResMap,
-    accuracyStats,
   }
 }
 
@@ -212,8 +181,8 @@ async function updateExpect(dir: string, ruleConfigFile: string, expectPath: str
   })
 }
 
-const dir = '/Users/jiufo/yasaaaaa/Code-Regression-Real/Normal'
-runMultiProject(dir)
+// const dir = ''
+// runMultiProject(dir)
 
 // const dir = ''
 // runSingleProject(dir, dir + '.json', dir + '.result')
