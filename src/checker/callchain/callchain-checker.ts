@@ -218,7 +218,7 @@ class CallchainChecker extends Checker {
         finding.sinkRule = arr[0]
       } else if (arr.length === 2) {
         finding.sinkRule = arr[0]
-        finding.sinkAttribute = arr[1]
+        finding.sinkAttribute = arr[1].split(',')
       }
 
       finding.sinkInfo = {
@@ -321,7 +321,8 @@ class CallchainChecker extends Checker {
   findArgsAndAddNewFinding(node: any, callInfo: CallInfo | undefined, fclos: any, rule: any, state: any) {
     let ruleName = (rule as any).fsig
     if (typeof (rule as any).attribute !== 'undefined') {
-      ruleName += `\nSINK Attribute: ${(rule as any).attribute}`
+      const attrStr = Array.isArray((rule as any).attribute) ? (rule as any).attribute.join(',') : (rule as any).attribute
+      ruleName += `\nSINK Attribute: ${attrStr}`
     }
     const callchainFinding = this.buildCallchainFinding(
       this.getCheckerId(),

@@ -54,8 +54,7 @@ class CheckerBase {
         }
       }
     } else if (!Array.isArray(ruleConfigContent)) {
-      handleException('', 'Error: ruleConfig must be an array!!', 'Error: ruleConfig must be an array!!')
-      process.exit(1)
+      throw new Error('ruleConfig must be an array')
     }
   }
 }

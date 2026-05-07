@@ -9,6 +9,7 @@ const Constant = require('../../../util/constant')
 const CommonUtil = require('../../../util/common-util')
 const Loader = require('../../../util/loader')
 const { matchSinkAtFuncCall } = require('../common-kit/sink-util')
+const { getOrBuildCallInfo: getOrBuildCallInfoEgg } = require('../common-kit/call-info-util')
 const Config = require('../../../config')
 const eggHttpEgg = require('../../../engine/analyzer/javascript/egg/entrypoint-collector/egg-http')
 const SanitizerCheckerEgg = require('../../sanitizer/sanitizer-checker')
@@ -246,6 +247,24 @@ class EggTaintChecker extends TaintCheckerEgg {
   }
 
   /**
+   * NewExpression 构造器调用后触发 sink 匹配，语义对齐 triggerAtFunctionCallBefore。
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
+    if (Config.analyzer !== 'EggAnalyzer') {
+      return
+    }
+    const { fclos } = info
+    const callInfo = getOrBuildCallInfoEgg(info)
+    this.checkSinkAtFunctionCall(node, fclos, callInfo, state)
+    this.checkByFieldMatch(node, fclos, callInfo, scope, state)
+  }
+
+  /**
    *
    * @param analyzer
    * @param scope
@@ -294,7 +313,8 @@ class EggTaintChecker extends TaintCheckerEgg {
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -305,7 +325,8 @@ class EggTaintChecker extends TaintCheckerEgg {
             TAINT_TAG_NAME_EGG,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
           if (!TaintOutputStrategyEgg.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyEgg.outputStrategyId)
@@ -369,8 +390,7 @@ class EggTaintChecker extends TaintCheckerEgg {
         CallObj = CallFull.substring(0, lastIndexofCall)
       }
       if (CallObj !== RuleObj) {
-        const idx = CallObj.lastIndexOf('(')
-        const result = idx !== -1 ? CallObj.slice(0, idx) : CallObj
+        const result = QidUnifyUtil.removeParenthesesFromString(CallObj)
         if (result !== RuleObj) {
           if (!result.endsWith(`.${RuleObj}`) && !result.startsWith(`${RuleObj}.`)) {
             return false
@@ -407,7 +427,8 @@ class EggTaintChecker extends TaintCheckerEgg {
             const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
             let ruleName = rule.fsig
             if (typeof rule.attribute !== 'undefined') {
-              ruleName += `\n` + `SINK Attribute: ${rule.attribute}`
+              const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+              ruleName += `\n` + `SINK Attribute: ${attrStr}`
             }
             const taintFlowFinding = this.buildTaintFinding(
               this.getCheckerId(),
@@ -418,7 +439,8 @@ class EggTaintChecker extends TaintCheckerEgg {
               TAINT_TAG_NAME_EGG,
               ruleName,
               matchedSanitizerTags,
-              state?.callstack
+              state?.callstack,
+              state?.callsites
             )
 
             if (!TaintOutputStrategyEgg.isNewFinding(this.resultManager, taintFlowFinding)) continue

@@ -15,6 +15,7 @@ test/javascript/benchmarks
 test/go/benchmarks
 test/python/benchmarks
 test/java/benchmarks
+test/php/benchmarks
 CNVD-*/
 TODO.md
 *.dot
@@ -50,4 +51,10 @@ src/uast
 deps-runtime/
 .cursorrules
 test/javascript/test-report
+test/trace-accuracy-reports
+test/java/report
+test/python/report
+test/javascript/report
+test/php/report
 deps
+node_modules

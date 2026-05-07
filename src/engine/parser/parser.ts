@@ -689,6 +689,25 @@ class BaseParser {
       },
       needsSourcefile: false,
     })
+
+    // 注册 PHP 解析器
+    this.registry.register({
+      language: 'php',
+      unit: 'file',
+      supportsIncremental: false,
+      parseAsFiles: true,
+      filePatterns: ['**/*.php'],
+      parseSingleFile: (code, options) => {
+        const PhpParser = require('./php/php-ast-builder')
+        return PhpParser.parseSingleFile(code, options)
+      },
+      parseProject: async (rootDir, options) => {
+        const PhpParser = require('./php/php-ast-builder')
+        await PhpParser.ensureInitialized()
+        return null
+      },
+      needsSourcefile: true,
+    })
   }
 
   /**
@@ -891,6 +910,11 @@ class BaseParser {
   ): Promise<{ result: Record<string, any> }> {
     const language = options.language!
     const enableIncremental = this.shouldEnableIncremental(language)
+
+    // parseAsFiles 模式下，先调用 config.parseProject 做语言特定的初始化（如 PHP tree-sitter WASM 加载）
+    if (config.parseProject) {
+      await config.parseProject(rootDir, options)
+    }
 
     performanceTracker.record('preProcess.parseCode.loadFiles').start()
     // 1. 先获取文件列表（使用 globby，只获取路径，不读取内容）

@@ -11,7 +11,7 @@
       },
       "sinkInfo": {
         "sinkRule": "cursor.execute",
-        "sinkAttribute": "PythonSQLInjection",
+        "sinkAttribute": ["PythonSQLInjection"],
         "callSite": {
           "code": "    cursor.execute(query)",
           "file": "/test_callchain.py",
@@ -65,7 +65,7 @@
       },
       "sinkInfo": {
         "sinkRule": "subprocess.call",
-        "sinkAttribute": "PythonCommandExec",
+        "sinkAttribute": ["PythonCommandExec"],
         "callSite": {
           "code": "    result = subprocess.call(command, shell=True)",
           "file": "/test_callchain.py",
@@ -119,7 +119,7 @@
       },
       "sinkInfo": {
         "sinkRule": "os.system",
-        "sinkAttribute": "PythonCommandExec",
+        "sinkAttribute": ["PythonCommandExec"],
         "callSite": {
           "code": "    os.system(command)",
           "file": "/test_callchain.py",
@@ -173,7 +173,7 @@
       },
       "sinkInfo": {
         "sinkRule": "eval",
-        "sinkAttribute": "PythonEvalInjection",
+        "sinkAttribute": ["PythonEvalInjection"],
         "callSite": {
           "code": "    eval(code)",
           "file": "/test_callchain.py",

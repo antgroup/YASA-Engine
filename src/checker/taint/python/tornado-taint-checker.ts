@@ -266,7 +266,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
-    if (Config.entryPointMode !== 'ONLY_CUSTOM' && isRequestAttributeAccess(node)) {
+    if (isRequestAttributeAccess(node)) {
       markTaintSource(info.res, { path: node, kind: 'PYTHON_INPUT' })
     }
   }

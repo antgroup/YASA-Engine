@@ -49,11 +49,24 @@ function deleteParent(node: any, visited = new Set()): void {
 /**
  * 处理解析任务（完整 parse + processAst，发送前删掉 parent 避免循环引用）
  */
+// PHP parser 需要异步初始化 tree-sitter WASM
+let phpInitialized = false
+async function ensurePhpParserReady(): Promise<void> {
+  if (phpInitialized) return
+  const PhpParser = require('./php/php-ast-builder')
+  await PhpParser.ensureInitialized()
+  phpInitialized = true
+}
+
 async function processParseTask(task: ParseTask): Promise<{ filepath: string; ast: any; error?: string }> {
   if (task.config.maindirPrefix !== undefined) {
     config.maindirPrefix = task.config.maindirPrefix
   }
   try {
+    // PHP 需要先异步初始化 tree-sitter WASM
+    if (task.language === 'php') {
+      await ensurePhpParserReady()
+    }
     const result = parseFileCore(task.filepath, task.content, task.language, task.options, task.config)
     deleteParent(result.ast)
     return result

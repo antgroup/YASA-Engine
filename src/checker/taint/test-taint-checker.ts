@@ -226,9 +226,12 @@ class TestTaintChecker extends TaintChecker {
         for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
           const { nd } = ndResultWithMatchedSanitizerTags
           const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
+          // sanitizer 匹配成功时跳过 finding（sanitizer 消毒生效，仅在 sink 规则配置了 sanitizerIds 时抑制）
+          if (rule.sanitizerIds?.length > 0 && matchedSanitizerTags && matchedSanitizerTags.length > 0) continue
           let ruleName = rule.fsig
           if (typeof rule.attribute !== 'undefined') {
-            ruleName += `\nSINK Attribute: ${rule.attribute}`
+            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+            ruleName += `\nSINK Attribute: ${attrStr}`
           }
           const taintFlowFinding = this.buildTaintFinding(
             this.getCheckerId(),
@@ -239,7 +242,8 @@ class TestTaintChecker extends TaintChecker {
             TAINT_TAG_NAME_TEST_TAINT,
             ruleName,
             matchedSanitizerTags,
-            state?.callstack
+            state?.callstack,
+            state?.callsites
           )
           if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)

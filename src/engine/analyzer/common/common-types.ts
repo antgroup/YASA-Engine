@@ -35,7 +35,7 @@ export interface TaintFinding {
   node?: any
   argNode?: any
   sinkRule?: string
-  sinkAttribute?: string
+  sinkAttribute?: string[]
   entrypoint?: any
   sinkInfo?: any
   format?: any

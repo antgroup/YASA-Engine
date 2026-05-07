@@ -349,9 +349,10 @@ function getAllFileEntryPointsUsingFileManager(analyzer: any): any[] {
   const entryPoints: any[] = []
   if (options.language === 'python' || options.language === 'javascript') {
     if (analyzer?.fileManager) {
-      Object.values(analyzer?.fileManager).forEach((fileUUid: any) => {
-        const file = analyzer.symbolTable.get(fileUUid)
-        if (!file.ast.node || file.ast.node.type !== 'CompileUnit') return
+      Object.values(analyzer?.fileManager).forEach((fileEntry: any) => {
+        const fileUuid = typeof fileEntry === 'string' ? fileEntry : fileEntry.uuid
+        const file = analyzer.symbolTable.get(fileUuid)
+        if (!file?.ast?.node || file.ast.node.type !== 'CompileUnit') return
         const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
@@ -420,15 +421,17 @@ function getEntryPointsUsingCallGraphByKeyWords(
       }
     }
 
-    for (const file of Object.values(fileManager)) {
-      // const file = fileManager[loc.sourcefile]
-      const content = sourceLine.getCodeBySourceFile((file as any)?.ast?.node?.loc?.sourcefile)
-      if (file && content.includes(keyword)) {
+    for (const fileEntry of Object.values(fileManager)) {
+      const fileUuid = typeof fileEntry === 'string' ? fileEntry : (fileEntry as any).uuid
+      const file = symbolTable?.get(fileUuid)
+      if (!file) continue
+      const content = sourceLine.getCodeBySourceFile(file?.ast?.node?.loc?.sourcefile)
+      if (content.includes(keyword)) {
         const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
         entryPoint.scopeVal = file
         entryPoint.argValues = undefined
         entryPoint.functionName = undefined
-        entryPoint.filePath = (file as any)?.ast?.node?.sourcefile || (file as any)?.ast?.node?.loc?.sourcefile
+        entryPoint.filePath = file?.ast?.node?.sourcefile || file?.ast?.node?.loc?.sourcefile
         entryPoint.attribute = 'FileEntryPointByLoc'
         entryPoint.packageName = undefined
         entryPoint.entryPointSymVal = file
@@ -486,17 +489,21 @@ function getEntryPointsUsingCallGraphByLoc(locs: any[], callGraph: any, fileMana
         }
       }
     } else {
-      const file = fileManager[loc.sourcefile]
-      if (file) {
-        const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
-        entryPoint.scopeVal = file
-        entryPoint.argValues = undefined
-        entryPoint.functionName = undefined
-        entryPoint.filePath = (file as any)?.ast?.node?.sourcefile || (file as any)?.ast?.node?.loc?.sourcefile
-        entryPoint.attribute = 'FileEntryPointByLoc'
-        entryPoint.packageName = undefined
-        entryPoint.entryPointSymVal = file
-        newEntryPointList.push(entryPoint)
+      const fileEntry = fileManager[loc.sourcefile]
+      if (fileEntry) {
+        const fileUuid = typeof fileEntry === 'string' ? fileEntry : (fileEntry as any).uuid
+        const file = symbolTable?.get(fileUuid)
+        if (file) {
+          const entryPoint = new EntryPoint(constValue.ENGIN_START_FILE_BEGIN)
+          entryPoint.scopeVal = file
+          entryPoint.argValues = undefined
+          entryPoint.functionName = undefined
+          entryPoint.filePath = file?.ast?.node?.sourcefile || file?.ast?.node?.loc?.sourcefile
+          entryPoint.attribute = 'FileEntryPointByLoc'
+          entryPoint.packageName = undefined
+          entryPoint.entryPointSymVal = file
+          newEntryPointList.push(entryPoint)
+        }
       }
     }
   }

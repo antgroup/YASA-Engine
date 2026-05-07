@@ -20,7 +20,9 @@ const {
 } = require('../../common')
 
 const constValue = require('../../../../util/constant')
+const Config = require('../../../../config')
 const { handleException } = require('../../common/exception-handler')
+const { ErrorCode } = require('../../../../util/error-code')
 const { eggSanityCheck } = require('../../../../util/framework-util')
 
 const load_mod_enum = {
@@ -50,6 +52,9 @@ class EggAnalyzer extends JsAnalyzer {
     Initializer.initGlobalScope(this.topScope)
     // prepare state
     this.state = this.initState(this.topScope)
+
+    // leoric ORM 适配：在 scanModules 之前初始化，使 import 能找到预置的 stub
+    Initializer.initLeoric(this.topScope.context.modules)
 
     // 1st process
     this.scanModules(dir)
@@ -140,8 +145,8 @@ class EggAnalyzer extends JsAnalyzer {
             }
           } else {
             const { filePath } = entryPoint
-            entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath])
-            entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath])
+            entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath].uuid)
+            entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath].uuid)
             try {
               this.processCompileUnit(
                 entryPoint.scopeVal,
@@ -401,7 +406,11 @@ class EggAnalyzer extends JsAnalyzer {
     // logger.debug('==========================================================\n');
 
     // parse & process unit, attach unit to top scope
-    const egg_app_path = path.join(dir, 'app')
+    // tegg 新目录结构用 src/，传统 egg 用 app/
+    let egg_app_path = path.join(dir, 'app')
+    if (!fs.existsSync(egg_app_path) && fs.existsSync(path.join(dir, 'src'))) {
+      egg_app_path = path.join(dir, 'src')
+    }
     const modules = FileUtil.loadAllFileTextGlobby(
       [
         '**/*.(js|ts|mjs|cjs)',
@@ -425,7 +434,8 @@ class EggAnalyzer extends JsAnalyzer {
         'find no target compileUnit of the project : no js/ts file found in source path',
         'find no target compileUnit of the project : no js/ts file found in source path'
       )
-      process.exit(1)
+      process.exitCode = ErrorCode.no_valid_source_file
+      return false
     }
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file)
@@ -504,10 +514,25 @@ class EggAnalyzer extends JsAnalyzer {
    * @param state
    */
   loadPredefinedModule(scope: any, fname: any, node: any, state: any) {
-    // TODO modeling module more precisely
-    // considering two aspect:
-    // 1. built-in module
-    // 2. importing from third party package in node_modules
+    // tsconfig paths 别名解析：@/ → app/
+    if (typeof fname === 'string' && fname.startsWith('@/')) {
+      const relativePath = fname.slice(2) // 去掉 @/
+      const basePath = path.join(Config.maindir, 'app', relativePath)
+      // 尝试带扩展名查找已加载的模块
+      const extensions = ['', '.ts', '.js', '.mjs', '.cjs']
+      for (const ext of extensions) {
+        const fullPath = basePath + ext
+        const m = this.topScope.context.modules.members.get(fullPath)
+        if (m && typeof m === 'object') return m
+      }
+      // 尝试 index 文件
+      const indexExts = ['/index.ts', '/index.js', '/index.mjs', '/index.cjs']
+      for (const ext of indexExts) {
+        const fullPath = basePath + ext
+        const m = this.topScope.context.modules.members.get(fullPath)
+        if (m && typeof m === 'object') return m
+      }
+    }
     return super.loadPredefinedModule(scope, fname, node, state)
   }
 }

@@ -1,5 +1,6 @@
 import type { Instruction } from '@ant-yasa/uast-spec'
 import SymAddress from '../../common/sym-address'
+import { AstRefList } from '../../common/value/ast-ref-list'
 import { BinaryExprValue } from '../../common/value/binary-expr'
 import type {
   Scope,
@@ -19,12 +20,13 @@ import type {
   MemberAccess,
   NewExpression,
   ReturnStatement,
+  TryStatement,
   VariableDeclaration,
   AssignmentExpression,
+  SpreadElement,
 } from '../../../../types/uast'
 
 const Uuid = require('node-uuid')
-const { floor } = require('lodash')
 const globby = require('fast-glob')
 const _ = require('lodash')
 const path = require('path')
@@ -271,6 +273,23 @@ class PythonAnalyzer extends Analyzer {
   }
 
   /**
+   * Python 的 **kwargs spread 在函数调用参数中需要保留 dict 的 key→value 结构，
+   * 基类 processSpreadElement 会将 dict 展平为独立值的 Set 丢失键名，
+   * 导致 resolveKwSpreadEntries 无法还原 keyword 参数绑定。
+   * 仅对函数调用参数直接求值内部引用，返回完整的 ObjectValue；
+   * dict literal 中的 {**params} 仍走基类展平逻辑。
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processSpreadElement(scope: Scope, node: SpreadElement, state: State): any {
+    if ((node as any).parent?.type === 'CallExpression') {
+      return this.processInstruction(scope, node.argument, state)
+    }
+    return super.processSpreadElement(scope, node, state)
+  }
+
+  /**
    *
    * @param scope
    * @param node
@@ -344,6 +363,53 @@ class PythonAnalyzer extends Analyzer {
       })
     }
 
+    // union callee 含 class 成员：拆出 class 走 propagateNewObject，其余交给 executeCall
+    if (fclos.vtype === 'union' && Array.isArray(fclos.value)) {
+      const classMembers = fclos.value.filter((m: any) => m && typeof m === 'object' && m.vtype === 'class')
+      if (classMembers.length > 0) {
+        const results: Value[] = []
+        for (const member of classMembers) {
+          const signatureAst = member.members?.get('_CTOR_')?.fdef || member.fdef || member.ast
+          if (signatureAst?.type === 'FunctionDefinition') {
+            callInfo.boundCall = this.bindCallArgs(node, member, signatureAst, callInfo)
+          }
+          const r = this.propagateNewObject(scope, node, state, member, argvalues, callInfo)
+          if (r) results.push(r)
+        }
+        // 非 class 成员通过 executeCall 的 union 处理（已内置 checkAtFunctionCallAfter）
+        const nonClassMembers = fclos.value.filter((m: any) => !m || typeof m !== 'object' || m.vtype !== 'class')
+        if (nonClassMembers.length > 0) {
+          for (const member of nonClassMembers) {
+            if (!member || typeof member !== 'object') continue
+            const r = this.executeCall(node, member, state, scope, callInfo)
+            if (r) {
+              results.push(r)
+              if (this.checkerManager?.checkAtFunctionCallAfter) {
+                this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
+                  callInfo,
+                  fclos: member,
+                  ret: r,
+                  pcond: state.pcond,
+                  einfo: state.einfo,
+                  callstack: state.callstack,
+                })
+              }
+            }
+          }
+        }
+        if (results.length === 1) return results[0]
+        if (results.length > 1) {
+          return new UnionValue(
+            results,
+            undefined,
+            `${scope.qid}.<union@call:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`,
+            node
+          )
+        }
+        return new UndefinedValue()
+      }
+    }
+
     if (fclos.vtype === 'class') {
       const signatureAst = fclos?.members?.get('_CTOR_')?.fdef || fclos?.fdef || fclos?.ast
       if (signatureAst?.type === 'FunctionDefinition') {
@@ -351,14 +417,31 @@ class PythonAnalyzer extends Analyzer {
       }
       return this.propagateNewObject(scope, node, state, fclos, argvalues, callInfo)
     }
-    // todo 待迁移到库函数建模中
+    // list.append(x)：将元素添加到列表，并传播污点
     if (
       node.callee.type === 'MemberAccess' &&
       node.callee.property.type === 'Identifier' &&
       node.callee.property.name === 'append' &&
-      (fclos as any)?.object?.parent
+      (fclos as any)?.object
     ) {
-      this.saveVarInCurrentScope((fclos as any).object.parent, fclos.object, argvalues[0], state)
+      const listObj = (fclos as any).object
+      const appendedVal = argvalues[0]
+      if (appendedVal) {
+        // 将元素存入列表的下一个索引位置
+        const nextIdx =
+          listObj.length ??
+          Object.keys(listObj.getRawValue?.() ?? {}).filter((k: string) => !k.startsWith('__yasa')).length
+        if (listObj.value && typeof listObj.value === 'object') {
+          listObj.value[nextIdx] = appendedVal
+        }
+        if (typeof listObj.length === 'number') {
+          listObj.length++
+        }
+        // 传播污点：如果追加的元素有污点，列表也应该有污点
+        if (appendedVal._taint?.isTaintedRec) {
+          listObj.taint.propagateFrom(appendedVal)
+        }
+      }
       return undefined
     }
     const res = this.executeCall(node, fclos, state, scope, callInfo)
@@ -398,7 +481,9 @@ class PythonAnalyzer extends Analyzer {
     argvalues: Value[],
     callInfo: CallInfo
   ): Value {
-    if (fclos.members?.has('_CTOR_')) {
+    // 有 __init__ 或 __new__：走完整 buildNewObject（执行构造函数）
+    // 不含 fclos.ast?.cdef 条件——无 __init__ 的类走 processLibArgToRet 避免 OOM
+    if (fclos.members?.has('_CTOR_') || fclos.value?.['__new__']) {
       const res = this.buildNewObject(fclos.ast.cdef, fclos, state, node, scope, callInfo)
       if (res && this.checkerManager?.checkAtFunctionCallAfter) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
@@ -737,8 +822,19 @@ class PythonAnalyzer extends Analyzer {
     }
     if (!resolved_prop) return defscope
     const res = this.getMemberValue(defscope, resolved_prop, state)
-    if (node.object.type !== 'SuperExpression' && (res.vtype !== 'union' || !Array.isArray(res.value))) {
-      res._this = defscope
+    if (node.object.type !== 'SuperExpression') {
+      if (res.vtype !== 'union' || !Array.isArray(res.value)) {
+        // 非 union 类型：直接绑定 _this
+        res._this = defscope
+      } else {
+        // union + 数组：在 union 层级设置 _this，同时为每个尚未绑定 _this 的子成员设置
+        res._this = defscope
+        for (const member of res.value) {
+          if (member && typeof member === 'object' && !member._this) {
+            member._this = defscope
+          }
+        }
+      }
     } else if (node.object.type === 'SuperExpression' && this.thisFClos) {
       // For super().method() calls, bind this/self to the current instance.
       // In Python semantics, super() only affects method dispatch, not self binding.
@@ -757,7 +853,6 @@ class PythonAnalyzer extends Analyzer {
    */
   processModule(ast: any, filename: any) {
     if (!ast) {
-      process.exitCode = ErrorCode.fail_to_parse
       const sourceFile = filename
       Stat.fileIssues[sourceFile] = 'Parsing Error'
       handleException(
@@ -779,7 +874,7 @@ class PythonAnalyzer extends Analyzer {
     const modClos = new Scoped(this.topScope.qid, { sid: relateFileName, parent: this.topScope, decls: {}, ast })
     modClos.ast.fdef = ast
     this.topScope.context.modules.members.set(filename, modClos)
-    this.fileManager[filename] = modClos.uuid
+    this.fileManager[filename] = { uuid: modClos.uuid, astNode: modClos.ast.node }
     m = this.processModuleDirect(ast, filename, modClos)
     ;(m as any).ast = ast
     return m
@@ -875,7 +970,6 @@ class PythonAnalyzer extends Analyzer {
   }
 
   /**
-   *
    * @param scope
    * @param node
    * @param state
@@ -886,7 +980,7 @@ class PythonAnalyzer extends Analyzer {
       if (!node.isYield) {
         if (!(this as any).lastReturnValue) {
           ;(this as any).lastReturnValue = return_value
-        } else if ((this as any).lastReturnValue.vtype === 'union') {
+        } else if ((this as any).lastReturnValue.vtype === 'union' && !(this as any).lastReturnValue.isTuple) {
           ;(this as any).lastReturnValue.appendValue(return_value)
         } else {
           const tmp = new UnionValue(undefined, undefined, `${scope.qid}.<union@py_ret:${node.loc?.start?.line}>`, node)
@@ -908,6 +1002,58 @@ class PythonAnalyzer extends Analyzer {
       return return_value
     }
     return new PrimitiveValue(scope.qid, 'undefined', null, null, 'Literal', node.loc)
+  }
+
+  /**
+   * Python try-except 覆盖：except handler 通过 getDefScope 向上覆盖 try body 设置的绑定
+   *
+   * 问题根因：基类为 except handler 创建子 scope，但赋值通过 getDefScope 向上查找到
+   * 父 scope 同名变量并覆盖（如 try-import/except-None 模式）。
+   *
+   * 修复策略：保存 try body 后的值快照，except handler 处理后，对被覆盖的变量创建
+   * union（try 值 | except 值），由 processCallExpression 的 union 遍历处理调用。
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processTryStatement(scope: Scope, node: TryStatement, state: State): VoidValueType {
+    this.processInstruction(scope, node.body, state)
+
+    const { handlers } = node
+    if (handlers && handlers.length > 0) {
+      // 保存 try body 后的 scope 值快照
+      const trySnapshot: Record<string, any> = {}
+      if (scope.value) {
+        for (const key of Object.keys(scope.value)) {
+          trySnapshot[key] = scope.value[key]
+        }
+      }
+
+      for (const clause of handlers) {
+        if (!clause) continue
+        const exceptScope = ScopeClass.createSubScope(
+          `<block_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`,
+          scope
+        )
+        clause.parameter.forEach((param: any) => this.processInstruction(exceptScope, param, state))
+        this.processInstruction(exceptScope, clause.body, state)
+      }
+
+      // except handler 可能通过 getDefScope 覆盖了父 scope 的绑定
+      // 对被覆盖的变量创建 union（try 值 | except 值），保留两条路径的分析能力
+      if (scope.value) {
+        for (const key of Object.keys(trySnapshot)) {
+          const tryVal = trySnapshot[key]
+          const exceptVal = scope.value[key]
+          if (tryVal && exceptVal && tryVal !== exceptVal) {
+            scope.value[key] = new UnionValue([tryVal, exceptVal], undefined, `${scope.qid}.${key}`, tryVal.ast)
+          }
+        }
+      }
+    }
+
+    if (node.finalizer) this.processInstruction(scope, node.finalizer, state)
+    return new UndefinedValue()
   }
 
   /**
@@ -1069,7 +1215,6 @@ class PythonAnalyzer extends Analyzer {
           }
           if (this.checkerManager && this.checkerManager.checkAtAssignment) {
             const lscope = this.getDefScope(scope, left)
-            const mindex = this.resolveIndices(scope, left, state)
             this.checkerManager.checkAtAssignment(this, scope, node, state, {
               lscope,
               lvalue: oldVal,
@@ -1077,7 +1222,6 @@ class PythonAnalyzer extends Analyzer {
               pcond: state.pcond,
               binfo: state.binfo,
               entry_fclos: this.entry_fclos,
-              mindex,
               einfo: state.einfo,
               state,
               ainfo: this.ainfo,
@@ -1125,7 +1269,6 @@ class PythonAnalyzer extends Analyzer {
 
         if (this.checkerManager && this.checkerManager.checkAtAssignment) {
           const lscope = this.getDefScope(scope, node.left)
-          const mindex = this.resolveIndices(scope, node.left, state)
           this.checkerManager.checkAtAssignment(this, scope, node, state, {
             lscope,
             lvalue: oldVal,
@@ -1133,7 +1276,6 @@ class PythonAnalyzer extends Analyzer {
             pcond: state.pcond,
             binfo: state.binfo,
             entry_fclos: this.entry_fclos,
-            mindex,
             einfo: state.einfo,
             state,
             ainfo: this.ainfo,
@@ -1155,17 +1297,33 @@ class PythonAnalyzer extends Analyzer {
    */
   handleTupleAssign(scope: any, left: any, rightVal: any, state: any) {
     if (rightVal.vtype === 'union') {
-      const pairs = floor(rightVal.value.length / left.elements.length)
-      const scopes = new Array(left.elements.length)
-      for (let i = 0; i < left.elements.length; i++) scopes[i] = new Array(pairs)
-      for (let i = 0; i < pairs; i++) {
-        for (let j = 0; j < left.elements.length; j++) {
-          scopes[j][i] = rightVal.value[i * left.elements.length + j]
+      if (rightVal.isTuple) {
+        // 直接 tuple：按索引 1-to-1 拆分
+        const minLen = Math.min(left.elements.length, rightVal.value.length)
+        for (let i = 0; i < minLen; i++) {
+          this.saveVarInScope(scope, left.elements[i], rightVal.value[i], state)
         }
-      }
-      for (let i = 0; i < left.elements.length; i++) {
-        const union = unionAllValues(scopes[i], state)
-        this.saveVarInScope(scope, left.elements[i], union, state)
+      } else {
+        // union-of-returns：每个元素可能是 tuple 或单值，按位置提取后合并
+        const leftCount = left.elements.length
+        const perPos: any[][] = Array.from({ length: leftCount }, () => [])
+        for (const elem of rightVal.value) {
+          if (elem && elem.isTuple && elem.vtype === 'union') {
+            // 某个 return 分支的 tuple，按位置提取
+            for (let j = 0; j < leftCount; j++) {
+              perPos[j].push(j < elem.value.length ? elem.value[j] : elem)
+            }
+          } else {
+            // 非 tuple 值（单值 return），保守分配到所有位置
+            for (let j = 0; j < leftCount; j++) {
+              perPos[j].push(elem)
+            }
+          }
+        }
+        for (let i = 0; i < leftCount; i++) {
+          const union = unionAllValues(perPos[i], state)
+          this.saveVarInScope(scope, left.elements[i], union, state)
+        }
       }
     } else if (Array.isArray(rightVal.value) && rightVal.value.length >= 1) {
       const minLen = Math.min(left.elements.length, rightVal.value.length)
@@ -1266,7 +1424,7 @@ class PythonAnalyzer extends Analyzer {
     if (path.basename(filename) === '__init__.py') {
       // 先注册到 members 再处理，防止递归 import 重复触发 processModuleDirect
       this.topScope.context.modules.members.set(filename, packageScope)
-      this.fileManager[filename] = packageScope.uuid
+      this.fileManager[filename] = { uuid: packageScope.uuid, astNode: packageScope.ast.node }
       const m = this.processModuleDirect(ast, filename, packageScope)
       ;(m as any).ast = ast
       return m
@@ -1379,6 +1537,9 @@ class PythonAnalyzer extends Analyzer {
         if (fieldName === '_CTOR_') {
           superValue.ast.node = v_copy.ast.fdef
           superValue.ast.fdef = v_copy.ast.fdef
+          if (!superValue.overloaded) {
+            superValue.overloaded = new AstRefList(() => superValue.getASTManager())
+          }
           superValue.overloaded.push(fdef)
         }
       }
@@ -1435,7 +1596,8 @@ class PythonAnalyzer extends Analyzer {
         'find no target compileUnit of the project : no python file found in source path',
         'find no target compileUnit of the project : no python file found in source path'
       )
-      process.exit(1)
+      process.exitCode = ErrorCode.no_valid_source_file
+      return
     }
 
     // 预先填充 sourceCodeCache，避免 parseProject 中的 postProcessProjectResult 重复读取
@@ -1465,6 +1627,10 @@ class PythonAnalyzer extends Analyzer {
       const ast = this.pyAstParseManager[filename]
       if (ast) {
         this.processModule(ast, filename)
+      }
+      // 每个文件处理完后触发 checker 回调，用于逐步解析 pending 的 include()
+      if (this.checkerManager && this.checkerManager.checkAtEndOfCompileUnit) {
+        this.checkerManager.checkAtEndOfCompileUnit(this, null, null, null, null)
       }
     }
     this.performanceTracker.end('preProcess.processModule')

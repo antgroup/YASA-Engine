@@ -1,5 +1,6 @@
 import GoTypeRelatedInfoResolver from '../../../../resolver/go/go-type-related-info-resolver'
 import { buildNewCopiedWithTag } from '../../../../util/clone-util'
+import { AstRefList } from '../../common/value/ast-ref-list'
 import { BinaryExprValue } from '../../common/value/binary-expr'
 import type { Scope, State, Value, SymbolValue as SymbolValueType } from '../../../../types/analyzer'
 import type { CallExpression, VariableDeclaration, NewExpression, ThisExpression, CompileUnit, BinaryExpression, MemberAccess, Identifier, TupleExpression } from '../../../../types/uast'
@@ -20,7 +21,7 @@ const { shallowCopyValue, buildNewValueInstance, lodashCloneWithTag } = require(
 
 const {
   valueUtil: {
-    ValueUtil: { Scoped, PackageValue, PrimitiveValue, UndefinedValue, SymbolValue, UnionValue },
+    ValueUtil: { Scoped, PackageValue, PrimitiveValue, UndefinedValue, SymbolValue, UnionValue, ObjectValue },
   },
 } = require('../../common')
 import type { CallInfo } from '../../common/call-args'
@@ -36,11 +37,13 @@ const entryPointConfig = require('../../common/current-entrypoint')
 const { unionAllValues } = require('../../common/memStateBVT')
 const constValue = require('../../../../util/constant')
 const { handleException } = require('../../common/exception-handler')
+const { ErrorCode } = require('../../../../util/error-code')
 
 /**
  *
  */
 class GoAnalyzer extends Analyzer {
+
   /**
    *
    * @param options
@@ -59,6 +62,9 @@ class GoAnalyzer extends Analyzer {
     this.mainEntryPoints = []
     this.ruleEntrypoints = []
     this.typeResolver = new GoTypeRelatedInfoResolver()
+    this._isSymbolInterpretPhase = false
+    this._methodResolveCache = {}
+    this.classMap = new Map()
   }
 
   /**
@@ -73,7 +79,8 @@ class GoAnalyzer extends Analyzer {
         'find no target compileUnit of the project : no go file found in source path',
         'find no target compileUnit of the project : no go file found in source path'
       )
-      process.exit(1)
+      process.exitCode = ErrorCode.no_valid_source_file
+      return
     }
   }
 
@@ -182,7 +189,7 @@ class GoAnalyzer extends Analyzer {
           // 在value中查找包含'node'且node.type为'CompileUnit'的节点
           const v = value as any
           if (v.node && typeof v.node === 'object' && v.node.type === 'CompileUnit') {
-            fileManager[key] = { ast: v.node }
+            fileManager[key] = { astNode: v.node }
             continue
           }
         }
@@ -292,6 +299,37 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
+   * Go 嵌入结构体方法延迟解析：实例上找不到方法时，通过 ClassDefinition 的 SpreadElement 找嵌入类型的方法。
+   * 解决文件按字母序处理时，SpreadElement 阶段嵌入类型方法尚未注册导致继承失败的问题。
+   */
+  _resolveEmbeddedMethod(defscope: any, methodName: string): any {
+    // 从实例的 sid 提取类名
+    const className = defscope.sid?.split('<')?.[0]?.split('.')?.[0]
+    if (!className) return null
+
+    const classDefs = this._findAllClassDefsByName(className)
+    for (const classDef of classDefs) {
+      const bodyStmts = this._getClassDefBodyStmts(classDef)
+      if (!bodyStmts) continue
+
+      for (const stmt of bodyStmts) {
+        if (stmt.type !== 'SpreadElement') continue
+        const embeddedTypeName = this._extractTypeName(stmt.argument)
+        if (!embeddedTypeName) continue
+
+        // 在已解析的 packages 中查找嵌入类型的 ClassDefinition
+        const embeddedClasses = this._findAllClassDefsByName(embeddedTypeName)
+        for (const embeddedClass of embeddedClasses) {
+          if (embeddedClass.value?.[methodName]?.ast?.fdef) {
+            return embeddedClass.value[methodName]
+          }
+        }
+      }
+    }
+    return null
+  }
+
+  /**
    *
    * @param scope
    * @param node
@@ -305,6 +343,19 @@ class GoAnalyzer extends Analyzer {
         const deferNode = _.clone(node)
         delete deferNode._meta.defer
         encloseFclos._defers.push(deferNode)
+      }
+    }
+
+    // 拦截 make(MapType, ...) 调用，返回空 map ObjectValue，避免生成 <unknownProcessTypeNode> symbol
+    // Go UAST 中 make() 的类型参数可能是 MapType（不在 Expr union 内），用 any 绕过类型检查
+    if (node.callee?.type === 'Identifier' && (node.callee as Identifier).name === 'make') {
+      const typeArg = node.arguments?.[0] as any
+      if (typeArg?.type === 'MapType') {
+        const line = node.loc?.start?.line ?? 'unknown'
+        const mapSid = `<make_map_${line}>`
+        const mapObj = new ObjectValue(scope.qid, { sid: mapSid })
+        mapObj.rtype = typeArg
+        return mapObj
       }
     }
 
@@ -324,10 +375,19 @@ class GoAnalyzer extends Analyzer {
         }
       }
 
+      // 构建 callInfo，携带调用参数信息供 checker 做 sink 匹配
+      // 仅在外部库方法（无可执行函数体）时传递 callInfo，有函数体的调用由
+      // super.processCallExpression 内部 executeFdeclOrExecute 统一处理 sink 匹配，避免重复 finding
+      const fclosBody = fclos?.ast?.fdef?.body
+      const isUnresolvableCall = !fclos || fclos.vtype !== 'fclos' || !fclosBody || fclosBody.type === 'Noop'
+      const callInfo: CallInfo | undefined = isUnresolvableCall
+        ? { callArgs: this.buildCallArgs(node, argvalues, fclos) }
+        : undefined
       if (argvalues && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
           argvalues,
           fclos,
+          callInfo,
           pcond: state.pcond,
           entry_fclos: this.entry_fclos,
           einfo: state.einfo,
@@ -337,6 +397,74 @@ class GoAnalyzer extends Analyzer {
         })
       }
       ret = super.processCallExpression(scope, node, state)
+
+      // CHA fallback：正常 dispatch 未生效时，通过 ClassHierarchy 查找接口实现并执行
+      if (
+        (this as any).classHierarchyMap &&
+        (fclos?.vtype !== 'fclos' || this.checkFclosInInterface(fclos)) &&
+        (!ret || ret.vtype === 'symbol')
+      ) {
+        let implementations = this.findCHAImplementations(fclos)
+
+        // rtype fallback：fclos.parent 不是接口时，通过 receiver 的 rtype 查找接口
+        if (implementations.length === 0 && node.callee?.type === 'MemberAccess') {
+          const methodName = node.callee.property?.name || (node.callee.property as any)?.value
+          if (methodName) {
+            // 获取 receiver 的 rtype（优先 fclos.parent.rtype，其次从 callee.object 获取）
+            let rtype = fclos?.parent?.rtype || fclos?._object?.rtype
+            if (!rtype && node.callee.object) {
+              const receiver = this.processInstruction(scope, node.callee.object, state)
+              rtype = receiver?.rtype
+            }
+            if (rtype) {
+              const rtypeName = rtype.type === 'Identifier' ? rtype.name
+                : rtype.type === 'PointerType' ? rtype.element?.name
+                : null
+              if (rtypeName) {
+                implementations = this.findCHAImplementationsByTypeName(rtypeName, methodName)
+              }
+            }
+          }
+        }
+
+        if (implementations.length > 0) {
+          const results: any[] = []
+          const executed = new Set<string>()
+
+          for (const implFclos of implementations) {
+            // 剪枝：dedup（同一 call site 不重复执行同一实现）
+            const implKey = implFclos.qid || implFclos.uuid
+            if (executed.has(implKey)) continue
+            executed.add(implKey)
+
+            // 剪枝：callstack depth 超限
+            if (state?.callstack?.length >= Config.maxCallstackDepth) break
+
+            // 剪枝：Noop body 跳过
+            if (implFclos.ast?.fdef?.body?.type === 'Noop') continue
+
+            // 绑定 this 并执行
+            const oldThis = implFclos._this
+            if (fclos?._this) implFclos._this = fclos._this
+            else if (typeof fclos?.getThisObj === 'function') implFclos._this = fclos.getThisObj()
+
+            const r = this.executeCall(node, implFclos, state, scope, {
+              callArgs: this.buildCallArgs(node, argvalues, implFclos),
+            })
+            implFclos._this = oldThis
+
+            if (r && r.vtype !== 'symbol') results.push(r)
+          }
+
+          // 返回值合并：单个直接返回，多个用 UnionValue
+          if (results.length === 1) {
+            ret = results[0]
+          } else if (results.length > 1) {
+            ret = new UnionValue(results)
+          }
+        }
+      }
+
       if (ret && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
           fclos,
@@ -527,6 +655,10 @@ class GoAnalyzer extends Analyzer {
         // if (cscope && cscope.vtype !== 'undefine')
         if (cscope) {
           initVal = this.buildNewObject(cscope?.ast.fdef, cscope, state, node, scope, INTERNAL_CALL)
+          // 全局变量类型推导：将声明类型写入 rtype，使 sink 匹配时能获取 calleeType
+          if (node.varType && initVal) {
+            initVal.rtype = node.varType
+          }
         } else {
           initVal = this.createVarDeclarationScope(id, scope)
         }
@@ -548,7 +680,9 @@ class GoAnalyzer extends Analyzer {
       if (initVal?.rtype && initVal.rtype !== 'DynamicType') {
         const cscope = this.processInstruction(scope, initVal.rtype, state)
         if (cscope?.vtype === 'class' && initVal.vtype !== 'primitive') {
+          const savedRtype = initVal.rtype
           initVal = this.buildTypeObject(initVal, cscope)
+          if (savedRtype && !initVal.rtype) initVal.rtype = savedRtype
         }
       }
       initVal = SourceLine.addSrcLineInfo(
@@ -573,19 +707,34 @@ class GoAnalyzer extends Analyzer {
       const tupleId = id as TupleExpression
       if (initVal.vtype === 'union') {
         const substates = MemState.forkStates(state, 1)
-        const pairs = _.floor(initVal.value.length / tupleId.elements.length)
-        const scopes = new Array(tupleId.elements.length)
-        for (let i = 0; i < tupleId.elements.length; i++) {
-          scopes[i] = new Array(pairs)
-        }
-        for (let i = 0; i < pairs; i++) {
-          for (let j = 0; j < tupleId.elements.length; j++) {
-            scopes[j][i] = initVal.getFieldValue(String(i * tupleId.elements.length + j))
+        if (initVal.isTuple) {
+          // 直接 tuple：按索引 1-to-1 映射
+          const minLen = Math.min(tupleId.elements.length, initVal.value.length)
+          for (let i = 0; i < minLen; i++) {
+            this.saveVarInCurrentScope(scope, tupleId.elements[i], initVal.getFieldValue(String(i)), state)
           }
-        }
-        for (let i = 0; i < tupleId.elements.length; i++) {
-          const union = unionAllValues(scopes[i], state)
-          this.saveVarInCurrentScope(scope, tupleId.elements[i], union, state)
+        } else {
+          // union-of-returns：每个元素可能是 isTuple union 或单值，按位置提取后合并
+          const leftCount = tupleId.elements.length
+          const perPos: any[][] = Array.from({ length: leftCount }, () => [])
+          for (let idx = 0; idx < initVal.value.length; idx++) {
+            const elem = initVal.value[idx]
+            if (elem && elem.isTuple && elem.vtype === 'union') {
+              // 某个 return 分支的 tuple，按位置提取
+              for (let j = 0; j < leftCount; j++) {
+                perPos[j].push(j < elem.value.length ? elem.value[j] : elem)
+              }
+            } else {
+              // 非 tuple 值，保守分配到所有位置
+              for (let j = 0; j < leftCount; j++) {
+                perPos[j].push(elem)
+              }
+            }
+          }
+          for (let i = 0; i < leftCount; i++) {
+            const union = unionAllValues(perPos[i], state)
+            this.saveVarInCurrentScope(scope, tupleId.elements[i], union, state)
+          }
         }
       } else if (Array.isArray(initVal.value) && initVal.value.length >= 1) {
         const minLen = Math.min(tupleId.elements.length, initVal.value.length)
@@ -744,6 +893,12 @@ class GoAnalyzer extends Analyzer {
       this.thisFClos = oldThisFClos
     }
 
+    // 注册到 classMap，供 CHA 构建 ClassHierarchy
+    const logicalQid = cscope.logicalQid || cscope.qid
+    if (logicalQid && cscope.uuid) {
+      this.classMap.set(logicalQid, cscope.uuid)
+    }
+
     return cscope
   }
 
@@ -801,6 +956,9 @@ class GoAnalyzer extends Analyzer {
         if (fieldName === '_CTOR_') {
           superValue.ast.node = v_copy.ast.fdef
           superValue.ast.fdef = v_copy.ast.fdef
+          if (!superValue.overloaded) {
+            superValue.overloaded = new AstRefList(() => superValue.getASTManager())
+          }
           superValue.overloaded.push(fdef)
         }
 
@@ -914,6 +1072,7 @@ class GoAnalyzer extends Analyzer {
         }
       } else {
         // declRetType.type !== 'TupleType'
+        if (!retVal.value || !retVal.value[Symbol.iterator]) return retVal
         for (let rawValue of retVal.value) {
           rawValue.rtype = fclos.ast.node.returnType
           if (rawValue.rtype !== 'DynamicType') {
@@ -964,6 +1123,94 @@ class GoAnalyzer extends Analyzer {
     const retVal = super.executeSingleCall(fclos, state, node, scope, callInfo)
     const argvalues = getLegacyArgValues(callInfo)
     return this.convertRetValToObjectType(fclos, argvalues, state, node, scope, retVal)
+  }
+
+  /**
+   * 检查 fclos 是否属于 interface（Go 没有 abstract class）
+   */
+  checkFclosInInterface(fclos: any): boolean {
+    return !!(
+      fclos?.parent?.isInterface ||
+      fclos?.ast?.fdef?.parent?._meta?.isInterface
+    )
+  }
+
+  /**
+   * 从 classHierarchyMap 查找接口方法的所有具体实现
+   * 递归遍历 implementedBy 链（包含间接实现）
+   */
+  findCHAImplementations(fclos: any): any[] {
+    if (!this.classHierarchyMap) return []
+
+    const interfaceQid = fclos.parent?.logicalQid || fclos.parent?.qid
+    if (!interfaceQid) return []
+
+    const hierarchy = this.classHierarchyMap.get(interfaceQid)
+    if (!hierarchy || hierarchy.implementedBy.length === 0) return []
+
+    const methodName = fclos.sid || fclos.name
+    if (!methodName) return []
+
+    const results: any[] = []
+    const visited = new Set<string>()
+
+    // 递归收集所有实现类（包括间接实现）
+    const collectImplementors = (h: any) => {
+      for (const impl of h.implementedBy) {
+        if (visited.has(impl.type)) continue
+        visited.add(impl.type)
+
+        const implMethod = impl.value?.value?.[methodName]
+        if (implMethod?.vtype === 'fclos' && implMethod.ast?.fdef?.body?.type !== 'Noop') {
+          results.push(implMethod)
+        }
+
+        // 递归：实现类可能也被其他类继承
+        if (impl.extendedBy?.length > 0) {
+          collectImplementors(impl)
+        }
+      }
+    }
+
+    collectImplementors(hierarchy)
+    return results
+  }
+
+  /**
+   * 通过类型名和方法名在 classHierarchyMap 中查找接口实现
+   * 用于 rtype fallback：当 fclos.parent 不是接口时，通过 receiver 声明类型查找
+   */
+  findCHAImplementationsByTypeName(typeName: string, methodName: string): any[] {
+    if (!this.classHierarchyMap || !typeName || !methodName) return []
+
+    // 在 classHierarchyMap 中查找匹配的接口（qid 以 .typeName 结尾或等于 typeName）
+    for (const [qid, hierarchy] of this.classHierarchyMap as Map<string, any>) {
+      if (hierarchy.typeDeclaration !== 'interface') continue
+      // 匹配：qid 末尾是 typeName（考虑包名前缀）
+      if (qid !== typeName && !qid.endsWith('.' + typeName)) continue
+      if (!hierarchy.implementedBy || hierarchy.implementedBy.length === 0) continue
+
+      const results: any[] = []
+      const visited = new Set<string>()
+
+      const collectImplementors = (h: any) => {
+        for (const impl of h.implementedBy) {
+          if (visited.has(impl.type)) continue
+          visited.add(impl.type)
+          const implMethod = impl.value?.value?.[methodName]
+          if (implMethod?.vtype === 'fclos' && implMethod.ast?.fdef?.body?.type !== 'Noop') {
+            results.push(implMethod)
+          }
+          if (impl.extendedBy?.length > 0) {
+            collectImplementors(impl)
+          }
+        }
+      }
+
+      collectImplementors(hierarchy)
+      if (results.length > 0) return results
+    }
+    return []
   }
 
   /**
@@ -1045,6 +1292,7 @@ class GoAnalyzer extends Analyzer {
    * @returns {boolean}
    */
   symbolInterpret() {
+    this._isSymbolInterpretPhase = true
     const { entryPoints } = this
     const state = this.initState(this.topScope)
     let isFromRule = false
@@ -1268,21 +1516,63 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
+   * 防止已 resolved 的符号值被 resolveIndices 二次处理导致 qid 损坏
+   */
+  saveVarInCurrentScope(scope: any, node: any, value: any, state: any): any {
+    if (node?.vtype && node.vtype !== 'undefine' && node?.sid?.startsWith('<indice_')) {
+      return this.saveVarInScopeRec(scope, node, value, state)
+    }
+    return super.saveVarInCurrentScope(scope, node, value, state)
+  }
+
+  /**
+   * Go map computed index 归一化 + UAST 扁平化修复
+   * 1. 先修复 UAST 扁平化的 map[obj.field] 模式
+   * 2. 再将求值结果为 primitive 字符串的 index 转为 Identifier 格式的 SymbolValue
+   */
+  resolveIndices(scope: any, node: any, state: any): any {
+    // UAST 扁平化修复：map[obj.field] → (map[obj]).field
+    let inputNode = node
+    if (node?.type === 'MemberAccess' && node?.computed) {
+      const fixed = this._tryUnflattenMapIndex(node as MemberAccess)
+      if (fixed) {
+        inputNode = fixed
+      }
+    }
+    const resolved = super.resolveIndices(scope, inputNode, state)
+    if (!resolved || resolved.type !== 'MemberAccess' || !resolved.computed) return resolved
+    // key 归一化
+    const prop = resolved.property
+    if (prop?.vtype === 'primitive' && typeof prop.value === 'string') {
+      const normalized = new SymbolValue(prop.qid, { sid: `<indice_${prop.value}>`, name: prop.value, type: 'Identifier', loc: prop.loc })
+      resolved.property = normalized
+    } else if (prop?.vtype === 'symbol' && !prop.sid?.startsWith('<indice_') && prop.name && typeof prop.name === 'string') {
+      const normalized = new SymbolValue(prop.qid, { sid: `<indice_${prop.name}>`, name: prop.name, type: 'Identifier', loc: prop.loc })
+      resolved.property = normalized
+    }
+    return resolved
+  }
+
+  /**
    *
    * @param scope
    * @param node
    * @param state
    */
   override processMemberAccess(scope: Scope, node: MemberAccess, state: State): SymbolValueType {
-    const defscope = this.processInstruction(scope, node.object, state)
+    // 修复 Go UAST 扁平化问题：map[obj.field] 被解析为 (map[obj]).field
+    // 检测：外层 computed=true，object 也是 computed=true MemberAccess，且外层 property 是 Identifier，
+    // 并且内层 property（也是 Identifier）的 end 列紧邻外层 property 的 start 列（.分隔符）
+    const effectiveNode = this._tryUnflattenMapIndex(node) ?? node
+    const defscope = this.processInstruction(scope, effectiveNode.object, state)
     if (defscope.vtype === 'union' && Array.isArray(defscope.value)) {
       const ret = new UnionValue(undefined, undefined, `${scope.qid}.<union@go_mem:${node.loc?.start?.line}:${node.loc?.start?.column}>`, node)
       defscope.value.forEach((defScp: any) => {
-        ret.appendValue(this.accessValueFromDefScope(scope, node, state, defScp))
+        ret.appendValue(this.accessValueFromDefScope(scope, effectiveNode, state, defScp))
       })
       return ret
     }
-    return this.accessValueFromDefScope(scope, node, state, defscope)
+    return this.accessValueFromDefScope(scope, effectiveNode, state, defscope)
   }
 
   /**
@@ -1310,6 +1600,24 @@ class GoAnalyzer extends Analyzer {
         return new UndefinedValue()
       }
       const res = this.getMemberValue(defscope, resolvedProp, state)
+
+      // Go struct 实例方法解析：实例 _field 为空时，通过 rtype 链查找 ClassDefinition 方法
+      if (this._isSymbolInterpretPhase && defscope.vtype === 'symbol' && defscope.rtype && defscope.rtype !== 'DynamicType') {
+        const methodFclos = this.resolveGoMethod(defscope, resolvedProp?.name)
+        if (methodFclos) {
+          return methodFclos
+        }
+      }
+
+      // Go 嵌入结构体方法解析：实例方法未找到时，通过 ClassDefinition 的 SpreadElement 查找嵌入类型的方法
+      if (this._isSymbolInterpretPhase && defscope.vtype === 'object' && resolvedProp?.name
+          && (!res || !res.ast?.fdef)) {
+        const embeddedMethod = this._resolveEmbeddedMethod(defscope, resolvedProp.name)
+        if (embeddedMethod) {
+          return embeddedMethod
+        }
+      }
+
       if (node.object.type !== 'SuperExpression' && (res.vtype !== 'union' || !Array.isArray(res.value))) {
         res._this = defscope
       }
@@ -1327,6 +1635,293 @@ class GoAnalyzer extends Analyzer {
       return res
     }
     return defscope
+  }
+
+  /**
+   * 检测并修复 Go UAST 扁平化问题：map[obj.field] → (map[obj]).field。
+   * uast4go 将 IndexExpr(X, SelectorExpr(Y, Z)) 错误解析为：
+   *   MemberAccess(computed=true, MemberAccess(computed=true, X, Y), Z)
+   * 正确语义应为：
+   *   MemberAccess(computed=true, X, MemberAccess(computed=false, Y, Z))
+   * 返回重构后的临时节点，或 null 表示不需要修复。
+   */
+  private _tryUnflattenMapIndex(node: MemberAccess): MemberAccess | null {
+    // 条件1：外层 computed=true
+    if (!node.computed) return null
+    // 条件2：外层 property 是简单 Identifier
+    const outerProp = node.property as any
+    if (!outerProp || outerProp.type !== 'Identifier') return null
+    // 条件3：外层 object 也是 computed=true MemberAccess
+    const innerNode = node.object as any
+    if (!innerNode || innerNode.type !== 'MemberAccess' || !innerNode.computed) return null
+    // 条件4：内层 property 也是简单 Identifier（不是字面量或表达式）
+    const innerProp = innerNode.property as any
+    if (!innerProp || innerProp.type !== 'Identifier') return null
+    // 条件5：列号验证——内层 property end 列 + 1（.分隔符）= 外层 property start 列
+    const innerPropEnd = innerProp.loc?.end?.column
+    const outerPropStart = outerProp.loc?.start?.column
+    if (innerPropEnd == null || outerPropStart == null) return null
+    if (innerPropEnd + 1 !== outerPropStart) return null
+
+    // 重构：MemberAccess(computed=true, X, MemberAccess(computed=false, Y, Z))
+    const newInnerProp: any = {
+      type: 'MemberAccess',
+      computed: false,
+      object: innerNode.property,  // Y（mc）
+      property: node.property,     // Z（name）
+      loc: {
+        start: innerNode.property.loc?.start,
+        end: node.property.loc?.end,
+      },
+    }
+    const rewritten: any = {
+      type: 'MemberAccess',
+      computed: true,
+      object: innerNode.object,    // X（startModules）
+      property: newInnerProp,      // mc.name
+      loc: node.loc,
+    }
+    return rewritten as MemberAccess
+  }
+
+  /**
+   * 策略1：从 rtype 链中提取父 ClassDefinition，再从其字段的类型找到目标 ClassDefinition 的方法
+   * 策略2：遍历 packages 查找包含该方法的非接口 ClassDefinition
+   * 注意：不调用 processInstruction（symbolInterpret 阶段有副作用），只做数据结构遍历
+   */
+  resolveGoMethod(defscope: any, methodName: string): any {
+    const rtype = defscope.rtype
+    if (!rtype || typeof rtype !== 'object') return null
+
+    // 策略1：从 rtype 链提取字段名和父类型名，然后在 packages 中精确查找
+    const fieldName = rtype.vagueType?.split('.').pop()
+    const parentTypeNode = rtype.definiteType
+    if (fieldName && parentTypeNode) {
+      const cacheKey = `type:${fieldName}:${methodName}`
+      if (cacheKey in this._methodResolveCache) return this._methodResolveCache[cacheKey]
+
+      const resolved = this._resolveMethodViaTypeChain(parentTypeNode, fieldName, methodName)
+      if (resolved) {
+        this._methodResolveCache[cacheKey] = resolved
+        return resolved
+      }
+    }
+
+    // 策略2：全局搜索兜底
+    const fallbackKey = `global:${methodName}`
+    if (fallbackKey in this._methodResolveCache) return this._methodResolveCache[fallbackKey]
+
+    const found = this._searchMethodInPackages(methodName)
+    this._methodResolveCache[fallbackKey] = found
+    return found
+  }
+
+  /**
+   * 策略1（纯数据遍历，无副作用）：
+   * 从 PointerType/Identifier AST 节点提取父类型名 → 在 packages 中找到所有同名 ClassDefinition
+   * → 遍历每个候选，从 body 中查找目标字段 → 提取字段的 varType → 找到目标 ClassDefinition 的方法
+   * 解决同名类型歧义：多个包定义同名 struct 时，通过字段名精确匹配正确的 ClassDefinition
+   */
+  _resolveMethodViaTypeChain(parentTypeNode: any, fieldName: string, methodName: string): any {
+    const parentTypeName = this._extractTypeName(parentTypeNode)
+    if (!parentTypeName) return null
+
+    const parentClassDefs = this._findAllClassDefsByName(parentTypeName)
+    if (parentClassDefs.length === 0) return null
+
+    // 遍历所有同名 ClassDefinition，找到包含目标字段的那个
+    for (const parentClassDef of parentClassDefs) {
+      const bodyStmts = this._getClassDefBodyStmts(parentClassDef)
+      if (!bodyStmts) continue
+
+      let fieldTypeName: string | null = null
+      for (const stmt of bodyStmts) {
+        if (stmt.type === 'VariableDeclaration' && stmt.id?.type === 'Identifier'
+          && stmt.id.name === fieldName && stmt.varType) {
+          fieldTypeName = this._extractTypeName(stmt.varType)
+          break
+        }
+      }
+      if (!fieldTypeName) continue
+
+      // 在 packages 中找字段类型的所有 ClassDefinition
+      const fieldClassDefs = this._findAllClassDefsByName(fieldTypeName)
+      for (const fieldClassDef of fieldClassDefs) {
+        // 具体类型：直接取方法
+        if (!fieldClassDef.isInterface && fieldClassDef.value?.[methodName]?.ast?.fdef) {
+          return fieldClassDef.value[methodName]
+        }
+
+        // 接口类型：提取接口方法签名，搜索匹配的具体实现
+        if (fieldClassDef.isInterface) {
+          const implMethod = this._findInterfaceImplMethod(fieldClassDef, methodName)
+          if (implMethod) return implMethod
+        }
+      }
+    }
+
+    // 所有候选都不满足时，全局兜底
+    return this._searchMethodInPackages(methodName)
+  }
+
+  /**
+   * 接口实现查找：从接口的 body 提取方法名列表，
+   * 在 packages 树中搜索具备所有这些方法（带 fdef）的非接口 ClassDefinition，返回目标方法
+   */
+  _findInterfaceImplMethod(interfaceClassDef: any, methodName: string): any {
+    const bodyStmts = this._getClassDefBodyStmts(interfaceClassDef)
+    if (!bodyStmts || bodyStmts.length === 0) return null
+
+    // 提取接口声明的所有方法名
+    const interfaceMethodNames: string[] = []
+    for (const stmt of bodyStmts) {
+      const name = stmt.id?.name
+      if (name) interfaceMethodNames.push(name)
+    }
+    if (interfaceMethodNames.length === 0 || !interfaceMethodNames.includes(methodName)) return null
+
+    // 在 packages 树中搜索实现了该接口全部方法的非接口 ClassDefinition
+    const packages = this.topScope?.context?.packages
+    if (!packages) return null
+
+    let found: any = null
+    const visited = new Set<any>()
+
+    const search = (node: any, depth: number): void => {
+      if (depth > 15 || !node || visited.has(node) || found) return
+      visited.add(node)
+      if (!node.value || typeof node.value !== 'object' || Array.isArray(node.value)) return
+
+      for (const key of Object.keys(node.value)) {
+        if (found) return
+        const child = node.value[key]
+        if (!child) continue
+
+        // 非接口 ClassDefinition，且具备目标方法
+        if (child.ast?.cdef && !child.isInterface && child.value?.[methodName]?.ast?.fdef) {
+          // 验证该 ClassDef 实现了接口的所有方法
+          const hasAll = interfaceMethodNames.every(
+            (m: string) => child.value?.[m]?.ast?.fdef
+          )
+          if (hasAll) {
+            found = child.value[methodName]
+            return
+          }
+        }
+
+        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module' || child.vtype === 'class') {
+          search(child, depth + 1)
+        }
+      }
+    }
+
+    search(packages, 0)
+    return found
+  }
+
+  /**
+   * 从 AST 类型节点提取类型名（不调用 processInstruction）
+   * 支持：Identifier、MemberAccess、PointerType
+   */
+  _extractTypeName(node: any): string | null {
+    if (!node) return null
+    if (node.type === 'Identifier') return node.name
+    if (node.type === 'PointerType' || node.type === 'StarExpression') return this._extractTypeName(node.element || node.argument)
+    if (node.type === 'MemberAccess' && node.property?.name) return node.property.name
+    // 嵌套结构化 rtype
+    if (node.name) return node.name
+    if (node.id?.name) return node.id.name
+    return null
+  }
+
+  /**
+   * 从 ClassDefinition scope 提取字段声明列表。
+   * Go struct 的 cdef.body 结构不固定：
+   * - BlockStatement：body.body 是数组
+   * - ObjectExpression：body.properties 是数组
+   * - 直接数组：body 本身是数组
+   */
+  _getClassDefBodyStmts(classDef: any): any[] | null {
+    const cdef = classDef?.ast?.cdef
+    if (!cdef?.body) return null
+
+    const body = cdef.body
+    if (Array.isArray(body)) return body
+    if (Array.isArray(body.body)) return body.body
+    if (Array.isArray(body.properties)) return body.properties
+    return null
+  }
+
+  /**
+   * 在 packages 树中按类型名查找所有同名 ClassDefinition（解决同名歧义）
+   */
+  _findAllClassDefsByName(name: string): any[] {
+    const cacheKey = `classDefs:${name}`
+    if (cacheKey in this._methodResolveCache) return this._methodResolveCache[cacheKey]
+
+    const packages = this.topScope?.context?.packages
+    if (!packages) return []
+
+    const results: any[] = []
+    const visited = new Set<any>()
+
+    const search = (node: any, depth: number): void => {
+      if (depth > 15 || !node || visited.has(node)) return
+      visited.add(node)
+      if (!node.value || typeof node.value !== 'object' || Array.isArray(node.value)) return
+
+      for (const key of Object.keys(node.value)) {
+        const child = node.value[key]
+        if (!child) continue
+
+        if (child.ast?.cdef && child.sid === name) {
+          results.push(child)
+        }
+
+        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module' || child.vtype === 'class') {
+          search(child, depth + 1)
+        }
+      }
+    }
+
+    search(packages, 0)
+    this._methodResolveCache[cacheKey] = results
+    return results
+  }
+
+  /**
+   * 遍历 packages 树查找包含目标方法（带 fdef）的非接口 ClassDefinition
+   */
+  _searchMethodInPackages(methodName: string): any {
+    const packages = this.topScope?.context?.packages
+    if (!packages) return null
+
+    let found: any = null
+    const visited = new Set<any>()
+
+    const search = (node: any, depth: number): void => {
+      if (depth > 15 || !node || visited.has(node) || found) return
+      visited.add(node)
+      if (!node.value || typeof node.value !== 'object' || Array.isArray(node.value)) return
+
+      for (const key of Object.keys(node.value)) {
+        if (found) return
+        const child = node.value[key]
+        if (!child) continue
+
+        if (child.ast?.cdef && !child.isInterface && child.value?.[methodName]?.ast?.fdef) {
+          found = child.value[methodName]
+          return
+        }
+
+        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module') {
+          search(child, depth + 1)
+        }
+      }
+    }
+
+    search(packages, 0)
+    return found
   }
 
   /**

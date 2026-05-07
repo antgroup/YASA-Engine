@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, import/no-commonjs, @typescript-eslint/no-use-before-define */
 
+import v8 from 'v8'
 import { yasaLog } from "../util/format-util"
+import { printMemorial } from '../util/memorial'
 
 const fs = require('fs-extra')
 const path = require('path')
@@ -12,7 +14,7 @@ const Parser = require('../engine/parser/parser')
 const Stat = require('../util/statistics')
 const logger = require('../util/logger')(__filename)
 const FileUtil = require('../util/file-util')
-const { ErrorCode, Errors } = require('../util/error-code')
+const { ErrorCode, Errors, setExitCode } = require('../util/error-code')
 const FrameworkUtil = require('../util/framework-util')
 const { handleException } = require('../engine/analyzer/common/exception-handler')
 const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-strategy-auto-register')
@@ -40,9 +42,14 @@ async function execute(dir: any, args: any[] = [], printf?: any) {
   if (analyzer) {
     const processingDir = Config.maindir
     const exitCode = await executeAnalyzer(analyzer, processingDir)
-    process.exitCode = exitCode
+    setExitCode(exitCode)
     if (exitCode === 0) {
-      result = await outputAnalyzerResult(analyzer, printf)
+      try {
+        result = await outputAnalyzerResult(analyzer, printf)
+      } catch (e: any) {
+        handleException(e, 'Error occurred in outputAnalyzerResult', 'Error occurred in outputAnalyzerResult')
+        setExitCode(ErrorCode.fail_to_generate_report)
+      }
     }
   }
 
@@ -101,6 +108,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   if (dir) {
     sourcePath = dir
   }
+  // 标记初始化是否遇到致命错误
+  let initError = false
   // 标记是否显式设置了 --intermediate-dir
   let intermediateDirExplicitlySet = false
   // 标记是否显式设置了 --context-environment-dir
@@ -116,7 +125,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       try {
         if (!fs.existsSync(d)) {
           handleException(null, `Error !! no such file or directory: ${d}`, `Error !! no such file or directory: ${d}`)
-          process.exit(1)
+          initError = true
+          setExitCode(ErrorCode.config_error)
+          return
         }
         const stats = fs.statSync(d)
         if (stats.isFile()) {
@@ -129,18 +140,21 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
           'ERROR: an error occurred while reading source path',
           'ERROR: an error occurred while reading source path'
         )
-        process.exit(1)
+        initError = true
+        setExitCode(ErrorCode.config_error)
       }
     })
     .option('--language <lang>', '指定语言（支持: javascript/typescript/golang/python/java）', (lang: any) => {
-      const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python', 'java']
+      const supported = ['javascript', 'typescript', 'js', 'ts', 'go', 'golang', 'python', 'java', 'php']
       if (!supported.includes(lang)) {
         handleException(
           null,
-          'Unknown language!! Only support javascript/typescript/golang/python/java',
-          'Unknown language!! Only support javascript/typescript/golang/python/java'
+          'Unknown language!! Only support javascript/typescript/golang/python/java/php',
+          'Unknown language!! Only support javascript/typescript/golang/python/java/php'
         )
-        process.exit(0)
+        initError = true
+        setExitCode(ErrorCode.config_error)
+        return
       }
       if (['typescript', 'ts', 'js', 'javascript'].includes(lang)) {
         lang = 'javascript'
@@ -204,6 +218,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       if (!Config.checkerIds) Config.checkerIds = []
       Config.checkerIds = Array.isArray(Config.checkerIds) ? Config.checkerIds : [Config.checkerIds]
       Config.checkerIds.push('callgraph')
+    })
+    .option('--dumpEntrypoint', '输出入口点信息到 entrypoints.json', () => {
+      Config.dumpEntrypoint = true
     })
     .option('--source <locations>', '指定source位置（QL专用）', (locations: any) => {
       if (!Config.FlowConfig) {
@@ -285,7 +302,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
           'ERROR: --workerCount must be a non-negative integer',
           'ERROR: --workerCount must be a non-negative integer'
         )
-        process.exit(1)
+        initError = true
+        setExitCode(ErrorCode.config_error)
+        return
       }
       Config.workerCount = workerCount
     })
@@ -336,7 +355,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
             'ERROR: an error occurred while reading path',
             'ERROR: an error occurred while reading path'
           )
-          process.exit(1)
+          initError = true
+          setExitCode(ErrorCode.config_error)
         }
       }
     }
@@ -353,8 +373,22 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
 
   program.version(YASA_VERSION)
 
+  // echo：与 --version 同型——commander 解析到此选项立即打印并退出，不进入 analyzer
+  program.option('--echo', '致曾同行者', () => {
+    printMemorial()
+    process.exit(0)
+  })
+
   // 解析命令行参数
   program.parse(args, { from: 'user' })
+
+  // 启动诊断日志：放在 parse 之后，避免 --version / --echo 等立即退出选项混入噪音
+  logger.info(`version: ${YASA_VERSION}`)
+  logger.info(`v8 heap_size_limit: ${v8.getHeapStatistics().heap_size_limit / 1024 / 1024}`, 'MB')
+  logger.info(`main file:${require.main?.filename}`)
+
+  // commander 回调中遇到致命错误，直接返回
+  if (initError) return null
 
   // 检查如果启用了增量分析，但 --intermediate-dir 未设置或为空，则禁用增量分析
   if (
@@ -416,12 +450,14 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
         logger.info(
           'Unknown command or unknown language!! Note the command using -- , and language support javascript/typescript/golang/python/java.'
         )
-        process.exit(0)
+        setExitCode(ErrorCode.config_error)
+        return null
       }
     }
   } else {
     handleException(null, 'There is no sourcePath specified to analyze', 'There is no sourcePath specified to analyze')
-    process.exit(0)
+    setExitCode(ErrorCode.config_error)
+    return null
   }
 
   if (reportPath && reportPath !== '') {
@@ -461,7 +497,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
   if (Config.dumpAST) {
     if (!Config.single) {
       Errors.ParseError('Only support dump AST for single file, but given a dir')
-      process.exit(0)
+      setExitCode(ErrorCode.config_error)
+      return null
     }
     // read and parse the source file(s)
     const apps = loadSource(Config.maindir)
@@ -477,7 +514,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     } else {
       await dumpAST(apps, logger.info.bind(logger))
     }
-    process.exit(0)
+    setExitCode(ErrorCode.normal)
+    return null
   }
 
   // dump all AST
@@ -492,10 +530,12 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       await Parser.dumpAllAST(Config.maindir, Config.reportDir, Config)
 
       logger.info('parseDirectory UAST success!')
-      process.exit(0)
+      setExitCode(ErrorCode.normal)
+      return null
     } catch (e: any) {
       handleException(e, 'Error occurred in dumpAllAST!!!!', `Error occurred in dumpAllAST!!!!${e}`)
-      process.exit(1)
+      setExitCode(ErrorCode.engine_failure)
+      return null
     }
   }
 
@@ -512,6 +552,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
 
   const PythonAnalyzer = require('../engine/analyzer/python/common/python-analyzer')
 
+  const PhpAnalyzer = require('../engine/analyzer/php/common/php-analyzer')
+
   const analyzerEnum = {
     EggAnalyzer,
     JavaScriptAnalyzer,
@@ -519,6 +561,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     GoAnalyzer,
     SpringAnalyzer,
     PythonAnalyzer,
+    PhpAnalyzer,
   }
   const analyzerLanguage = {
     EggAnalyzer: 'javascript',
@@ -527,6 +570,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     SpringAnalyzer: 'java',
     GoAnalyzer: 'golang',
     PythonAnalyzer: 'python',
+    PhpAnalyzer: 'php',
   }
 
   let Analyzer: any
@@ -536,8 +580,8 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     if (!Analyzer || Analyzer === '') {
       handleException(
         null,
-        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer',
-        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer'
+        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer|PhpAnalyzer',
+        'analyzer set failed,now YASA supported EggAnalyzer|JavaScriptAnalyzer|JavaAnalyzer|SpringAnalyzer|GoAnalyzer|PythonAnalyzer|PhpAnalyzer'
       )
       return
     }
@@ -561,6 +605,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
           break
         case 'python':
           f = 'PythonAnalyzer'
+          break
+        case 'php':
+          f = 'PhpAnalyzer'
           break
         default:
           handleException(null, 'default analyzer set failed', 'default analyzer set failed')
@@ -588,15 +635,15 @@ async function executeAnalyzer(analyzer: any, processingDir: any): Promise<numbe
       const source = fs.readFileSync(processingDir, 'utf8')
       const singleFileResult = await analyzer.analyzeSingleFile(source, processingDir)
       if (!singleFileResult) {
-        return 1
+        return (process.exitCode as number) || ErrorCode.engine_failure
       }
     } else if (!(await analyzer.analyzeProject(processingDir))) {
-      return 1
+      return (process.exitCode as number) || ErrorCode.engine_failure
     }
-    return 0
+    return (process.exitCode as number) || ErrorCode.normal
   } catch (e: any) {
     handleException(e, 'Error occurred in executeAnalyzer!!!!', 'Error occurred in executeAnalyzer!!!!')
-    return 1
+    return ErrorCode.engine_failure
   }
 }
 
@@ -633,8 +680,7 @@ function removeParentProperty(obj: any) {
  */
 function loadSource(absdirs: any) {
   if (!Config.language) {
-    logger.info('please set language first')
-    process.exit(1)
+    throw new Error('Config.language is not set')
   }
   let fext: any = ['.sol']
   const dirFilter: any[] = []
@@ -657,6 +703,9 @@ function loadSource(absdirs: any) {
       break
     case 'python':
       fext = ['py']
+      break
+    case 'php':
+      fext = ['php']
       break
     default:
       // Keep default .sol extension for unknown languages
@@ -736,7 +785,7 @@ function cleanReportDir(odir: any) {
         'ERROR: an error occurred while cleanReportDir.',
         'ERROR: an error occurred while cleanReportDir.'
       )
-      process.exitCode = ErrorCode.fail_to_generate_report
+      setExitCode(ErrorCode.fail_to_generate_report)
     }
   }
 }
@@ -829,6 +878,8 @@ function detectFileLanguage(filename: any) {
       return 'java'
     case 'py':
       return 'python'
+    case 'php':
+      return 'php'
     default:
       return null
   }

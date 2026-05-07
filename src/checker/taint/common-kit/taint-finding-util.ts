@@ -42,8 +42,8 @@ function outputCheckerResultToConsole(findings: TaintFinding[], printf: PrintFun
       if (typeof finding.sinkRule !== 'undefined' && finding.sinkRule !== 'Default') {
         printf('SINK RULE:', finding.sinkRule)
       }
-      if (finding.sinkAttribute) {
-        printf('SINK Attribute:', finding.sinkAttribute)
+      if (finding.sinkAttribute && finding.sinkAttribute.length > 0) {
+        printf('SINK Attribute:', finding.sinkAttribute.join(','))
       }
       // the entrypoint of this source
       if (entrypoint && entrypoint.filepath !== Constant.YASA_DEFAULT) {

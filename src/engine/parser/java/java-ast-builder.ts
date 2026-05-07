@@ -18,12 +18,7 @@ const uastParser = new UastParser()
 function parseJava(code: string, options?: ParseOptions) {
   options = options || {}
   if (options.language && options.language !== LanguageType.LANG_JAVA && options.language !== 'java') {
-    handleException(
-      new Error(`Java AST Builder received wrong language type: ${options.language}`),
-      `Error: Java AST Builder received wrong language type: ${options.language}`,
-      `Error: Java AST Builder received wrong language type: ${options.language}`
-    )
-    process.exit(1)
+    throw new Error(`Java AST Builder received wrong language type: ${options.language}`)
   }
   options.language = LanguageType.LANG_JAVA
   return uastParser.parse(code, options)

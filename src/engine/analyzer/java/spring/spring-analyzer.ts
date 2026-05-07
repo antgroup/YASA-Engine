@@ -1,5 +1,7 @@
 import JavaInitializer from '../common/java-initializer'
 import { INTERNAL_CALL } from '../../common/call-args'
+import { UnionValue } from '../../common/value/union'
+import type { Invocation } from '../../../../resolver/common/value/invocation'
 
 const UastSpec = require('@ant-yasa/uast-spec')
 const Config = require('../../../../config')
@@ -581,6 +583,38 @@ class SpringAnalyzer extends JavaAnalyzer {
         isPrimary,
       })
     }
+    /* 收集 @Handler 注解映射：识别 @Handler(value) 并建立 value → className 映射。
+       @Handler 的 value 通常是常量引用（如 HandlerConstants.XXX），在 processModule 阶段
+       常量已被解析到 scope 中，通过 scope 查找获取字面量值，避免调用 processInstruction */
+    if (annotations && Array.isArray(annotations) && res.logicalQid) {
+      for (const rawAnnotation of annotations) {
+        const annotationStr = AstUtil.prettyPrintAST(rawAnnotation)
+        if (!annotationStr?.includes('Handler')) continue
+        const annotation = rawAnnotation as { type?: string; body?: Array<{ type?: string }> }
+        if (annotation.type !== 'ScopedStatement' || !Array.isArray(annotation.body)) continue
+        /* ScopedStatement: body[0] 是注解类型声明，body[1+] 是注解参数值 */
+        for (let i = 1; i < annotation.body.length; i++) {
+          const candidate = annotation.body[i]
+          /* 尝试解析常量引用（MemberAccess 如 HandlerConstants.XXX）*/
+          const candidateStr = AstUtil.prettyPrintAST(candidate)
+          if (!candidateStr) continue
+          /* 从 scope 中查找常量值：遍历 scope 链找到常量定义 */
+          let handlerValue: string | undefined
+          const val = this.processInstruction(scope, candidate as Expr, state)
+          if (val?.vtype === 'primitive' && typeof val.value === 'string') {
+            handlerValue = val.value
+          }
+          if (handlerValue) {
+            if (!this.topScope.spring.handlerAnnotationMap) {
+              this.topScope.spring.handlerAnnotationMap = new Map<string, string>()
+            }
+            this.topScope.spring.handlerAnnotationMap.set(handlerValue, res.logicalQid)
+          }
+          break
+        }
+        break
+      }
+    }
     return res
   }
 
@@ -719,6 +753,44 @@ class SpringAnalyzer extends JavaAnalyzer {
         }
       }
     }
+
+    // 接口→实现类匹配：通过 AST supers 检查 bean 的类是否 implements targetClassName
+    // 只注册 classHierarchy 继承关系，不修改 AST 节点
+    // 原因：修改 varType/init 会导致接口 default 方法在 callgraph 中丢失
+    if (!hasFindPrimary && this.classMap && this.symbolTable && targetClassName) {
+      const targetShortName = targetClassName.split('.').pop() || targetClassName
+      let matchedBean: { className: string; isPrimary: boolean } | undefined
+      for (const beanValue of this.topScope.spring.beanMap.values()) {
+        if (!beanValue.className) {
+          continue
+        }
+        const classUuid = this.classMap.get(beanValue.className)
+        if (!classUuid) {
+          continue
+        }
+        const classVal = this.symbolTable.get(classUuid)
+        if (!classVal?.ast?.node?.supers || !Array.isArray(classVal.ast.node.supers)) {
+          continue
+        }
+        const implementsTarget = classVal.ast.node.supers.some(
+          (superAst: { name?: string }) => superAst?.name === targetShortName
+        )
+        if (implementsTarget) {
+          if (beanValue.isPrimary) {
+            matchedBean = beanValue
+            break
+          }
+          if (!matchedBean) {
+            matchedBean = beanValue
+          }
+        }
+      }
+      if (matchedBean) {
+        const implClassName = matchedBean.className
+        this.addExtraClassHierarchyByName(implClassName, targetClassName)
+        return true
+      }
+    }
   }
 
   /**
@@ -834,6 +906,157 @@ class SpringAnalyzer extends JavaAnalyzer {
           }
         }
         classVal.members.set(bodyAst.id.name, objVal)
+
+        /* @Handler dispatch：对有 initApplicationContext 方法的 bean（如 HandlerFactory），
+           在 CLASS 级别覆盖 getHandler 方法，使其返回所有 @Handler 注解 bean 的联合体。
+           必须修改 memberVal（CLASS 值，被 parent/child 共享），而非 objVal（仅在当前类可见的新实例）。
+           注意：引擎的 member access 使用 scope.value[key]，不是 scope.members.get(key） */
+        const handlerMap = this.topScope.spring.handlerAnnotationMap as Map<string, string> | undefined
+        if (handlerMap && handlerMap.size > 0 && memberVal.members?.has('initApplicationContext')) {
+          /* 从 value 和 members 两处获取 getHandler，确保修改生效 */
+          const classGetHandler = memberVal.value?.['getHandler'] || memberVal.members?.get('getHandler')
+          if (classGetHandler?.vtype === 'fclos') {
+            /* 收集所有 handler 实例联合体 */
+            const handlerInstances: any[] = []
+            for (const [, handlerClassName] of handlerMap) {
+              const handlerClassUuid = classMap.get(handlerClassName)
+              if (!handlerClassUuid) continue
+              const handlerClassVal = this.symbolTable.get(handlerClassUuid)
+              if (!handlerClassVal) continue
+              const handlerObj = newInstance(this, packageManager, handlerClassVal.qid, bodyAst)
+              handlerObj.injected = true
+              handlerObj.rtype = { type: undefined }
+              handlerObj.rtype.definiteType = UastSpec.identifier(handlerClassName)
+              handlerInstances.push(handlerObj)
+            }
+            if (handlerInstances.length > 0) {
+              const handlerUnion = new UnionValue(
+                undefined,
+                'handler-dispatch-union',
+                `${memberVal.qid}.handler-union`,
+                bodyAst
+              )
+              handlerUnion.parent = memberVal
+              for (const instance of handlerInstances) {
+                handlerUnion.appendValue(instance)
+              }
+              /* 在 CLASS 的 getHandler 上设置 runtime.execute（同时设置 value 和 members）
+                 同时清除 fdef，确保引擎走 runtime.execute 而非原始函数体 */
+              if (!classGetHandler.runtime) classGetHandler.runtime = {}
+              /* 捕获 analyzer 引用，用于精确 dispatch + lazy 剪枝 */
+              const analyzer = this as any
+              /* handlerValue → handler instance 的精确映射 */
+              const handlerInstanceMap = new Map<string, any>()
+              for (const [handlerValue, handlerClassName] of handlerMap) {
+                const matchingInstance = handlerInstances.find((inst: any) =>
+                  inst.rtype?.definiteType?.name === handlerClassName
+                )
+                if (matchingInstance) {
+                  handlerInstanceMap.set(handlerValue, matchingInstance)
+                }
+              }
+              let prunedUnion: any = null
+              classGetHandler.runtime.execute = (_fclos: any, _argvalues: any[], _state: any, _node: any, _scope: any) => {
+                /* 精确 dispatch：如果参数是已解析的字符串常量，直接返回对应的 handler 实例 */
+                const arg = _argvalues?.[0]
+                if (arg?.vtype === 'primitive' && typeof arg.value === 'string') {
+                  const exactMatch = handlerInstanceMap.get(arg.value)
+                  if (exactMatch) {
+                    logger.info('@Handler dispatch exact: "%s" → %s', arg.value, exactMatch.rtype?.definiteType?.name)
+                    return exactMatch
+                  }
+                }
+                /* 回退：lazy 剪枝，首次调用时过滤只保留 sink-reachable 的 handler */
+                if (prunedUnion) return prunedUnion
+                const { sinkArray, sofaStrictMatchSinkCacheMap } = analyzer.pruneInfoMap || {}
+                if (!sinkArray || sinkArray.length === 0) {
+                  prunedUnion = handlerUnion
+                  return prunedUnion
+                }
+                const reachableInstances: any[] = []
+                for (const instance of handlerInstances) {
+                  const executeFclos = instance.members?.get('execute') || instance.value?.['execute']
+                  const doExecuteFclos = instance.members?.get('doExecute') || instance.value?.['doExecute']
+                  const targetFclos = doExecuteFclos || executeFclos
+                  if (!targetFclos || !targetFclos.invocationMap) {
+                    reachableInstances.push(instance)
+                    continue
+                  }
+                  if (analyzer.checkFclosMatchSink(targetFclos, [], sinkArray, sofaStrictMatchSinkCacheMap, false)) {
+                    reachableInstances.push(instance)
+                  }
+                }
+                if (reachableInstances.length === 0) {
+                  prunedUnion = handlerUnion
+                } else {
+                  prunedUnion = new UnionValue(
+                    undefined,
+                    'handler-dispatch-union-pruned',
+                    `${memberVal.qid}.handler-union-pruned`,
+                    bodyAst
+                  )
+                  prunedUnion.parent = memberVal
+                  for (const instance of reachableInstances) {
+                    prunedUnion.appendValue(instance)
+                  }
+                }
+                logger.info(
+                  '@Handler dispatch lazy prune fallback: %d/%d handler sink-reachable',
+                  reachableInstances.length,
+                  handlerInstances.length
+                )
+                return prunedUnion
+              }
+              if (classGetHandler.ast) classGetHandler.ast.fdef = undefined
+              /* 确保 value 和 members 都指向同一个有 runtime.execute 的 fclos */
+              if (memberVal.value) memberVal.value['getHandler'] = classGetHandler
+              if (memberVal.members) memberVal.members.set('getHandler', classGetHandler)
+              /* 为静态剪枝注入虚拟 invocation：getHandler fclos 指向每个 handler 实例的 execute/doExecute fclos。
+                 目的：checkFclosMatchSink 只递归 invocationMap 的静态 invocation，看不到 runtime.execute；
+                 注入后剪枝可沿 getHandler → handler.execute/doExecute 自然递归到 sink。
+                 calleeType/fsig/callSiteLiteral 使用特殊前缀，确保不误命中 sink 精确匹配或 dynamic feature。 */
+              if (!(classGetHandler.invocationMap instanceof Map)) {
+                classGetHandler.invocationMap = new Map()
+              }
+              const virtualInvocations: Invocation[] = []
+              for (const instance of handlerInstances) {
+                for (const sid of ['execute', 'doExecute']) {
+                  const targetFclos = instance.members?.get(sid) || instance.value?.[sid]
+                  if (targetFclos?.vtype !== 'fclos') continue
+                  const targetFdef =
+                    targetFclos.ast?.fdef ||
+                    (Array.isArray(targetFclos.overloaded) && targetFclos.overloaded[0]) ||
+                    targetFclos.ast?.node
+                  virtualInvocations.push({
+                    callSiteLiteral: `<@Handler dispatch virtual>.${sid}`,
+                    calleeType: '<@Handler dispatch virtual>',
+                    fsig: `<@Handler dispatch virtual>.${sid}`,
+                    argTypes: [],
+                    callSite: bodyAst,
+                    fromScope: memberVal,
+                    fromScopeAst: memberVal.ast?.node,
+                    toScope: targetFclos,
+                    toScopeAst: targetFdef,
+                  })
+                }
+              }
+              if (virtualInvocations.length > 0) {
+                const virtualNodeHash = `${memberVal.qid}.handler-dispatch-virtual`
+                classGetHandler.invocationMap.set(virtualNodeHash, virtualInvocations)
+              }
+              logger.info(
+                '@Handler dispatch virtual invocation: CLASS [%s] getHandler 注入 %d 个虚拟 invocation (execute/doExecute handler fclos) 供静态剪枝递归',
+                memberVal.logicalQid || memberVal.qid,
+                virtualInvocations.length
+              )
+              logger.info(
+                '@Handler dispatch: 在 CLASS [%s] 的 getHandler 方法上设置 runtime.execute，返回 %d 个 handler 联合体',
+                memberVal.logicalQid || memberVal.qid,
+                handlerInstances.length
+              )
+            }
+          }
+        }
       }
     }
   }

@@ -24,6 +24,8 @@ interface SinkRule {
   fsig?: string
   fregex?: string
   calleeType?: string
+  /** sink 关联的前置条件 id 列表，采用 OR 语义：taint 上命中任一 id 对应的 tag 即生成 finding */
+  preconditionIds?: string[]
   [key: string]: any
 }
 
@@ -92,6 +94,9 @@ function matchSinkAtFuncCallWithCalleeType(
         continue
       }
 
+      // Go 指针类型 sink 规则的 calleeType 带 * 前缀（如 *Collection），引擎解析的类型不带，需 normalize
+      const calleeTypeBase = tspec.calleeType?.startsWith('*') ? tspec.calleeType.slice(1) : ''
+
       if (tspec.fsig) {
         if ((!tspec.calleeType || tspec.calleeType === '') && tspec.fsig === AstUtilSinkUtil.prettyPrint(callExpr)) {
           res.push(tspec)
@@ -99,6 +104,8 @@ function matchSinkAtFuncCallWithCalleeType(
           callExpr.type === 'MemberAccess' &&
           (AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
+            (calleeTypeBase && (AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType).endsWith(`.${calleeTypeBase}`))) ||
             tspec.calleeType === '*') &&
           `${AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.vagueType).replace(/"/g, '')}.${AstUtilSinkUtil.prettyPrint(
             fclos.property
@@ -109,6 +116,8 @@ function matchSinkAtFuncCallWithCalleeType(
           (callExpr.type === 'MemberAccess' || callExpr.type === 'Identifier') &&
           (AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
+            (calleeTypeBase && (AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${calleeTypeBase}`))) ||
             tspec.calleeType === '*') &&
           (AstUtilSinkUtil.prettyPrint(fclos.rtype?.vagueType).replace(/"/g, '') === tspec.fsig ||
             fclos.sid === tspec.fsig)
@@ -121,6 +130,10 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype).endsWith(`.${tspec.calleeType}`) ||
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
+            (calleeTypeBase && (AstUtilSinkUtil.prettyPrint(fclos.object?.rtype) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.object?.rtype).endsWith(`.${calleeTypeBase}`) ||
+              AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType).endsWith(`.${calleeTypeBase}`))) ||
             tspec.calleeType === '*') &&
           AstUtilSinkUtil.prettyPrint(fclos.property) === tspec.fsig
         ) {
@@ -131,6 +144,10 @@ function matchSinkAtFuncCallWithCalleeType(
             AstUtilSinkUtil.prettyPrint(fclos.rtype).endsWith(`.${tspec.calleeType}`) ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === tspec.calleeType ||
             AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${tspec.calleeType}`) ||
+            (calleeTypeBase && (AstUtilSinkUtil.prettyPrint(fclos.rtype) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.rtype).endsWith(`.${calleeTypeBase}`) ||
+              AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType) === calleeTypeBase ||
+              AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType).endsWith(`.${calleeTypeBase}`))) ||
             tspec.calleeType === '*') &&
           AstUtilSinkUtil.prettyPrint(fclos.ast?.node) === tspec.fsig
         ) {

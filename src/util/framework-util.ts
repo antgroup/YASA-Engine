@@ -21,16 +21,21 @@ function eggSanityCheck(appEntryDir: string): boolean {
     return false
   }
 
+  // 传统 egg 目录结构：app/ + config/
   const appDir = path.join(appEntryDir, 'app')
   const configDir = path.join(appEntryDir, 'config')
-  if (!fs.existsSync(appDir)) {
-    return false
-  }
-  if (!fs.existsSync(configDir)) {
-    return false
+  if (fs.existsSync(appDir) && fs.existsSync(configDir)) {
+    return true
   }
 
-  return true
+  // tegg 新目录结构：src/ + module.yml
+  const srcDir = path.join(appEntryDir, 'src')
+  const moduleYml = path.join(appEntryDir, 'module.yml')
+  if (fs.existsSync(srcDir) && fs.existsSync(moduleYml)) {
+    return true
+  }
+
+  return false
 }
 
 /**

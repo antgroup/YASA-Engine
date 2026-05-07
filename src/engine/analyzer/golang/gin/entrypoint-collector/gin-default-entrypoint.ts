@@ -3,7 +3,7 @@ const completeEntryPoint = require('../../../../../checker/taint/common-kit/entr
 
 export {}
 
-const RouteRegistryProperty = ['POST', 'GET', 'DELETE', 'PUT']
+const RouteRegistryProperty = ['POST', 'GET', 'DELETE', 'PUT', 'Handle']
 
 const RouteRegistryObject = [
   '<global>.packageManager.github.com/gin-gonic/gin.Default()',
@@ -114,6 +114,53 @@ function getGinEntryPointAndSource(packageManager: any) {
   }
 }
 
+/** 通过 rtype 判断 callee 是否为 Gin 路由注册器（Engine 或 RouterGroup） */
+function isGinRouteRegistrar(calleeObject: { rtype?: unknown }): boolean {
+  const rtype = calleeObject.rtype
+  if (!rtype) return false
+  // rtype 可能是字符串或对象（可能含循环引用），安全提取类型名
+  let rtypeStr: string
+  if (typeof rtype === 'string') {
+    rtypeStr = rtype
+  } else if (typeof rtype === 'object' && rtype !== null && 'name' in rtype) {
+    rtypeStr = String((rtype as { name: unknown }).name)
+  } else {
+    try {
+      rtypeStr = JSON.stringify(rtype)
+    } catch {
+      return false
+    }
+  }
+  return rtypeStr.includes('gin.RouterGroup') || rtypeStr.includes('gin.Engine')
+}
+
+/** 沿 scope 链查找标识符对应的值 */
+function lookupInScopeChain(name: string, scope: { _field?: Record<string, unknown>; parent?: any }): unknown {
+  let current: { _field?: Record<string, unknown>; parent?: any } | null = scope
+  while (current) {
+    if (current._field && name in current._field) {
+      return current._field[name]
+    }
+    current = current.parent ?? null
+  }
+  return null
+}
+
+/** 从 scope 链中解析 AST 表达式（Identifier / MemberAccess）对应的运行时值 */
+function resolveAstExpr(astNode: { type?: string; name?: string; object?: any; property?: { name?: string } }, scope: any): any {
+  if (!astNode || !scope) return null
+  if (astNode.type === 'Identifier') {
+    return lookupInScopeChain(astNode.name ?? '', scope)
+  }
+  if (astNode.type === 'MemberAccess' && astNode.object && astNode.property?.name) {
+    const obj = resolveAstExpr(astNode.object, scope)
+    if (obj && obj._field) {
+      return obj._field[astNode.property.name] ?? null
+    }
+  }
+  return null
+}
+
 /**
  * 自采集路由，将注册的路由函数添加到entryPoints
  * @param callExpNode
@@ -126,20 +173,36 @@ function collectRouteRegistry(callExpNode: any, calleeObject: any, argValues: an
   const routeFCloses: any[] = []
   const propertyName = callExpNode.callee.property?.name
   const objectQid = calleeObject.qid
-  // TODO：后续考虑用rtype判断
+  // qid 前缀匹配（原有逻辑）或 rtype 匹配（支持 RouterGroup / Engine）
+  const isQidMatch = RouteRegistryObject.some((ginPrefix) => objectQid?.startsWith(ginPrefix))
+  const isRtypeMatch = isGinRouteRegistrar(calleeObject)
   if (
-    RouteRegistryObject.some((ginPrefix) => objectQid?.startsWith(ginPrefix)) &&
+    (isQidMatch || isRtypeMatch) &&
     RouteRegistryProperty.includes(propertyName)
   ) {
-    for (const arg of argValues) {
-      if (arg?.vtype === 'fclos' && arg.ast?.node?.loc) {
-        // 避免对同一条路由注册语句重复添加
-        const hash = JSON.stringify(arg.ast.node.loc)
-        if (!processedRouteRegistry.has(hash)) {
-          processedRouteRegistry.add(hash)
-          routeFCloses.push(arg)
+    for (let i = 0; i < argValues.length; i++) {
+      const arg = argValues[i]
+      if (!arg || (arg.vtype !== 'fclos' && arg.vtype !== 'symbol')) continue
+      if (!arg.ast?.node?.loc) continue
+
+      // 用路由注册语句位置去重
+      const hash = JSON.stringify(callExpNode.loc) + '#' + String(i)
+      if (processedRouteRegistry.has(hash)) continue
+      processedRouteRegistry.add(hash)
+
+      // 检查 AST 中对应位置的参数是否为包装函数调用（如 WrapFD(handler)）
+      // 如果是，尝试从 scope 中解析实际 handler
+      const astArg = callExpNode.arguments?.[i]
+      if (astArg?.type === 'CallExpression' && astArg.arguments?.length > 0) {
+        // 包装函数模式：取第一个参数作为实际 handler
+        const innerAstArg = astArg.arguments[0]
+        const resolved = resolveAstExpr(innerAstArg, scope)
+        if (resolved?.vtype === 'fclos' && resolved.ast?.node?.loc) {
+          routeFCloses.push(resolved)
+          continue
         }
       }
+      routeFCloses.push(arg)
     }
     return routeFCloses
   }

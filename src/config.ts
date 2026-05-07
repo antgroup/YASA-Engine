@@ -43,6 +43,7 @@ export interface IConfig {
   format?: string
   dumpCG?: boolean
   dumpAllCG?: boolean
+  dumpEntrypoint?: boolean
   needBenchmarkJson?: boolean
 
   // Rules
@@ -111,7 +112,7 @@ const configObject: IConfig = {
   shareSourceLineSet: false,
 
   // Worker数量：0表示自动计算，>0表示使用设置的worker数量
-  workerCount: 0,
+  workerCount: 1,
 
   //* *****************************  analysis  ***************************
 
@@ -121,6 +122,7 @@ const configObject: IConfig = {
   i18n: 'ch', // ch | en
   format: 'sarif', // sarif | json | plaintext | html
   dumpCG: false,
+  dumpEntrypoint: false,
   needBenchmarkJson: true,
   //* ***************************** rules *****************
   loadDefaultRule: true,

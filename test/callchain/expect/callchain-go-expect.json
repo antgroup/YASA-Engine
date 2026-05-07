@@ -12,7 +12,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Query",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Query(query)",
           "file": "/test_callchain.go",
@@ -83,7 +83,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Exec",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Exec(query)",
           "file": "/test_callchain.go",
@@ -154,7 +154,7 @@
       },
       "sinkInfo": {
         "sinkRule": "exec.Command",
-        "sinkAttribute": "GoCommandInjection",
+        "sinkAttribute": ["GoCommandInjection"],
         "callSite": {
           "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
           "file": "/test_callchain.go",
@@ -225,7 +225,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Query",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Query(query)",
           "file": "/test_callchain.go",
@@ -296,7 +296,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Exec",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Exec(query)",
           "file": "/test_callchain.go",
@@ -367,7 +367,7 @@
       },
       "sinkInfo": {
         "sinkRule": "exec.Command",
-        "sinkAttribute": "GoCommandInjection",
+        "sinkAttribute": ["GoCommandInjection"],
         "callSite": {
           "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
           "file": "/test_callchain.go",
@@ -436,7 +436,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Query",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Query(query)",
           "file": "/test_callchain.go",
@@ -489,7 +489,7 @@
       },
       "sinkInfo": {
         "sinkRule": "Exec",
-        "sinkAttribute": "GoSQLInjection",
+        "sinkAttribute": ["GoSQLInjection"],
         "callSite": {
           "code": "\tdb.Exec(query)",
           "file": "/test_callchain.go",
@@ -542,7 +542,7 @@
       },
       "sinkInfo": {
         "sinkRule": "exec.Command",
-        "sinkAttribute": "GoCommandInjection",
+        "sinkAttribute": ["GoCommandInjection"],
         "callSite": {
           "code": "\tcmd := exec.Command(\"sh\", \"-c\", command)",
           "file": "/test_callchain.go",

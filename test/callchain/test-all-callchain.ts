@@ -1,4 +1,7 @@
 import * as path from 'path'
+import * as fs from 'fs'
+// @ts-ignore
+import { computeAccuracyFromSarif, AccuracyStats } from '../trace-accuracy'
 const { execute } = require('../../src/interface/starter')
 const logger = require('../../src/util/logger')(__filename)
 
@@ -41,7 +44,7 @@ const tests: TestConfig[] = [
   },
 ]
 
-async function runCallchainTest(config: TestConfig): Promise<void> {
+async function runCallchainTest(config: TestConfig): Promise<AccuracyStats | null> {
   console.log(`\n${'='.repeat(60)}`)
   console.log(`Testing ${config.name} Callchain Checker`)
   console.log(`${'='.repeat(60)}`)
@@ -49,14 +52,15 @@ async function runCallchainTest(config: TestConfig): Promise<void> {
   console.log(`Rule config: ${config.ruleConfigFile}`)
 
   try {
+    const reportDir = path.join(config.testDir, 'report')
     const args = [
       config.testDir,
       '--ruleConfigFile',
       config.ruleConfigFile,
       '--analyzer',
       config.analyzer,
-      '--reportDir',
-      path.join(config.testDir, 'report'),
+      '--report',
+      reportDir,
       '--entryPointMode',
       'ONLY_CUSTOM',
       '--checkerPackIds',
@@ -72,6 +76,19 @@ async function runCallchainTest(config: TestConfig): Promise<void> {
         console.log(`  - Callchain findings: ${result.callchain.length}`)
       }
     }
+
+    // 计算 trace 准确率
+    const sarifPath = path.join(reportDir, 'report.sarif')
+    if (fs.existsSync(sarifPath)) {
+      const sarifData = JSON.parse(fs.readFileSync(sarifPath, 'utf-8'))
+      const stats = computeAccuracyFromSarif(sarifData)
+      const pct = stats.evaluableHops > 0 ? ((stats.accurateHops / stats.evaluableHops) * 100).toFixed(2) : 'N/A'
+      console.log(
+        `  Trace Accuracy: ${pct}% (${stats.accurateHops}/${stats.evaluableHops} hops, ${stats.totalFindings} findings)`
+      )
+      return stats
+    }
+    return null
   } catch (error) {
     console.error(`\n✗ ${config.name} Callchain test failed:`, error)
     throw error
@@ -83,12 +100,12 @@ async function runAllTests(): Promise<void> {
   console.log('Running All Callchain Checker Tests')
   console.log('='.repeat(60))
 
-  const results: Array<{ name: string; success: boolean; error?: any }> = []
+  const results: Array<{ name: string; success: boolean; error?: any; accuracy?: AccuracyStats | null }> = []
 
   for (const test of tests) {
     try {
-      await runCallchainTest(test)
-      results.push({ name: test.name, success: true })
+      const accuracy = await runCallchainTest(test)
+      results.push({ name: test.name, success: true, accuracy })
     } catch (error) {
       results.push({ name: test.name, success: false, error })
     }
@@ -110,6 +127,24 @@ async function runAllTests(): Promise<void> {
   const passedCount = results.filter((r) => r.success).length
 
   console.log(`\nTotal: ${results.length} | Passed: ${passedCount} | Failed: ${failedCount}`)
+
+  // 输出 trace 准确率汇总
+  console.log('\n' + '='.repeat(60))
+  console.log('Trace Accuracy Summary')
+  console.log('='.repeat(60))
+  for (const result of results) {
+    if (result.accuracy) {
+      const pct =
+        result.accuracy.evaluableHops > 0
+          ? ((result.accuracy.accurateHops / result.accuracy.evaluableHops) * 100).toFixed(2)
+          : 'N/A'
+      console.log(
+        `${result.name}: ${pct}% (${result.accuracy.accurateHops}/${result.accuracy.evaluableHops} hops, ${result.accuracy.totalFindings} findings)`
+      )
+    } else {
+      console.log(`${result.name}: N/A`)
+    }
+  }
 
   if (failedCount > 0) {
     throw new Error(`${failedCount} test(s) failed`)

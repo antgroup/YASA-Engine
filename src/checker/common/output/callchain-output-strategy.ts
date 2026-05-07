@@ -61,8 +61,8 @@ class CallchainOutputStrategy extends OutputStrategy {
     printf(`\nTotal callchain findings: ${callchainFindings.length}\n`)
     callchainFindings.forEach((finding: any, index: number) => {
       printf(`\n[${index + 1}] Sink matched: ${finding.sinkRule}`)
-      if (finding.sinkAttribute) {
-        printf(`  Attribute: ${finding.sinkAttribute}`)
+      if (finding.sinkAttribute && finding.sinkAttribute.length > 0) {
+        printf(`  Attribute: ${finding.sinkAttribute.join(',')}`)
       }
       printf(`  Entry point: ${finding.entrypoint?.functionName || 'N/A'}`)
       printf(`  Location: ${finding.sourcefile}:${finding.line}`)

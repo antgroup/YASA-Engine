@@ -16,6 +16,7 @@ const astUtil = require('../../../../util/ast-util')
 export class UnionValue extends DataValue {
   set: WeakSet<Unit>
   elements!: ValueRefList
+  isTuple: boolean = false
 
   raw_value: unknown
 
@@ -223,7 +224,7 @@ export class UnionValue extends DataValue {
       return
     }
 
-    if (flatten && val instanceof UnionValue) {
+    if (flatten && val instanceof UnionValue && !val.isTuple) {
       for (const v of val.value) {
         this.appendValue(v, uniqueFlag, flatten)
       }

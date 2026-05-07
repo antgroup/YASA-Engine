@@ -28,6 +28,7 @@ import type {
   FunctionDefinition,
 } from '../../../../types/uast'
 import type { PrimitiveValue as PrimitiveValueType } from '../../../../types/value'
+import type { CallInfo } from '../../common/call-args'
 
 const _ = require('lodash')
 const fs = require('fs')
@@ -57,7 +58,6 @@ const AstUtil = require('../../../../util/ast-util')
 const SourceLine = require('../../common/source-line')
 const { checkInvocationMatchSink } = require('../../../../checker/taint/common-kit/sink-util')
 const { filterDataFromScope } = require('../../../../util/common-util')
-import type { CallInfo } from '../../common/call-args'
 const { getLegacyArgValues } = require('../../common/call-args')
 
 /**
@@ -94,6 +94,7 @@ class JavaAnalyzer extends Analyzer {
       matchSinkCacheMap: new Map(),
       matchSinkNoRecurseCacheMap: new Map(),
       matchFuncCallSourceSinkSanitizerCacheMap: new Map(),
+      sofaStrictMatchSinkCacheMap: new Map(),
       dynamicClassArray: [
         'Class',
         'Thread',
@@ -325,7 +326,7 @@ class JavaAnalyzer extends Analyzer {
     if (this.checkerManager && this.checkerManager.checkAtEndOfCompileUnit) {
       this.checkerManager.checkAtEndOfCompileUnit(this, null, null, state, null)
     }
-    this.fileManager[filename] = fileScope.uuid
+    this.fileManager[filename] = { uuid: fileScope.uuid, astNode: fileScope.ast.node }
 
     // 记录 preload 时间：累加到总 preload 时间中
     this.performanceTracker.record('preProcess.preload')?.end()
@@ -990,8 +991,8 @@ class JavaAnalyzer extends Analyzer {
     if (sofaImplList && sofaImplList.length > 0) {
       const methodName = fclos.sid
       const { sinkArray } = this.pruneInfoMap
-      /* 复用全局 pruning 缓存：strict 模式（checkUseDynamicFeature=false）的结果是 dynamic 模式的子集，安全复用 */
-      const { matchSinkCacheMap } = this.pruneInfoMap
+      /* SOFA strict 匹配使用独立缓存，避免 strict=false 结果污染全局 dynamic 缓存 */
+      const { sofaStrictMatchSinkCacheMap } = this.pruneInfoMap
 
       /* 获取 this 对象：fclos 可能是 symbol（Map.get() 返回值），需要安全处理 */
       const thisObj = typeof fclos.getThisObj === 'function' ? fclos.getThisObj() : fclos._this
@@ -1011,14 +1012,16 @@ class JavaAnalyzer extends Analyzer {
         if (!implFdef || implFdef.body?.type === 'Noop') continue
 
         /* 严格匹配：callgraph 中静态可达 sink 才执行 */
-        const matchSink = this.checkFclosMatchSink(implFclos, [], sinkArray, matchSinkCacheMap, false)
+        const matchSink = this.checkFclosMatchSink(implFclos, [], sinkArray, sofaStrictMatchSinkCacheMap, false)
         if (!matchSink) continue
 
         strictMatchCount++
         implFclos.ast.fdef = implFdef
         const oldThis = implFclos._this
         implFclos._this = thisObj
-        res = this.executeCall(node, implFclos, state, scope, { callArgs: this.buildCallArgs(node, argvalues, implFclos) })
+        res = this.executeCall(node, implFclos, state, scope, {
+          callArgs: this.buildCallArgs(node, argvalues, implFclos),
+        })
         if (res?.type === 'FunctionCall') {
           meetSameFuncInCallstack = true
         }
@@ -1064,7 +1067,9 @@ class JavaAnalyzer extends Analyzer {
           invocation.toScope.ast.fdef = invocation.toScopeAst
           const oldThis = invocation.toScope._this
           invocation.toScope._this = fclos.getThisObj()
-          res = this.executeCall(node, invocation.toScope, state, scope, { callArgs: this.buildCallArgs(node, argvalues, invocation.toScope) })
+          res = this.executeCall(node, invocation.toScope, state, scope, {
+            callArgs: this.buildCallArgs(node, argvalues, invocation.toScope),
+          })
           if (res?.type === 'FunctionCall') {
             meetSameFuncInCallstack = true
           }
@@ -1080,7 +1085,9 @@ class JavaAnalyzer extends Analyzer {
         fclos?.ast?.fdef?.body?.type === 'Noop'
       ) {
         if (!res) {
-          res = this.processLibArgToRet(node, fclos, argvalues, scope, state, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
+          res = this.processLibArgToRet(node, fclos, argvalues, scope, state, {
+            callArgs: this.buildCallArgs(node, argvalues, fclos),
+          })
         }
       } else {
         res = this.executeCall(node, fclos, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
@@ -1121,7 +1128,9 @@ class JavaAnalyzer extends Analyzer {
 
       // execute function not found callback
       if (fclos._this?.members?.get('_functionNotFoundCallback_')?.vtype === 'fclos') {
-        this.executeCall(node, fclos._this.members.get('_functionNotFoundCallback_')!, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos._this.members.get('_functionNotFoundCallback_')!) })
+        this.executeCall(node, fclos._this.members.get('_functionNotFoundCallback_')!, state, scope, {
+          callArgs: this.buildCallArgs(node, argvalues, fclos._this.members.get('_functionNotFoundCallback_')!),
+        })
       }
 
       // evaluate default equals result
@@ -1139,10 +1148,14 @@ class JavaAnalyzer extends Analyzer {
     // execute fclos of this
     if (fclos?._this?.vtype === 'fclos') {
       if (['accept', 'apply', 'call', 'run', 'get'].includes(fclos.sid)) {
-        this.executeCall(node, fclos._this, state, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos._this) })
+        this.executeCall(node, fclos._this, state, scope, {
+          callArgs: this.buildCallArgs(node, argvalues, fclos._this),
+        })
       } else if (fclos.sid === 'invoke' && argvalues.length >= 1) {
         fclos._this._this = argvalues[0]
-        this.executeCall(node, fclos._this, state, scope, { callArgs: this.buildCallArgs(node, argvalues.slice(1), fclos._this) })
+        this.executeCall(node, fclos._this, state, scope, {
+          callArgs: this.buildCallArgs(node, argvalues.slice(1), fclos._this),
+        })
       }
     }
 
@@ -1553,7 +1566,9 @@ class JavaAnalyzer extends Analyzer {
           }
 
           try {
-            this.executeCall(overloadFuncDef, entryPoint.entryPointSymVal, state, entryPoint.scopeVal, { callArgs: this.buildCallArgs(overloadFuncDef, argValues, entryPoint.entryPointSymVal) })
+            this.executeCall(overloadFuncDef, entryPoint.entryPointSymVal, state, entryPoint.scopeVal, {
+              callArgs: this.buildCallArgs(overloadFuncDef, argValues, entryPoint.entryPointSymVal),
+            })
           } catch (e) {
             handleException(
               e,
@@ -1626,7 +1641,13 @@ class JavaAnalyzer extends Analyzer {
             timeoutEntryPoint.entryPoint.entryPointSymVal,
             state,
             timeoutEntryPoint.entryPoint.scopeVal,
-            { callArgs: this.buildCallArgs(timeoutEntryPoint.overloadFuncDef, timeoutEntryPoint.argValues, timeoutEntryPoint.entryPoint.entryPointSymVal) }
+            {
+              callArgs: this.buildCallArgs(
+                timeoutEntryPoint.overloadFuncDef,
+                timeoutEntryPoint.argValues,
+                timeoutEntryPoint.entryPoint.entryPointSymVal
+              ),
+            }
           )
         } catch (e) {
           handleException(
@@ -1781,6 +1802,7 @@ class JavaAnalyzer extends Analyzer {
    * @param state
    * @param node
    * @param scope
+   * @param callInfo
    */
   override buildNewObject(fdef: any, fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
     const obj = super.buildNewObject(fdef, fclos, state, node, scope, callInfo)
@@ -1860,7 +1882,7 @@ class JavaAnalyzer extends Analyzer {
    * @param sinkNum
    */
   checkPruneSupported(entryPointNum: number, sinkNum: number) {
-    if (entryPointNum < Config.minEntryPointToEnablePrune || sinkNum <= 0 || Config.makeAllCG) {
+    if (sinkNum <= 0 || Config.makeAllCG) {
       return false
     }
     return !!(this.typeResolver.resolveFinish && this.ainfo?.callgraph)
@@ -1965,7 +1987,12 @@ class JavaAnalyzer extends Analyzer {
     matchSinkCacheMap: Map<any, any>,
     checkUseDynamicFeature: boolean
   ) {
-    if (!fclos || !fclos.invocationMap || !sinkArray) {
+    if (!fclos || !sinkArray) {
+      matchSinkCacheMap.set(fclos, false)
+      return false
+    }
+    const invocationMap = this.resolveInvocationMapForInherited(fclos)
+    if (!invocationMap) {
       matchSinkCacheMap.set(fclos, false)
       return false
     }
@@ -1974,7 +2001,7 @@ class JavaAnalyzer extends Analyzer {
       return matchSinkCacheMap.get(fclos)
     }
 
-    for (const invocationArray of fclos.invocationMap.values()) {
+    for (const invocationArray of invocationMap.values()) {
       for (const invocation of invocationArray) {
         if (checkUseDynamicFeature) {
           for (const dynamicClass of this.pruneInfoMap.dynamicClassArray) {
@@ -2006,6 +2033,33 @@ class JavaAnalyzer extends Analyzer {
   }
 
   /**
+   * 对 inherited fclos 做 invocationMap fallback：
+   * 子类 inherited 方法的 fclos 是 cloneAlias 克隆版，clone 时 super 的 invocationMap 可能还未填充，
+   * 导致克隆版 invocationMap 为空，剪枝递归断链。
+   * 通过 logicalQid 反查原始 class 的原始 fclos，取其 invocationMap。
+   */
+  private resolveInvocationMapForInherited(fclos: any): Map<any, any> | undefined {
+    if (fclos?.invocationMap instanceof Map) {
+      return fclos.invocationMap
+    }
+    if (!fclos?.func?.inherited || typeof fclos.logicalQid !== 'string') {
+      return undefined
+    }
+    const dotIdx = fclos.logicalQid.lastIndexOf('.')
+    if (dotIdx <= 0) return undefined
+    const ownerQid = fclos.logicalQid.slice(0, dotIdx)
+    const methodSid = fclos.logicalQid.slice(dotIdx + 1)
+    const classUuid = this.classMap?.get(ownerQid)
+    if (!classUuid) return undefined
+    const classVal = this.symbolTable.get(classUuid)
+    const originalFclos = classVal?.members?.get(methodSid) || classVal?.value?.[methodSid]
+    if (originalFclos?.invocationMap instanceof Map) {
+      return originalFclos.invocationMap
+    }
+    return undefined
+  }
+
+  /**
    * check if fclos match any sink
    * @param fclos
    * @param fclosStack
@@ -2020,7 +2074,12 @@ class JavaAnalyzer extends Analyzer {
     matchSinkCacheMap: Map<any, any>,
     checkUseDynamicFeature: boolean
   ) {
-    if (!fclos || !fclos.invocationMap || !sinkArray) {
+    if (!fclos || !sinkArray) {
+      matchSinkCacheMap.set(fclos, false)
+      return false
+    }
+    const invocationMap = this.resolveInvocationMapForInherited(fclos)
+    if (!invocationMap) {
       matchSinkCacheMap.set(fclos, false)
       return false
     }
@@ -2044,7 +2103,7 @@ class JavaAnalyzer extends Analyzer {
     // }
 
     const toScopeArray = []
-    for (const invocationArray of fclos.invocationMap.values()) {
+    for (const invocationArray of invocationMap.values()) {
       for (const invocation of invocationArray) {
         if (checkUseDynamicFeature) {
           for (const dynamicClass of this.pruneInfoMap.dynamicClassArray) {

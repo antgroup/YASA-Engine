@@ -59,6 +59,21 @@
           "type": "ARG",
           "index": 0
         }
+      },
+      {
+        "func": {
+          "calleeType": "*",
+          "fsig": "write",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "THIS",
+          "propagateToOwner": true
+        }
       }
     ]
   }

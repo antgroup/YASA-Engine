@@ -135,6 +135,10 @@ class JsCallchainChecker extends CallchainChecker {
     }
 
     analyzer.entryPoints.push(...this.entryPoints)
+
+    // 回填 processModule 阶段产生的 finding 的 entrypoint
+    // processModule 阶段 getCurrentEntryPoint() 返回 YASADefault，需要从 callstack 匹配正确的 entrypoint
+    this.backfillEntrypoints(constValue)
   }
 
   /**
@@ -243,8 +247,7 @@ class JsCallchainChecker extends CallchainChecker {
         CallObj = CallFull.substring(0, lastIndexofCall)
       }
       if (CallObj !== RuleObj) {
-        const idx = CallObj.lastIndexOf('(')
-        const result = idx !== -1 ? CallObj.slice(0, idx) : CallObj
+        const result = QidUnifyUtil.removeParenthesesFromString(CallObj)
         if (result !== RuleObj) {
           if (!result.endsWith(`.${RuleObj}`) && !result.startsWith(`${RuleObj}.`)) {
             return false
@@ -282,6 +285,43 @@ class JsCallchainChecker extends CallchainChecker {
       return this.getObj(fclos._this)
     }
     return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(fclos.sid)
+  }
+
+  /**
+   * 回填 processModule 阶段产生的 finding 中为 YASADefault 的 entrypoint
+   * 遍历已有 findings，从 callstackInfo 匹配 entryPoints 列表，找到正确的 entrypoint
+   * @param constValue
+   */
+  backfillEntrypoints(constValue: any): void {
+    const CallchainOutputStrategy = require('../../common/output/callchain-output-strategy')
+    const category = this.resultManager?.findings?.[CallchainOutputStrategy.outputStrategyId]
+    if (!category || this.entryPoints.length === 0) return
+
+    for (const finding of category) {
+      if (finding.entrypoint?.filePath !== constValue.YASA_DEFAULT) continue
+
+      // 从 callstackInfo（已处理的调用链）中匹配 entryPoints
+      const callstackInfo = finding.callstackInfo
+      if (!callstackInfo || callstackInfo.length === 0) continue
+
+      let matched = false
+      for (const frame of callstackInfo) {
+        if (frame.type === 1) continue // 跳过 sink 节点
+        for (const ep of this.entryPoints) {
+          if (ep.filePath === frame.file && ep.functionName === frame.function) {
+            finding.entrypoint = {
+              filePath: ep.filePath,
+              functionName: ep.functionName,
+              attribute: ep.attribute,
+              funcReceiverType: ep.funcReceiverType || '',
+            }
+            matched = true
+            break
+          }
+        }
+        if (matched) break
+      }
+    }
   }
 }
 

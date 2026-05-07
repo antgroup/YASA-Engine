@@ -19,6 +19,10 @@ export interface EntryPoint {
   filePath?: string
   attribute?: string
   funcReceiverType?: string
+  /** 函数定义起始行号，用于精确匹配 overloaded 同名函数 */
+  funcLocStart?: number
+  /** 函数定义结束行号，用于精确匹配 overloaded 同名函数 */
+  funcLocEnd?: number
   [key: string]: any
 }
 
@@ -42,6 +46,12 @@ class EntryPointClass implements EntryPoint {
 
   funcReceiverType: string
 
+  /** 函数定义起始行号，用于精确匹配 overloaded 同名函数 */
+  funcLocStart: number | undefined
+
+  /** 函数定义结束行号，用于精确匹配 overloaded 同名函数 */
+  funcLocEnd: number | undefined
+
   /**
    *
    * @param type
@@ -55,6 +65,8 @@ class EntryPointClass implements EntryPoint {
     this.filePath = ''
     this.attribute = ''
     this.funcReceiverType = ''
+    this.funcLocStart = undefined
+    this.funcLocEnd = undefined
   }
 }
 

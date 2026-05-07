@@ -13,7 +13,7 @@ export class AstBinding {
   private _nodeRef: AstRef | null = null
   private _fdefRef: AstRef | null = null
   private _cdefRef: AstRef | null = null
-  private _declsMap: Map<string, AstRef> = new Map()
+  private _declsMap: Map<string, AstRef> | undefined = undefined
   private _owner: { getASTManager(): AstNodeManager | null }
 
   constructor(owner: { getASTManager(): AstNodeManager | null }) {
@@ -53,25 +53,28 @@ export class AstBinding {
   set cdef(astNode: BaseNode | null | undefined) { this._cdefRef = this._toRef(astNode ?? null) }
 
   getDecl(key: string): BaseNode | null {
-    return this._resolve(this._declsMap.get(key) ?? null)
+    return this._resolve(this._declsMap?.get(key) ?? null)
   }
 
   setDecl(key: string, astNode: BaseNode | null | undefined): void {
-    if (!astNode) { this._declsMap.delete(key); return }
+    if (!astNode) { this._declsMap?.delete(key); return }
     const ref = this._toRef(astNode)
-    if (ref) this._declsMap.set(key, ref)
+    if (ref) {
+      if (!this._declsMap) this._declsMap = new Map()
+      this._declsMap.set(key, ref)
+    }
   }
 
   hasDecl(key: string): boolean {
-    return this._declsMap.has(key)
+    return this._declsMap?.has(key) ?? false
   }
 
   deleteDecl(key: string): void {
-    this._declsMap.delete(key)
+    this._declsMap?.delete(key)
   }
 
   get declKeys(): string[] {
-    return Array.from(this._declsMap.keys())
+    return this._declsMap ? Array.from(this._declsMap.keys()) : []
   }
 
   initDecls(declsObj: Record<string, BaseNode | string> | null | undefined): void {
@@ -87,6 +90,7 @@ export class AstBinding {
         hash = uastNode._meta?.nodehash ?? null
       }
       if (hash) {
+        if (!this._declsMap) this._declsMap = new Map()
         this._declsMap.set(key, new AstRef(hash))
       }
     }
@@ -97,7 +101,7 @@ export class AstBinding {
     c._nodeRef = this._nodeRef
     c._fdefRef = this._fdefRef
     c._cdefRef = this._cdefRef
-    c._declsMap = new Map(this._declsMap)
+    c._declsMap = this._declsMap ? new Map(this._declsMap) : undefined
     return c
   }
 }

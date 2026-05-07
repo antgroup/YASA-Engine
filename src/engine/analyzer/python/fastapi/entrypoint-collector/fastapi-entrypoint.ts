@@ -192,11 +192,13 @@ function processDecorator(
 
   if (!isValidRouter) return
 
-  // Create entrypoint
+  // 创建 entrypoint，携带函数定义行号用于精确匹配 overloaded 同名函数
   const entryPoint = new EntryPointClass(Constant.ENGIN_START_FUNCALL)
   entryPoint.filePath = relativeFile
   entryPoint.functionName = funcName
   entryPoint.attribute = 'HTTP'
+  entryPoint.funcLocStart = obj.loc?.start?.line as number | undefined
+  entryPoint.funcLocEnd = obj.loc?.end?.line as number | undefined
 
   entryPoints.push(entryPoint)
 

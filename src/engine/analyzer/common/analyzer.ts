@@ -1,4 +1,5 @@
 import { primitiveToString } from '../../../util/variable-util'
+import { AstRefList } from './value/ast-ref-list'
 import type { ISymbolTableManager } from './symbol-table-interface'
 import type { Invocation } from '../../../resolver/common/value/invocation'
 import type {
@@ -731,20 +732,51 @@ class Analyzer extends BaseAnalyzer {
     this.startAnalyze()
 
     this.performanceTracker.end('startAnalyze')
-    Rules.setPreprocessReady(true)
 
-    this.performanceTracker.start('symbolInterpret')
-
-    // 切换到临时符号表
-    this.switchToTemporarySymbolTable()
-
-    try {
-      this.symbolInterpret()
-    } finally {
-      // 恢复原始符号表
-      this.restoreSymbolTable()
+    // dumpEntrypoint：收集完入口点后输出 entrypoints.json
+    if (Config.dumpEntrypoint && Config.reportDir) {
+      const fs = require('fs')
+      const path = require('path')
+      const sourceRoot = this.options?.maindir || Config.maindirPrefix || ''
+      const entryPointData = {
+        entryPoints: (this.entryPoints || []).map((ep: any) => {
+          const loc = ep.entryPointSymVal?.ast?.node?.loc
+          const location = loc ? {
+            start: loc.start,
+            end: loc.end,
+            sourcefile: loc.sourcefile && sourceRoot && loc.sourcefile.startsWith(sourceRoot)
+              ? loc.sourcefile.substring(sourceRoot.length)
+              : (loc.sourcefile || ''),
+          } : null
+          return {
+            filePath: ep.filePath || '',
+            functionName: ep.functionName || '',
+            type: ep.type || '',
+            location,
+          }
+        }),
+      }
+      const outPath = path.join(Config.reportDir, 'entrypoints.json')
+      fs.writeFileSync(outPath, JSON.stringify(entryPointData, null, 2))
+      logger.info(`EntryPoints dumped to ${outPath} (${entryPointData.entryPoints.length} entries)`)
     }
-    this.performanceTracker.end('symbolInterpret')
+
+    // dumpEntrypoint 模式跳过符号解释，但保留 endAnalyze 以兼容 dumpAllCG 等输出
+    if (!Config.dumpEntrypoint) {
+      Rules.setPreprocessReady(true)
+
+      this.performanceTracker.start('symbolInterpret')
+
+      // 切换到临时符号表
+      this.switchToTemporarySymbolTable()
+
+      try {
+        this.symbolInterpret()
+      } finally {
+        this.restoreSymbolTable()
+      }
+      this.performanceTracker.end('symbolInterpret')
+    }
     this.endAnalyze()
 
     // 记录性能数据并输出摘要（会自动输出指令统计）
@@ -1316,7 +1348,7 @@ class Analyzer extends BaseAnalyzer {
             // 如果是string，将其构造出符号值再存储
             // TODO 250731 将符号的字面量(而非符号值)作为key存储是否合适，有待商榷。
             if (_.isString(k)) k = new PrimitiveValue(scope.qid, k, k, null, key.type, key.loc, key)
-            this.saveVarInScope(scope, key, k, state)
+            this.saveVarInCurrentScope(scope, key, k, state)
           }
         }
         if (value) {
@@ -1328,7 +1360,7 @@ class Analyzer extends BaseAnalyzer {
               this.saveVarInCurrentScope(scope, value.elements[i].name, eleVal, state)
             }
           } else {
-            this.saveVarInScope(scope, value, v, state)
+            this.saveVarInCurrentScope(scope, value, v, state)
           }
         }
         this.processInstruction(scope, body, state)
@@ -1352,7 +1384,7 @@ class Analyzer extends BaseAnalyzer {
       if (!node.isYield) {
         if (!this.lastReturnValue) {
           this.lastReturnValue = returnValue
-        } else if (this.lastReturnValue.vtype === 'union') {
+        } else if (this.lastReturnValue.vtype === 'union' && !this.lastReturnValue.isTuple) {
           if (returnValue === this.lastReturnValue || returnValue.value === this.lastReturnValue.value) {
             const newReturnValue = buildNewValueInstance(
               this,
@@ -1462,7 +1494,8 @@ class Analyzer extends BaseAnalyzer {
    * @param state
    */
   processTryStatement(scope: ScopeType, node: TryStatement, state: State): VoidValueType {
-    // 此处processInstruction的返回值是undefine 因此无法拿到try里面是否抛出异常的信息
+    // 初始化 throwstack，使 processThrowStatement 可将抛出值 push 进来
+    state.throwstack = state.throwstack ?? []
     this.processInstruction(scope, node.body, state)
     const { handlers } = node
     if (handlers) {
@@ -1604,7 +1637,6 @@ class Analyzer extends BaseAnalyzer {
 
             if (this.checkerManager && this.checkerManager.checkAtAssignment) {
               const lscope = this.getDefScope(scope, x)
-              const mindex = this.resolveIndices(scope, x, state)
               this.checkerManager.checkAtAssignment(this, scope, node, state, {
                 lscope,
                 lvalue: oldVal,
@@ -1612,7 +1644,6 @@ class Analyzer extends BaseAnalyzer {
                 pcond: state.pcond,
                 binfo: state.binfo,
                 entry_fclos: this.entry_fclos,
-                mindex,
                 einfo: state.einfo,
                 state,
               })
@@ -1635,7 +1666,6 @@ class Analyzer extends BaseAnalyzer {
           }
           if (this.checkerManager && this.checkerManager.checkAtAssignment) {
             const lscope = this.getDefScope(scope, left)
-            const mindex = this.resolveIndices(scope, left, state)
             this.checkerManager.checkAtAssignment(this, scope, node, state, {
               lscope,
               lvalue: oldVal,
@@ -1643,7 +1673,6 @@ class Analyzer extends BaseAnalyzer {
               pcond: state.pcond,
               binfo: state.binfo,
               entry_fclos: this.entry_fclos,
-              mindex,
               einfo: state.einfo,
               state,
               ainfo: this.ainfo,
@@ -1694,7 +1723,6 @@ class Analyzer extends BaseAnalyzer {
 
         if (this.checkerManager && this.checkerManager.checkAtAssignment) {
           const lscope = this.getDefScope(scope, node.left)
-          const mindex = this.resolveIndices(scope, node.left, state)
           this.checkerManager.checkAtAssignment(this, scope, node, state, {
             lscope,
             lvalue: oldVal,
@@ -1702,7 +1730,6 @@ class Analyzer extends BaseAnalyzer {
             pcond: state.pcond,
             binfo: state.binfo,
             entry_fclos: this.entry_fclos,
-            mindex,
             einfo: state.einfo,
             state,
             ainfo: this.ainfo,
@@ -1843,7 +1870,12 @@ class Analyzer extends BaseAnalyzer {
     const values = node.elements.map((ele: any) => {
       return this.processInstruction(scope, ele, state)
     })
-    return unionAllValues(values, state)
+    const result = unionAllValues(values, state)
+    // 非数组的 tuple（如 Python tuple、Go 多返回值）标记 isTuple，防止 return 合并时丢失元素
+    if (!(node as any).isArray) {
+      result.isTuple = true
+    }
+    return result
   }
 
   /**
@@ -2231,6 +2263,15 @@ class Analyzer extends BaseAnalyzer {
     const fclos = this.processInstruction(scope, node.callee, state)
     if (!fclos) return new UndefinedValue()
 
+    // 类型转换去污：数值/布尔类型转换不携带注入载荷（如 (int)"1 OR 1=1" → 1）
+    const numericCastTypes = ['int', 'integer', 'float', 'double', 'bool', 'boolean']
+    if (node._meta?.isCast && node.callee?.name && numericCastTypes.includes(node.callee.name)) {
+      for (const arg of node.arguments) {
+        this.processInstruction(scope, arg, state)
+      }
+      return new PrimitiveValue(scope.qid, `<cast_${node.callee.name}>`, node, null, 'Literal', node.loc)
+    }
+
     // prepare the function arguments
     let argvalues = []
     let same_args = true // minor optimization to save memory
@@ -2485,15 +2526,15 @@ class Analyzer extends BaseAnalyzer {
     if (!id || idName === '_') return new UndefinedValue() // e.g. in Go
 
     let initVal
-    if (!initialNode) {
-      initVal = this.createVarDeclarationScope(id, scope)
-      initVal.uninit = !initialNode
-      initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', idName || '')
-    } else if (node?.parent?.type === 'CatchClause' && node?._meta?.isCatchParam && (state?.throwstack?.length ?? 0) > 0) {
-      // 处理throw传递到catch的情况
+    if (node?.parent?.type === 'CatchClause' && node?._meta?.isCatchParam && (state?.throwstack?.length ?? 0) > 0) {
+      // throw 传递到 catch：从 throwstack 取出抛出值赋给 catch 参数
       initVal = state?.throwstack && state?.throwstack.shift()
       initVal = SourceLine.addSrcLineInfo(initVal, node, node.loc && node.loc.sourcefile, 'Var Pass: ', idName || '')
       delete node._meta.isCatchParm
+    } else if (!initialNode) {
+      initVal = this.createVarDeclarationScope(id, scope)
+      initVal.uninit = !initialNode
+      initVal = SourceLine.addSrcLineInfo(initVal, id, id.loc && id.loc.sourcefile, 'Var Pass: ', idName || '')
     } else {
       initVal = this.processInstruction(scope, initialNode, state)
       if (initialNode.type === 'ImportExpression') {
@@ -2742,9 +2783,9 @@ class Analyzer extends BaseAnalyzer {
     callInfo = this.ensureCallInfo(node, fclos, callInfo)
     const argvalues = getLegacyArgValues(callInfo)
     if (Config.miniSaveContextEnvironment) {
-      return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
+      return new CallExprValue(scope.qid, fclos, argvalues, node, node?.loc, fclos)
     }
-    if (Config.makeAllCG && fclos?.ast.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
+    if (Config.makeAllCG && state.callstack?.length > 0 && fclos?.ast.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
       for (const callgraphnode of this.ainfo?.callgraph?.nodes.values()) {
         // 从 nodehash 还原 funcDef
         let callgraphFuncDef = callgraphnode.opts?.funcDef
@@ -2768,7 +2809,7 @@ class Analyzer extends BaseAnalyzer {
             analyzer: this,
             ainfo: this.ainfo,
           })
-          return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
+          return new CallExprValue(scope.qid, fclos, argvalues, node, node?.loc, fclos)
         }
       }
     }
@@ -2892,7 +2933,9 @@ class Analyzer extends BaseAnalyzer {
           !res.expression.object &&
           thisVal.taint?.isTaintedRec
         ) {
-          res.expression.object = thisVal
+          if (!res.expression.object) {
+            res.expression.object = thisVal
+          }
           isTainted = true
         }
       }
@@ -2905,7 +2948,15 @@ class Analyzer extends BaseAnalyzer {
       res.taint?.markSource()
     }
 
-    // save pass-in arguments for later use
+    // receiver 污点的形式化数据传播：将 receiver 加入返回值的 buffer，使 satisfy 遍历时能找到 taint tags
+    if (node.callee?.type === 'MemberAccess' && res.hasTagRec) {
+      const thisObj = fclos.getThisObj?.()
+      if (thisObj?.hasTagRec && _.isFunction(res.setMisc)) {
+        addElementToBuffer(res, thisObj)
+      }
+    }
+
+    // 将传入参数存入 misc_，hasTagRec 迭代 misc_ 时可发现污点参数，实现参数→返回值污点传播
     if (argvalues.length > 0) {
       res.setMisc('pass-in', argvalues)
     }
@@ -2948,7 +2999,15 @@ class Analyzer extends BaseAnalyzer {
           )
           matchRuleFound = true
         } else if (sourceType === 'ARG' && targetType === 'THIS') {
-          this.processLibArgToThis(node, fclos, argvalues, libFuncTagPropagationRule.source.index, scope, state)
+          this.processLibArgToThis(
+            node,
+            fclos,
+            argvalues,
+            libFuncTagPropagationRule.source.index,
+            scope,
+            state,
+            !!libFuncTagPropagationRule.target?.propagateToOwner
+          )
           matchRuleFound = true
         } else if (sourceType === 'THIS' && targetType === 'ARG') {
           this.processLibThisToArg(node, fclos, argvalues, libFuncTagPropagationRule.target.index, scope, state)
@@ -3012,22 +3071,18 @@ class Analyzer extends BaseAnalyzer {
    * @param scope
    * @param state
    */
-  processLibArgToThis(node: any, fclos: any, argvalues: any, sourceIndex: any, scope: any, state: any) {
+  processLibArgToThis(
+    node: any,
+    fclos: any,
+    argvalues: any,
+    sourceIndex: any,
+    scope: any,
+    state: any,
+    propagateToOwner: boolean = false
+  ) {
     let thisVal = fclos.getThisObj()
-    if (
-      !argvalues ||
-      argvalues.length === 0 ||
-      !thisVal ||
-      !['symbol', 'object'].includes(thisVal.vtype) ||
-      !_.isFunction(thisVal.setMisc) ||
-      this.shouldSkipLibArgToThisPropagation(thisVal) ||
-      thisVal.injected ||
-      thisVal?.parent?.vtype === 'class' ||
-      thisVal?.parent?._isConstructor ||
-      thisVal?._this?.vtype === 'class' ||
-      thisVal?._this?._isConstructor ||
-      thisVal.qid?.startsWith('<global>.syslib_from')
-    ) {
+
+    if (!argvalues || argvalues.length === 0 || !thisVal || !this.isValidLibArgToThisTarget(thisVal)) {
       return
     }
 
@@ -3055,12 +3110,60 @@ class Analyzer extends BaseAnalyzer {
             }
           }
         }
+        // C.1b getter-chain 反向染：仅当规则 opt-in `propagateToOwner:true` 且 thisVal 真被染后，
+        // 若 thisVal 是 `owner.getter()` 返回的 SymbolValue（带 expression.object 回指），
+        // 同跑一套 arg2this 守卫把 taint 反向传到 owner，1 跳不递归。默认 fallback 恒传 false 不触发。
+        // 关键：markSource 只置 hasTag 但不填 tagTraces，而 sink 侧走 tagTraceMap.has(attribute) 判断；
+        // 必须把 arg 塞进 owner.misc_.buffer，让 sink 侧 satisfy 递归能发现深层语言级 tag（JAVA_INPUT/PYTHON_INPUT 等），
+        // 再补 markSource 让 owner.isTaintedRec 短路为 true，与引擎现有 ARG→THIS 的双写口径对齐。
+        if (propagateToOwner && thisVal.taint?.isTaintedRec) {
+          const owner = thisVal.expression?.object
+          if (owner && this.isValidLibArgToThisTarget(owner)) {
+            for (const argIndex in argvalues) {
+              if (sourceIndex >= 0 && sourceIndex !== Number(argIndex)) continue
+              const arg = argvalues[argIndex]
+              if (!arg?.taint?.isTaintedRec) continue
+              addElementToBuffer(owner, arg)
+            }
+            owner.taint?.markSource()
+            if (node?.parent?.type !== 'AssignmentExpression') {
+              SourceLine.addSrcLineInfo(
+                owner,
+                node,
+                node.loc && node.loc.sourcefile,
+                'Var Pass: getter-chain reverse',
+                owner.sid
+              )
+            }
+          }
+        }
         break
       case 'Identifier':
         break
       default:
         break
     }
+  }
+
+  /**
+   * 判断目标 Value 是否可作为 lib arg→this 的染色目标。
+   * processLibArgToThis 头部守卫与 opt-in 反向染 owner 复用同一组条件，
+   * 以保证 §7 arg2this 黑名单 + class/constructor 保护 + syslib 注入守卫对两侧一致生效。
+   * @param val 被评估的目标 Unit
+   */
+  isValidLibArgToThisTarget(val: any): boolean {
+    if (!val) return false
+    if (!['symbol', 'object'].includes(val.vtype)) return false
+    if (!_.isFunction(val.setMisc)) return false
+    if (this.shouldSkipLibArgToThisPropagation(val)) return false
+    if (val.injected) return false
+    // 内部类实例（sid 含 <instance）不应被 parentClass guard 阻止
+    if (val?.parent?.vtype === 'class' && !val.sid?.includes('<instance')) return false
+    if (val?.parent?._isConstructor && !val.sid?.includes('<instance')) return false
+    if (val?._this?.vtype === 'class') return false
+    if (val?._this?._isConstructor) return false
+    if (val.qid?.startsWith('<global>.syslib_from')) return false
+    return true
   }
 
   /**
@@ -3220,7 +3323,7 @@ class Analyzer extends BaseAnalyzer {
     let execute_builtin = false
     if (!fdecl) {
       if (!fclos.runtime?.execute) {
-        return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc)
+        return new CallExprValue(scope.qid, fclos, argvalues, node, node?.loc)
       }
       // execute prepared builtins function
       execute_builtin = true
@@ -3242,7 +3345,7 @@ class Analyzer extends BaseAnalyzer {
     }
 
     let extraFuncDefs = []
-    const overloadedNodes = fclos.overloaded.filter(() => true)
+    const overloadedNodes = fclos.overloaded?.filter(() => true) ?? []
     if (overloadedNodes.length > 1) {
       // overloaded functions
       let hasFind = false
@@ -3397,6 +3500,10 @@ class Analyzer extends BaseAnalyzer {
     const argvalues = getLegacyArgValues(callInfo)
     if (logger.isTraceEnabled()) logger.trace(`\nprocessCall: function: ${this.formatScope(fdecl?.id?.name)}`)
 
+    // 进入函数调用时重置 inRange，避免 for-range body 中调用函数时嵌套 for-range 被错误抑制
+    const savedInRange = this.inRange
+    this.inRange = false
+
     // avoid infinite loops,the re-entry should only less than 3
     if (
       fdecl &&
@@ -3404,7 +3511,8 @@ class Analyzer extends BaseAnalyzer {
         return currentValue.ast.fdef === fdecl ? previousValue + 1 : previousValue
       }, 0) > 0
     ) {
-      return new CallExprValue(scope.qid, fclos, argvalues, node, node.loc, fclos)
+      this.inRange = savedInRange
+      return new CallExprValue(scope.qid, fclos, argvalues, node, node?.loc, fclos)
     }
 
     // pre-call processing
@@ -3426,15 +3534,15 @@ class Analyzer extends BaseAnalyzer {
       ? state.callsites.concat([
           {
             code: AstUtil.getRawCode(node).slice(0, 100),
-            nodeHash: node._meta?.nodehash,
-            loc: node.loc,
+            nodeHash: node?._meta?.nodehash,
+            loc: node?.loc,
           },
         ])
       : [
           {
             code: AstUtil.getRawCode(node).slice(0, 100),
-            nodeHash: node._meta?.nodehash,
-            loc: node.loc,
+            nodeHash: node?._meta?.nodehash,
+            loc: node?.loc,
           },
         ]
     new_state.brs = ''
@@ -3456,7 +3564,7 @@ class Analyzer extends BaseAnalyzer {
       // this.lastReturnValue =  fclos.runtime.execute.call(this, fclos, argvalues, new_state, node, scope);
       this.lastReturnValue = null
       for (let i = 0; i < argvalues.length; i++) {
-        argvalues[i] = SourceLine.addSrcLineInfo(argvalues[i], node, node.loc && node.loc.sourcefile, 'CALL: ', fname)
+        argvalues[i] = SourceLine.addSrcLineInfo(argvalues[i], node, node?.loc && node.loc.sourcefile, 'CALL: ', fname)
       }
       return_value = fclos.runtime!.execute!.call(this, fclos, argvalues, new_state, node, scope)
     } else {
@@ -3480,6 +3588,7 @@ class Analyzer extends BaseAnalyzer {
 
       // process function arguments
       if (!fdecl.parameters) {
+        this.inRange = savedInRange
         return new UndefinedValue()
       }
       const params = fdecl.parameters
@@ -3609,6 +3718,8 @@ class Analyzer extends BaseAnalyzer {
     delete fclos.value[fscope.sid]
     // this.setCurrentFunction(old_function);
     this.thisFClos = oldThisFClos
+    // 恢复 inRange，使调用方 for-range 的状态不被嵌套函数调用影响
+    this.inRange = savedInRange
 
     return return_value
   }
@@ -3707,11 +3818,11 @@ class Analyzer extends BaseAnalyzer {
       if (Config.invokeCallbackOnUnknownFunction) {
         this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
       }
-      // save pass-in arguments for later use
       if (argvalues.length > 0) {
         if (!obj.arguments || (Array.isArray(obj.arguments) && obj.arguments?.length === 0)) {
           obj.arguments = argvalues
         } else {
+          // 将传入参数存入 misc_，hasTagRec 迭代时可发现污点参数
           obj.setMisc('pass-in', argvalues)
         }
       }
@@ -3760,6 +3871,26 @@ class Analyzer extends BaseAnalyzer {
             ctorClos = obj.value._CTOR_
           }
         }
+        // 无 __init__ 时查找 __new__，使 __new__ 中的赋值能传播 taint
+        if (!ctorClos && body) {
+          let newMethodAst: any
+          for (const nd of body) {
+            if (nd.type === 'FunctionDefinition' && nd.name === '__new__') {
+              newMethodAst = nd
+              break
+            }
+          }
+          if (newMethodAst) {
+            this.processInstruction(fclos, newMethodAst, state)
+            const newClos = obj.value?.['__new__']
+            if (newClos?.vtype === 'fclos') {
+              ctorClos = newClos
+              paras = newMethodAst.parameters
+              // __new__ 返回值需要合并回 obj，与 __init__ 不同
+              ctorClos.__isNewMethod = true
+            }
+          }
+        }
       }
     }
     if (paras) {
@@ -3769,7 +3900,7 @@ class Analyzer extends BaseAnalyzer {
         const param = paras[i]
         let index = i
         const names = node.names || node.arguments
-        if (names > 0) {
+        if (names?.length > 0) {
           // handle named argument values like "f({value: 2, key: 3})"
           const k = names.indexOf(param.name)
           if (k !== -1) index = k
@@ -3781,7 +3912,7 @@ class Analyzer extends BaseAnalyzer {
             val,
             node,
             param.loc.sourcefile,
-            'CTOR ARG PASS: ',
+            'ARG PASS: ',
             param.name || AstUtil.prettyPrint(param).slice(0, 50)
           )
         }
@@ -3804,8 +3935,36 @@ class Analyzer extends BaseAnalyzer {
       const oldThisFClos = this.thisFClos
       this.thisFClos = obj
       ctorClos._this = obj
-      this.executeCall(node, ctorClos, state, scope, callInfo)
+      // __new__ 的第一个参数是 cls，需要设置 receiver 使 bindReceiverParam 正确跳过 cls
+      let ctorCallInfo = callInfo
+      if (ctorClos.__isNewMethod && callInfo?.callArgs) {
+        ctorCallInfo = {
+          callArgs: {
+            ...callInfo.callArgs,
+            receiver: obj,
+          },
+        }
+      }
+      const ctorReturn = this.executeCall(node, ctorClos, state, scope, ctorCallInfo)
       this.thisFClos = oldThisFClos
+
+      // __new__ 返回值合并：将 __new__ 内部对 instance 的赋值传播到 obj
+      if (ctorClos.__isNewMethod && ctorReturn) {
+        if (ctorReturn.value && typeof ctorReturn.value === 'object') {
+          for (const key of Object.keys(ctorReturn.value)) {
+            if (!key.startsWith('__') && obj.value && !obj.value[key]) {
+              obj.value[key] = ctorReturn.value[key]
+            }
+          }
+        }
+        // 传播 taint
+        if (ctorReturn.taint?.isTaintedRec) {
+          obj.taint = obj.taint || {}
+          if (typeof obj.taint.propagateFrom === 'function') {
+            obj.taint.propagateFrom(ctorReturn)
+          }
+        }
+      }
     }
 
     if (obj.parent) {
@@ -3956,7 +4115,9 @@ class Analyzer extends BaseAnalyzer {
           if (fieldName === '_CTOR_') {
             superValue.ast.node = v_copy.ast.fdef
             superValue.ast.fdef = v_copy.ast.fdef
-            superValue.overloaded = superValue.overloaded || []
+            if (!superValue.overloaded) {
+              superValue.overloaded = new AstRefList(() => superValue.getASTManager())
+            }
             superValue.overloaded.push(fdef)
           }
         }
@@ -4020,8 +4181,16 @@ class Analyzer extends BaseAnalyzer {
           continue
         }
         if (typeof fields.hasOwnProperty === 'function' && fields.hasOwnProperty(key)) {
-          if (!filter) yield { k: key, v: fields[key] }
-          else if (filter(fields[key])) yield { k: key, v: fields[key] }
+          let val = fields[key]
+          // UUID 字符串解析回实际符号值
+          if (val && typeof val === 'string' && val.startsWith('symuuid_')) {
+            const resolved = this.symbolTable.get(val)
+            if (resolved) {
+              val = resolved
+            }
+          }
+          if (!filter) yield { k: key, v: val }
+          else if (filter(val)) yield { k: key, v: val }
         }
       }
     }

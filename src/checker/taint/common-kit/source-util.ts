@@ -121,13 +121,34 @@ function introduceTaintAtFuncCallReturnValue(
 }
 
 /**
+ * source calleeType 匹配，兼容 Go 嵌入类型
+ * 优先直接匹配 scope.rtype，失败后检查 fclos._base（嵌入基类）
+ */
+function matchSourceCalleeType(scope: any, fclos: any, expectedType: string): boolean {
+  if (!expectedType || expectedType === '*') return true
+
+  // 直接匹配（现有逻辑）
+  if (AstUtil.prettyPrint(scope?.rtype) === expectedType) return true
+
+  // 嵌入类型 fallback：方法继承自基类时，检查基类 logicalQid
+  if (fclos?._base) {
+    const baseQid = fclos._base.logicalQid || fclos._base.qid || ''
+    const baseType = expectedType.replace(/^\*/, '')
+    if (baseQid === baseType || baseQid.endsWith('.' + baseType)) return true
+  }
+
+  return false
+}
+
+/**
  *
  * @param scope
  * @param node
  * @param callInfo
  * @param funcCallArgTaintSource
+ * @param fclos
  */
-function introduceFuncArgTaintByRuleConfig(scope: any, node: any, callInfo: CallInfo | undefined, funcCallArgTaintSource: any): void {
+function introduceFuncArgTaintByRuleConfig(scope: any, node: any, callInfo: CallInfo | undefined, funcCallArgTaintSource: any, fclos?: any): void {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
@@ -142,7 +163,7 @@ function introduceFuncArgTaintByRuleConfig(scope: any, node: any, callInfo: Call
           if (
             (matchField(call.callee?.property, marray, marray.length - 1) ||
               matchField(call.callee, marray, marray.length - 1)) &&
-            (AstUtil.prettyPrint(scope?.rtype) === tspec.calleeType || tspec.calleeType === '*')
+            matchSourceCalleeType(scope, fclos, tspec.calleeType)
           ) {
             const args = prepareArgs(callInfo, undefined, tspec)
             for (let i = 0; i < args.length; i++) {
@@ -214,6 +235,15 @@ function introduceTaintAtIdentifier(analyzer: any, scope: any, node: any, res: a
           const kinds = Array.isArray(val.kind) ? val.kind : [val.kind]
           if (!isGlobalIdentifierSource && kinds.some((k: string) => target.taint?.containsTag(k))) {
             continue
+          }
+          // 函数参数（entrypoint）：作用域在当前函数，不需要 clone，保持 entrypoint SOURCE
+          // 全局变量：需要 clone + 重新标记，让每条路径有独立的 SOURCE 位置
+          if (isGlobalIdentifierSource && alreadyTainted && kinds.some((k: string) => target.taint?.containsTag(k))) {
+            const params = scope.ast?.fdef?.parameters
+            const isFuncParam = Array.isArray(params) && params.some((p: any) => p.name === node.name)
+            if (isFuncParam) {
+              continue
+            }
           }
           if (alreadyTainted && target === res && isGlobalIdentifierSource) {
             target = buildNewValueInstance(

@@ -25,6 +25,26 @@ const AstUtil = require('../../../util/ast-util')
 const { handleException } = require('../../../engine/analyzer/common/exception-handler')
 
 /**
+ * 过滤掉合成的 synthetic step（Plan A）。
+ *
+ * 背景：R21 判据 A 在 CO 模式下自动在 finding.trace 中注入一对 `CALL: ` + `ARG PASS: ` synthetic
+ * step（带 `_synthetic: true` 内部标记）以补齐 callstack 桥接 fclos 的 trace 可见性；但 `isNewFinding`
+ * 的 CO 折叠判据依赖"raw trace 形态"判定两条 finding 是否可合并。合成 step 不该参与可合并性判定，
+ * 否则原本 degenerate 的 SOURCE+SINK finding 在注入合成 step 后会被误判为不同 finding → R19 CO
+ * 折叠语义破损。
+ *
+ * 该 filter 常驻生效：非 CO 模式下 finding.trace 本就不含带 `_synthetic` 标记的 step，返回值与原数组
+ * 等价（no-op）；CO 模式下过滤合成 step 后恢复 R19 折叠语义。
+ * `_synthetic` 字段不经 SARIF 序列化路径（prepareLocation 只读 file/line/tag/node/affectedNodeName），
+ * 不影响输出。
+ * @param trace
+ */
+function filterOutSyntheticSteps(trace: any): any[] | undefined {
+  if (!Array.isArray(trace)) return trace
+  return trace.filter((item: any) => item?._synthetic !== true)
+}
+
+/**
  * 比较单个 trace item 是否相等（file、line、tag、affectedNodeName）
  */
 function isTraceItemEqual(item1: any, item2: any): boolean {
@@ -61,6 +81,80 @@ function isTraceEqual(trace1: any[] | undefined, trace2: any[] | undefined): boo
 }
 
 /**
+ * 取 trace 中第一个 tag=SOURCE 的 item 的位置键
+ */
+function extractSourceKey(finding: any): string | null {
+  const trace = finding?.trace
+  if (!Array.isArray(trace)) return null
+  for (const item of trace) {
+    if (item?.tag === 'SOURCE: ') {
+      const file = item.node?.loc?.sourcefile || item.file || ''
+      const line = item.node?.loc?.start?.line ?? (Array.isArray(item.line) ? item.line[0] : item.line) ?? -1
+      const col = item.node?.loc?.start?.column ?? -1
+      return `${file}:${line}:${col}`
+    }
+  }
+  return null
+}
+
+/**
+ * 取 sink 位置键：优先 finding.node 的 loc，否则 trace 末尾 tag=SINK 的 item
+ */
+function extractSinkKey(finding: any): string | null {
+  const n = finding?.node
+  if (n?.loc) {
+    const file = n.loc.sourcefile || finding.sourcefile || ''
+    const line = n.loc.start?.line ?? -1
+    const col = n.loc.start?.column ?? -1
+    return `${file}:${line}:${col}`
+  }
+  const trace = finding?.trace
+  if (Array.isArray(trace)) {
+    for (let i = trace.length - 1; i >= 0; i--) {
+      const item = trace[i]
+      if (item?.tag === 'SINK: ') {
+        const file = item.node?.loc?.sourcefile || item.file || ''
+        const line = item.node?.loc?.start?.line ?? (Array.isArray(item.line) ? item.line[0] : item.line) ?? -1
+        const col = item.node?.loc?.start?.column ?? -1
+        return `${file}:${line}:${col}`
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * 同 source+sink 位置的 finding 只保留 trace 最短的一条
+ * 只对 PHP（finding.type === 'taint_flow_php_input'）启用；其它语言原样透传
+ */
+function dedupBySourceSinkShortestTrace(taintFindings: any[]): any[] {
+  if (!Array.isArray(taintFindings) || taintFindings.length === 0) return taintFindings
+  const phpGroups = new Map<string, { finding: any; len: number }>()
+  const nonPhpAndUngrouped: any[] = []
+  for (const finding of taintFindings) {
+    if (finding?.type !== 'taint_flow_php_input') {
+      nonPhpAndUngrouped.push(finding)
+      continue
+    }
+    const srcKey = extractSourceKey(finding)
+    const sinkKey = extractSinkKey(finding)
+    if (!srcKey || !sinkKey) {
+      nonPhpAndUngrouped.push(finding)
+      continue
+    }
+    const groupKey = `${srcKey}|${sinkKey}`
+    const traceLen = Array.isArray(finding.trace) ? finding.trace.length : Number.POSITIVE_INFINITY
+    const prev = phpGroups.get(groupKey)
+    if (!prev || traceLen < prev.len) {
+      phpGroups.set(groupKey, { finding, len: traceLen })
+    }
+  }
+  const result: any[] = [...nonPhpAndUngrouped]
+  for (const { finding } of phpGroups.values()) result.push(finding)
+  return result
+}
+
+/**
  *
  */
 class TaintOutputStrategy extends OutputStrategy {
@@ -85,9 +179,13 @@ class TaintOutputStrategy extends OutputStrategy {
     let reportFilePath
     if (resultManager) {
       const allFindings = resultManager.getFindings()
-      const taintFindings = allFindings[TaintOutputStrategy.outputStrategyId]
+      let taintFindings = allFindings[TaintOutputStrategy.outputStrategyId]
       let callgraphFindings
       if (taintFindings) {
+        // 后处理：同 source+sink 位置只保留 trace 最短的 finding（仅 PHP 启用）
+        const deduped = dedupBySourceSinkShortestTrace(taintFindings as any[])
+        allFindings[TaintOutputStrategy.outputStrategyId] = deduped
+        taintFindings = deduped
         if (printf) {
           TaintFindingUtil.outputCheckerResultToConsole(taintFindings, printf)
         }
@@ -107,9 +205,14 @@ class TaintOutputStrategy extends OutputStrategy {
    * @param finding
    */
   static isNewFinding(resultManager: IResultManager, finding: TaintFinding): boolean {
+    // finding 为 null 表示上游（如 verifyCallstackEdgeInvariant 校验未通过）已判定丢弃，返回 false 让 caller 的 `if (!isNewFinding) continue` 跳过
+    if (!finding) return false
     try {
       const category = resultManager?.findings[TaintOutputStrategy.outputStrategyId]
       if (!category) return true
+      // Plan A：在所有依赖 trace 形态的折叠判据前，先过滤 synthetic step（R21 判据 A 注入的合成步）；
+      // 非 CO 模式下 finding.trace / issue.trace 不含带 _synthetic 标记的 step，filter 返回等价数组（no-op）。
+      const findingTraceNoSynthetic = filterOutSyntheticSteps(finding.trace)
       for (const issue of category) {
         if (
           issue.line === finding.line &&
@@ -124,21 +227,31 @@ class TaintOutputStrategy extends OutputStrategy {
             }
           } else if (isTraceEqual(issue.trace, finding.trace)) {
             return false
-          } else if (isTraceEqual(getOutputTrace(issue), getOutputTrace(finding))) {
+          } else if (
+            isTraceEqual(
+              filterOutSyntheticSteps(getOutputTrace(issue)),
+              filterOutSyntheticSteps(getOutputTrace(finding))
+            )
+          ) {
             // callstack-only output may collapse distinct internal traces into the same
             // user-visible chain; suppress duplicate visible findings in that mode.
+            // Plan A：比较前过滤合成 step，确保 R21 判据 A 在 CO 下原折叠语义不破。
             return false
-          } else if (
-            finding.trace && finding.trace.length === 2 &&
-            finding.trace[0]?.tag === 'SOURCE: ' && finding.trace[1]?.tag === 'SINK: ' &&
-            issue.trace && issue.trace.length > 2 &&
-            issue.trace[0]?.tag === 'SOURCE: ' &&
-            isTraceItemEqual(finding.trace[0], issue.trace[0]) &&
-            isTraceItemEqual(finding.trace[1], issue.trace[issue.trace.length - 1])
-          ) {
+          } else {
             // TaintRecord._clone 拷贝 trace 数组导致部分 finding 的 trace 退化为仅 SOURCE+SINK（len=2），
             // 当已有同 SOURCE 且同 SINK 的更长 trace finding 时，跳过退化 finding。
-            return false
+            // Plan A：判定基于"去合成 step 后的 trace"，避免 R21 注入的 CALL/ARG PASS 把原 len=2 退化体变成 len>2 逃过折叠。
+            const issueTraceNoSynthetic = filterOutSyntheticSteps(issue.trace)
+            if (
+              Array.isArray(findingTraceNoSynthetic) && findingTraceNoSynthetic.length === 2 &&
+              findingTraceNoSynthetic[0]?.tag === 'SOURCE: ' && findingTraceNoSynthetic[1]?.tag === 'SINK: ' &&
+              Array.isArray(issueTraceNoSynthetic) && issueTraceNoSynthetic.length > 2 &&
+              issueTraceNoSynthetic[0]?.tag === 'SOURCE: ' &&
+              isTraceItemEqual(findingTraceNoSynthetic[0], issueTraceNoSynthetic[0]) &&
+              isTraceItemEqual(findingTraceNoSynthetic[1], issueTraceNoSynthetic[issueTraceNoSynthetic.length - 1])
+            ) {
+              return false
+            }
           }
         }
       }
@@ -286,3 +399,4 @@ class TaintOutputStrategy extends OutputStrategy {
 }
 
 module.exports = TaintOutputStrategy
+module.exports.dedupBySourceSinkShortestTrace = dedupBySourceSinkShortestTrace

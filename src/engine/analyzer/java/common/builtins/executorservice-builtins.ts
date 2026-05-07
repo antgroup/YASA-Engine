@@ -76,20 +76,25 @@ class ExecutorService extends Executor {
       return new UndefinedValue()
     }
 
+    // invokeAll 语义：每个 Callable 独立并行执行，不应共享污点状态。
+    // 为每次迭代创建独立的 state 快照，防止前一个 Callable 的污点 trace 泄漏到后续 Callable。
     for (const func of funcs) {
+      const isolatedState = _.clone(state)
+      isolatedState.callstack = state.callstack ? [...state.callstack] : []
+      isolatedState.callsites = state.callsites ? [...state.callsites] : []
       if (func.vtype === 'object' && func.members?.get('call')?.vtype === 'fclos') {
         // 对象实例的 call 方法：绑定 _this 指向对象实例
         const callMethod = func.members.get('call')
         const oldThis = callMethod._this
         callMethod._this = func
-        ;(this as any).executeCall(node, callMethod, state, scope, { callArgs: (this as any).buildCallArgs(node, [], callMethod) })
+        ;(this as any).executeCall(node, callMethod, isolatedState, scope, { callArgs: (this as any).buildCallArgs(node, [], callMethod) })
         callMethod._this = oldThis
       } else if (func.members?.get('call')) {
-        ;(this as any).executeCall(node, func.members.get('call')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], func.members.get('call')!) })
+        ;(this as any).executeCall(node, func.members.get('call')!, isolatedState, scope, { callArgs: (this as any).buildCallArgs(node, [], func.members.get('call')!) })
       } else if (func.members?.get('doCall')) {
-        ;(this as any).executeCall(node, func.members.get('doCall')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], func.members.get('doCall')!) })
+        ;(this as any).executeCall(node, func.members.get('doCall')!, isolatedState, scope, { callArgs: (this as any).buildCallArgs(node, [], func.members.get('doCall')!) })
       } else if (func.vtype === 'fclos') {
-        ;(this as any).executeCall(node, func, state, scope, { callArgs: (this as any).buildCallArgs(node, [], func) })
+        ;(this as any).executeCall(node, func, isolatedState, scope, { callArgs: (this as any).buildCallArgs(node, [], func) })
       }
     }
 

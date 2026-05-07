@@ -8,9 +8,8 @@
 
 export class ValueRef {
   readonly uuid: string
-  private _cached: any = null
-  private _directWeak: WeakRef<any> | null = null
-  private _directStrong: any = null
+  private _directWeak?: WeakRef<any>
+  private _directStrong?: any
 
   constructor(uuid: string, direct?: any) {
     if (!direct && (typeof uuid !== 'string' || uuid.length === 0)) {
@@ -33,14 +32,14 @@ export class ValueRef {
 
   set _direct(val: any) {
     if (val == null) {
-      this._directWeak = null
-      this._directStrong = null
+      this._directWeak = undefined
+      this._directStrong = undefined
     } else if (typeof val === 'object') {
       this._directWeak = new WeakRef(val)
-      this._directStrong = null
+      this._directStrong = undefined
     } else {
       this._directStrong = val
-      this._directWeak = null
+      this._directWeak = undefined
     }
   }
 
@@ -62,7 +61,7 @@ export class ValueRef {
    */
   markRegistered(): void {
     if (this.uuid) {
-      this._directStrong = null
+      this._directStrong = undefined
     }
   }
 

@@ -52,6 +52,9 @@ function findInferenceAiStudioTplEntryPointAndSource(filenameAstObj: Record<stri
           entryPoint.filePath = shortFileName
           entryPoint.functionName = 'predict_np'
           entryPoint.attribute = 'HTTP'
+          // 携带函数定义行号，用于精确匹配 overloaded 同名函数
+          entryPoint.funcLocStart = bodyObj.loc?.start?.line as number | undefined
+          entryPoint.funcLocEnd = bodyObj.loc?.end?.line as number | undefined
           inferenceAiStudioTplEntryPointArray.push(entryPoint)
 
           if (entryPointAndSourceAtSameTime) {
@@ -108,6 +111,9 @@ function findInferenceTritonEntryPointAndSource(filenameAstObj: Record<string, a
           entryPoint.filePath = shortFileName
           entryPoint.functionName = 'execute'
           entryPoint.attribute = 'HTTP'
+          // 携带函数定义行号，用于精确匹配 overloaded 同名函数
+          entryPoint.funcLocStart = bodyObj.loc?.start?.line as number | undefined
+          entryPoint.funcLocEnd = bodyObj.loc?.end?.line as number | undefined
           inferenceTritonEntryPointArray.push(entryPoint)
 
           if (entryPointAndSourceAtSameTime) {

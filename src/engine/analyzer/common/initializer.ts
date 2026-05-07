@@ -1,5 +1,6 @@
 import { shallowCopyValue } from '../../../util/clone-util'
 import type Unit from './value/unit'
+import { AstRefList } from './value/ast-ref-list'
 
 const _ = require('lodash')
 const Scope = require('./scope')
@@ -189,6 +190,9 @@ function resolveClassInheritance(fclos: Unit): void {
       if (fieldName === '_CTOR_') {
         superValue.ast.node = v_copy.ast?.node
         superValue.ast.fdef = v_copy.ast.fdef
+        if (!superValue.overloaded) {
+          superValue.overloaded = new AstRefList(() => superValue.getASTManager())
+        }
         superValue.overloaded.push(fdef)
       }
 

@@ -273,7 +273,8 @@ function calcEntryPointAndRun(options: any, fileManager: any, analyzer: any): vo
   for (const filename in fileManager) {
     for (const sourcefile in options.FlowConfig.sourcefiles) {
       if (filename.endsWith(sourcefile)) {
-        const fileUuid = fileManager[filename]
+        const fileEntry = fileManager[filename]
+        const fileUuid = typeof fileEntry === 'string' ? fileEntry : fileEntry?.uuid
         const filescope = analyzer.symbolTable.get(fileUuid)
         let entryPoints = AstUtilConverter.satisfy(
           filescope,

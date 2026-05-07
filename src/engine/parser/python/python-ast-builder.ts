@@ -27,12 +27,7 @@ let uastFilePath = './uast'
 function buildUASTPython(rootDir: string, options?: BuildOptions): any {
   options = options || {}
   if (options.language && options.language !== 'python') {
-    handleException(
-      new Error(`Python AST Builder received wrong language type: ${options.language}`),
-      `Error: Python AST Builder received wrong language type: ${options.language}`,
-      `Error: Python AST Builder received wrong language type: ${options.language}`
-    )
-    process.exit(1)
+    throw new Error(`Python AST Builder received wrong language type: ${options.language}`)
   }
 
   let isSingle = ''
@@ -53,13 +48,7 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): any {
 
   // if uast4pyPath does not exist, exit with error
   if (!uast4pyPath || !fs.existsSync(uast4pyPath)) {
-    handleException(
-      null,
-      // eslint-disable-next-line sonarjs/no-duplicate-string
-      `uast4py not found. Please set --uastSDKPath to the binary or deps directory, or install it under deps/uast4py/uast4py`,
-      `uast4py not found. Please set --uastSDKPath to the binary or deps directory, or install it under deps/uast4py/uast4py`
-    )
-    process.exit(0)
+    throw new Error('uast4py binary not found, please check uastSDKPath configuration')
   }
 
   if (options.ASTFileOutput) {

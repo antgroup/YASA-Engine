@@ -1,4 +1,5 @@
 import type { CallInfo } from '../../engine/analyzer/common/call-args'
+import { toPreconditionAsSanitizer, type Precondition, type PreconditionAsSanitizer } from '../common/value/precondition'
 
 const _ = require('lodash')
 const BasicRuleHandler = require('../common/rules-basic-handler')
@@ -28,7 +29,36 @@ const SANITIZER = {
     VALIDATE_BY_BINARYOPERATION: 'SANITIZER.VALIDATE_BY_BINARYOPERATION',
   },
 }
+const PRECONDITION = {
+  PRECONDITION_TYPE: {
+    FUNCTION_CALL_PRECONDITION: 'FunctionCallPrecondition',
+  },
+  PRECONDITION_SCENARIO: {
+    VALIDATE_BY_FUNCTIONCALL: 'PRECONDITION.VALIDATE_BY_FUNCTIONCALL',
+  },
+}
+
+/**
+ * 根据 sanitizer 规则的 from/to 字段推断 scenario
+ * - to 包含 "R" → FILTER_BY_FUNCTIONCALL（返回值带 sanitizer tag）
+ * - to 包含以 "P" 开头的项 → VALIDATE_BY_FUNCTIONCALL（参数带 sanitizer tag）
+ * - 其他 → DEFAULT
+ */
+function inferSanitizerScenario(item: { from?: string; to?: string | string[] }): string {
+  const toArr = Array.isArray(item.to) ? item.to : item.to ? [item.to] : []
+  if (toArr.some((t: string) => t === 'R')) {
+    return SANITIZER.SANITIZER_SCENARIO.FILTER_BY_FUNCTIONCALL
+  }
+  if (toArr.some((t: string) => /^P\d*$/.test(t))) {
+    return SANITIZER.SANITIZER_SCENARIO.VALIDATE_BY_FUNCTIONCALL
+  }
+  return SANITIZER.SANITIZER_SCENARIO.DEFAULT
+}
+
 const callstackSanitizers = new Set()
+
+/** 缓存：precondition 转为 sanitizer 兼容格式的列表 */
+let preconditionAsSanitizerCache: PreconditionAsSanitizer[] | undefined
 
 /**
  *
@@ -78,6 +108,8 @@ class SanitizerChecker extends Checker {
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { fclos, ret, callInfo } = info
+    // legacy 兼容：Java 分析器传 argvalues 而非 callInfo，转换为 CallInfo 格式
+    const effectiveCallInfo: CallInfo | undefined = callInfo ?? (Array.isArray(info.argvalues) ? { callArgs: { args: info.argvalues.map((v: any, i: number) => ({ index: i, value: v })) } } as CallInfo : undefined)
     const sanitizers = SanitizerChecker.findAllSanitizers()
     if (sanitizers) {
       SanitizerChecker.checkAddOrDeleteFunctionCallSanitizer(
@@ -85,11 +117,13 @@ class SanitizerChecker extends Checker {
         node,
         fclos,
         ret,
-        callInfo,
+        effectiveCallInfo,
         scope,
         info?.callstack
       )
     }
+    // precondition 打标：复用 sanitizer 匹配逻辑
+    SanitizerChecker.checkAndTagPreconditions(node, fclos, ret, effectiveCallInfo, scope, info?.callstack)
   }
 
   /**
@@ -103,6 +137,8 @@ class SanitizerChecker extends Checker {
    */
   triggerAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any): void {
     const { fclos, ret, callInfo } = info
+    // legacy 兼容：Java 分析器传 argvalues 而非 callInfo，转换为 CallInfo 格式
+    const effectiveCallInfo: CallInfo | undefined = callInfo ?? (Array.isArray(info.argvalues) ? { callArgs: { args: info.argvalues.map((v: any, i: number) => ({ index: i, value: v })) } } as CallInfo : undefined)
     const sanitizers = SanitizerChecker.findAllSanitizers()
     if (sanitizers) {
       SanitizerChecker.checkAddOrDeleteFunctionCallSanitizer(
@@ -110,11 +146,13 @@ class SanitizerChecker extends Checker {
         node,
         fclos,
         ret,
-        callInfo,
+        effectiveCallInfo,
         scope,
         info?.callstack
       )
     }
+    // precondition 打标：复用 sanitizer 匹配逻辑
+    SanitizerChecker.checkAndTagPreconditions(node, fclos, ret, effectiveCallInfo, scope, info?.callstack)
   }
 
   /**
@@ -155,7 +193,7 @@ class SanitizerChecker extends Checker {
     node: any,
     fclos: any,
     ret: any,
-    callInfo: CallInfo,
+    callInfo: CallInfo | undefined,
     scope: any,
     callstack: any
   ): void {
@@ -311,9 +349,29 @@ class SanitizerChecker extends Checker {
     SanitizerChecker.sanitizerMap = new Map()
     if (Array.isArray(BasicRuleHandler.getRules()) && BasicRuleHandler.getRules().length > 0) {
       for (const rule of BasicRuleHandler.getRules()) {
+        if (!rule.sanitizers || typeof rule.sanitizers !== 'object') {
+          continue
+        }
         if (Array.isArray(rule.sanitizers)) {
+          // 旧格式：sanitizers 是扁平数组，每项已含 id/sanitizerType
           for (const sanitizer of rule.sanitizers) {
             SanitizerChecker.sanitizerMap.set(sanitizer.id, sanitizer)
+          }
+        } else {
+          // 新格式：sanitizers 是 { sanitizerType: [...items] } 的 Object
+          for (const [type, items] of Object.entries(rule.sanitizers)) {
+            if (!Array.isArray(items)) {
+              continue
+            }
+            for (const item of items as any[]) {
+              const sanitizer = {
+                ...item,
+                sanitizerType: type,
+                id: item.id || item.fsig,
+                sanitizerScenario: item.sanitizerScenario || inferSanitizerScenario(item),
+              }
+              SanitizerChecker.sanitizerMap.set(sanitizer.id, sanitizer)
+            }
           }
         }
       }
@@ -437,12 +495,13 @@ class SanitizerChecker extends Checker {
    * @param scope
    * @returns {*[]}
    */
-  static findMatchedSanitizerOfFunctionCall(sanitizers: any[], node: any, fclos: any, scope: any, callInfo: CallInfo): any[] {
+  static findMatchedSanitizerOfFunctionCall(sanitizers: any[], node: any, fclos: any, scope: any, callInfo: CallInfo | undefined, skipCache?: boolean): any[] {
     if (!BasicRuleHandler.getPreprocessReady()) {
       return []
     }
 
-    if (node?._meta?.nodehash && SanitizerChecker.matchSanitizerResultMap.has(node._meta.nodehash)) {
+    // precondition 匹配复用此方法但传入不同规则列表，必须跳过缓存避免与 sanitizer 结果混淆
+    if (!skipCache && node?._meta?.nodehash && SanitizerChecker.matchSanitizerResultMap.has(node._meta.nodehash)) {
       return SanitizerChecker.matchSanitizerResultMap.get(node._meta.nodehash)
     }
 
@@ -475,7 +534,8 @@ class SanitizerChecker extends Checker {
       matchedSanitizers.push(...matchedSanitizersWithCalleeType)
     }
 
-    if (node?._meta?.nodehash) {
+    // 仅缓存 sanitizer 的结果，precondition 不写入缓存
+    if (!skipCache && node?._meta?.nodehash) {
       SanitizerChecker.matchSanitizerResultMap.set(node._meta.nodehash, matchedSanitizers)
     }
 
@@ -664,6 +724,87 @@ class SanitizerChecker extends Checker {
     satisfy(args, fFlow, filter, undefined, multiMatch, 30, satisfyCallback)
 
     return resultArray
+  }
+
+  /**
+   * 获取所有 precondition（转换为 sanitizer 兼容格式），带缓存
+   */
+  static findAllPreconditionsAsSanitizers(): PreconditionAsSanitizer[] {
+    if (preconditionAsSanitizerCache) {
+      return preconditionAsSanitizerCache
+    }
+    const preconditions: Precondition[] = BasicRuleHandler.findAllPreconditions()
+    preconditionAsSanitizerCache = preconditions.map(toPreconditionAsSanitizer)
+    return preconditionAsSanitizerCache
+  }
+
+  /**
+   * 检查函数调用是否匹配 precondition，匹配时在 taint 上打 tag
+   * 复用 sanitizer 的函数匹配逻辑，scenario 为 VALIDATE_BY_FUNCTIONCALL 时标记参数
+   */
+  static checkAndTagPreconditions(
+    node: any,
+    fclos: any,
+    ret: any,
+    callInfo: CallInfo | undefined,
+    scope: any,
+    callstack: any
+  ): void {
+    const preconditionsAsSanitizer = SanitizerChecker.findAllPreconditionsAsSanitizers()
+    if (preconditionsAsSanitizer.length === 0) {
+      return
+    }
+    const matched = SanitizerChecker.findMatchedSanitizerOfFunctionCall(
+      preconditionsAsSanitizer,
+      node,
+      fclos,
+      scope,
+      callInfo,
+      true // skipCache：precondition 和 sanitizer 使用不同规则列表，不能共享缓存
+    )
+    if (!matched || matched.length === 0) {
+      return
+    }
+    for (const matchedPrecondition of matched) {
+      // precondition 场景目前只支持 VALIDATE_BY_FUNCTIONCALL
+      const mappedScenario = matchedPrecondition.sanitizerScenario ?? SANITIZER.SANITIZER_SCENARIO.VALIDATE_BY_FUNCTIONCALL
+      if (mappedScenario === SANITIZER.SANITIZER_SCENARIO.VALIDATE_BY_FUNCTIONCALL) {
+        const args = BasicRuleHandler.prepareArgs(callInfo, fclos, matchedPrecondition)
+        // precondition 语义：只有参数携带 taint 时才打 tag（arg + receiver）
+        // 确保 taint 必须流经 precondition 函数的参数
+        const argHasTaint = args?.some((arg: any) => arg?.taint?.isTaintedRec)
+        if (argHasTaint) {
+          if (args) {
+            for (const arg of args) {
+              SanitizerChecker.addSanitizerInSymbolValue(matchedPrecondition, node, arg, callstack)
+            }
+          }
+          // 对 MemberAccess 调用（如 request.setStatement(userInput)），在 receiver 上也打 tag
+          const receiver = typeof fclos?.getThisObj === 'function' ? fclos.getThisObj() : undefined
+          if (receiver) {
+            SanitizerChecker.addSanitizerInSymbolValue(matchedPrecondition, node, receiver, callstack)
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * 在 taint tags 中查找匹配指定 precondition ids 的 tag
+   * 返回匹配到的 tag 列表
+   */
+  static findMatchedPreconditionTags(preconditionIds: string[], tags: any[]): any[] {
+    const result: any[] = []
+    if (!preconditionIds || preconditionIds.length === 0 || !tags) {
+      return result
+    }
+    const idSet = new Set(preconditionIds)
+    for (const tagObj of tags) {
+      if (tagObj instanceof SanitizerTag && tagObj.id && idSet.has(tagObj.id)) {
+        result.push(tagObj)
+      }
+    }
+    return result
   }
 }
 

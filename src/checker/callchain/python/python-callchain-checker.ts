@@ -232,12 +232,13 @@ class PythonCallchainChecker extends CallchainChecker {
   getObj(fclos: any): any {
     if (typeof fclos?.sid !== 'undefined' && typeof fclos?.qid === 'undefined' && typeof fclos?._this === 'undefined') {
       const index = fclos?.sid.indexOf('>.')
-      return index !== -1 ? fclos?.sid.substring(index + 2) : fclos?.sid
+      const result = index !== -1 ? fclos?.sid.substring(index + 2) : fclos?.sid
+      return QidUnifyUtil.removeParenthesesFromString(result)
     }
     if (typeof fclos?.qid !== 'undefined' && typeof fclos.qid === 'string') {
       const index = fclos.qid.indexOf('>.')
       const result = index !== -1 ? fclos?.qid.substring(index + 2) : fclos?.qid
-      return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result)
+      return QidUnifyUtil.removeParenthesesFromString(QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result))
     }
     if (!(fclos === fclos?._this)) {
       return this.getObj(fclos._this)
@@ -246,7 +247,7 @@ class PythonCallchainChecker extends CallchainChecker {
       const index = fclos?.sid.indexOf('>.')
       const result = index !== -1 ? fclos?.sid.substring(index + 2) : fclos?.sid
       if (result) {
-        return QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result)
+        return QidUnifyUtil.removeParenthesesFromString(QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(result))
       }
     }
   }

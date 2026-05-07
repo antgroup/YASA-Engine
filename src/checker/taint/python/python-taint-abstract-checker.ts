@@ -1,4 +1,5 @@
 import type { CallInfo } from '../../../engine/analyzer/common/call-args'
+import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
 
 const _ = require('lodash')
 const commonUtil = require('../../../util/common-util')
@@ -75,7 +76,7 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param info
    */
   triggerAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
-    const { fclos, ret } = info
+    const { fclos, ret, callInfo } = info
     const funcCallReturnValueTaintSource = this.checkerRuleConfigContent.sources?.FuncCallReturnValueTaintSource
 
     IntroduceTaint.introduceTaintAtFuncCallReturnValue(fclos, node, ret, funcCallReturnValueTaintSource)
@@ -111,16 +112,6 @@ class PythonTaintAbstractChecker extends TaintChecker {
    * @param state
    * @param qid
    */
-  // 去除 qid 中每个 `.` 分隔段的调用参数元数据，如 connect(with(config)) → connect
-  stripCallMetadata(qid: string): string {
-    return qid
-      .split('.')
-      .map((seg) => {
-        const parenIdx = seg.indexOf('(')
-        return parenIdx >= 0 ? seg.substring(0, parenIdx) : seg
-      })
-      .join('.')
-  }
 
   /**
    *
@@ -147,9 +138,9 @@ class PythonTaintAbstractChecker extends TaintChecker {
           this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
           return true
         }
-        // 去除参数元数据后做后缀匹配
-        const stripped = this.stripCallMetadata(callFull)
-        if (stripped.endsWith(rule.fsig)) {
+        // 去除参数元数据后匹配：无 '.' 的裸函数名只精确匹配，有 '.' 的允许后缀匹配
+        const stripped = QidUnifyUtil.removeParenthesesFromString(callFull)
+        if (stripped === rule.fsig || (rule.fsig.includes('.') && stripped.endsWith(`.${rule.fsig}`))) {
           this.findArgsAndAddNewFinding(node, callInfo, fclos, rule, state)
           return true
         }
@@ -219,7 +210,8 @@ class PythonTaintAbstractChecker extends TaintChecker {
         const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
         let ruleName = rule.fsig
         if (typeof rule.attribute !== 'undefined') {
-          ruleName += `\nSINK Attribute: ${rule.attribute}`
+          const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+          ruleName += `\nSINK Attribute: ${attrStr}`
         }
         const taintFlowFinding = this.buildTaintFinding(
           this.getCheckerId(),
@@ -230,7 +222,8 @@ class PythonTaintAbstractChecker extends TaintChecker {
           TAINT_TAG_NAME_PYTHON,
           ruleName,
           matchedSanitizerTags,
-          state?.callstack
+          state?.callstack,
+          state?.callsites
         )
         if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
         this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
