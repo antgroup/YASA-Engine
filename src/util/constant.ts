@@ -7,7 +7,7 @@ export const ENGIN_START_FILE_BEGIN = 'fileBegin'
 export const YASA_DEFAULT = 'YASADefault'
 
 // 基础版本号
-const BASE_VERSION = '0.2.22-inner'
+const BASE_VERSION = '0.3.1'
 
 /**
  * 尝试读取构建时生成的版本信息文件
