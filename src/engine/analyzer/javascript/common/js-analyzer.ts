@@ -835,24 +835,35 @@ class JsAnalyzer extends Analyzer {
     // handle ext
     if (!fs.existsSync(pathname) || !fs.statSync(pathname).isFile()) {
       let isExist = false
-      let cwd
-      let filename
 
-      cwd = path.join(pathname, '../')
-      filename = pathname.split('/').pop()
-      const files = [`${filename}.(js|ts|mjs|cjs)`]
-      const filepaths = globby.sync(files, { cwd, caseSensitiveMatch: false })
-      if (filepaths && filepaths.length !== 0) {
-        pathname = path.join(cwd, filepaths[0])
-        isExist = true
-      } else if (fs.existsSync(pathname)) {
-        cwd = pathname
-        filename = '(i|I)ndex'
+      if (pathname.endsWith('.js')) { // handle ts
+        const tsPathname = pathname.replace(/\.js$/, '.ts')
+        if (fs.existsSync(tsPathname) && fs.statSync(tsPathname).isFile()) {
+          pathname = tsPathname
+          isExist = true
+        }
+      }
+
+      if (!isExist) {
+        let cwd
+        let filename
+
+        cwd = path.join(pathname, '../')
+        filename = pathname.split('/').pop()
         const files = [`${filename}.(js|ts|mjs|cjs)`]
         const filepaths = globby.sync(files, { cwd, caseSensitiveMatch: false })
         if (filepaths && filepaths.length !== 0) {
-          pathname = path.join(pathname, filepaths[0])
+          pathname = path.join(cwd, filepaths[0])
           isExist = true
+        } else if (fs.existsSync(pathname)) {
+          cwd = pathname
+          filename = '(i|I)ndex'
+          const files = [`${filename}.(js|ts|mjs|cjs)`]
+          const filepaths = globby.sync(files, { cwd, caseSensitiveMatch: false })
+          if (filepaths && filepaths.length !== 0) {
+            pathname = path.join(pathname, filepaths[0])
+            isExist = true
+          }
         }
       }
 
