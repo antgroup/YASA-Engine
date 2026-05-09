@@ -3499,7 +3499,6 @@ class Analyzer extends BaseAnalyzer {
   ) {
     const argvalues = getLegacyArgValues(callInfo)
     if (logger.isTraceEnabled()) logger.trace(`\nprocessCall: function: ${this.formatScope(fdecl?.id?.name)}`)
-
     // 进入函数调用时重置 inRange，避免 for-range body 中调用函数时嵌套 for-range 被错误抑制
     const savedInRange = this.inRange
     this.inRange = false
@@ -3658,6 +3657,21 @@ class Analyzer extends BaseAnalyzer {
           this.saveVarInCurrentScope(fscope, param.id, new UndefinedValue(), state)
         }
       })
+
+      const pythonReceiverFallback = callInfo?.callArgs?.receiver || fclos?.getThisObj?.()
+      if (
+        Config.language === 'python' &&
+        pythonReceiverFallback &&
+        fscope?.value &&
+        !Object.prototype.hasOwnProperty.call(fscope.value, 'self')
+      ) {
+        this.saveVarInCurrentScope(
+          fscope,
+          { type: 'Identifier', name: 'self', loc: fdecl?.loc },
+          pythonReceiverFallback,
+          new_state
+        )
+      }
 
       let objectVal
       if (node?.callee?.type === 'MemberAccess') {
@@ -3935,10 +3949,10 @@ class Analyzer extends BaseAnalyzer {
       const oldThisFClos = this.thisFClos
       this.thisFClos = obj
       ctorClos._this = obj
-      // __new__ 的第一个参数是 cls，需要设置 receiver 使 bindReceiverParam 正确跳过 cls
       let ctorCallInfo = callInfo
-      if (ctorClos.__isNewMethod && callInfo?.callArgs) {
+      if (callInfo?.callArgs) {
         ctorCallInfo = {
+          ...callInfo,
           callArgs: {
             ...callInfo.callArgs,
             receiver: obj,

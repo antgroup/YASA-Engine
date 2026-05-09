@@ -183,7 +183,8 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
 
     for (const fileEntryPoint of fileEntryPoints) {
       const fullFilePath = `${Config.maindir}${fileEntryPoint.filePath}`.replace('//', '/')
-      const fileUuid = fileManager[fullFilePath]
+      const fileEntry = fileManager[fullFilePath]
+      const fileUuid = typeof fileEntry === 'string' ? fileEntry : fileEntry?.uuid
       const file = analyzer.symbolTable.get(fileUuid)
       if (file?.ast?.node?.type === 'CompileUnit') {
         const entryPoint = new EntryPoint(Constant.ENGIN_START_FILE_BEGIN)
