@@ -283,6 +283,7 @@ export function matchField(node: any, marray: string[], i: number): boolean {
   switch (node.type) {
     case 'MemberAccess': {
       if (!matchPrefix(el, node.property.name)) return false
+      if (i === 0) return true
       return matchField(node.object, marray, i - 1)
     }
     case 'Identifier': {
