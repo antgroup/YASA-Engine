@@ -14,7 +14,6 @@ from typing import Any
 
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse
-from starlette.routing import Route
 
 from yasa_mcp import SERVER_NAME, SERVER_VERSION
 
@@ -51,13 +50,12 @@ def build_http_app(mcp: FastMCP) -> Any:
     app = mcp.http_app(transport="streamable-http")
 
     # 追加 /healthz 路由
-    health_route = Route("/healthz", healthz, methods=["GET"])
-    app.routes.insert(0, health_route)
+    app.add_route("/healthz", healthz, methods=["GET"])
 
     return app
 
 
-async def run_http(mcp: FastMCP, port: int, host: str = "0.0.0.0") -> None:
+async def run_http(mcp: FastMCP, port: int, host: str = "0.0.0.0", log_level: str = "info") -> None:
     """
     启动 HTTP 服务（含 /healthz 健康检查）。
 
@@ -65,6 +63,7 @@ async def run_http(mcp: FastMCP, port: int, host: str = "0.0.0.0") -> None:
         mcp: FastMCP 实例
         port: 监听端口
         host: 监听地址
+        log_level: 日志级别
     """
     import uvicorn
 
@@ -76,7 +75,7 @@ async def run_http(mcp: FastMCP, port: int, host: str = "0.0.0.0") -> None:
         app,
         host=host,
         port=port,
-        log_level="info",
+        log_level=log_level,
     )
     server = uvicorn.Server(config)
     await server.serve()

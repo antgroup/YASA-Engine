@@ -14,10 +14,8 @@ import asyncio
 
 import pytest
 from fastmcp import FastMCP
-from pydantic import ValidationError
 
 from yasa_mcp.registry import mcp_tool, auto_discover_tools
-from yasa_mcp.errors import ValidationError as YasaValidationError
 
 
 @pytest.fixture

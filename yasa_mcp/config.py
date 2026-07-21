@@ -67,6 +67,8 @@ def parse_config(argv: list[str] | None = None) -> ServerConfig:
 
     args = parser.parse_args(argv)
     repo_root = os.environ.get("YASA_MCP_REPO_ROOT", "")
+    if repo_root:
+        repo_root = os.path.abspath(repo_root)
 
     config = ServerConfig(
         transport=args.transport,

@@ -45,7 +45,7 @@ class TestMcpToolDecorator:
         async def my_tool(x: int) -> int:
             return x * 2
 
-        result = asyncio.get_event_loop().run_until_complete(my_tool(5))
+        result = asyncio.run(my_tool(5))
         assert result == 10
 
     def test_decorator_does_not_execute_function(self):

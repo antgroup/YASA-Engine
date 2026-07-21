@@ -15,7 +15,8 @@ class YasaMCPError(Exception):
     message: str = "An unknown error occurred"  # 保底
 
     def __init__(self, message: str | None = None, **extra):
-        self.message = message or self.message
+        if message is not None:
+            self.message = message
         self.extra = extra
         super().__init__(self.message)
 

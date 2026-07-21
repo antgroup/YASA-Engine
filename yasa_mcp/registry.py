@@ -91,7 +91,11 @@ def auto_discover_tools(
 
         for attr_name in dir(module):  # 遍历模块中的所有属性
             attr = getattr(module, attr_name)
-            if callable(attr) and hasattr(attr, _MCP_TOOL_META_ATTR):  #  找到可调用且有mcptoolmeta的属性的对象
+            if (
+                callable(attr)
+                and hasattr(attr, _MCP_TOOL_META_ATTR)
+                and getattr(attr, "__module__", None) == full_name
+            ):  #  找到在本模块中定义且有mcptoolmeta属性的对象
                 meta = getattr(attr, _MCP_TOOL_META_ATTR)
                 tool_name = meta["name"]
                 try:

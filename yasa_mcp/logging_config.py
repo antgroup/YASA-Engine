@@ -39,6 +39,6 @@ def setup_logging(level: str = "info", transport: str = "stdio") -> None:
 
 def get_logger(name: str) -> logging.Logger:
     """获取 yasa_mcp 命名空间下的子 logger"""
-    if not name.startswith("yasa_mcp"):
+    if name != "yasa_mcp" and not name.startswith("yasa_mcp."):
         name = f"yasa_mcp.{name}"
     return logging.getLogger(name)

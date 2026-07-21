@@ -56,4 +56,4 @@ class YasaMCPServer:
     async def _run_http(self) -> None:
         """HTTP 模式启动 (含 /healthz)"""
         from yasa_mcp.transport.http import run_http
-        await run_http(self.mcp, self.config.port)
+        await run_http(self.mcp, self.config.port, log_level=self.config.log_level)
