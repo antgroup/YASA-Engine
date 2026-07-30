@@ -98,15 +98,16 @@ def _strip_comments(content: str) -> str:
     """
     移除 Java 源码中的注释, 避免注释中的类/方法定义被误匹配。
 
-    将注释替换为等长空白, 保持行号不变。
+    将注释替换为等长空白, **保留换行符**, 保持行号不变。
     """
     # 先处理块注释
     def _replace_block(m: re.Match) -> str:
-        return " " * len(m.group(0))
+        # 保留换行符, 只替换非换行字符为空格
+        return "".join(" " if ch != "\n" else "\n" for ch in m.group(0))
 
     content = _BLOCK_COMMENT.sub(_replace_block, content)
-    # 再处理行注释
-    content = _LINE_COMMENT.sub(_replace_block, content)
+    # 再处理行注释 (行注释不含换行符)
+    content = _LINE_COMMENT.sub(lambda m: " " * len(m.group(0)), content)
     return content
 
 
