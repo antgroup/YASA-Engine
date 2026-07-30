@@ -94,10 +94,29 @@ def _extract_all_method_ranges(
     与 #135 的 _extract_method_ranges 的区别: 不跳过 ; 结尾的方法。
     """
     methods: list[dict[str, Any]] = []
+    used_lines: set[int] = set()  # 已匹配的行, 避免重复
 
     for i, line in enumerate(lines):
+        if i in used_lines:
+            continue
+
         m = _METHOD_LINE_PATTERN.search(line)
-        if not m:
+
+        # 尝试跨行匹配: 当前行有 ( 但没有 ), 合并后续行直到找到 )
+        match_line = line  # 实际用于匹配的行文本
+        if not m and "(" in line and ")" not in line:
+            combined = line
+            for j in range(i + 1, min(i + 10, len(lines))):
+                combined += "\n" + lines[j]
+                if ")" in lines[j]:
+                    m = _METHOD_LINE_PATTERN.search(combined)
+                    if m:
+                        match_line = combined
+                        used_lines.update(range(i + 1, j + 1))
+                    break
+            if not m:
+                continue
+        elif not m:
             continue
 
         method_name = m.group(1)
@@ -158,10 +177,13 @@ def _extract_all_method_ranges(
             "containing_class": containing_class,
             "containing_method": containing_method,
             "method_depth": method_depth,
+            "_match_line": match_line,  # 方法声明行文本 (跨行时为合并文本)
         })
 
     # 检测静态初始化块: static { ... }
     for i, line in enumerate(lines):
+        if i in used_lines:
+            continue
         if not _STATIC_INIT_PATTERN.search(line):
             continue
 
@@ -480,7 +502,7 @@ def _read_method_source(
 
     # 提取每个候选的详细信息
     for c in candidates:
-        line = lines[c["start_line"]]
+        line = c.get("_match_line", lines[c["start_line"]])
         m = _METHOD_LINE_PATTERN.search(line)
         if m:
             info = _extract_method_info(line, m)

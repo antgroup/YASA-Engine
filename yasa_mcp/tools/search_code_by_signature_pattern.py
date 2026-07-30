@@ -484,6 +484,9 @@ def _build_class_ranges_by_depth(
     类定义行 depth=0 或 depth=外层类体级别, 类体 { 后 depth+1,
     类体结束 } 时 depth 回落到类定义时的 depth。
 
+    支持跨行类声明: 如果 { 不在类声明行, 向下搜索到 { 所在行,
+    再从该行之后查找 depth 回落。
+
     返回: [(start_line, end_line, full_name), ...]
     """
     class_info: list[tuple[int, int, str]] = []
@@ -494,13 +497,22 @@ def _build_class_ranges_by_depth(
         class_name = m.group(2)
         full_name = f"{package}.{class_name}" if package else class_name
         class_depth = depths[i]  # 该行开始前的深度
-        # 类体 { 在该行或后续行, 对应的 } 时 depth 回落到 class_depth
-        # 找到 depth 回落到 class_depth 的行
+
+        # 找到 { 所在行 (类声明可能跨多行)
+        brace_line = i
+        if "{" not in line:
+            for j in range(i + 1, min(i + 10, len(lines))):
+                if "{" in lines[j]:
+                    brace_line = j
+                    break
+
+        # 从 { 所在行之后查找 depth 回落到 class_depth 的行
         end_line = len(lines) - 1
-        for j in range(i + 1, len(lines)):
+        for j in range(brace_line + 1, len(lines)):
             if depths[j] <= class_depth:
                 end_line = j
                 break
+
         class_info.append((i, end_line, full_name))
     return class_info
 

@@ -9,3 +9,4 @@ from yasa_mcp.tools import ping  # noqa: F401
 from yasa_mcp.tools import search_code_by_signature_pattern  # noqa: F401
 from yasa_mcp.tools import search_code_by_body_pattern  # noqa: F401
 from yasa_mcp.tools import read_method_source_by_method_name  # noqa: F401
+from yasa_mcp.tools import list_methods_by_class_name  # noqa: F401
