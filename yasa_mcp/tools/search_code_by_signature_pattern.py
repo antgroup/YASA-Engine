@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import re
 import logging
+from bisect import bisect_left, bisect_right
 from typing import Any
 
 from yasa_mcp.registry import mcp_tool
@@ -50,7 +51,8 @@ _MAX_RESULTS_LIMIT = 1000
 # 逐行匹配: 在每一行中查找 class/interface 关键字后跟类名和 {
 # 不使用跨行正则, 避免回溯灾难
 _CLASS_PATTERN = re.compile(
-    r"\b(?:abstract\s+)?(class|interface)\s+(\w+)",
+    r"\b(?:(?:public|protected|private|static|abstract|final|strictfp|sealed|non-sealed)\s+)*"
+    r"(class|interface|enum|record)\s+([A-Za-z_$][\w$]*)",
 )
 
 # --- 方法签名 ---
@@ -88,26 +90,77 @@ _FIELD_LINE_PATTERN = re.compile(
 # 注释过滤
 # ---------------------------------------------------------------------------
 
-# 行注释
-_LINE_COMMENT = re.compile(r"//[^\n]*")
-# 块注释
-_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_JAVA_REGION_PATTERN = re.compile(
+    r"(?P<line_comment>//[^\r\n]*)"
+    r"|(?P<block_comment>/\*.*?(?:\*/|\Z))"
+    r'|(?P<text_block>"""(?:(?:\\[\s\S])|(?:(?!""")[\s\S]))*(?:"""|\Z))'
+    r'|(?P<string>"(?:\\.|[^"\\\r\n])*(?:"|$))'
+    r"|(?P<char>'(?:\\.|[^'\\\r\n])*(?:'|$))",
+    re.DOTALL | re.MULTILINE,
+)
+_NON_NEWLINE_PATTERN = re.compile(r"[^\r\n]")
+
+def _mask_java_regions(
+    content: str,
+    *,
+    mask_comments: bool,
+    mask_literals: bool,
+) -> str:
+    """Mask Java comments and/or literals without changing offsets."""
+    return _mask_java_region_variants(
+        content,
+        ((mask_comments, mask_literals),),
+    )[0]
+
+
+def _mask_java_region_variants(
+    content: str,
+    variants: tuple[tuple[bool, bool], ...],
+) -> list[str]:
+    """Build multiple comment/literal masks in one lexical pass."""
+    outputs: list[list[str]] = [[] for _ in variants]
+    cursor = 0
+
+    for match in _JAVA_REGION_PATTERN.finditer(content):
+        start, end = match.span()
+        segment = match.group(0)
+        is_comment = match.lastgroup in {"line_comment", "block_comment"}
+        masked_segment: str | None = None
+
+        for output, (mask_comments, mask_literals) in zip(outputs, variants):
+            output.append(content[cursor:start])
+            should_mask = mask_comments if is_comment else mask_literals
+            if should_mask:
+                if masked_segment is None:
+                    masked_segment = _NON_NEWLINE_PATTERN.sub(" ", segment)
+                output.append(masked_segment)
+            else:
+                output.append(segment)
+        cursor = end
+
+    remainder = content[cursor:]
+    for output in outputs:
+        output.append(remainder)
+    return ["".join(output) for output in outputs]
+
+
+def _prepare_java_source(content: str) -> tuple[str, str]:
+    """Return comment-masked and structural source in one lexical pass."""
+    without_comments, structural = _mask_java_region_variants(
+        content,
+        ((True, False), (True, True)),
+    )
+    return without_comments, structural
 
 
 def _strip_comments(content: str) -> str:
-    """
-    移除 Java 源码中的注释, 避免注释中的类/方法定义被误匹配。
+    """Mask comments while preserving literals, offsets, and line numbers."""
+    return _mask_java_regions(content, mask_comments=True, mask_literals=False)
 
-    将注释替换为等长空白, 保持行号不变。
-    """
-    # 先处理块注释
-    def _replace_block(m: re.Match) -> str:
-        return " " * len(m.group(0))
 
-    content = _BLOCK_COMMENT.sub(_replace_block, content)
-    # 再处理行注释
-    content = _LINE_COMMENT.sub(_replace_block, content)
-    return content
+def _mask_literals(content: str) -> str:
+    """Mask string, character, and text-block literals."""
+    return _mask_java_regions(content, mask_comments=False, mask_literals=True)
 
 
 # ---------------------------------------------------------------------------
@@ -473,10 +526,41 @@ def _compute_line_depths(lines: list[str]) -> list[int]:
     return depths
 
 
+def _compute_brace_metadata(
+    content: str,
+) -> tuple[dict[int, int], dict[int, int], dict[int, int]]:
+    """Return brace pairs, opening-brace depths, and header starts in O(n)."""
+    stack: list[int] = []
+    pairs: dict[int, int] = {}
+    open_depths: dict[int, int] = {}
+    header_starts: dict[int, int] = {}
+    last_boundary: dict[int, int] = {0: -1}
+
+    for i, ch in enumerate(content):
+        depth = len(stack)
+        if ch == "{":
+            open_depths[i] = depth
+            header_starts[i] = last_boundary.get(depth, -1) + 1
+            stack.append(i)
+            last_boundary[depth + 1] = i
+        elif ch == "}":
+            if stack:
+                opening = stack.pop()
+                pairs[opening] = i
+            last_boundary[len(stack)] = i
+        elif ch == ";":
+            last_boundary[depth] = i
+
+    return pairs, open_depths, header_starts
+
+
 def _build_class_ranges_by_depth(
     lines: list[str],
     depths: list[int],
     package: str | None,
+    structural_content: str | None = None,
+    brace_metadata: tuple[dict[int, int], dict[int, int], dict[int, int]] | None = None,
+    line_starts: list[int] | None = None,
 ) -> list[tuple[int, int, str]]:
     """
     利用预计算的 depth 数组, 快速确定每个类的行范围。
@@ -485,23 +569,70 @@ def _build_class_ranges_by_depth(
 
     返回: [(start_line, end_line, full_name), ...]
     """
-    class_info: list[tuple[int, int, str]] = []
-    for i, line in enumerate(lines):
+    if structural_content is None:
+        structural = _mask_literals("\n".join(lines))
+    else:
+        structural = structural_content
+    structural_lines = structural.split("\n")
+    if brace_metadata is None:
+        pairs, open_depths, _ = _compute_brace_metadata(structural)
+    else:
+        pairs, open_depths, _ = brace_metadata
+    opening_positions = sorted(open_depths)
+    if line_starts is None:
+        line_starts = [0]
+        for match in re.finditer("\n", structural):
+            line_starts.append(match.end())
+
+    accepted: list[dict[str, Any]] = []
+    for i, line in enumerate(structural_lines):
         m = _CLASS_PATTERN.search(line)
         if not m:
             continue
         class_name = m.group(2)
-        full_name = f"{package}.{class_name}" if package else class_name
         class_depth = depths[i]  # 该行开始前的深度
-        # 类体 { 在该行或后续行, 对应的 } 时 depth 回落到 class_depth
-        # 找到 depth 回落到 class_depth 的行
-        end_line = len(lines) - 1
-        for j in range(i + 1, len(lines)):
-            if depths[j] <= class_depth:
-                end_line = j
+        declaration_pos = line_starts[i] + m.start()
+
+        opening = None
+        for pos in opening_positions[bisect_left(opening_positions, declaration_pos):]:
+            if open_depths[pos] == class_depth:
+                opening = pos
                 break
-        class_info.append((i, end_line, full_name))
-    return class_info
+        if opening is None or opening not in pairs:
+            continue
+
+        closing = pairs[opening]
+        parent = None
+        for candidate in accepted:
+            if (
+                candidate["opening"] < opening < candidate["closing"]
+                and class_depth == candidate["depth"] + 1
+            ):
+                if parent is None or candidate["depth"] > parent["depth"]:
+                    parent = candidate
+
+        if class_depth > 0 and parent is None:
+            # Local classes are inside methods, not at a class-body level.
+            continue
+
+        if parent is not None:
+            full_name = f"{parent['full_name']}.{class_name}"
+        else:
+            full_name = f"{package}.{class_name}" if package else class_name
+
+        accepted.append({
+            "start_line": i,
+            "end_line": bisect_right(line_starts, closing) - 1,
+            "full_name": full_name,
+            "depth": class_depth,
+            "opening": opening,
+            "closing": closing,
+        })
+
+    return [
+        (item["start_line"], item["end_line"], item["full_name"])
+        for item in accepted
+    ]
 
 
 def _find_matching_brace(content: str, brace_pos: int) -> int:

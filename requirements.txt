@@ -1,4 +1,4 @@
-# YASA MCP Server — runtime dependencies
+# YASA MCP Server - runtime dependencies
 # Install: pip install -r requirements.txt
 
 fastmcp>=3.0

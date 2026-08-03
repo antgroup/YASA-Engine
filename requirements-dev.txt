@@ -1,4 +1,4 @@
-# YASA MCP Server — development dependencies
+# YASA MCP Server - development dependencies
 # Install: pip install -r requirements-dev.txt
 # (includes all runtime deps from requirements.txt)
 

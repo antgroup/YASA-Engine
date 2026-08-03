@@ -6,4 +6,5 @@
 
 # 显式导入各 tool 模块，确保在包被 import 时即被加载
 from yasa_mcp.tools import ping  # noqa: F401
+from yasa_mcp.tools import search_code_by_body_pattern  # noqa: F401
 from yasa_mcp.tools import search_code_by_signature_pattern  # noqa: F401

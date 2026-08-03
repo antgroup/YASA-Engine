@@ -24,6 +24,8 @@ TODO.md
 *.LICENSE.txt
 gulpfile_sym.js
 yasa*
+!yasa_mcp/
+!yasa_mcp/**
 e2e_chair.test.js
 package-lock.json
 test.js
