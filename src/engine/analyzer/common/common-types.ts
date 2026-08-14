@@ -1,3 +1,5 @@
+import type { TraceItem } from '../../../util/finding-util'
+
 /**
  * 通用类型定义文件
  * 集中管理项目中共享的TypeScript类型定义
@@ -40,7 +42,7 @@ export interface TaintFinding {
   sinkInfo?: any
   format?: any
   line?: number
-  trace?: any[]
+  trace?: TraceItem[]
   severity?: number
   matchedSanitizerTags?: any
   issuecause?: string

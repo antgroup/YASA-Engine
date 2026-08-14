@@ -12,6 +12,12 @@ const AstUtil = require('../../../util/ast-util')
 const varUtil = require('../../../util/variable-util')
 const { handleException } = require('./exception-handler')
 const { getGlobalSymbolTable } = require('../../../util/global-registry')
+const { addElementToBuffer } = require('../java/common/builtins/buffer')
+const Config = require('../../../config')
+
+function isDataflowInstrumentationEnabled(): boolean {
+  return Config.dataflowDb
+}
 
 import type UnitType from './value/unit'
 type FilterFn = ((scope: UnitType) => boolean) | null
@@ -69,9 +75,13 @@ class MemSpace extends Scope {
    * 同一 node 不要重复 resolve，调用链参见 saveVarInScope / saveVarInCurrentScope 注释。
    *
    * @param node AST node 或 Value 实例（字符串也会被包成 IdentifierRefValue）
+   * @param evalScope 可选，computed key evaluation 使用的作用域。
+   *   当 saveVarInScope 经过 getDefScope 找到 declaration scope 后，computed key 中的变量
+   *   可能声明在更内层的 block scope（如 for-range 的迭代变量）。此时需要用原始执行 scope
+   *   来求值 key，否则找不到变量值。不传则回退到 scope（保持向后兼容）。
    * @returns SymbolValue | MemberExprValue | UnionValue | 原 AST node | processInstruction 结果
    */
-  resolveIndices(scope: UnitType, node: any, state: any): any {
+  resolveIndices(scope: UnitType, node: any, state: any, evalScope?: UnitType): any {
     if (!node) return node
     // 针对error类型特别适配
     if (node?.rtype?.type === 'Identifier' && node?.rtype?.name === 'error') {
@@ -92,10 +102,14 @@ class MemSpace extends Scope {
         prop = index = node.property
       } else {
         const prop = node.property
-        index = this.processInstruction(scope, prop, state)
+        // computed key 使用 evalScope（执行上下文 scope）求值，而非 declaration scope
+        // 例如 for-range 中 repository[v] = ... 的 v 声明在 block scope 中，
+        // 但 repository 的 declaration scope 是 function scope，v 在 function scope 中不可见
+        const keyScope = evalScope || scope
+        index = this.processInstruction(keyScope, prop, state)
         if (!index) index = new SymbolValue(scope.qid, { sid: `<indice_process_prop_failed>`, ...prop })
       }
-      const object = this.resolveIndices(scope, node.object, state)
+      const object = this.resolveIndices(scope, node.object, state, evalScope)
       if (object === node.object && index === prop) return node
       return new MemberExprValue(object.qid, object, index, node.computed, node, node.loc)
     }
@@ -125,7 +139,7 @@ class MemSpace extends Scope {
       }
       if (Array.isArray(values)) {
         for (const el of values) {
-          const v = this.resolveIndices(scope, el, state)
+          const v = this.resolveIndices(scope, el, state, evalScope)
           if (v) res.push(v)
         }
       }
@@ -232,6 +246,11 @@ class MemSpace extends Scope {
           res.appendValue(this._getMemberValue(scp, node, state, createIfNotExists, limit--, filter))
         }
       }
+      // union 成员访问结果继承原 union 的值图连接，使 BFS 能追溯到 tag traces
+      if (scope.taint?.isTaintedRec) {
+        res.taint.mergeFrom([scope])
+        addElementToBuffer(res, scope)
+      }
       return res
     }
     // 如果scope.vtype是object 则传入的scope就是当前obj的defscope 直接从scope中取值即可
@@ -336,11 +355,20 @@ class MemSpace extends Scope {
    * @param oldVal 旧值（用于继承 rtype）
    */
   saveVarInScope(scope: UnitType, node: any, value: UnitType, state: any, oldVal: UnitType | null = null): any {
+    if (isDataflowInstrumentationEnabled()) {
+      const { recordEdge, recordNodeTag } = require('./dataflow-edge-stats')
+      const declName = typeof node?.name === 'string' ? node.name : (typeof node?.value === 'string' ? node.value : 'unknown')
+      recordEdge(value, scope, 'assign', { targetKind: 'decl_use', producerKind: 'variable_write', provenance: 'memSpace.saveVarInScope' })
+      recordNodeTag(value, 'decl_use', declName, 'memSpace.saveVarInScope')
+    }
     if (!value.rtype && oldVal && oldVal.rtype) value.rtype = oldVal.rtype
     const defscope = this.getDefScope(scope, node)
 
     if (state && state.brs) state.br_index = 0
-    return this.saveVarInCurrentScope(defscope, node, value, state)
+    // scope = 执行 scope（可见 for-range 迭代变量等）
+    // defscope = 变量声明 scope（如 function scope）
+    // 传 scope 作为 evalScope，使 computed key 能在正确的作用域中求值
+    return this.saveVarInCurrentScope(defscope, node, value, state, scope)
   }
 
   /**
@@ -364,15 +392,16 @@ class MemSpace extends Scope {
    * @param node AST node
    * @param value 待写入的 Value
    * @param state 分析状态
+   * @param evalScope 可选，computed key evaluation 使用的执行 scope
    */
-  saveVarInCurrentScope(scope: UnitType, node: any, value: UnitType, state: any): any {
+  saveVarInCurrentScope(scope: UnitType, node: any, value: UnitType, state: any, evalScope?: UnitType): any {
     if (node && (node.type === 'Identifier' || node.type === 'Parameter' || node.type === 'Literal')) {
       if (value && node.rtype && !value.rtype) {
         value.rtype = node.rtype
       }
       return this.saveVarInScopeRec(scope, node, value, state)
     }
-    const resolvedNode = this.resolveIndices(scope, node, state)
+    const resolvedNode = this.resolveIndices(scope, node, state, evalScope)
     if (value && resolvedNode?.rtype && !value?.rtype) {
       value.rtype = resolvedNode.rtype
     }
@@ -405,6 +434,14 @@ class MemSpace extends Scope {
       return
     }
 
+    if (scope.vtype === 'union' && Array.isArray(scope.value)) {
+      // union 作为对象载体时，字段写入必须落到每个候选对象。
+      for (const element of scope.value as UnitType[]) {
+        this.saveVarInScopeRec(element, node, value, state)
+      }
+      return
+    }
+
     if (typeof node === 'string') node = new IdentifierRefValue(scope.qid, node, null, null)
 
     switch (node.type) {
@@ -428,6 +465,7 @@ class MemSpace extends Scope {
         // }
 
         this.saveVarInScopeRec(subscope, prop, value, state)
+
         return
       }
       case 'Identifier':
@@ -596,7 +634,8 @@ class MemSpace extends Scope {
       if (res.length === 0) return undefined
       if (res.length === 1) return res[0]
 
-      return new UnionValue(res, undefined, `${scope.qid}.<union@memD:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`, node)
+      const union = new UnionValue(res, undefined, `${scope.qid}.<union@memD:${node?.loc?.start?.line}:${node?.loc?.start?.column}>`, node)
+      return union
     }
     if (scope.vtype === 'BVT') {
       scope = memState.loadForkedValue(scope, state)
@@ -648,6 +687,7 @@ class MemSpace extends Scope {
         if (fields && _.has(fields, index)) {
           // todo 还需要判断当前的val 是否state匹配
           val = fields[index]
+          // 不记 field_access 结构边：runtime 此处不调 propagateFrom，真正传播在下方 L661/L693 的 propagate 分支
           // UUID 字符串解析回实际符号值
           if (val && typeof val === 'string' && val.startsWith('symuuid_')) {
             const symbolTable = getGlobalSymbolTable()
@@ -709,6 +749,23 @@ class MemSpace extends Scope {
             }
             if (scope.taint?.hasTags() && val.taint) {
               for (const t of scope.taint.getTags()) val.taint.addTag(t)
+            } else if (scope.taint?.isTaintedRec && val.taint && scope.value && typeof scope.value === 'object'
+              && node.type === 'Literal') {
+              // container 被标记 tainted（isTaintedRec=true）但自身无 tags 时，
+              // 仅对字面量 key 访问（如 map["id"]）从子值继承 tags/traces。
+              // 限定 Literal 访问排除方法解析（如 obj.get）的误传播。
+              // 场景：BVT 分叉后 key 查找失败走 fallback，但 container 所有字段来自同一 tainted source
+              const fields = scope.value
+              const fieldKeys = Object.keys(fields)
+              for (const fk of fieldKeys) {
+                const child = fields[fk]
+                if (child && child !== val && child.taint?.hasTags()) {
+                  for (const t of child.taint.getTags()) val.taint.addTag(t)
+                  if (child.taint.hasTraces()) {
+                    val.taint.mergeTracesDedup(child.taint)
+                  }
+                }
+              }
             }
             if (scope.taint.hasTraces() && val.taint) {
               val.taint.inheritTracesFrom(scope.taint)
@@ -745,6 +802,13 @@ class MemSpace extends Scope {
           if (val.taint && !val.taint.hasTraces() && scope.taint.hasTraces()) {
             val.taint.inheritTracesFrom(scope.taint)
           }
+          // 成员读结果由带 buffer 的 receiver 派生时保留一跳 carrier，避免 getter 只保留递归污点而丢失深层 SOURCE donor。
+          if (val && val !== scope && typeof val.setMisc === 'function' && typeof scope.getMisc === 'function') {
+            const scopeBuffer = scope.getMisc('buffer')
+            if (Array.isArray(scopeBuffer) && scopeBuffer.length > 0 && !val.getMisc?.('buffer')) {
+              addElementToBuffer(val, scope)
+            }
+          }
           val = memState.loadForkedValue(val, state) // may need to resolve branch-dependent values
           if (!val) {
             // val = Scope.createSubScope(index, scope);
@@ -770,6 +834,7 @@ class MemSpace extends Scope {
             // 当 key 携带污点，存储到 misc 避免断链
             scope.setMisc(sid, node)
           }
+          // 不记 member_resolve 结构边：runtime 此处不调 propagateFrom，真正传播在 L661/L693
           return val
         }
         const memberExpr = new MemberExprValue('', scope, node, false, node.ast?.node, node.loc)

@@ -16,7 +16,7 @@
         "id": "SANITIZER_2",
         "sanitizerType": "FunctionCallSanitizer",
         "sanitizerScenario": "SANITIZER.VALIDATE_BY_FUNCTIONCALL",
-        "calleeType": "com.alipay.common.security.util.secutils.cmd.CmdParameterChecker",
+        "calleeType": "com.example.security.util.CommandParameterChecker",
         "fsig": "checkCmdParameter",
         "args": [
           "0"
@@ -26,7 +26,7 @@
         "id": "SANITIZER_3",
         "sanitizerType": "FunctionCallSanitizer",
         "sanitizerScenario": "SANITIZER.CALLSTACK_HAS_FUNCTIONCALL",
-        "calleeType": "com.alipay.common.security.util.secutils.cmd.AlipayCmdChecker",
+        "calleeType": "com.example.security.util.CommandChecker",
         "fsig": "hookStart",
         "args": [
           "0"

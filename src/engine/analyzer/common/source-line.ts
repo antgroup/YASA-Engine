@@ -1,15 +1,60 @@
+import type { TraceItem, TraceWriteOptions } from '../../../util/finding-util'
+import type { TaintRecord } from './value/taint-record'
 export {}
 const _ = require('lodash')
 const Config = require('../../../config')
 const { prettyPrint } = require('../../../util/ast-util')
-const { buildNewCopiedWithTag } = require('../../../util/clone-util')
+const {
+  buildCrossCallVisitedKey,
+  probeCrossCallVisited,
+  markCrossCallVisited,
+} = require('./cross-call-visited')
+const { buildNewCopiedWithTag, shallowCopyValue } = require('../../../util/clone-util')
 const QidUnifyUtil = require('../../../util/qid-unify-util')
 const VariableUtil = require('../../../util/variable-util')
-
 /** **************** source code line management *********************** */
 
+type SourceLineNode = TraceItem['node'] & { parent?: SourceLineNode }
+export interface TraceProvenanceOptions {
+  callbackEdge?: boolean
+  callbackClosureOwnerHash?: string
+}
+
+type SourceLineValue = {
+  vtype?: string
+  sid?: string
+  logicalQid?: string
+  ast?: { node?: unknown }
+  type?: string
+  value?: Record<string, SourceLineValue> | SourceLineValue[] | unknown
+  taint?: TaintRecord
+  _field?: Record<string, SourceLineValue> | SourceLineValue[]
+  members?: Map<string, SourceLineValue>
+  arguments?: SourceLineValue[]
+  left?: SourceLineValue
+  right?: SourceLineValue
+  expression?: SourceLineValue
+  children?: Record<string, SourceLineValue | undefined>
+  object?: SourceLineValue
+  property?: SourceLineValue
+  misc_?: { buffer?: SourceLineValue[] }
+  getChild?: (key: string) => SourceLineValue | undefined | null
+  getFieldValue?: (key: string) => SourceLineValue | undefined | null
+  setFieldValue?: (key: string, value: SourceLineValue) => void
+}
+
+type SourceLineResult = SourceLineValue & { taint: TaintRecord }
+
+type SourceCodeAnalyzer = {
+  sourceCodeCache?: Map<string, string[]> | Record<string, string[] | string>
+  // 是否启用跨 addSrcLineInfo 调用 visited memo（卡点 A Step A）。
+  // 仅 Python analyzer 入口循环会按入口重置；未挂载重置 hook 的语言（JS/Go/Java）必须关闭，避免跨入口污染。
+  crossCallVisitedEnabled?: boolean
+  enableNestedSourceLineIsolation?: boolean
+}
+
 // 全局 analyzer 引用，用于访问 sourceCodeCache
-let globalAnalyzer: any = null
+let globalAnalyzer: SourceCodeAnalyzer | null = null
 
 // 无 analyzer 场景（如 dumpAllAST）共享的模块级单例 cache
 // 不能每次 new 一个新 Map，否则 storeCode 写入和 getCodeByLocation 读取用的是不同实例
@@ -19,7 +64,7 @@ const fallbackSourceCodeCache: Map<string, string[]> = new Map<string, string[]>
  * 设置全局 analyzer 实例
  * @param analyzer analyzer 实例
  */
-function setGlobalAnalyzer(analyzer: any) {
+function setGlobalAnalyzer(analyzer: SourceCodeAnalyzer) {
   globalAnalyzer = analyzer
 }
 
@@ -49,12 +94,14 @@ function getSourceCodeCache(): Map<string, string[]> {
   if (
     globalAnalyzer.sourceCodeCache &&
     typeof globalAnalyzer.sourceCodeCache === 'object' &&
+    !(globalAnalyzer.sourceCodeCache instanceof Map) &&
     !Array.isArray(globalAnalyzer.sourceCodeCache)
   ) {
     const map = new Map<string, string[]>()
-    for (const key in globalAnalyzer.sourceCodeCache) {
-      if (Object.prototype.hasOwnProperty.call(globalAnalyzer.sourceCodeCache, key)) {
-        const value = globalAnalyzer.sourceCodeCache[key]
+    const sourceCodeCache = globalAnalyzer.sourceCodeCache
+    for (const key in sourceCodeCache) {
+      if (Object.prototype.hasOwnProperty.call(sourceCodeCache, key)) {
+        const value = sourceCodeCache[key]
         // 兼容处理：如果是字符串，转换为数组
         map.set(key, typeof value === 'string' ? value.split(/\n/) : value)
       }
@@ -74,8 +121,16 @@ function getSourceCodeCache(): Map<string, string[]> {
  * @param tag
  * @param affectedNodeName
  */
-function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affectedNodeName: any) {
+function addSrcLineInfo(
+  val: SourceLineValue | SourceLineValue[] | undefined | null,
+  node: SourceLineNode,
+  sourcefile: string | undefined,
+  tag: string,
+  affectedNodeName: string | undefined,
+  options?: TraceWriteOptions & TraceProvenanceOptions
+): SourceLineValue | SourceLineValue[] | undefined | null {
   if (!val) return val
+  if (!node.loc) return val
   let sig = '<NodeLocUnknown>'
   if (node.loc?.sourcefile && typeof node.loc?.sourcefile === 'string') {
     sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
@@ -96,27 +151,43 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
     // @ts-ignore
     newVal.value = val.value
     for (const eachVal of newVal) {
-      const start_line = node.loc.start?.line
-      const end_line = node.loc.end?.line
+      const start_line = node.loc.start?.line ?? 0
+      const end_line = node.loc.end?.line ?? start_line
       const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-      const traceItem = { file: sourcefile, line: tline, node, tag, affectedNodeName }
+      const traceItem: TraceItem = {
+    file: sourcefile,
+    line: tline,
+    node,
+    tag,
+    affectedNodeName,
+    _callbackEdge: options?.callbackEdge,
+    _callbackClosureOwnerHash: options?.callbackClosureOwnerHash,
+  }
 
-      eachVal.taint.dedupLastTrace(sourcefile, node.loc.start?.line, tag)
+      eachVal.taint.dedupLastTrace(sourcefile, node.loc.start?.line, tag, options)
 
-      // Pass traceItem to processFieldAndArguments for delayed addition
-      processFieldAndArguments(eachVal, eachVal, 0, [], node, traceItem)
+      // traceItem 延迟交给递归传播，避免根值与子字段重复写入。
+      processFieldAndArguments(eachVal, eachVal, 0, { ids: new Set(), buckets: new Map() }, node, traceItem, options)
     }
     return newVal
   }
   if (!val.taint?.isTaintedRec || !sourcefile) return val
 
-  const start_line = node.loc.start?.line
-  const end_line = node.loc.end?.line
+  const start_line = node.loc.start?.line ?? 0
+  const end_line = node.loc.end?.line ?? start_line
   const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-  const traceItem = { file: sourcefile, line: tline, node, tag, affectedNodeName }
+  const traceItem: TraceItem = {
+    file: sourcefile,
+    line: tline,
+    node,
+    tag,
+    affectedNodeName,
+    _callbackEdge: options?.callbackEdge,
+    _callbackClosureOwnerHash: options?.callbackClosureOwnerHash,
+  }
 
   if (val.taint.hasTraces()) {
-    val.taint.dedupLastTrace(sourcefile, node.loc.start?.line, tag)
+    val.taint.dedupLastTrace(sourcefile, start_line, tag, options)
 
     let newVal
     if (Config.shareSourceLineSet) {
@@ -125,20 +196,19 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
       newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
       newVal.value = val.value
     }
-    // CRITICAL: If traceItem exists and val has tags, add it to val FIRST
-    // This handles the case where val itself has tags (first call where val === res)
+    // 根值已有 trace 时先补当前 trace，子字段递归阶段只做去重合并。
     if (traceItem && newVal.taint?.hasTags()) {
-      newVal.taint.addTraceToAllTags(traceItem)
+      newVal.taint.addTraceToAllTags(traceItem, options)
     }
-    // Pass traceItem to processFieldAndArguments for delayed addition
-    processFieldAndArguments(newVal, newVal, 0, [], node, traceItem)
+    // traceItem 延迟交给递归传播，避免根值与子字段重复写入。
+    processFieldAndArguments(newVal, newVal, 0, { ids: new Set(), buckets: new Map() }, node, traceItem, options)
     return newVal
   }
   const newVal = buildNewCopiedWithTag(globalAnalyzer, val, sig)
   newVal.value = val.value
 
-  // Pass traceItem to processFieldAndArguments for delayed addition
-  processFieldAndArguments(newVal, newVal, 0, [], node, traceItem)
+  // traceItem 延迟交给递归传播，避免根值与子字段重复写入。
+  processFieldAndArguments(newVal, newVal, 0, { ids: new Set(), buckets: new Map() }, node, traceItem, options)
   return newVal
 }
 
@@ -151,59 +221,151 @@ function addSrcLineInfo(val: any, node: any, sourcefile: any, tag: any, affected
  * @param node
  * @param traceItem - The trace item to be added during recursion
  */
-function processFieldAndArguments(val: any, res: any, stack: any, visited: any[], node: any, traceItem?: any) {
-  if (visited.includes(val)) {
+function getLastTraceVariantKey(val: SourceLineValue): string {
+  const trace = val?.taint?.getFirstTrace?.()
+  if (!Array.isArray(trace) || trace.length === 0) return '<empty>'
+  const last = trace[trace.length - 1]
+  return `${last?.file ?? ''}:${JSON.stringify(last?.line ?? '')}:${last?.tag ?? ''}:${last?.affectedNodeName ?? ''}`
+}
+
+function isTerminalStringValueOfTrace(traceItem?: TraceItem): boolean {
+  return traceItem?.affectedNodeName === 'String' && prettyPrint(traceItem?.node).includes('String.valueOf')
+}
+
+function shouldPropagateTraceItemAtStack(traceItem: TraceItem, stack: number): boolean {
+  if (traceItem?.tag === 'Return Value: ') return true
+  return !isTerminalStringValueOfTrace(traceItem) || stack <= 2
+}
+
+function needsNestedSourceLineIsolation(val: unknown, traceItem?: unknown): boolean {
+  const candidate = val as { taint?: { hasTags?: () => boolean } } | null | undefined
+  return Boolean(globalAnalyzer?.enableNestedSourceLineIsolation && traceItem && candidate?.taint?.hasTags?.())
+}
+
+const NESTED_ISOLATION_QID_MARKER = '<nested_'
+let _nestedIsolationSeq = 0
+
+type NestedIsolatedValue = SourceLineValue & {
+  _qid?: string
+  _logicalQid?: string
+  uuid?: string | null
+  calculateAndRegisterUUID?: () => void
+}
+
+function isolateNestedSourceLineValue(val: SourceLineValue, traceItem?: TraceItem): SourceLineValue {
+  if (!needsNestedSourceLineIsolation(val, traceItem)) return val
+
+  const sourceVal = val as NestedIsolatedValue
+  // 已隔离的值复用当前 symbolTable 条目，避免递归传播重复注册等价副本。
+  if (sourceVal._qid?.includes(NESTED_ISOLATION_QID_MARKER)) return val
+
+  const isolatedVal = shallowCopyValue(val) as NestedIsolatedValue
+  isolatedVal.value = sourceVal.value
+  // qid 后缀只用于嵌套 trace 隔离，避免子值与原值共享同一 symbolTable 项。
+  isolatedVal._qid = `${isolatedVal._qid ?? ''}<nested_${++_nestedIsolationSeq}_endtag>`
+  isolatedVal._logicalQid = undefined
+  isolatedVal.uuid = null
+  isolatedVal.calculateAndRegisterUUID?.()
+  return isolatedVal
+}
+
+type VisitState = {
+  ids: Set<SourceLineValue>
+  // 结构等价桶索引（vtype:sid:logicalQid:astNodeRef:type:taintFlag）。
+  // 把昂贵的 getLastTraceVariantKey 留到桶内 live 状态比较，避免 snapshot 漏掉
+  // 后续被加深的 trace 步（例如匿名函数 wrapper 的延迟传播）。
+  buckets: Map<string, SourceLineValue[]>
+}
+
+// AST 节点标识符缓存：用于桶键拼接。原结构比对用 === 引用相等，这里用模块内单调 id 还原同一语义。
+const astNodeIdCache: WeakMap<object, number> = new WeakMap<object, number>()
+let astNodeIdSeq = 0
+function getAstNodeId(node: unknown): string {
+  if (!node || typeof node !== 'object') return ''
+  let id = astNodeIdCache.get(node as object)
+  if (id === undefined) {
+    id = ++astNodeIdSeq
+    astNodeIdCache.set(node as object, id)
+  }
+  return String(id)
+}
+
+function buildBucketKey(val: SourceLineValue): string | null {
+  if (val.vtype === 'union' || val.vtype === 'BVT') return null
+  return `${val.vtype ?? ''}|${val.sid ?? ''}|${val.logicalQid ?? ''}|${val.type ?? ''}|${val.taint?.isTaintedRec ? '1' : '0'}|${getAstNodeId(val.ast?.node)}`
+}
+
+function processFieldAndArguments(
+  val: SourceLineValue,
+  res: SourceLineResult,
+  stack: number,
+  visited: VisitState,
+  node: SourceLineNode,
+  traceItem?: TraceItem,
+  options?: TraceWriteOptions
+): void {
+  if (visited.ids.has(val)) {
     return
   }
-  const sig = `${node.loc?.sourcefile.substring((node.loc?.sourcefile.lastIndexOf('/') || 0) + 1, node.loc?.sourcefile.lastIndexOf('.'))}_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}`
-
-  for (const a of visited) {
-    if (
-      a.vtype !== 'union' &&
-      a.vtype !== 'BVT' &&
-      a.vtype === val.vtype &&
-      a.sid === val.sid &&
-      a.logicalQid === val.logicalQid &&
-      a.ast?.node === val.ast?.node &&
-      a.type === val.type &&
-      a.taint?.isTaintedRec === val.taint?.isTaintedRec
-    ) {
-      return
+  // 跨 addSrcLineInfo 调用 memo：本入口内同一污染子树（全 tag 末步指纹相同）已递归灌过 trace。
+  // 命中时仍执行 propagateTraceFrom（保证 res 取得末步），仅跳过子树递归（buildNestedTraceCopy 风暴源）。
+  // 仅 Python analyzer（crossCallVisitedEnabled=true 且按入口 reset）启用，避免 JS/Go/Java 跨入口污染。
+  // union/BVT（buildBucketKey 返 null）不进跨调用 memo，只走下方单次 visited 引用相等。
+  let crossCallMemoSkipped = false
+  const bucketKey = buildBucketKey(val)
+  if (globalAnalyzer?.crossCallVisitedEnabled === true && bucketKey !== null) {
+    const crossCallKey = buildCrossCallVisitedKey(bucketKey, val.taint)
+    if (crossCallKey !== null) {
+      if (probeCrossCallVisited(crossCallKey)) {
+        crossCallMemoSkipped = true
+      } else {
+        markCrossCallVisited(crossCallKey)
+      }
     }
   }
-  visited.push(val)
-  if (stack >= 20) {
+  if (bucketKey !== null) {
+    const bucket = visited.buckets.get(bucketKey)
+    if (bucket && bucket.length > 0) {
+      const valLastKey = getLastTraceVariantKey(val)
+      for (const a of bucket) {
+        if (getLastTraceVariantKey(a) === valLastKey) {
+          return
+        }
+      }
+    }
+  }
+  visited.ids.add(val)
+  if (bucketKey !== null) {
+    const bucket = visited.buckets.get(bucketKey)
+    if (bucket) bucket.push(val)
+    else visited.buckets.set(bucketKey, [val])
+  }
+  if (traceItem && val?.taint?.hasTags()) {
+    val.taint.propagateTraceFrom(res.taint, shouldPropagateTraceItemAtStack(traceItem, stack) ? traceItem : undefined, options)
+  }
+  if (stack >= 20 || crossCallMemoSkipped) {
     return
   }
 
-  // Check if val needs processing
+  // 仅递归处理仍携带污点的符号值。
   if (!val.taint?.isTaintedRec) {
     return
   }
 
-  // Check if there's anything to propagate: res has traces OR traceItem exists
-  // Don't return early just because res has no traces - traceItem might need to propagate to children
+  // res trace 或当前 traceItem 至少存在其一时，才需要继续向子值传播。
   if (!res.taint.hasTraces() && !traceItem) {
     return
   }
   if (val.taint?.isTaintedRec && val.vtype === 'BVT') {
-    const childKeys = Object.keys(val.value)
+    const childValue: Record<string, SourceLineValue> = val.value && typeof val.value === 'object' && !Array.isArray(val.value) ? val.value as Record<string, SourceLineValue> : {}
+    const childKeys = Object.keys(childValue)
     for (const key of childKeys) {
-      const arg = val.getChild(key)
+      const arg = val.getChild?.(key)
       if (arg == null) continue
       if (arg.taint?.isTaintedRec) {
-        let hasChange = false
-        if (arg.taint?.hasTags()) {
-          const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
-          argCopy.taint.propagateTraceFrom(res.taint, traceItem)
-          val.setChild(key, argCopy)
-          hasChange = true
-        }
-        if (hasChange) {
-          processFieldAndArguments(val.getChild(key), res, stack + 1, visited, node, traceItem)
-        } else {
-          processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
-        }
+        const nextArg = isolateNestedSourceLineValue(arg, traceItem)
+        if (nextArg !== arg) childValue[key] = nextArg
+        processFieldAndArguments(nextArg, res, stack + 1, visited, node, traceItem, options)
       }
     }
   } else if (
@@ -213,20 +375,11 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
   ) {
     if (Array.isArray(val._field)) {
       for (const argI in val._field) {
-        const arg = val.getFieldValue(argI)
+        const arg = val.getFieldValue?.(argI)
         if (arg?.taint?.isTaintedRec) {
-          let hasChange = false
-          if (arg.taint?.hasTags()) {
-            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
-            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
-            val.setFieldValue(argI, argCopy)
-            hasChange = true
-          }
-          if (hasChange) {
-            processFieldAndArguments(val.getFieldValue(argI), res, stack + 1, visited, node, traceItem)
-          } else {
-            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
-          }
+          const nextArg = isolateNestedSourceLineValue(arg, traceItem)
+          if (nextArg !== arg) val.setFieldValue?.(argI, nextArg)
+          processFieldAndArguments(nextArg, res, stack + 1, visited, node, traceItem, options)
         }
       }
     } else if (val.members) {
@@ -236,18 +389,9 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
           continue
         }
         if (arg.taint?.isTaintedRec) {
-          let hasChange = false
-          if (arg.taint?.hasTags()) {
-            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
-            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
-            val.members.set(key, argCopy)
-            hasChange = true
-          }
-          if (hasChange) {
-            processFieldAndArguments(val.members.get(key), res, stack + 1, visited, node, traceItem)
-          } else {
-            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
-          }
+          const nextArg = isolateNestedSourceLineValue(arg, traceItem)
+          if (nextArg !== arg) val.members.set(key, nextArg)
+          processFieldAndArguments(nextArg, res, stack + 1, visited, node, traceItem, options)
         }
       }
     }
@@ -261,47 +405,24 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
       }
       try {
         if (arg.taint?.isTaintedRec) {
-          let hasChange = false
-          if (arg.taint?.hasTags()) {
-            const argCopy = buildNewCopiedWithTag(globalAnalyzer, arg, sig)
-            argCopy.taint.propagateTraceFrom(res.taint, traceItem)
-            const currentArgs = val.arguments
-            currentArgs[argIdx] = argCopy
-            val.arguments = currentArgs
-            hasChange = true
-          }
-          if (hasChange) {
-            processFieldAndArguments(val.arguments[argIdx], res, stack + 1, visited, node, traceItem)
-          } else {
-            processFieldAndArguments(arg, res, stack + 1, visited, node, traceItem)
-          }
+          const nextArg = isolateNestedSourceLineValue(arg, traceItem)
+          if (nextArg !== arg) argsSnapshot[argIdx] = nextArg
+          processFieldAndArguments(nextArg, res, stack + 1, visited, node, traceItem, options)
         }
       } catch (e) {}
     }
   }
   if (val?.left?.taint?.isTaintedRec) {
-    if (val.left.taint?.hasTags()) {
-      const leftCopy = buildNewCopiedWithTag(globalAnalyzer, val.left, sig)
-      leftCopy.taint.propagateTraceFrom(res.taint, traceItem)
-      val.left = leftCopy
-    }
-    processFieldAndArguments(val.left, res, stack + 1, visited, node, traceItem)
+    val.left = isolateNestedSourceLineValue(val.left, traceItem)
+    processFieldAndArguments(val.left, res, stack + 1, visited, node, traceItem, options)
   }
   if (val?.right?.taint?.isTaintedRec) {
-    if (val.right.taint?.hasTags()) {
-      const rightCopy = buildNewCopiedWithTag(globalAnalyzer, val.right, sig)
-      rightCopy.taint.propagateTraceFrom(res.taint, traceItem)
-      val.right = rightCopy
-    }
-    processFieldAndArguments(val.right, res, stack + 1, visited, node, traceItem)
+    val.right = isolateNestedSourceLineValue(val.right, traceItem)
+    processFieldAndArguments(val.right, res, stack + 1, visited, node, traceItem, options)
   }
   if (val?.expression?.taint?.isTaintedRec) {
-    if (val.expression.taint?.hasTags()) {
-      const expressionCopy = buildNewCopiedWithTag(globalAnalyzer, val.expression, sig)
-      expressionCopy.taint.propagateTraceFrom(res.taint, traceItem)
-      val.expression = expressionCopy
-    }
-    processFieldAndArguments(val.expression, res, stack + 1, visited, node, traceItem)
+    val.expression = isolateNestedSourceLineValue(val.expression, traceItem)
+    processFieldAndArguments(val.expression, res, stack + 1, visited, node, traceItem, options)
   }
   if (val?.children && val.vtype !== 'BVT') {
     for (const key in val.children) {
@@ -311,43 +432,32 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
           continue
         }
         if (children.taint?.isTaintedRec) {
-          let hasChange = false
-          if (children.taint?.hasTags()) {
-            const childrenCopy = buildNewCopiedWithTag(globalAnalyzer, children, sig)
-            childrenCopy.taint.propagateTraceFrom(res.taint, traceItem)
-            val.children[key] = childrenCopy
-            hasChange = true
-          }
-          if (hasChange) {
-            processFieldAndArguments(val.children[key], res, stack + 1, visited, node, traceItem)
-          } else {
-            processFieldAndArguments(children, res, stack + 1, visited, node, traceItem)
-          }
+          const nextChildren = isolateNestedSourceLineValue(children, traceItem)
+          if (nextChildren !== children) val.children[key] = nextChildren
+          processFieldAndArguments(nextChildren, res, stack + 1, visited, node, traceItem, options)
         }
       }
     }
   }
 
   if (val.vtype === 'symbol') {
-    const processMemberAccess = (target: any) => {
+    const processMemberAccess = (target: 'object' | 'property') => {
       const targetRef = target === 'object' ? val.object : val.property
+      if (!targetRef) return
 
       if (targetRef.object && targetRef?.object?.sid && targetRef?.object?.sid?.includes('__tmp')) {
         return
       }
 
-      if (targetRef.taint?.hasTags()) {
-        const targetCopy = buildNewCopiedWithTag(globalAnalyzer, targetRef, sig)
-        targetCopy.taint.propagateTraceFrom(res.taint, traceItem)
+      const nextTarget = isolateNestedSourceLineValue(targetRef, traceItem)
+      if (nextTarget !== targetRef) {
         if (target === 'object') {
-          val.object = targetCopy
+          val.object = nextTarget
         } else {
-          val.property = targetCopy
+          val.property = nextTarget
         }
       }
-
-      const nextTarget = target === 'object' ? val.object : val.property
-      processFieldAndArguments(nextTarget, res, stack + 1, visited, node, traceItem)
+      processFieldAndArguments(nextTarget, res, stack + 1, visited, node, traceItem, options)
     }
 
     if (val.object?.taint && val.object.taint?.isTaintedRec) {
@@ -362,18 +472,9 @@ function processFieldAndArguments(val: any, res: any, stack: any, visited: any[]
     for (const bufferI in val.misc_.buffer) {
       const buffer = val.misc_.buffer[bufferI]
       if (buffer.taint?.isTaintedRec) {
-        let hasChange = false
-        if (buffer.taint?.hasTags()) {
-          const buffer_copy = buildNewCopiedWithTag(globalAnalyzer, buffer, sig)
-          buffer_copy.taint.propagateTraceFrom(res.taint, traceItem)
-          val.misc_.buffer[bufferI] = buffer_copy
-          hasChange = true
-        }
-        if (hasChange) {
-          processFieldAndArguments(val.misc_.buffer[bufferI], res, stack + 1, visited, node, traceItem)
-        } else {
-          processFieldAndArguments(buffer, res, stack + 1, visited, node, traceItem)
-        }
+        const nextBuffer = isolateNestedSourceLineValue(buffer, traceItem)
+        if (nextBuffer !== buffer) val.misc_.buffer[bufferI] = nextBuffer
+        processFieldAndArguments(nextBuffer, res, stack + 1, visited, node, traceItem, options)
       }
     }
   }
@@ -422,6 +523,15 @@ function storeCode(sourcefile: string, code: string) {
   return fname
 }
 
+const TRACE_LINE_MAX_LEN = 200
+
+// trace 单行超长时尾部截断；匿名函数 / 长字面量在源码中常常铺成单行 800+ 字符。
+function truncateTraceLine(code: any): any {
+  if (typeof code !== 'string') return code
+  if (code.length <= TRACE_LINE_MAX_LEN) return code
+  return `${code.substring(0, TRACE_LINE_MAX_LEN)}...`
+}
+
 /**
  *
  * @param item
@@ -462,16 +572,21 @@ function formatSingleTrace(item: any) {
     res += `  ` + `AffectedNodeName: ${affectName}\n`
   }
   let code
+  // CALL tag 的 loc 覆盖整个 call 表达式，遇到匿名函数/lambda 时会把整个函数体行号范围都展开，
+  // 导致 trace 极其冗长。CALL 跨度超过 10 行时只保留首行调用点。
+  const isCallTag = item.tag === 'CALL: '
   if (fname) {
     const codeCache = getSourceCodeCache()
     const flines = codeCache.get(fname)
-    const lines = Array.isArray(item.line) ? item.line : [item.line]
+    let lines = Array.isArray(item.line) ? item.line : [item.line]
+    if (isCallTag && lines.length > 10) lines = [lines[0]]
     for (let i = 0; i < lines.length; i++) {
       const lno = lines[i]
       if (lno === prev_line && !(i == 0 && prev_file !== fname)) continue
       prev_line = lno
       code = flines?.[lno - 1]
       if (item.tag) code = `${item.tag} ${code}`
+      code = truncateTraceLine(code)
       const pat = lno < 10 ? '   ' : lno < 100 ? '  ' : ' '
       res += `  ${lno}:${pat}${code}\n`
     }
@@ -482,6 +597,7 @@ function formatSingleTrace(item: any) {
     code = prettyPrint(item.node)
     const pat = lno < 10 ? '   ' : lno < 100 ? '  ' : ' '
     if (item.tag) code = `${item.tag} ${code}`
+    code = truncateTraceLine(code)
     res += `  ${lno}:${pat}${code}\n`
   }
   prev_file = fname

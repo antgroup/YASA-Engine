@@ -3,6 +3,7 @@ import type { IOutputStrategy } from './output-strategy'
 const path = require('path')
 const { glob } = require('fast-glob')
 const logger = require('../../../util/logger')(__filename)
+const { yasaLog } = require('../../../util/format-util')
 
 type StrategyRegistry = Record<string, IOutputStrategy>
 
@@ -40,18 +41,18 @@ class OutputStrategyAutoRegister {
         ignore: ['**/node_modules/**', '**/OutputStrategyAutoRegister.{js,ts}', '**/OutputStrategy.{js,ts}'],
       })
 
-      logger.info(`Found ${jsFiles.length} potential output strategy files`)
-
-      let registeredCount = 0
+      const registeredIds: string[] = []
 
       for (const filePath of jsFiles) {
-        const isRegistered = this.registerStrategyFromFile(filePath)
-        if (isRegistered) {
-          registeredCount++
+        const strategyId = this.registerStrategyFromFile(filePath)
+        if (strategyId) {
+          registeredIds.push(strategyId)
         }
       }
 
-      logger.info(`Successfully registered ${registeredCount} output strategies`)
+      if (registeredIds.length > 0) {
+        yasaLog(`Registered output strategy: ${registeredIds.join(', ')}`, 'report')
+      }
       return this.strategyRegistry
     } catch (error) {
       logger.error('Error auto-registering output strategies:', error)
@@ -63,7 +64,7 @@ class OutputStrategyAutoRegister {
    * 从单个文件注册策略
    * @param filePath
    */
-  registerStrategyFromFile(filePath: string): boolean {
+  registerStrategyFromFile(filePath: string): string | null {
     try {
       // 清除require缓存，确保每次都是最新版本
       delete require.cache[require.resolve(filePath)]
@@ -71,42 +72,34 @@ class OutputStrategyAutoRegister {
       // 动态导入策略类
       const StrategyModule = require(filePath)
 
-      // 获取默认导出或第一个导出的类
-      // const StrategyClass = this.findStrategyClass(strategyModule)
-
       if (!StrategyModule) {
-        logger.info(`No class found in ${path.basename(filePath)}`)
-        return false
+        return null
       }
 
       // 检查是否继承自OutputStrategy
       if (!this.isSubclassOfOutputStrategy(StrategyModule)) {
-        logger.info(`Class in ${path.basename(filePath)} does not inherit from OutputStrategy`)
-        return false
+        return null
       }
 
       // 检查是否有outputStrategyId静态属性
       if (!StrategyModule.hasOwnProperty('outputStrategyId')) {
-        logger.info(`Class in ${path.basename(filePath)} missing outputStrategyId static property`)
-        return false
+        return null
       }
 
       const strategyId = StrategyModule.outputStrategyId
 
       if (!strategyId || typeof strategyId !== 'string') {
-        logger.info(`Invalid outputStrategyId in ${path.basename(filePath)}: ${strategyId}`)
-        return false
+        return null
       }
 
       // 创建策略实例并注册
       const strategyInstance = new StrategyModule()
       this.registerStrategy(strategyId, strategyInstance)
 
-      logger.info(`Registered strategy: ${strategyId} from ${path.basename(filePath)}`)
-      return true
+      return strategyId
     } catch (error: any) {
       logger.error(`Error registering strategy from ${path.basename(filePath)}:`, error.message)
-      return false
+      return null
     }
   }
 

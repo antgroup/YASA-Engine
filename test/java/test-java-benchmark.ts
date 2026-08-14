@@ -200,8 +200,8 @@ async function updateExpect(dir: string): Promise<void> {
 }
 
 let dir = path.join(path.resolve(__dirname), '/benchmarks/sast-java/')
-if (fs.existsSync(dir)) {
-  runJavaBenchmark(dir)
-}
+// if (fs.existsSync(dir)) {
+//   runJavaBenchmark(dir)
+// }
 
-// updateExpect(dir)
+updateExpect(dir)

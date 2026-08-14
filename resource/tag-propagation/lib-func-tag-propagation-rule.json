@@ -18,6 +18,7 @@
         }
       },
       {
+        "_comment": "Spring BeanUtils.copyProperties(source, target) 把 source bean 字段拷贝到 target；target 需获得 source 的语言级 tag key，避免仅 buffer 传播被 sink 起点过滤拒绝。",
         "func": {
           "calleeType": "BeanUtils",
           "fsig": "copyProperties",
@@ -29,7 +30,89 @@
         },
         "target": {
           "type": "ARG",
-          "index": 1
+          "index": 1,
+          "tripleWrite": true
+        }
+      },
+      {
+        "_comment": "Hutool BeanUtil.copyProperties(source, target) 把 source bean 字段拷贝到 target；target 需获得 source 的语言级 tag key，避免仅 buffer 传播被 sink 起点过滤拒绝。",
+        "func": {
+          "calleeType": "BeanUtil",
+          "fsig": "copyProperties",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "ARG",
+          "index": 1,
+          "tripleWrite": true
+        }
+      },
+      {
+        "_comment": "Hutool BeanUtil.copyProperties(source, Class<T>) 返回新 bean；显式 ARG→ARG 规则不能吞掉返回值拷贝语义。",
+        "func": {
+          "calleeType": "BeanUtil",
+          "fsig": "copyProperties",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "BeanUtil.copyObjectEmpty(source, Class) 返回新 bean；applyWithBody 让 bodyResult ?? libPropagation 合并不丢失 ARG→RET 语义。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "BeanUtil",
+          "fsig": "copyObjectEmpty",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "BeanUtil.copyObject(source, Class) 返回新 bean；applyWithBody 让 bodyResult ?? libPropagation 合并不丢失 ARG→RET 语义。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "BeanUtil",
+          "fsig": "copyObject",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "Spring CGLIB BeanCopier.copy(source, target, converter) 是 BeanUtil.copyProperties 的底层拷贝执行点；同样按 source -> target 三写传播。",
+        "func": {
+          "calleeType": "BeanCopier",
+          "fsig": "copy",
+          "argNum": 3
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "ARG",
+          "index": 1,
+          "tripleWrite": true
         }
       },
       {
@@ -73,6 +156,380 @@
         "target": {
           "type": "THIS",
           "propagateToOwner": true
+        }
+      },
+      {
+        "func": {
+          "calleeType": "Matcher",
+          "fsig": "appendReplacement",
+          "argNum": 2
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "ARG",
+          "index": 0
+        }
+      },
+      {
+        "func": {
+          "calleeType": "Matcher",
+          "fsig": "appendTail",
+          "argNum": 1
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "ARG",
+          "index": 0
+        }
+      },
+      {
+        "_comment": "String.format(format, args...) 将参与格式化的参数写入返回字符串，保留模板拼接后的查询语句传播。",
+        "func": {
+          "calleeType": "String",
+          "fsig": "format"
+        },
+        "source": {
+          "type": "ARG",
+          "index": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "Freemarker 模板渲染把参数模型写入返回字符串，保留模板查询语句传播。",
+        "func": {
+          "calleeType": "FreemarkerUtils",
+          "fsig": "parse"
+        },
+        "source": {
+          "type": "ARG",
+          "index": 1
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSON.parseObject(String, Class) — arg0 taint flow → RET（反序列化把 string tag 复制到返回对象）",
+        "func": {
+          "calleeType": "JSON",
+          "fsig": "parseObject"
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSON.parseArray(String, Class) — 同 parseObject 模式",
+        "func": {
+          "calleeType": "JSON",
+          "fsig": "parseArray"
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONObject.getString(String key) — receiver 携 carrier 时把字段值染色，dict-access 同型",
+        "func": {
+          "calleeType": "JSONObject",
+          "fsig": "getString"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONObject.getJSONObject(String key) — 嵌套对象提取，让 chained dict-access 染色继续",
+        "func": {
+          "calleeType": "JSONObject",
+          "fsig": "getJSONObject"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONObject.getJSONArray(String key) — 嵌套数组提取",
+        "func": {
+          "calleeType": "JSONObject",
+          "fsig": "getJSONArray"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONObject.get(String key) — 通用 Object 取值 fallback",
+        "func": {
+          "calleeType": "JSONObject",
+          "fsig": "get"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONArray.getString(int idx) — 数组下标取字符串",
+        "func": {
+          "calleeType": "JSONArray",
+          "fsig": "getString"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONArray.getJSONObject(int idx) — 数组下标取嵌套对象",
+        "func": {
+          "calleeType": "JSONArray",
+          "fsig": "getJSONObject"
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "fastjson JSONObject.parseObject(String) — 实例方法形式 parseObject，与 JSON.parseObject 静态形式同义；endsWith \"JSON\" 不命中 JSONObject 必须独立规则",
+        "func": {
+          "calleeType": "JSONObject",
+          "fsig": "parseObject"
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "QueryClauseBuilder.buildEqQueryClause(key, value) 把 field/value 拼成查询条件字符串，value 侧污点需进入返回字符串。",
+        "func": {
+          "calleeType": "*",
+          "fsig": "buildEqQueryClause",
+          "argNum": 2
+        },
+        "source": {
+          "type": "ARG",
+          "index": 1
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "QueryClauseBuilder.buildInQueryClause(key, values...) 把多个 value 拼成查询条件字符串，所有 value 侧污点需进入返回字符串。",
+        "func": {
+          "calleeType": "*",
+          "fsig": "buildInQueryClause"
+        },
+        "source": {
+          "type": "ARG",
+          "index": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "_comment": "QueryClause.addQuery(sql) 将 query 字符串写入 QueryClause receiver；precondition 需要沿 receiver/container 继续传播。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "QueryClause",
+          "fsig": "addQuery",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "THIS",
+          "propagateToOwner": true,
+          "returnThis": true,
+          "tripleWrite": true
+        }
+      },
+      {
+        "_comment": "SearchClause.setQueryClause(queryClause) 将 query 容器写入外层 search clause receiver，保持 DSL builder 链路传播。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "SearchClause",
+          "fsig": "setQueryClause",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "THIS",
+          "propagateToOwner": true,
+          "returnThis": true,
+          "tripleWrite": true
+        }
+      },
+      {
+        "_comment": "setSearchClause(searchClause) 将 search clause 容器写入请求 receiver，保持 DSL builder 链路传播。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "*",
+          "fsig": "setSearchClause",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "THIS",
+          "propagateToOwner": true,
+          "returnThis": true,
+          "tripleWrite": true
+        }
+      },
+      {
+        "_comment": "setStatement(statement) 将查询语句字符串写入请求 receiver，保持模板/格式化查询语句到请求对象的传播。",
+        "applyWithBody": true,
+        "func": {
+          "calleeType": "*",
+          "fsig": "setStatement",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "THIS",
+          "propagateToOwner": true,
+          "returnThis": true,
+          "tripleWrite": true
+        }
+      }
+    ]
+  },
+  {
+    "language": "python",
+    "rules": [
+      {
+        "_comment": "json.loads(str) — 反序列化把 arg0 的 tag（如 PYTHON_INPUT）传播到返回值，走 processLibArgToRetWithBuffer 保留 tagTraces",
+        "func": {
+          "fsig": "json.loads"
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      }
+    ]
+  },
+  {
+    "language": "go",
+    "rules": [
+      {
+        "func": {
+          "calleeType": "net/url",
+          "fsig": "Parse",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "func": {
+          "calleeType": "",
+          "fregex": "(^|\\.)net/url\\.Parse\\(.*\\)\\.Hostname$",
+          "argNum": 0
+        },
+        "source": {
+          "type": "THIS"
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "func": {
+          "calleeType": "net/url",
+          "fsig": "QueryEscape",
+          "argNum": 1
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
+        }
+      },
+      {
+        "func": {
+          "calleeType": "strings",
+          "fsig": "ReplaceAll",
+          "argNum": 3
+        },
+        "source": {
+          "type": "ARG",
+          "index": 0
+        },
+        "target": {
+          "type": "RET"
         }
       }
     ]

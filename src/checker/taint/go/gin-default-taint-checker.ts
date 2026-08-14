@@ -7,7 +7,7 @@ const CommonUtil = require('../../../util/common-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../common-kit/sink-util')
 const IntroduceTaint = require('../common-kit/source-util')
 const GinEntryPoint = require('../../../engine/analyzer/golang/gin/entrypoint-collector/gin-default-entrypoint')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const AstUtil = require('../../../util/ast-util')
@@ -160,24 +160,26 @@ class GinDefaultTaintChecker extends TaintChecker {
 
       if (!_.isEmpty(FuncCallArgTaintSource)) {
         this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
-        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
-        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
-          this.checkerRuleConfigContent.sources.TaintSource
+        this.checkerRuleConfigContent.sources.FuncCallArgTaintSource =
+          this.checkerRuleConfigContent.sources.FuncCallArgTaintSource || []
+        this.checkerRuleConfigContent.sources.FuncCallArgTaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.FuncCallArgTaintSource
         )
-          ? this.checkerRuleConfigContent.sources.TaintSource
-          : [this.checkerRuleConfigContent.sources.TaintSource]
-        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallArgTaintSource)
+          ? this.checkerRuleConfigContent.sources.FuncCallArgTaintSource
+          : [this.checkerRuleConfigContent.sources.FuncCallArgTaintSource]
+        this.checkerRuleConfigContent.sources.FuncCallArgTaintSource.push(...FuncCallArgTaintSource)
       }
 
       if (!_.isEmpty(FuncCallReturnValueTaintSource)) {
         this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
-        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
-        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
-          this.checkerRuleConfigContent.sources.TaintSource
+        this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource =
+          this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource || []
+        this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource
         )
-          ? this.checkerRuleConfigContent.sources.TaintSource
-          : [this.checkerRuleConfigContent.sources.TaintSource]
-        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallReturnValueTaintSource)
+          ? this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource
+          : [this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource]
+        this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource.push(...FuncCallReturnValueTaintSource)
       }
     }
   }
@@ -205,7 +207,7 @@ class GinDefaultTaintChecker extends TaintChecker {
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { fclos, callInfo } = info
     const calleeObject = fclos.object
-    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state, analyzer)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
     IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource)
 
@@ -276,14 +278,14 @@ class GinDefaultTaintChecker extends TaintChecker {
    * @param scope
    * @param state
    */
-  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any, analyzer?: any) {
     if (fclos === undefined) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
     if (!rules || !callInfo) return
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo, analyzer)
     rule = rule.length > 0 ? rule[0] : null
     if (rule) {
       const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)

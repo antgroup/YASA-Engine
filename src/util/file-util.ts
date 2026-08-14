@@ -173,7 +173,7 @@ function loadAllFileTextGlobby(srcFilter: string[], cwd: string): FileContent[] 
   const res: FileContent[] = []
 
   const parsingStart = new Date().getTime()
-  const files = globby.sync(srcFilter, { cwd })
+  const files = globby.sync(srcFilter, { cwd, dot: true })
   for (const file of files) {
     const filepath = path.join(cwd, file)
     try {
@@ -283,9 +283,11 @@ function loadJsonFileAsts(filename: string): ASTFileUnit[] | ASTFileUnit {
  * @param filename - 文件名
  * @param value - 要写入的值
  */
-function writeJSONfile(filename: string, value: any): void {
+function writeJSONfile(filename: string, value: any, diagnosticTiming = false): void {
   // logger.info('writing JSON file: ' + filename);
   try {
+    const normalizeStartedAt = diagnosticTiming ? Date.now() : 0
+    const normalizeElapsed = diagnosticTiming ? Date.now() - normalizeStartedAt : 0
     // 检测循环引用的函数
     const detectCircularRefs = (
       obj: any,
@@ -348,7 +350,9 @@ function writeJSONfile(filename: string, value: any): void {
     }
 
     // 在序列化前检测循环引用
+    const circularStartedAt = diagnosticTiming ? Date.now() : 0
     const circularPaths = detectCircularRefs(value, ['root'])
+    const circularElapsed = diagnosticTiming ? Date.now() - circularStartedAt : 0
     if (circularPaths.length > 0) {
       logger.error('=== Circular References Detected ===')
       circularPaths.forEach((path, index) => {
@@ -407,7 +411,11 @@ function writeJSONfile(filename: string, value: any): void {
       }
     }
 
+    const writeStartedAt = diagnosticTiming ? Date.now() : 0
     jsonfile.writeFileSync(filename, value, {})
+    if (diagnosticTiming) {
+      logger.info(`[outputFindings] phase=serialize-write file=${path.basename(filename)} circularRefs=${circularPaths.length} normalizeElapsed=${normalizeElapsed}ms circularElapsed=${circularElapsed}ms writeElapsed=${Date.now() - writeStartedAt}ms`)
+    }
   } catch (err: any) {
     // 如果错误是循环引用相关的，进行详细诊断
     if (

@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.js", "tools/change-impact/**/*.ts"],
+  "exclude": ["node_modules", "test/**/*", "dist"]
+}

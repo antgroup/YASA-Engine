@@ -1,13 +1,13 @@
 import { extractRelativePath } from '../../../../../util/file-util'
 import * as Constant from '../../../../../util/constant'
-import type { EntryPoint } from '../../../common/entrypoint'
+import type { EntryPoint } from '../../../common/entrypoint/entrypoint'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const config = require('../../../../../config')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PythonEntrypointSource = require('../../common/entrypoint-collector/python-entrypoint-source')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const EntryPointClass = require('../../../common/entrypoint')
+const EntryPointClass = require('../../../common/entrypoint/entrypoint')
 
 const { entryPointAndSourceAtSameTime } = config
 const { findSourceOfFuncParam } = PythonEntrypointSource
@@ -26,12 +26,18 @@ interface ValidInstances {
   validRouterInstances: Set<string>
 }
 
+interface LifespanAssignment {
+  filename: string
+  assignmentNode: any
+}
+
 interface EntryPointResult {
   fastApiEntryPointArray: EntryPoint[]
   fastApiEntryPointSourceArray: any[]
+  lifespanGlobalAssignments: LifespanAssignment[]
 }
 
-const ROUTE_DECORATORS = new Set(['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'route'])
+const ROUTE_DECORATORS = new Set(['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'route', 'websocket'])
 
 /**
  * Extracts literal string value.
@@ -151,6 +157,82 @@ function collectValidInstances(body: any[], importMap: Map<string, string>): Val
 }
 
 /**
+ * 从 AST 节点的 id 字段提取变量名。
+ * UAST 中 VariableDeclaration 的 id 可能是字符串（global 声明）或 Identifier 对象。
+ */
+function extractIdName(id: any): string | undefined {
+  if (typeof id === 'string') return id
+  if (id?.name) return id.name
+  return undefined
+}
+
+/**
+ * 从 FastAPI lifespan 回调中提取全局变量赋值节点。
+ * FastAPI(lifespan=xxx) 模式中，xxx 函数的 global 变量赋值需在模块作用域执行。
+ */
+// eslint-disable-next-line complexity, sonarjs/cognitive-complexity
+function extractLifespanAssignments(
+  body: any[],
+  importMap: Map<string, string>,
+  filename: string,
+  result: LifespanAssignment[]
+): void {
+  // 收集所有 FastAPI(..., lifespan=xxx) 中的 lifespan 函数名
+  const lifespanFuncNames = new Set<string>()
+  for (const obj of body) {
+    if (obj?.type !== 'AssignmentExpression' || obj?.right?.type !== 'CallExpression') continue
+    const canonical = resolveCanonicalName(obj.right.callee, importMap)
+    if (!canonical || !canonical.endsWith('.FastAPI')) continue
+    const args = obj.right.arguments
+    if (!Array.isArray(args)) continue
+    for (const arg of args) {
+      if (arg?.type === 'VariableDeclaration' && arg.id?.name === 'lifespan' && arg.init?.type === 'Identifier') {
+        lifespanFuncNames.add(arg.init.name)
+      }
+    }
+  }
+  if (lifespanFuncNames.size === 0) return
+
+  // 查找 lifespan 函数定义，提取 global 变量赋值
+  for (const obj of body) {
+    if (obj?.type !== 'FunctionDefinition' || !lifespanFuncNames.has(obj.id?.name)) continue
+    const fnBody = obj.body?.body
+    if (!Array.isArray(fnBody)) continue
+
+    // 收集 global 声明的变量名（id 可能是字符串或 Identifier 对象）
+    const globalVarNames = new Set<string>()
+    for (const stmt of fnBody) {
+      if (stmt?.type === 'Sequence' && Array.isArray(stmt.expressions)) {
+        for (const expr of stmt.expressions) {
+          if (expr?.type === 'VariableDeclaration') {
+            const name = extractIdName(expr.id)
+            if (name) globalVarNames.add(name)
+          }
+        }
+      }
+      // global 声明只有一个变量时可能是单个 VariableDeclaration
+      if (stmt?.type === 'VariableDeclaration') {
+        const name = extractIdName(stmt.id)
+        if (name) globalVarNames.add(name)
+      }
+    }
+    if (globalVarNames.size === 0) continue
+
+    // 收集对 global 变量的赋值节点
+    for (const stmt of fnBody) {
+      if (
+        stmt?.type === 'AssignmentExpression' &&
+        stmt.operator === '=' &&
+        stmt.left?.type === 'Identifier' &&
+        globalVarNames.has(stmt.left.name)
+      ) {
+        result.push({ filename, assignmentNode: stmt })
+      }
+    }
+  }
+}
+
+/**
  * Processes decorator for entry points.
  * @param deco Decorator node
  * @param funcName Function name
@@ -221,6 +303,7 @@ function processDecorator(
 function findFastApiEntryPointAndSource(filenameAstObj: FilenameAstMap, dir: string): EntryPointResult {
   const entryPoints: EntryPoint[] = []
   const entryPointSources: any[] = []
+  const lifespanGlobalAssignments: LifespanAssignment[] = []
 
   for (const filename in filenameAstObj) {
     if (!Object.prototype.hasOwnProperty.call(filenameAstObj, filename)) continue
@@ -251,6 +334,9 @@ function findFastApiEntryPointAndSource(filenameAstObj: FilenameAstMap, dir: str
 
     const validInstances = collectValidInstances(body, importMap)
 
+    // 提取 lifespan 回调中的全局变量赋值
+    extractLifespanAssignments(body, importMap, filename, lifespanGlobalAssignments)
+
     for (const obj of body) {
       if (!obj || typeof obj !== 'object') continue
 
@@ -268,6 +354,7 @@ function findFastApiEntryPointAndSource(filenameAstObj: FilenameAstMap, dir: str
   return {
     fastApiEntryPointArray: entryPoints,
     fastApiEntryPointSourceArray: entryPointSources,
+    lifespanGlobalAssignments,
   }
 }
 

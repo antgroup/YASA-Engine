@@ -257,9 +257,11 @@ function prepareCallstackElements(callstack: any[], sinkNode?: any): CallstackEl
   if (callstack) {
     for (const element of callstack) {
       if (element.vtype === 'fclos') {
+        const nodeHash = element.ast?.node?._meta?.nodehash
+        if (typeof nodeHash !== 'string') continue
         const callstackElement: CallstackElement = {
           type: 0,
-          nodeHash: element.ast?.node?._meta?.nodehash,
+          nodeHash,
         }
         resultArray.push(callstackElement)
       }

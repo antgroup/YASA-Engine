@@ -64,6 +64,18 @@
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
   },
   {
+    "checkerId": "taint_flow_go_http_input",
+    "checkerPath": "checker/taint/go/go-http-taint-checker.ts",
+    "description": "net/http taint_flow checker，注入 *http.Request / *url.URL / url.Values 默认 source",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go.json"
+  },
+  {
+    "checkerId": "taint_flow_go_cli_input",
+    "checkerPath": "checker/taint/go/go-cli-taint-checker.ts",
+    "description": "Go CLI/script checker，标记命令行参数 source",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_go_cli.json"
+  },
+  {
     "checkerId": "gorilla-mux-entrypoint-collect-checker",
     "checkerPath": "checker/taint/go/gorilla-mux-entrypoint-collect-checker.ts",
     "description": "Mux entryPoint采集以及框架source添加"
@@ -119,6 +131,12 @@
     "demoRuleConfigPath": "resource/example-rule-config/rule_config_js.json"
   },
   {
+    "checkerId": "taint_flow_nodejs_cli_input",
+    "checkerPath": "checker/taint/js/nodejs-cli-taint-checker.ts",
+    "description": "Node.js CLI/script checker，标记命令行参数 source",
+    "demoRuleConfigPath": "resource/example-rule-config/rule_config_nodejs_cli.json"
+  },
+  {
     "checkerId": "taint_flow_python_input",
     "checkerPath": "checker/taint/python/python-default-taint-checker.ts",
     "description": "Python污点分析checker，会使用CallGraph边界制作entrypoint",
@@ -149,6 +167,16 @@
     "checkerId": "taint_flow_python_script_input",
     "checkerPath": "checker/taint/python/script-taint-checker.ts",
     "description": "Python脚本命令行参数source添加，支持argparse/sys.argv/input/os.environ/getopt等"
+  },
+  {
+    "checkerId": "taint_flow_python_skill_script_input",
+    "checkerPath": "checker/taint/python/skill-script-taint-checker.ts",
+    "description": "Python skill目录脚本命令行参数source添加，支持argparse/sys.argv/input/os.environ/getopt等"
+  },
+  {
+    "checkerId": "taint_flow_python_agentuniverse_input",
+    "checkerPath": "checker/taint/python/agentuniverse-taint-checker.ts",
+    "description": "python AgentUniverse框架 source标记"
   },
   {
     "checkerId": "taint_flow_php_input",

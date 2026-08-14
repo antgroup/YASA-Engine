@@ -42,6 +42,22 @@ export function isRequestAttributeAccess(node: any): boolean {
   )
 }
 
+type MemberAccessNode = {
+  type: 'MemberAccess'
+  object?: unknown
+  property?: unknown
+}
+
+const tornadoPreparedBodyReads = new WeakSet<MemberAccessNode>()
+
+export function registerPreparedBodyRead(node: MemberAccessNode): void {
+  tornadoPreparedBodyReads.add(node)
+}
+
+export function isPreparedBodyRead(node: unknown): node is MemberAccessNode {
+  return typeof node === 'object' && node !== null && tornadoPreparedBodyReads.has(node as MemberAccessNode)
+}
+
 /**
  * Check if node is a Tornado Application call
  * @param node

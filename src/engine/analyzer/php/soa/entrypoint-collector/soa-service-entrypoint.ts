@@ -11,7 +11,7 @@
  * resolveFrameworkEntryPoints 无法定位它们。
  */
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const logger = require('../../../../../util/logger')(__filename)
 const {

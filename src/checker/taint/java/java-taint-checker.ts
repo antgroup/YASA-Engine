@@ -2,7 +2,7 @@ const _ = require('lodash')
 const Loader = require('../../../util/loader')
 const CommonUtil = require('../../../util/common-util')
 const SpringEntryPoint = require('../../../engine/analyzer/java/spring/entrypoint-collector/spring-default-entrypoint')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const {
   valueUtil: {

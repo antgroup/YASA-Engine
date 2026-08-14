@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports, import/no-commonjs */
+const fs = require('fs')
+const path = require('path')
 const { yasaLog, yasaWarning, yasaSeparator } = require('./format-util')
 
 /**
@@ -61,6 +63,7 @@ class PerformanceTracker {
       totalTime: number // 用于累加场景（如 parseCode、preload）
       currentStartTime: number
       hasRecorded: boolean // 标记是否在 start/end 之间调用了 record
+      baselineHeap: number // stage 开始时 heapUsed，用于计算 used/growth
     }
   } = {}
 
@@ -98,6 +101,7 @@ class PerformanceTracker {
         totalTime: 0,
         currentStartTime: 0,
         hasRecorded: false,
+        baselineHeap: 0,
       }
     }
   }
@@ -178,6 +182,7 @@ class PerformanceTracker {
     const stageData = this.stages[stage]
     if (stageData.currentStartTime === 0) {
       stageData.currentStartTime = Date.now()
+      stageData.baselineHeap = process.memoryUsage().heapUsed
       if (stage === 'total') {
         yasaLog('Begin execution')
       } else {
@@ -202,16 +207,19 @@ class PerformanceTracker {
   }
 
   /**
-   * 获取内存使用情况的格式化字符串
-   * @returns {string} 格式化的内存使用字符串，如 "heap: 1024/4096 MB"
+   * 获取内存使用情况的格式化字符串：used/growth/cur/rss
+   * used = stage 结束 heapUsed - baseline；GC 后 growth = afterGc - baseline；cur/rss 为 GC 后值
    */
-  private getMemoryUsageString(): string {
-    const memUsage = process.memoryUsage()
-    const heapUsedMB = Math.round((memUsage.heapUsed / 1024 / 1024) * 100) / 100
-    const heapTotalMB = Math.round((memUsage.heapTotal / 1024 / 1024) * 100) / 100
-    const rssMB = Math.round((memUsage.rss / 1024 / 1024) * 100) / 100
-    const arrayBuffersMB = Math.round((memUsage.arrayBuffers / 1024 / 1024) * 100) / 100
-    return `heap: ${heapUsedMB}/${heapTotalMB} MB, rss: ${rssMB} MB, arrayBuffers: ${arrayBuffersMB} MB`
+  private getMemoryUsageString(baselineHeap: number): string {
+    const memAfterStage = process.memoryUsage()
+    if (typeof global.gc === 'function') {
+      global.gc()
+    }
+    const memAfterGc = process.memoryUsage()
+    const fmt = (n: number) => `${Math.round((n / 1024 / 1024) * 100) / 100}MB`
+    const used = Math.max(0, memAfterStage.heapUsed - baselineHeap)
+    const growth = Math.max(0, memAfterGc.heapUsed - baselineHeap)
+    return `used: ${fmt(used)}, growth: ${fmt(growth)}, cur: ${fmt(memAfterGc.heapUsed)}, rss: ${fmt(memAfterGc.rss)}`
   }
 
   /**
@@ -220,7 +228,8 @@ class PerformanceTracker {
    * @param duration - 耗时（毫秒）
    */
   private logStageEnd(stage: string, duration: number): void {
-    const memoryInfo = this.getMemoryUsageString()
+    const stageData = this.stages[stage]
+    const memoryInfo = this.getMemoryUsageString(stageData?.baselineHeap ?? process.memoryUsage().heapUsed)
     if (stage === 'total') {
       yasaLog(`Execution completed, cost: ${duration}ms, ${memoryInfo}`)
     } else {
@@ -395,6 +404,7 @@ class PerformanceTracker {
     markedSourceCount: number
     matchedSinkCount: number
     entryPointCount: number
+    skippedEntryPointCount: number
     findingCount: number
     // symbolInterpretDetail1
     avgExecutionTimePerInstruction: number
@@ -515,6 +525,14 @@ class PerformanceTracker {
         }
       }
     }
+    const incrementalFindingCount = readIncrementalPublicFindingCount(Config.reportDir)
+    if (incrementalFindingCount !== null) findingCount = incrementalFindingCount
+
+    let skippedEntryPointCount = 0
+    const entryPointMetrics = typeof analyzer?.getEntryPointMetrics === 'function' ? analyzer.getEntryPointMetrics() : []
+    if (Array.isArray(entryPointMetrics)) {
+      skippedEntryPointCount = entryPointMetrics.filter((metric: { skipped?: unknown }) => metric.skipped === true).length
+    }
 
     const instructionDetails = this.getInstructionDetails()
 
@@ -540,6 +558,7 @@ class PerformanceTracker {
       markedSourceCount,
       matchedSinkCount,
       entryPointCount,
+      skippedEntryPointCount,
       findingCount,
       avgExecutionTimePerInstruction: instructionDetails.avgExecutionTimePerInstruction,
       avgInstructionExecutionCount: instructionDetails.avgInstructionExecutionCount,
@@ -626,7 +645,9 @@ class PerformanceTracker {
 
     this.outputOverviewLine('Sources marked', String(analysisOverview.markedSourceCount), maxLabelLength)
     this.outputOverviewLine('Sinks matched', String(analysisOverview.matchedSinkCount), maxLabelLength)
-    this.outputOverviewLine('Valid entrypoints', String(analysisOverview.entryPointCount), maxLabelLength)
+    // Valid entrypoints 展示实际分析的 EP 数（收集总数减去被 skip 的），skip 属内部去重细节不单列
+    const validEntryPointCount = Math.max(0, analysisOverview.entryPointCount - analysisOverview.skippedEntryPointCount)
+    this.outputOverviewLine('Valid entrypoints', String(validEntryPointCount), maxLabelLength)
     this.outputOverviewLine('Findings', String(analysisOverview.findingCount), maxLabelLength)
 
     this.outputOverviewLine(
@@ -1163,6 +1184,19 @@ class PerformanceTracker {
     this.instructionStats.monitoringOverhead = 0
     this.instructionStats.updateStatsOverhead = 0
     this.instructionStats.executionStack = []
+  }
+}
+
+function readIncrementalPublicFindingCount(reportDir: string | undefined): number | null {
+  if (!reportDir) return null
+  const summaryPath = path.join(reportDir, 'incremental', 'incremental-summary.json')
+  if (!fs.existsSync(summaryPath)) return null
+  try {
+    const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
+    const finalFindings = summary?.counts?.finalFindings
+    return typeof finalFindings === 'number' ? finalFindings : null
+  } catch (_err) {
+    return null
   }
 }
 

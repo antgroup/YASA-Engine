@@ -26,6 +26,55 @@ export default class TypeRelatedInfoResolver extends MemSpace {
   resolveFinish: boolean = false
 
   /**
+   * 钩子：identifier 在 value-position 解析时，语言层可基于 shadow field 返回替代结果
+   * 默认实现返回 undefined（= 保持原 fclos returnType 行为）
+   * Java 在 java-type-related-info-resolver.ts 覆写，实现 JLS field-shadow-method-as-value 语义
+   *
+   * @param analyzer
+   * @param scope
+   * @param node identifier AST node
+   * @param state state（state.callExpressionCallee 指向当前 call 的 callee，若有）
+   * @param val getMemberValueNoCreate 返回的 fclos value
+   * @param defScope identifier 解析到的 defScope
+   * @param defScopeType defScope 对应的类型 qid
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  resolveIdentifierShadowFieldHook(
+    analyzer: any,
+    scope: any,
+    node: any,
+    state: any,
+    val: any,
+    defScope: any,
+    defScopeType: string
+  ): TypeRelatedInfoResult[] | undefined {
+    return undefined
+  }
+
+  /**
+   * 钩子：基于 callsite receiver 静态类型收敛 findPolymorphismInvocation 的根
+   * 默认实现返回 undefined（= 保持 invocation.calleeType 全子树展开）
+   * Java 在 java-type-related-info-resolver.ts 覆写，对 field/local/param receiver 做收敛
+   *
+   * @param analyzer
+   * @param scope
+   * @param node CallExpression AST node
+   * @param state state
+   * @param invocation 已构建的 invocation 对象（calleeType = 原静态类型）
+   * @returns 收敛后的 calleeType（string）；或 undefined = fallback 到原全子树
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  narrowCalleeTypeByReceiver(
+    analyzer: any,
+    scope: any,
+    node: any,
+    state: any,
+    invocation: Invocation
+  ): string | undefined {
+    return undefined
+  }
+
+  /**
    * resolve
    * @param analyzer
    */
@@ -168,6 +217,20 @@ export default class TypeRelatedInfoResolver extends MemSpace {
           )
         )
       } else if (val.vtype === 'fclos' && (val.overloaded?.length ?? 0) > 0 && Array.isArray(state.argumentTypes)) {
+        // 语言层可基于同名 shadow field 覆写返回值（JLS value-position 语义）
+        // 默认 hook 返回 undefined → 走原 fclos.returnType 分支
+        const shadowResult = this.resolveIdentifierShadowFieldHook(
+          analyzer,
+          scope,
+          node,
+          state,
+          val,
+          defScope,
+          defScopeType
+        )
+        if (shadowResult !== undefined) {
+          return shadowResult
+        }
         funcDef = this.findMatchedFuncDef(val, state.argumentTypes)
         const funcReturnTypeArray = this.resolveInstruction(analyzer, scope, funcDef.returnType, state)
         for (const funcReturnType of funcReturnTypeArray) {
@@ -273,10 +336,7 @@ export default class TypeRelatedInfoResolver extends MemSpace {
           declSite: node,
           nodeScope: state.nodeScope,
         }
-        if (!(state.nodeScope.scope.declarationMap instanceof Map)) {
-          state.nodeScope.scope.declarationMap = new Map()
-        }
-        state.nodeScope.scope.declarationMap.set(nameArray[i], declaration)
+        state.nodeScope.scope.setDeclaration(nameArray[i], declaration)
       }
     }
 
@@ -412,6 +472,10 @@ export default class TypeRelatedInfoResolver extends MemSpace {
     const newState = lodash.clone(state)
     newState.parent = state
     newState.argumentTypes = calleeArgumentTypes
+    // 语言层 hook（resolveIdentifierShadowFieldHook / narrowCalleeTypeByReceiver）通过此字段判定
+    // "当前 identifier 是否处于 CallExpression.callee 直接位置（invocable context）"
+    // 纯结构字段，非 Java 语言可忽略；语言层 hook 默认不读此字段
+    newState.callExpressionCallee = node.callee
     const returnTypeResultArray: TypeRelatedInfoResult[] = this.resolveInstruction(
       analyzer,
       scope,
@@ -438,7 +502,14 @@ export default class TypeRelatedInfoResolver extends MemSpace {
             this.addInvocationToScope(state.nodeScope, node?._meta?.nodehash, invocation)
             const invokeSuper = node.callee?.type === 'MemberAccess' && node.callee.object?.type === 'SuperExpression'
             if (invocation.calleeType !== '' && !invokeSuper) {
-              const polyInvocationArray = this.findPolymorphismInvocation(invocation, state)
+              // 语言层可基于 callsite receiver 静态类型收敛 polymorphism 展开根
+              // 默认 hook 返回 undefined → polyInvocation 沿用原 invocation.calleeType 作为根
+              let polyRootInvocation: Invocation = invocation
+              const narrowed = this.narrowCalleeTypeByReceiver(analyzer, scope, node, state, invocation)
+              if (narrowed !== undefined && narrowed !== '') {
+                polyRootInvocation = { ...invocation, calleeType: narrowed }
+              }
+              const polyInvocationArray = this.findPolymorphismInvocation(polyRootInvocation, state)
               this.addInvocationToScope(state.nodeScope, node?._meta?.nodehash, polyInvocationArray)
             }
           }

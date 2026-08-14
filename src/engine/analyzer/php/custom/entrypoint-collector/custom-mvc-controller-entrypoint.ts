@@ -15,7 +15,7 @@
  * taint 层只把第一个参数 `$request` 当 source（`$response` 是输出端）。
  */
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const logger = require('../../../../../util/logger')(__filename)
 const {

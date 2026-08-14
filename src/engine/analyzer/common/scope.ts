@@ -158,9 +158,7 @@ class Scope {
   createFuncScope(node: any, scope: Unit): Unit {
     // new version uses keyword 'constructor' to refer to ctor, this will cause node.name being null
     // so  tweak name to _CTOR_ to facilitate following evaluating
-    let funcName =
-      node.id?.name ||
-      `<anonymousFunc_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>` // <anonymous_[line]_[column]> for anonymous function
+    let funcName = ASTUtil.getFunctionDisplayName(node)
     if (node._meta.isConstructor) {
       funcName = '_CTOR_'
     }
@@ -247,6 +245,11 @@ class Scope {
       fclos.ast = node
       fclos.ast.fdef = node
       fclos.vtype = 'fclos'
+      // 仅当新 overload 节点本身带 decorators 时才回写 scope.value，避免无装饰器语言（Java 重载方法）丢失原 fclos 引用
+      const hasNewDeco = Array.isArray(node?._meta?.decorators) && node._meta.decorators.length > 0
+      if (hasNewDeco) {
+        scope.value[funcName] = fclos
+      }
     } else {
       const sid =
         funcName ||

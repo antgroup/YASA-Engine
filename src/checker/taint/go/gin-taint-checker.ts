@@ -1,3 +1,6 @@
+import type { BaseAnalyzer } from '../../../engine/analyzer/common/base-analyzer'
+import type { Scope, State, Value } from '../../../types/analyzer'
+import type { Identifier } from '../../../types/uast'
 import { getLegacyArgValues, type CallInfo } from '../../../engine/analyzer/common/call-args'
 
 const _ = require('lodash')
@@ -7,7 +10,7 @@ const CommonUtil = require('../../../util/common-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../common-kit/sink-util')
 const IntroduceTaint = require('../common-kit/source-util')
 const GinEntryPoint = require('../../../engine/analyzer/golang/gin/entrypoint-collector/gin-default-entrypoint')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const AstUtil = require('../../../util/ast-util')
@@ -15,6 +18,7 @@ const SanitizerChecker = require('../../sanitizer/sanitizer-checker')
 const Config = require('../../../config')
 const TaintChecker = require('../taint-checker')
 const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
+const SourceLine = require('../../../engine/analyzer/common/source-line')
 const logger = require('../../../util/logger')(__filename)
 
 const TAINT_TAG_NAME_GIN = 'GO_INPUT'
@@ -59,6 +63,29 @@ class GinTaintChecker extends TaintChecker {
     const taintSource = this.checkerRuleConfigContent.sources?.TaintSource
 
     IntroduceTaint.introduceTaintAtMemberAccess(info.res, node, scope, taintSource)
+  }
+
+
+  /**
+   * Identifier trigger（识别自定义配置中的形参 / 局部变量 source）
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtIdentifier(
+    analyzer: BaseAnalyzer,
+    scope: Scope,
+    node: Identifier,
+    state: State,
+    info: { res: Value }
+  ): void {
+    const before = Boolean(info.res?.taint?.isTaintedRec)
+    info.res = IntroduceTaint.introduceTaintAtIdentifier(analyzer, scope, node, info.res, this.sourceScope.value)
+    if (!before && info.res?.taint?.isTaintedRec && node.loc?.sourcefile) {
+      info.res = SourceLine.addSrcLineInfo(info.res, node, node.loc.sourcefile, 'SOURCE: ', node.name)
+    }
   }
 
   /**
@@ -126,60 +153,61 @@ class GinTaintChecker extends TaintChecker {
       }
     }
 
-    // 构建 classHierarchyMap（CHA fallback dispatch 需要）
-    if (Config.entryPointMode !== 'ONLY_CUSTOM' && analyzer.typeResolver?.findClassHierarchy) {
+    // CHA fallback 依赖接口层级；自定义入口同样需要穿透 interface 调用。
+    if (analyzer.typeResolver?.findClassHierarchy) {
       analyzer.classHierarchyMap = analyzer.typeResolver.findClassHierarchy(analyzer, null)
     }
 
-    // 添加source
-    if (Config.entryPointMode !== 'ONLY_CUSTOM') {
-      const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
-        GinEntryPoint.getGinEntryPointAndSource(topScope.context.packages)
+    const { TaintSource, FuncCallArgTaintSource, FuncCallReturnValueTaintSource } =
+      GinEntryPoint.getGinEntryPointAndSource(topScope.context.packages)
+    const shouldLoadAllDefaultSources = Config.entryPointMode !== 'ONLY_CUSTOM'
 
-      if (
-        _.isEmpty(TaintSource) &&
-        _.isEmpty(FuncCallArgTaintSource) &&
-        _.isEmpty(FuncCallReturnValueTaintSource) &&
-        _.isEmpty(TaintSourceRules) &&
-        _.isEmpty(FuncCallArgTaintSourceRules) &&
-        _.isEmpty(FuncCallReturnValueTaintSourceRules)
-      ) {
-        logger.info('[gin-taint-checker]TaintSource are not found')
-        return
-      }
+    if (
+      shouldLoadAllDefaultSources &&
+      _.isEmpty(TaintSource) &&
+      _.isEmpty(FuncCallArgTaintSource) &&
+      _.isEmpty(FuncCallReturnValueTaintSource) &&
+      _.isEmpty(TaintSourceRules) &&
+      _.isEmpty(FuncCallArgTaintSourceRules) &&
+      _.isEmpty(FuncCallReturnValueTaintSourceRules)
+    ) {
+      logger.info('[gin-taint-checker]TaintSource are not found')
+      return
+    }
 
-      if (!_.isEmpty(TaintSource)) {
-        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
-        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
-        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
-          this.checkerRuleConfigContent.sources.TaintSource
-        )
-          ? this.checkerRuleConfigContent.sources.TaintSource
-          : [this.checkerRuleConfigContent.sources.TaintSource]
-        this.checkerRuleConfigContent.sources.TaintSource.push(...TaintSource)
-      }
+    if (shouldLoadAllDefaultSources && !_.isEmpty(TaintSource)) {
+      this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+      this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+      this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+        this.checkerRuleConfigContent.sources.TaintSource
+      )
+        ? this.checkerRuleConfigContent.sources.TaintSource
+        : [this.checkerRuleConfigContent.sources.TaintSource]
+      this.checkerRuleConfigContent.sources.TaintSource.push(...TaintSource)
+    }
 
-      if (!_.isEmpty(FuncCallArgTaintSource)) {
-        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
-        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
-        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
-          this.checkerRuleConfigContent.sources.TaintSource
-        )
-          ? this.checkerRuleConfigContent.sources.TaintSource
-          : [this.checkerRuleConfigContent.sources.TaintSource]
-        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallArgTaintSource)
-      }
+    if (!_.isEmpty(FuncCallArgTaintSource)) {
+      this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+      this.checkerRuleConfigContent.sources.FuncCallArgTaintSource =
+        this.checkerRuleConfigContent.sources.FuncCallArgTaintSource || []
+      this.checkerRuleConfigContent.sources.FuncCallArgTaintSource = Array.isArray(
+        this.checkerRuleConfigContent.sources.FuncCallArgTaintSource
+      )
+        ? this.checkerRuleConfigContent.sources.FuncCallArgTaintSource
+        : [this.checkerRuleConfigContent.sources.FuncCallArgTaintSource]
+      this.checkerRuleConfigContent.sources.FuncCallArgTaintSource.push(...FuncCallArgTaintSource)
+    }
 
-      if (!_.isEmpty(FuncCallReturnValueTaintSource)) {
-        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
-        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
-        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
-          this.checkerRuleConfigContent.sources.TaintSource
-        )
-          ? this.checkerRuleConfigContent.sources.TaintSource
-          : [this.checkerRuleConfigContent.sources.TaintSource]
-        this.checkerRuleConfigContent.sources.TaintSource.push(...FuncCallReturnValueTaintSource)
-      }
+    if (shouldLoadAllDefaultSources && !_.isEmpty(FuncCallReturnValueTaintSource)) {
+      this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+      this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource =
+        this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource || []
+      this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource = Array.isArray(
+        this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource
+      )
+        ? this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource
+        : [this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource]
+      this.checkerRuleConfigContent.sources.FuncCallReturnValueTaintSource.push(...FuncCallReturnValueTaintSource)
     }
   }
 
@@ -206,7 +234,7 @@ class GinTaintChecker extends TaintChecker {
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { fclos, callInfo } = info
     const calleeObject = fclos.object
-    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state, analyzer)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
     IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource, fclos)
 
@@ -293,17 +321,18 @@ class GinTaintChecker extends TaintChecker {
    * @param scope
    * @param state
    */
-  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any, analyzer?: any) {
     if (fclos === undefined) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
     if (!rules || !callInfo) return
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
-    rule = rule.length > 0 ? rule[0] : null
+    const matchedRules = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo, analyzer)
+    if (matchedRules.length === 0) return
 
-    if (rule) {
+    // 遍历所有匹配的 sink 规则，不同规则可能检查不同参数位置（vague calleeType 可能遮蔽 specific 规则）
+    for (const rule of matchedRules) {
       const args = BasicRuleHandler.prepareArgs(callInfo, fclos, rule)
       const sanitizers = SanitizerChecker.findSanitizerByIds(rule.sanitizerIds)
       const ndResultWithMatchedSanitizerTagsArray = SanitizerChecker.findTagAndMatchedSanitizer(
@@ -315,32 +344,33 @@ class GinTaintChecker extends TaintChecker {
         true,
         sanitizers
       )
-      if (ndResultWithMatchedSanitizerTagsArray) {
-        for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
-          const { nd } = ndResultWithMatchedSanitizerTags
-          const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
-          let ruleName = rule.fsig
-          if (typeof rule.attribute !== 'undefined') {
-            const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
-            ruleName += `\nSINK Attribute: ${attrStr}`
-          }
-          const taintFlowFinding = this.buildTaintFinding(
-            this.getCheckerId(),
-            this.desc,
-            node,
-            nd,
-            fclos,
-            TAINT_TAG_NAME_GIN,
-            ruleName,
-            matchedSanitizerTags,
-            state?.callstack,
-            state?.callsites
-          )
-          if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
-          this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
+      if (!ndResultWithMatchedSanitizerTagsArray || ndResultWithMatchedSanitizerTagsArray.length === 0) continue
+      let ruleProducedFinding = false
+      for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
+        const { nd } = ndResultWithMatchedSanitizerTags
+        const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
+        let ruleName = rule.fsig
+        if (typeof rule.attribute !== 'undefined') {
+          const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
+          ruleName += `\nSINK Attribute: ${attrStr}`
         }
-        return true
+        const taintFlowFinding = this.buildTaintFinding(
+          this.getCheckerId(),
+          this.desc,
+          node,
+          nd,
+          fclos,
+          TAINT_TAG_NAME_GIN,
+          ruleName,
+          matchedSanitizerTags,
+          state?.callstack,
+          state?.callsites
+        )
+        if (!TaintOutputStrategy.isNewFinding(this.resultManager, taintFlowFinding)) continue
+        this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategy.outputStrategyId)
+        ruleProducedFinding = true
       }
+      if (ruleProducedFinding) return true
     }
   }
 }

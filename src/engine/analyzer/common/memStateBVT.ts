@@ -193,6 +193,22 @@ function wrapValue(v: any): any {
  * @param v2
  * @returns {{vtype: string, value: *[]}}
  */
+/**
+ * 将子值的 taint tags 提升到 union 自身，确保跨包传递时 hasTags() 不丢失。
+ * 用 mergeTracesDedup 避免 trace 重复 FP。
+ * 用 _taint 直接访问避免触发 getter 创建空 TaintRecord。
+ */
+function liftChildTaintTags(union: any, children: any[]): void {
+  for (const child of children) {
+    if (child?._taint?.hasTags?.()) {
+      union.taint.mergeTracesDedup(child._taint)
+      if (!union.taint.isTainted) {
+        union.taint.propagateFrom(child)
+      }
+    }
+  }
+}
+
 function unionValue(v1: any, v2: any): any {
   v1 = wrapValue(v1)
   v2 = wrapValue(v2)
@@ -220,15 +236,23 @@ function unionValue(v1: any, v2: any): any {
         if (typeof uid === 'string') seen.add(uid)
         vs.push(val)
       }
-      return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+      if (vs.length === 1) return vs[0]
+      const u1 = new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+      liftChildTaintTags(u1, vs)
+      return u1
     }
     const vs = v1.value.slice()
     if (!vs.some((x: any) => x === v2))
       vs.push(v2)
-    return vs.length === 1 ? vs[0] : new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+    if (vs.length === 1) return vs[0]
+    const u2 = new UnionValue(vs, undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+    liftChildTaintTags(u2, vs)
+    return u2
   }
   if (v1 === v2) return v1
-  return new UnionValue([v1, v2], undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+  const u3 = new UnionValue([v1, v2], undefined, `${v1.qid}.<union@bvt>`, v1.ast?.node)
+  liftChildTaintTags(u3, [v1, v2])
+  return u3
 }
 
 /**

@@ -68,6 +68,13 @@ export class ScopeCtx {
     this._declarationMap = map
   }
 
+  // declarationMap 是可变 Map；写入前复制，避免共享 ScopeCtx 的声明表被原地改写。
+  setDeclaration(name: string, declaration: unknown): void {
+    const nextMap = this._declarationMap ? new Map(this._declarationMap) : new Map<string, unknown>()
+    nextMap.set(name, declaration)
+    this._declarationMap = nextMap
+  }
+
   // --- _clone ---
 
   _clone(newOwner: { getSymbolTable(): any }): ScopeCtx {

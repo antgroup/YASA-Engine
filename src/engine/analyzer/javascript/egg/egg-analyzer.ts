@@ -10,8 +10,10 @@ const FileUtil = require('../../../../util/file-util')
 const JsAnalyzer = require('../common/js-analyzer')
 const Initializer = require('./egg-initializer')
 const Loader = require('../../../../util/loader')
-const EntryPointConfig = require('../../common/current-entrypoint')
+const EntryPointConfig = require('../../common/entrypoint/current-entrypoint')
+const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
 const EggCommon = require('./egg-common')
+const { TypeScriptAliasResolver } = require('./tsconfig-alias-resolver') as typeof import('./tsconfig-alias-resolver')
 
 const {
   valueUtil: {
@@ -20,7 +22,6 @@ const {
 } = require('../../common')
 
 const constValue = require('../../../../util/constant')
-const Config = require('../../../../config')
 const { handleException } = require('../../common/exception-handler')
 const { ErrorCode } = require('../../../../util/error-code')
 const { eggSanityCheck } = require('../../../../util/framework-util')
@@ -31,16 +32,27 @@ const load_mod_enum = {
   DEFAULT: 3, // stay same
 }
 
+type ScannedProjectModule = {
+  file: string
+  content: string
+}
+
 /**
  *
  */
 class EggAnalyzer extends JsAnalyzer {
+  // EP 隔离基线：preProcess 后快照共享 scope 树的 key 集合
+  private _sharedScopeBaselineKeys: Map<any, Set<string>> | null = null
+  private moduleAliasResolver: import('./tsconfig-alias-resolver').TypeScriptAliasResolver | undefined
+  private scannedProjectModules = new Map<string, string>()
+
   /**
    *
    * @param options
    */
   constructor(options: any) {
     super(options)
+    this.enableNestedSourceLineIsolation = true
   }
 
   /**
@@ -63,6 +75,8 @@ class EggAnalyzer extends JsAnalyzer {
 
     // 让this.ctx.***能找到符号值
     this.loadToApp(dir, this.state)
+    // 快照共享 scope 树基线 key，用于 EP 隔离
+    this._sharedScopeBaselineKeys = this._captureSharedScopeKeys()
   }
 
   /**
@@ -77,90 +91,133 @@ class EggAnalyzer extends JsAnalyzer {
   /**
    *
    */
-  symbolInterpret() {
+  async symbolInterpret(): Promise<boolean> {
     try {
       if (_.isEmpty(this.entryPoints)) {
         logger.info('[symbolInterpret]：EntryPoints are not found')
         return true
       }
-      const hasAnalysised: any[] = []
+      const hasAnalysised = new Set<string>()
+      let epIdx = 0
       for (const entryPoint of this.entryPoints) {
-        if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-          this.symbolTable.clear()
-          if (
-            hasAnalysised.includes(
-              `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-            )
-          ) {
-            continue
-          }
-          hasAnalysised.push(
-            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-          )
-          EntryPointConfig.setCurrentEntryPoint(entryPoint)
-          const { entryPointSymVal, argValues, scopeVal } = entryPoint
+        epIdx++
+        const metricStartTime = Date.now()
+        const findingsBefore = this.countFindings()
+        let skipped = false
+        let skipReason: string | undefined
+        try {
+          if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
+            this.symbolTable.clear()
+            const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+            if (entryPointMark.skipped) {
+              skipped = true
+              skipReason = entryPointMark.skipReason
+              continue
+            }
+            EntryPointConfig.setCurrentEntryPoint(entryPoint)
+            const { entryPointSymVal, argValues, scopeVal } = entryPoint
 
-          // TODO(field-removal): refreshCtx 依赖 field proxy 的 delete trap，需配合 refreshCtx 一起迁移
-          EggCommon.refreshCtx(scopeVal?.value?.ctx?.value)
-          this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
-          this.replaceCtxInFunctionParams(entryPointSymVal.ast.node, argValues, entryPointSymVal, scopeVal, this.state)
-          try {
-            logger.info(
-              'EntryPoint [%s.%s] is executing ',
-              entryPoint.filePath?.substring(0, entryPoint?.filePath?.lastIndexOf('.')),
-              entryPoint.functionName ||
-                `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc?.start?.line}_$${
-                  entryPoint.entryPointSymVal?.ast?.node?.loc?.end?.line
-                }>`
+            executeViaEntryPointExecutor(
+              {
+                analyzer: this,
+                entryPoint,
+                metricStartTime,
+                findingsBefore,
+                executionState: this.state,
+                overloadCount: 1,
+                epIndex: epIdx,
+                epTotal: this.entryPoints.length,
+              },
+              {
+                language: 'egg',
+                classify: () => 'function',
+                execute: () => {
+                  // refreshCtx 依赖 field proxy 的 delete trap，需配合 refreshCtx 一起迁移
+                  EggCommon.refreshCtx(scopeVal?.value?.ctx?.value)
+                  this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+                  this.replaceCtxInFunctionParams(entryPointSymVal.ast.node, argValues, entryPointSymVal, scopeVal, this.state)
+                  try {
+                    this.executeCall(entryPointSymVal.ast.node, entryPointSymVal, this.state, scopeVal, {
+                      callArgs: this.buildCallArgs(entryPointSymVal.ast.node, argValues, entryPointSymVal),
+                    })
+                  } catch (e) {
+                    handleException(
+                      e,
+                      `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
+                      `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`
+                    )
+                  }
+                  this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+                },
+                dispose: () => {
+                  // EP 隔离：清除本 EP 写入共享 scope 树（ctx.service/controller 等）的新增 key
+                  this._restoreSharedScopeKeys()
+                },
+              },
+              this.checkerManager?.resultManagerProxy,
             )
-            this.executeCall(entryPointSymVal.ast.node, entryPointSymVal, this.state, scopeVal, { callArgs: this.buildCallArgs(entryPointSymVal.ast.node, argValues, entryPointSymVal) })
-          } catch (e) {
-            handleException(
-              e,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`
-            )
-          }
-          this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
-        } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-          if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)) {
-            continue
-          }
-          hasAnalysised.push(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)
-          EntryPointConfig.setCurrentEntryPoint(entryPoint)
-          logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
-          if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
-            try {
-              this.processCompileUnit(
-                entryPoint.scopeVal,
-                entryPoint.entryPointSymVal?.ast?.node,
-                this.initState(this.topScope)
-              )
-            } catch (e) {
-              handleException(
-                e,
-                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
-              )
+          } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
+            const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+            if (entryPointMark.skipped) {
+              skipped = true
+              skipReason = entryPointMark.skipReason
+              continue
+            }
+            EntryPointConfig.setCurrentEntryPoint(entryPoint)
+            if (!entryPoint.entryPointSymVal || !entryPoint.scopeVal) {
+              const { filePath } = entryPoint
+              const fileRecord = this.fileManager[filePath]
+              if (!fileRecord) {
+                skipped = true
+                skipReason = 'missing'
+                continue
+              }
+              entryPoint.entryPointSymVal = this.symbolTable.get(fileRecord.uuid)
+              entryPoint.scopeVal = this.symbolTable.get(fileRecord.uuid)
+            }
+            if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
+              const fileState = this.initState(this.topScope)
+              try {
+                executeViaEntryPointExecutor(
+                  {
+                    analyzer: this,
+                    entryPoint,
+                    metricStartTime,
+                    findingsBefore,
+                    executionState: fileState,
+                    overloadCount: 1,
+                    epIndex: epIdx,
+                    epTotal: this.entryPoints.length,
+                  },
+                  {
+                    language: 'egg',
+                    classify: () => 'file',
+                    before: () => {
+                      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+                    },
+                    execute: () => {
+                      this.processCompileUnit(entryPoint.scopeVal, entryPoint.entryPointSymVal?.ast?.node, fileState)
+                    },
+                    after: () => {
+                      this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+                    },
+                  },
+                  this.checkerManager?.resultManagerProxy,
+                )
+              } catch (e) {
+                handleException(
+                  e,
+                  `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
+                  `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
+                )
+              }
             }
           } else {
-            const { filePath } = entryPoint
-            entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-            entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-            try {
-              this.processCompileUnit(
-                entryPoint.scopeVal,
-                entryPoint.entryPointSymVal?.ast?.node,
-                this.initState(this.topScope)
-              )
-            } catch (e) {
-              handleException(
-                e,
-                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
-              )
-            }
+            skipped = true
+            skipReason = 'unsupported'
           }
+        } finally {
+          this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
         }
       }
     } catch (e) {
@@ -232,11 +289,18 @@ class EggAnalyzer extends JsAnalyzer {
         modsInject: [],
       },
       {
-        name: ['controller', 'controllers'],
+        name: 'proxy',
         caseStyle: 'lower',
         loadMod: load_mod_enum.INST,
         ctxInject: true,
         modsInject: ['service'],
+      },
+      {
+        name: ['controller', 'controllers'],
+        caseStyle: 'lower',
+        loadMod: load_mod_enum.INST,
+        ctxInject: true,
+        modsInject: ['service', 'proxy'],
       },
       {
         name: 'rpc',
@@ -342,6 +406,19 @@ class EggAnalyzer extends JsAnalyzer {
                 val.value[mod] = app.value[mod]
               }
             }
+            // egg 依赖注入字段同步到 class 定义作用域：dumpAllCG 不走 entrypoint，executeCall
+            // 类方法时 this 绑定到 class 定义而非实例，class 定义上缺少 ctx/service 等注入字段，
+            // 导致 this.service.X.method() 解析退化为属性访问链拼接的假节点。把注入字段同步到
+            // class 定义作用域后，this.service / this.ctx 在 dumpAllCG 下可解析到真实 Service 实例。
+            const defVal = exports?.members?.get?.('default')
+            if (defVal && defVal.vtype === 'class' && defVal.value) {
+              if (opt.ctxInject) {
+                defVal.value.ctx = ctx
+              }
+              for (const mod of opt.modsInject) {
+                defVal.value[mod] = app.value[mod]
+              }
+            }
           } else {
             scope.value[prop] =
               scope.value[prop] ||
@@ -370,6 +447,8 @@ class EggAnalyzer extends JsAnalyzer {
       handleException(null, `egg sanity check failed, dir:${dir}`, `egg sanity check failed, dir:${dir}`)
       return false
     }
+
+    this.moduleAliasResolver = TypeScriptAliasResolver.load(dir)
 
     // add config dir
     const configContents = FileUtil.loadAllFileTextGlobby(
@@ -411,7 +490,7 @@ class EggAnalyzer extends JsAnalyzer {
     if (!fs.existsSync(egg_app_path) && fs.existsSync(path.join(dir, 'src'))) {
       egg_app_path = path.join(dir, 'src')
     }
-    const modules = FileUtil.loadAllFileTextGlobby(
+    const modules: ScannedProjectModule[] = FileUtil.loadAllFileTextGlobby(
       [
         '**/*.(js|ts|mjs|cjs)',
         '!**/*.d.ts',
@@ -437,6 +516,7 @@ class EggAnalyzer extends JsAnalyzer {
       process.exitCode = ErrorCode.no_valid_source_file
       return false
     }
+    this.scannedProjectModules = new Map(modules.map((mod) => [path.resolve(mod.file), mod.content]))
     for (const mod of modules) {
       this.processModuleSrc(mod.content, mod.file)
     }
@@ -514,26 +594,44 @@ class EggAnalyzer extends JsAnalyzer {
    * @param state
    */
   loadPredefinedModule(scope: any, fname: any, node: any, state: any) {
-    // tsconfig paths 别名解析：@/ → app/
-    if (typeof fname === 'string' && fname.startsWith('@/')) {
-      const relativePath = fname.slice(2) // 去掉 @/
-      const basePath = path.join(Config.maindir, 'app', relativePath)
-      // 尝试带扩展名查找已加载的模块
-      const extensions = ['', '.ts', '.js', '.mjs', '.cjs']
-      for (const ext of extensions) {
-        const fullPath = basePath + ext
-        const m = this.topScope.context.modules.members.get(fullPath)
-        if (m && typeof m === 'object') return m
-      }
-      // 尝试 index 文件
-      const indexExts = ['/index.ts', '/index.js', '/index.mjs', '/index.cjs']
-      for (const ext of indexExts) {
-        const fullPath = basePath + ext
-        const m = this.topScope.context.modules.members.get(fullPath)
-        if (m && typeof m === 'object') return m
-      }
+    const modulePath = this.moduleAliasResolver?.resolveScannedModulePath(fname, this.scannedProjectModules)
+    if (modulePath) {
+      const module = this.topScope.context.modules.members.get(modulePath)
+      if (module && typeof module === 'object') return module
+      const source = this.scannedProjectModules.get(modulePath)
+      if (source !== undefined) return this.processModuleSrc(source, modulePath)
     }
     return super.loadPredefinedModule(scope, fname, node, state)
+  }
+
+  private _captureSharedScopeKeys(): Map<any, Set<string>> {
+    const baseline = new Map<any, Set<string>>()
+    const app = (this.topScope as any).value?.app
+    if (!app?._members) return baseline
+    for (const modName of ['service', 'controller', 'rpc', 'modules', 'common']) {
+      const modScope = app._members.get(modName)
+      if (!modScope?._members) continue
+      baseline.set(modScope._members, new Set(modScope._members.keys()))
+      for (const key of modScope._members.keys()) {
+        const instance = modScope._members.get(key)
+        if (instance?._members) {
+          baseline.set(instance._members, new Set(instance._members.keys()))
+        }
+      }
+    }
+    return baseline
+  }
+
+  private _restoreSharedScopeKeys(): void {
+    const baseline = this._sharedScopeBaselineKeys
+    if (!baseline) return
+    for (const [members, baseKeys] of baseline) {
+      for (const key of members.keys()) {
+        if (!baseKeys.has(key)) {
+          members.delete(key)
+        }
+      }
+    }
   }
 }
 

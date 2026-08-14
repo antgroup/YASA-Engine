@@ -3,12 +3,18 @@ import { ValueRef } from './value-ref'
 import { ScopeCtx } from './scope-ctx'
 import { AstRefList } from './ast-ref-list'
 import { TaintRecord } from './taint-record'
+import { auditCloneEvent } from './unit-audit'
 
 const _ = require('lodash')
 const { Errors } = require('../../../../util/error-code')
 const { getGlobalSymbolTable, getGlobalASTManager } = require('../../../../util/global-registry')
 const { yasaWarning } = require('../../../../util/format-util')
 const QidUnifyUtil = require('../../../../util/qid-unify-util')
+const Config = require('../../../../config')
+
+function isDataflowInstrumentationEnabled(): boolean {
+  return Config.dataflowDb
+}
 
 
 class Unit {
@@ -21,6 +27,8 @@ class Unit {
   declsNodehash: any = undefined
   _taint: TaintRecord | null = null
   misc_?: Record<string, any>
+  // 创建时所在调用点，仅在数据流数据库开启时写入；克隆与展开沿用原值。
+  _callsite: string | null = null
 
   // ===== Private fields =====
   _sid: string = ''
@@ -142,6 +150,14 @@ class Unit {
 
     this._isConstructing = false
 
+    // 调用点只服务增量数据流；未开启数据库时保持发布行为不变。
+    if ('_callsite' in opts) {
+      this._callsite = opts._callsite
+    } else if (isDataflowInstrumentationEnabled()) {
+      const { getCurrentCallsiteId } = require('../entrypoint/current-entrypoint')
+      this._callsite = getCurrentCallsiteId()
+    }
+
     if (!opts._skipRegister) {
       this.calculateAndRegisterUUID()
     }
@@ -197,9 +213,12 @@ class Unit {
   }
 
   getMemberValue(fieldName: string): Unit | null {
+    // 不记 field_read 结构边：runtime 此处不调 propagateFrom，只是"从容器读出子值"的结构关系
     if (this.members) {
       const val = this.members.get(fieldName)
-      if (val != null) return val
+      if (val != null) {
+        return val
+      }
       // 回退：members 无此 key，继续查 _field
     }
     if (!Object.prototype.hasOwnProperty.call(this._field, fieldName)) {
@@ -219,6 +238,10 @@ class Unit {
   }
 
   setMemberValue(fieldName: string, value: any): void {
+    if (isDataflowInstrumentationEnabled() && value && typeof value === 'object') {
+      const { recordEdge } = require('../dataflow-edge-stats')
+      recordEdge(value, this, 'field_write')
+    }
     if (this.members) { this.members.set(fieldName, value); return }
     if (!value) {
       delete this._field[fieldName]
@@ -479,6 +502,7 @@ class Unit {
       copy._scopeCtx = copy._scopeCtx._clone(copy)
     }
     copy._skipRegister = true
+    auditCloneEvent('clone', this, copy)
     return copy
   }
 
@@ -522,7 +546,7 @@ class Unit {
     for (let i = 0; i < exprPropPairs.length; i++) {
       const [refKey, propKey] = exprPropPairs[i]
       if (!Object.prototype.hasOwnProperty.call(this, refKey)) continue
-      const propVal = (this as any)[propKey]
+      const propVal = (this as Record<string, unknown>)[propKey]
       if (propVal !== undefined) {
         Object.defineProperty(copy, propKey, {
           value: propVal,
@@ -580,6 +604,7 @@ class Unit {
       })
     }
     copy._skipRegister = true
+    auditCloneEvent('cloneAlias', this, copy)
     return copy
   }
 }

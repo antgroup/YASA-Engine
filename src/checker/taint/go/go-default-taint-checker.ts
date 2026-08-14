@@ -7,7 +7,7 @@ const Config = require('../../../config')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const AstUtil = require('../../../util/ast-util')
 const FileUtil = require('../../../util/file-util')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const IntroduceTaint = require('../common-kit/source-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../common-kit/sink-util')
@@ -28,8 +28,8 @@ class GoDefaultTaintChecker extends TaintChecker {
    * constructor
    * @param resultManager
    */
-  constructor(resultManager: any) {
-    super(resultManager, 'taint_flow_go_input')
+  constructor(resultManager: unknown, checkerId = 'taint_flow_go_input') {
+    super(resultManager, checkerId)
     this.entryPoints = []
   }
 
@@ -169,7 +169,7 @@ class GoDefaultTaintChecker extends TaintChecker {
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { fclos, callInfo } = info
     const calleeObject = fclos?.object
-    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state)
+    this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state, analyzer)
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
     IntroduceTaint.introduceFuncArgTaintByRuleConfig(calleeObject, node, callInfo, funcCallArgTaintSource, fclos)
   }
@@ -197,14 +197,14 @@ class GoDefaultTaintChecker extends TaintChecker {
    * @param scope
    * @param state
    */
-  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any) {
+  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state?: any, analyzer?: any) {
     if (fclos === undefined) {
       return
     }
     const rules = this.checkerRuleConfigContent.sinks?.FuncCallTaintSink
 
     if (!rules || !callInfo) return
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo, analyzer)
     rule = rule.length > 0 ? rule[0] : null
 
     if (rule) {

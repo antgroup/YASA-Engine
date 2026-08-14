@@ -4,19 +4,27 @@ const { LanguageType } = require('@ant-yasa/uast-parser-java-js')
 const ChildProcess = require('child_process')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
 const JSONStream = require('JSONStream')
 const { handleException } = require('../../analyzer/common/exception-handler')
 const { resolveUastBinaryPath } = require('../../../util/file-util')
 
-let uastFilePath = './uast.json'
+interface GoAstBuilderOptions {
+  language?: string
+  single?: boolean
+  uastSDKPath?: string
+  ASTFileOutput?: string
+  dumpAST?: boolean
+  dumpAllAST?: boolean
+}
 
 /**
  * 构建 Go UAST
  * @param rootDir - 根目录
  * @param options - 构建选项
- * @returns {any} 构建结果
+ * @param uastOutputPath - UAST 输出路径
  */
-function buildUASTGo(rootDir: any, options: Record<string, any>) {
+function buildUASTGo(rootDir: string, options: GoAstBuilderOptions, uastOutputPath: string): void {
   options = options || {}
   if (options.language && options.language !== LanguageType.LANG_GO && options.language !== 'golang') {
     throw new Error(`Go AST Builder received wrong language type: ${options.language}`)
@@ -41,11 +49,8 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
     throw new Error('uast4go binary not found, please check uastSDKPath configuration')
   }
 
-  if (options.ASTFileOutput) {
-    uastFilePath = options.ASTFileOutput
-  }
-
-  const command = `${uast4go_path} ${isSingle} -rootDir=${rootDir} -output=${uastFilePath}`
+  fs.mkdirSync(path.dirname(uastOutputPath), { recursive: true })
+  const command = `${quoteShellArg(uast4go_path)} ${isSingle} -rootDir=${quoteShellArg(rootDir)} -output=${quoteShellArg(uastOutputPath)}`
 
   try {
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -56,7 +61,7 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
   } catch (e) {
     // eslint-disable-next-line prettier/prettier
     handleException(e, 'Error occurred in go-ast-builder.buildUAST', 'Error occurred in go-ast-builder.buildUAST')
-    return null
+    throw e
   }
 }
 
@@ -66,20 +71,21 @@ function buildUASTGo(rootDir: any, options: Record<string, any>) {
  * @param options - 解析选项
  * @returns {Promise<any>} 解析结果
  */
-async function parsePackage(rootDir: any, options: Record<string, any>) {
+async function parsePackage(rootDir: string, options: GoAstBuilderOptions) {
+  const uastFilePath = resolveUastFilePath(options)
   if (fs.existsSync(uastFilePath)) {
-    deleteUAST()
+    deleteUAST(uastFilePath)
   }
   try {
-    return parseSinglePackage(rootDir, options)
+    return parseSinglePackage(rootDir, options, uastFilePath)
   } catch (e) {
     try {
-      return await parseLargePackage(rootDir, options)
+      return await parseLargePackage(rootDir, options, uastFilePath)
     } catch (e1) {
       // eslint-disable-next-line prettier/prettier
       handleException(e1, `[go-ast-builder] 解析Go AST时发生错误`, `[go-ast-builder] 解析Go AST时发生错误`)
       if (fs.existsSync(uastFilePath)) {
-        deleteUAST()
+        deleteUAST(uastFilePath)
       }
       return null
     }
@@ -90,16 +96,17 @@ async function parsePackage(rootDir: any, options: Record<string, any>) {
  * 解析大型 Go 包
  * @param rootDir - 根目录
  * @param options - 解析选项
+ * @param uastFilePath - UAST 文件路径
  * @returns {Promise<any>} 解析结果
  */
-async function parseLargePackage(rootDir: any, options: Record<string, any>) {
-  buildUASTGo(rootDir, options)
+async function parseLargePackage(rootDir: string, options: GoAstBuilderOptions, uastFilePath: string) {
+  buildUASTGo(rootDir, options, uastFilePath)
   const data = (await parseLargeJsonFile(uastFilePath)) as any[]
   if (options.dumpAST || options.dumpAllAST) {
     const { deleteParent } = require('../../../util/ast-util')
     deleteParent(data)
   } else if (fs.existsSync(uastFilePath)) {
-    deleteUAST()
+    deleteUAST(uastFilePath)
   }
   return { packageInfo: data[0], moduleName: data[1] }
 }
@@ -108,25 +115,27 @@ async function parseLargePackage(rootDir: any, options: Record<string, any>) {
  * 解析单个 Go 包
  * @param rootDir - 根目录
  * @param options - 解析选项
+ * @param uastFilePath - UAST 文件路径
  * @returns {any} 解析结果
  */
-function parseSinglePackage(rootDir: any, options: Record<string, any>) {
-  buildUASTGo(rootDir, options)
+function parseSinglePackage(rootDir: string, options: GoAstBuilderOptions, uastFilePath: string) {
+  buildUASTGo(rootDir, options, uastFilePath)
   const data = fs.readFileSync(uastFilePath, 'utf8')
   const obj = JSON.parse(data)
   if (options.dumpAST || options.dumpAllAST) {
     const { deleteParent } = require('../../../util/ast-util')
     deleteParent(obj)
   } else if (fs.existsSync(uastFilePath)) {
-    deleteUAST()
+    deleteUAST(uastFilePath)
   }
   return obj
 }
 
 /**
  * 删除 UAST 文件
+ * @param uastFilePath - UAST 文件路径
  */
-function deleteUAST() {
+function deleteUAST(uastFilePath: string) {
   const stats = fs.statSync(uastFilePath) // 获取文件/目录状态
   if (stats.isFile()) {
     fs.unlink(uastFilePath, (err: any) => {
@@ -139,6 +148,19 @@ function deleteUAST() {
       }
     })
   }
+}
+
+function resolveUastFilePath(options: GoAstBuilderOptions): string {
+  if (options.ASTFileOutput) {
+    return path.isAbsolute(options.ASTFileOutput)
+      ? options.ASTFileOutput
+      : path.resolve(process.cwd(), options.ASTFileOutput)
+  }
+  return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-uast-go-')), 'uast.json')
+}
+
+function quoteShellArg(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
 /**
@@ -175,9 +197,9 @@ function parseLargeJsonFile(filePath: string) {
  * @param options - 解析选项
  * @returns {any} 解析结果（包含 packageInfo 和 moduleName）
  */
-function parseSingleFile(filepath: string, options?: Record<string, any>): any {
+function parseSingleFile(filepath: string, options?: GoAstBuilderOptions): any {
   const opts = { ...options, single: true }
-  const result = parseSinglePackage(filepath, opts)
+  const result = parseSinglePackage(filepath, opts, resolveUastFilePath(opts))
   // 将数组格式 [packageInfo, moduleName] 转换为对象格式 { packageInfo, moduleName }
   if (Array.isArray(result)) {
     return { packageInfo: result[0], moduleName: result[1] }
@@ -191,7 +213,7 @@ function parseSingleFile(filepath: string, options?: Record<string, any>): any {
  * @param options - 解析选项
  * @returns {Promise<any>} 解析结果（包含 packageInfo 和 moduleName）
  */
-async function parseProject(rootDir: string, options?: Record<string, any>): Promise<any> {
+async function parseProject(rootDir: string, options?: GoAstBuilderOptions): Promise<any> {
   return parsePackage(rootDir, options || {})
 }
 

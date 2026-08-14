@@ -125,12 +125,14 @@ function cleanDirectoryForSastJs(directory: string): void {
   })
 }
 
-// 移动case目录到上层的aaa目录
+// 将 sast-js/case 内容提升到 benchmark 根目录，重复准备时覆盖旧内容。
 function moveSrcDirectoryForJs(directory: string): void {
   const childAaaPath = path.join(directory, 'sast-js')
   const srcPath = path.join(childAaaPath, 'case')
   if (fs.existsSync(srcPath)) {
-    fs.moveSync(srcPath, directory)
+    for (const item of fs.readdirSync(srcPath)) {
+      fs.moveSync(path.join(srcPath, item), path.join(directory, item), { overwrite: true })
+    }
   }
   fs.removeSync(childAaaPath)
 }

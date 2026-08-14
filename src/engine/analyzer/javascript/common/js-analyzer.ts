@@ -12,11 +12,15 @@ const Parser = require('../../../parser/parser')
 const Initializer = require('./js-initializer')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const { AstUtil } = require('../../../../checker/common/checker-kit')
-const EntryPointConfig = require('../../common/current-entrypoint')
+const EntryPointConfig = require('../../common/entrypoint/current-entrypoint')
+const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
 const { processBinaryOperator } = require('./builtins/operator-builtins')
 const ScopeClass = require('../../common/scope')
 const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../../common/analyzer')
 const Unit: typeof import('../../common/value/unit') = require('../../common/value/unit')
+import type { CallArgs } from '../../common/call-args'
+import { jsCallSummaryPolicy } from '../../common/call-summary/language/javascript'
+import type { CallSummaryLanguagePolicy } from '../../common/call-summary/language/types'
 import type { Scope, State, Value, SymbolValue as SymbolValueType, VoidValue as VoidValueType, SpreadValue, BinaryExprValue, UnaryExprValue } from '../../../../types/analyzer'
 import type {
   CallExpression,
@@ -31,6 +35,7 @@ import type {
   ObjectExpression,
   ForStatement,
   ReturnStatement,
+  BaseNode,
 } from '../../../../types/uast'
 const CheckerManager = require('../../common/checker-manager')
 
@@ -47,6 +52,8 @@ const config = require('../../../../config')
  *
  */
 class JsAnalyzer extends Analyzer {
+  protected override readonly callSummaryLanguagePolicy: CallSummaryLanguagePolicy = jsCallSummaryPolicy
+
   /**
    *
    * @param options
@@ -122,106 +129,149 @@ class JsAnalyzer extends Analyzer {
   /**
    *
    */
-  symbolInterpret() {
+  async symbolInterpret(): Promise<boolean> {
     const { entryPoints } = this
     const state = this.initState(this.topScope)
     if (_.isEmpty(entryPoints)) {
       logger.info('[symbolInterpret]：EntryPoints are not found')
       return true
     }
-    const hasAnalysised: any[] = []
+    const hasAnalysised = new Set<string>()
     // 自定义source入口方式，并根据入口自主加载source
+    let epIdx = 0
     for (const entryPoint of entryPoints) {
-      this.symbolTable.clear()
-      if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        if (
-          hasAnalysised.includes(
-            `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-          )
-        ) {
-          continue
-        }
-        hasAnalysised.push(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-        )
-        EntryPointConfig.setCurrentEntryPoint(entryPoint)
-        logger.info(
-          'EntryPoint [%s.%s] is executing',
-          entryPoint.filePath?.substring(0, entryPoint.filePath?.lastIndexOf('.')),
-          entryPoint.functionName ||
-            `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc.start?.line}_$${
-              entryPoint.entryPointSymVal?.ast?.node?.loc.end?.line
-            }>`
-        )
+      epIdx++
+      const metricStartTime = Date.now()
+      const findingsBefore = this.countFindings()
+      let skipped = false
+      let skipReason: string | undefined
+      try {
+        this.symbolTable.clear()
+        if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
+          const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+          if (entryPointMark.skipped) {
+            skipped = true
+            skipReason = entryPointMark.skipReason
+            continue
+          }
+          EntryPointConfig.setCurrentEntryPoint(entryPoint)
 
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+          executeViaEntryPointExecutor(
+            {
+              analyzer: this,
+              entryPoint,
+              metricStartTime,
+              findingsBefore,
+              executionState: state,
+              overloadCount: 1,
+              epIndex: epIdx,
+              epTotal: entryPoints.length,
+            },
+            {
+              language: 'javascript',
+              classify: () => 'function',
+              execute: () => {
+                this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        const argValues: any[] = []
-        for (const key in entryPoint.entryPointSymVal?.ast?.node?.parameters) {
-          argValues.push(
-            this.processInstruction(
-              entryPoint.entryPointSymVal,
-              entryPoint.entryPointSymVal?.ast?.node?.parameters[key]?.id,
-              state
-            )
-          )
-        }
+                const argValues: any[] = []
+                for (const key in entryPoint.entryPointSymVal?.ast?.node?.parameters) {
+                  argValues.push(
+                    this.processInstruction(
+                      entryPoint.entryPointSymVal,
+                      entryPoint.entryPointSymVal?.ast?.node?.parameters[key]?.id,
+                      state
+                    )
+                  )
+                }
 
-        try {
-          this.executeCall(
-            entryPoint.entryPointSymVal?.ast?.node,
-            entryPoint.entryPointSymVal,
-            state,
-            entryPoint.scopeVal,
-            { callArgs: this.buildCallArgs(entryPoint.entryPointSymVal?.ast?.node, argValues, entryPoint.entryPointSymVal) }
+                try {
+                  this.executeCall(
+                    entryPoint.entryPointSymVal?.ast?.node,
+                    entryPoint.entryPointSymVal,
+                    state,
+                    entryPoint.scopeVal,
+                    {
+                      callArgs: this.buildCallArgs(
+                        entryPoint.entryPointSymVal?.ast?.node,
+                        argValues,
+                        entryPoint.entryPointSymVal
+                      ),
+                    }
+                  )
+                } catch (e) {
+                  handleException(
+                    e,
+                    `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
+                    `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`
+                  )
+                }
+                this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+              },
+            },
+            this.checkerManager?.resultManagerProxy,
           )
-        } catch (e) {
-          handleException(
-            e,
-            `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
-            `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log file`
-          )
-        }
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
-      } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-        if (hasAnalysised.includes(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)) {
-          continue
-        }
-        hasAnalysised.push(`fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`)
-        EntryPointConfig.setCurrentEntryPoint(entryPoint)
-        logger.info('EntryPoint [%s] is executing ', entryPoint.filePath)
-        if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
-          try {
-            this.processCompileUnit(
-              entryPoint.scopeVal,
-              entryPoint.entryPointSymVal?.ast?.node,
-              this.initState(this.topScope)
-            )
-          } catch (e) {
-            handleException(
-              e,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
-            )
+        } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
+          const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+          if (entryPointMark.skipped) {
+            skipped = true
+            skipReason = entryPointMark.skipReason
+            continue
+          }
+          EntryPointConfig.setCurrentEntryPoint(entryPoint)
+          if (!entryPoint.entryPointSymVal || !entryPoint.scopeVal) {
+            const { filePath } = entryPoint
+            const fileRecord = this.fileManager[filePath]
+            if (!fileRecord) {
+              skipped = true
+              skipReason = 'missing'
+              continue
+            }
+            entryPoint.entryPointSymVal = this.symbolTable.get(fileRecord.uuid)
+            entryPoint.scopeVal = this.symbolTable.get(fileRecord.uuid)
+          }
+          if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
+            const fileState = this.initState(this.topScope)
+            try {
+              executeViaEntryPointExecutor(
+                {
+                  analyzer: this,
+                  entryPoint,
+                  metricStartTime,
+                  findingsBefore,
+                  executionState: fileState,
+                  overloadCount: 1,
+                  epIndex: epIdx,
+                  epTotal: entryPoints.length,
+                },
+                {
+                  language: 'javascript',
+                  classify: () => 'file',
+                  before: () => {
+                    this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+                  },
+                  execute: () => {
+                    this.processCompileUnit(entryPoint.scopeVal, entryPoint.entryPointSymVal?.ast?.node, fileState)
+                  },
+                  after: () => {
+                    this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+                  },
+                },
+                this.checkerManager?.resultManagerProxy,
+              )
+            } catch (e) {
+              handleException(
+                e,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
+              )
+            }
           }
         } else {
-          const { filePath } = entryPoint
-          entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-          entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-          try {
-            this.processCompileUnit(
-              entryPoint.scopeVal,
-              entryPoint.entryPointSymVal?.ast?.node,
-              this.initState(this.topScope)
-            )
-          } catch (e) {
-            handleException(
-              e,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed. Exception message saved in error log file`
-            )
-          }
+          skipped = true
+          skipReason = 'unsupported'
         }
+      } finally {
+        this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
       }
     }
     return true
@@ -264,14 +314,19 @@ class JsAnalyzer extends Analyzer {
 
     // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
     this.performanceTracker.start(PROCESS_MODULE_STAGE)
-    for (const filename in astMap) {
-      const ast = astMap[filename]
-      if (ast) {
-        // sourceCodeCache 已在 parseProject 中自动填充，不需要重新读取
-        this.processModule(ast, filename)
+    this.beginPrimaryCallSummarySession('JavaScript')
+    try {
+      for (const filename in astMap) {
+        const ast = astMap[filename]
+        if (ast) {
+          // sourceCodeCache 已在 parseProject 中自动填充，不需要重新读取
+          this.processModule(ast, filename)
+        }
       }
+    } finally {
+      this.finishPrimaryCallSummarySession()
+      this.performanceTracker.end(PROCESS_MODULE_STAGE)
     }
-    this.performanceTracker.end(PROCESS_MODULE_STAGE)
   }
 
   /**
@@ -294,10 +349,13 @@ class JsAnalyzer extends Analyzer {
     if (ast) {
       // 记录 processModule 时间：处理模块（分析 AST）
       this.performanceTracker.record('preProcess.processModule')?.start()
-      const result = this.processModule(ast, filename)
-      this.performanceTracker.record('preProcess.processModule')?.end()
-
-      return result
+      this.beginPrimaryCallSummarySession('JavaScript')
+      try {
+        return this.processModule(ast, filename)
+      } finally {
+        this.finishPrimaryCallSummarySession()
+        this.performanceTracker.record('preProcess.processModule')?.end()
+      }
     }
   }
 
@@ -407,6 +465,13 @@ class JsAnalyzer extends Analyzer {
     }
     // 获取file中export出来的部分
     return moduleExports
+  }
+
+  /** JS 调用参数保留 callsite 节点，供摘要安全判断调用形态。 */
+  override buildCallArgs(node: BaseNode & { arguments?: BaseNode[] }, argvalues: Value[], fclos: Value): CallArgs {
+    const callArgs = super.buildCallArgs(node, argvalues, fclos) as CallArgs & { node?: BaseNode }
+    callArgs.node = node
+    return callArgs
   }
 
   /**
@@ -875,7 +940,12 @@ class JsAnalyzer extends Analyzer {
         const ast = Parser.parseSingleFile(prog.file, { ...this.options, sourcefile: prog.file }, this.sourceCodeCache)
         if (ast) {
           this.sourceCodeCache.set(prog.file, prog.content.split(/\n/))
-          res = this.processModule(ast, pathname)
+          this.beginPrimaryCallSummarySession('JavaScript')
+          try {
+            res = this.processModule(ast, pathname)
+          } finally {
+            this.finishPrimaryCallSummarySession()
+          }
         }
       }
     } catch (e) {

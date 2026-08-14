@@ -13,6 +13,7 @@ import { UninitializedValue } from './value/uninit'
 import { FunctionValue } from './value/function'
 import { BVTValue } from './value/bvt'
 import type { RType } from './value/data-value'
+import { AstRefList } from './value/ast-ref-list'
 
 const fs = require('fs')
 const path = require('path')
@@ -1739,6 +1740,38 @@ export function loadAnalyzerCache(analyzer: any, cacheId?: string, sourcePath?: 
               unit._syncElements(arr)
             } else {
               unit.value = fieldTarget
+            }
+
+            // 恢复 overloaded：反序列化后为字符串数组（nodehash），需转回 AstRefList
+            const overloaded = unit.overloaded
+            if (Array.isArray(overloaded) && !(overloaded instanceof AstRefList)) {
+              unit.overloaded = AstRefList.from(overloaded, () => unit.getASTManager?.() ?? null)
+            }
+            // 恢复 _ast：反序列化后为普通对象，需重建为 AstBinding
+            const ast = unit._ast
+            if (ast && typeof ast === 'object' && !(ast.constructor?.name === 'AstBinding')) {
+              const { AstBinding } = require('./value/ast-binding')
+              let declsMapForRestore: Map<string, string> | null = null
+              if (ast._declsMap instanceof Map) {
+                declsMapForRestore = new Map()
+                for (const [dk, dv] of ast._declsMap.entries()) {
+                  if (dv?.hash) declsMapForRestore.set(dk, dv.hash)
+                }
+              } else if (ast._declsMap && typeof ast._declsMap === 'object') {
+                declsMapForRestore = new Map()
+                for (const dk in ast._declsMap) {
+                  const dv = ast._declsMap[dk]
+                  if (dv?.hash) declsMapForRestore.set(dk, dv.hash)
+                  else if (typeof dv === 'string') declsMapForRestore.set(dk, dv)
+                }
+              }
+              unit._ast = AstBinding.fromSerializedRefs(
+                unit,
+                ast._nodeRef?.hash,
+                ast._fdefRef?.hash,
+                ast._cdefRef?.hash,
+                declsMapForRestore
+              )
             }
           } catch (e) {
             yasaWarning(`Failed to restore Proxy for Unit ${uuid}: ${e}`)

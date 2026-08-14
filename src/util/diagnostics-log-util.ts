@@ -250,6 +250,72 @@ function getRuleConfigContent(): string {
  * @returns {string} 紧凑的 JSON 字符串
  */
 // eslint-disable-next-line complexity
+function getNumberMetric(source: unknown, key: string): number {
+  if (!source || typeof source !== 'object') return 0
+  const value = (source as Record<string, unknown>)[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function getStringMetric(source: unknown, key: string): string {
+  if (!source || typeof source !== 'object') return ''
+  const value = (source as Record<string, unknown>)[key]
+  return typeof value === 'string' ? value : ''
+}
+
+function getCallSummarySessionStats(analyzer: unknown): unknown[] {
+  const analyzerRecord = analyzer && typeof analyzer === 'object' ? analyzer as Record<string, unknown> : {}
+  const sessions = analyzerRecord.callSummarySessions
+  if (!Array.isArray(sessions)) return []
+  return sessions.map((session) => {
+    if (!session || typeof session !== 'object') return {}
+    return (session as { readonly lastStats?: unknown }).lastStats ?? {}
+  })
+}
+
+function buildPrimaryCallSummaryStats(stats: unknown): Record<string, unknown> {
+  const calls = getNumberMetric(stats, 'calls')
+  const hits = getNumberMetric(stats, 'hits')
+  return {
+    calls,
+    hits,
+    hitRate: calls > 0 ? hits / calls : 0,
+    disabledReason: getStringMetric(stats, 'disabledReason') || 'none',
+    fallbackKeys: getNumberMetric(stats, 'fallbackKeys'),
+    l1Keys: getNumberMetric(stats, 'l1Keys'),
+    l2Keys: getNumberMetric(stats, 'l2Keys'),
+    l3Keys: getNumberMetric(stats, 'l3Keys'),
+    l4Keys: getNumberMetric(stats, 'l4Keys'),
+    replayReadyKeys: getNumberMetric(stats, 'replayReadyKeys'),
+    estimatedKeyBytes: getNumberMetric(stats, 'estimatedKeyBytes'),
+    storedKeyBytes: getNumberMetric(stats, 'storedKeyBytes'),
+    argKeyBuilds: getNumberMetric(stats, 'argKeyBuilds'),
+    runtimeStateKeyBuilds: getNumberMetric(stats, 'runtimeStateKeyBuilds'),
+    optionalStateKeys: getNumberMetric(stats, 'optionalStateKeys'),
+    riskKeyBuilds: getNumberMetric(stats, 'riskKeyBuilds'),
+  }
+}
+
+function buildAdditionalCallSummaryStats(stats: unknown): Record<string, unknown> {
+  const calls = getNumberMetric(stats, 'calls')
+  const hits = getNumberMetric(stats, 'hits')
+  return {
+    calls,
+    hits,
+    hitRate: calls > 0 ? hits / calls : 0,
+    disabledReason: getStringMetric(stats, 'disabledReason') || 'none',
+    instructionTotal: getNumberMetric(stats, 'instructionTotal'),
+    prunedInstructionsEstimated: getNumberMetric(stats, 'prunedInstructionsEstimated'),
+  }
+}
+
+function buildCallSummaryEffectiveness(analyzer: unknown): Record<string, unknown> {
+  const stats = getCallSummarySessionStats(analyzer)
+  return {
+    primary: buildPrimaryCallSummaryStats(stats[0] ?? {}),
+    additional: stats.slice(1).map((entry) => buildAdditionalCallSummaryStats(entry)),
+  }
+}
+
 function generateScanSummary(
   analyzer: any,
   performanceTracker: any,
@@ -360,7 +426,9 @@ function generateScanSummary(
     execTimesP70: analysisData?.executionTimes70Percent || 0,
     execTimesP99: analysisData?.executionTimes99Percent || 0,
     execTimesP100: analysisData?.executionTimes100Percent || 0,
+    callSummaryEffectiveness: buildCallSummaryEffectiveness(analyzer),
   }
+
 
   // 返回紧凑的 JSON 字符串（无空格）
   return JSON.stringify(scanSummary)

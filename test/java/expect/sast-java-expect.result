@@ -388,6 +388,40 @@ Trace:
 
 ------------- 18: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+Line 35: Runtime.getRuntime().exec(a.b)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: cmd
+  25:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: tainted
+  28:  Var Pass:              String tainted = cmd;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: b.attr.b
+  30:  Var Pass:             b.attr.b = tainted;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: c
+  31:  Var Pass:              B c = b;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: alias
+  32:  CALL:              A a = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: alias
+  32:  CALL RETURN:             A a = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: a
+  32:  Var Pass:              A a = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  35:  SINK:              Runtime.getRuntime().exec(a.b);
+
+------------- 19: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_003_T.java
 Line 34: Runtime.getRuntime().exec(e.b)
 SINK RULE:Runtime.getRuntime().exec
@@ -405,7 +439,44 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   34:  SINK:              Runtime.getRuntime().exec(e.b);
 
-------------- 19: taint_flow_java_input_inner-------------
+------------- 20: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+Line 35: Runtime.getRuntime().exec(e.b)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: cmd
+  24:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: c.b
+  30:  Var Pass:             c.b = cmd;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: alias
+  31:  CALL:              A d = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: alias
+  31:  CALL RETURN:             A d = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: d
+  31:  Var Pass:              A d = Invoke.alias(c);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: alias
+  32:  CALL:              A e = Invoke.alias(d);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: alias
+  32:  CALL RETURN:             A e = Invoke.alias(d);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: e
+  32:  Var Pass:              A e = Invoke.alias(d);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/ReturnAlias_004_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  35:  SINK:              Runtime.getRuntime().exec(e.b);
+
+------------- 21: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SameArgumentAlias_001_T.java
 Line 37: Runtime.getRuntime().exec(s)
@@ -433,7 +504,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   37:  SINK:              Runtime.getRuntime().exec(s);
 
-------------- 20: taint_flow_java_input_inner-------------
+------------- 22: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_001_T.java
 Line 32: Runtime.getRuntime().exec(b.b)
@@ -452,7 +523,35 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(b.b);
 
-------------- 21: taint_flow_java_input_inner-------------
+------------- 23: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+Line 32: Runtime.getRuntime().exec(b.b)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: cmd
+  24:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: a.b
+  28:  Var Pass:             a.b = cmd;
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: alias
+  29:  CALL:              A b = Invoke.alias(a);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: alias
+  29:  CALL RETURN:             A b = Invoke.alias(a);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: b
+  29:  Var Pass:              A b = Invoke.alias(a);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/SingleFieldAccessAlias_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  32:  SINK:              Runtime.getRuntime().exec(b.b);
+
+------------- 24: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/StaticFieldAlias_001_T.java
 Line 32: Runtime.getRuntime().exec(StaticData.staticB1.attr.b)
@@ -471,7 +570,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(StaticData.staticB1.attr.b);
 
-------------- 22: taint_flow_java_input_inner-------------
+------------- 25: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/AccessPathChainAlias_001_T.java
 Line 32: Runtime.getRuntime().exec(myTree.left.right.left.left.right.left.data)
@@ -490,7 +589,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(myTree.left.right.left.left.right.left.data);
 
-------------- 23: taint_flow_java_input_inner-------------
+------------- 26: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/AccessPathChainAlias_003_T.java
 Line 32: Runtime.getRuntime().exec(last.b)
@@ -512,7 +611,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(last.b);
 
-------------- 24: taint_flow_java_input_inner-------------
+------------- 27: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_001_T.java
 Line 29: Runtime.getRuntime().exec(simpleBean.getCmd())
@@ -534,7 +633,26 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(simpleBean.getCmd());
 
-------------- 25: taint_flow_java_input_inner-------------
+------------- 28: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_002_F.java
+Line 29: Runtime.getRuntime().exec(cmdObject.getCmd2())
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_002_F.java
+  AffectedNodeName: cmd
+  23:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_002_F.java
+  AffectedNodeName: getCmd2
+  29:  CALL RETURN:             Runtime.getRuntime().exec(cmdObject.getCmd2());
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_interface_class/PropertyIsTaintOrNot_Object_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  29:  SINK:              Runtime.getRuntime().exec(cmdObject.getCmd2());
+
+------------- 29: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/Array_index_muilt_collection_001_T.java
 Line 26: Runtime.getRuntime().exec(arr.0.0)
@@ -553,7 +671,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(arr[0][0]);
 
-------------- 26: taint_flow_java_input_inner-------------
+------------- 30: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
 Line 44: httpclient.execute(httpGet)
@@ -573,12 +691,6 @@ Trace:
   34:  CALL:              xCmdObject.setModelMap(paramMap);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java
   AffectedNodeName: getModelMap
-  35:  CALL:              HttpUtil.doGet(xCmdObject.getModelMap().get("url1"));
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java
-  AffectedNodeName: xCmdObject
-  35:  ARG PASS:              HttpUtil.doGet(xCmdObject.getModelMap().get("url1"));
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java
-  AffectedNodeName: getModelMap
   35:  CALL RETURN:             HttpUtil.doGet(xCmdObject.getModelMap().get("url1"));
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java
   AffectedNodeName: doGet
@@ -590,7 +702,7 @@ Trace:
   AffectedNodeName: doGet
   65:  CALL:          return doGet(url, null);
  /src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
-  AffectedNodeName: doGet
+  AffectedNodeName: url
   22:  ARG PASS:      public static String doGet(String url, Map<String, String> param) throws Exception {
  /src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
   AffectedNodeName: builder
@@ -605,7 +717,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   44:  SINK:              response = httpclient.execute(httpGet);
 
-------------- 27: taint_flow_java_input_inner-------------
+------------- 31: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ArrayElementOverwrite_001_T.java
 Line 30: Runtime.getRuntime().exec(c.1)
@@ -627,7 +739,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(c[1]);
 
-------------- 28: taint_flow_java_input_inner-------------
+------------- 32: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ArrayElementOverwrite_003_T.java
 Line 32: Runtime.getRuntime().exec(c.get(0))
@@ -649,7 +761,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(c.get(0));
 
-------------- 29: taint_flow_java_input_inner-------------
+------------- 33: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/Map_obj_sensitive_001_T.java
 Line 28: SinkUtil.sink(m)
@@ -668,7 +780,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   28:  SINK:              SinkUtil.sink(m);
 
-------------- 30: taint_flow_java_input_inner-------------
+------------- 34: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/Map_obj_sensitive_003_T.java
 Line 29: SinkUtil.sink(m)
@@ -687,7 +799,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(m);
 
-------------- 31: taint_flow_java_input_inner-------------
+------------- 35: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/Map_obj_sensitive_005_T.java
 Line 30: SinkUtil.sink(m)
@@ -706,7 +818,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   30:  SINK:              SinkUtil.sink(m);
 
-------------- 32: taint_flow_java_input_inner-------------
+------------- 36: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java
 Line 30: Runtime.getRuntime().exec(a.getCmd())
@@ -728,7 +840,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(a.getCmd());
 
-------------- 33: taint_flow_java_input_inner-------------
+------------- 37: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
 Line 44: httpclient.execute(httpGet)
@@ -765,7 +877,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   44:  SINK:              response = httpclient.execute(httpGet);
 
-------------- 34: taint_flow_java_input_inner-------------
+------------- 38: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_001_T.java
 Line 27: Runtime.getRuntime().exec(a)
@@ -790,7 +902,29 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 35: taint_flow_java_input_inner-------------
+------------- 39: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java
+Line 28: Runtime.getRuntime().exec(a)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java
+  AffectedNodeName: cmd
+  23:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java
+  AffectedNodeName: chooseOne
+  27:  CALL:              String a = Invoke.chooseOne(2, "a", "b", "c", cmd, "e");
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java
+  AffectedNodeName: a
+  27:  Var Pass:              String a = Invoke.chooseOne(2, "a", "b", "c", cmd, "e");
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  28:  SINK:              Runtime.getRuntime().exec(a);
+
+------------- 40: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -812,7 +946,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 36: taint_flow_java_input_inner-------------
+------------- 41: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -834,7 +968,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 37: taint_flow_java_input_inner-------------
+------------- 42: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.java
 Line 34: Runtime.getRuntime().exec(o)
@@ -865,7 +999,35 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   34:  SINK:              Runtime.getRuntime().exec(o);
 
-------------- 38: taint_flow_java_input_inner-------------
+------------- 43: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+Line 35: Runtime.getRuntime().exec(o)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java","functionName":"returnValuePassing002F","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: __taint_src
+  21:  SOURCE:      public static void returnValuePassing002F(@RequestParam String __taint_src) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: process
+  23:  CALL:          String data = process(__taint_src);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: data
+  23:  Var Pass:          String data = process(__taint_src);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: __taint_sink
+  24:  CALL:          __taint_sink(data);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: o
+  33:  ARG PASS:      private static void __taint_sink(String o) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  35:  SINK:              Runtime.getRuntime().exec(o);
+
+------------- 44: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java
 Line 28: Runtime.getRuntime().exec(ps.getCmd())
@@ -890,7 +1052,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(ps.getCmd());
 
-------------- 39: taint_flow_java_input_inner-------------
+------------- 45: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/T.java
 Line 16: Runtime.getRuntime().exec(this.cmd)
@@ -911,12 +1073,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java
   AffectedNodeName: run
   25:  CALL:          t.start();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java
-  AffectedNodeName: t
-  25:  ARG PASS:          t.start();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java
-  AffectedNodeName: run
-  25:  CALL:          t.start();
  /src/main/java/com/sast/astbenchmark/model/custom/T.java
   AffectedNodeName: run
   14:  ARG PASS:      public void run() {
@@ -924,7 +1080,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 40: taint_flow_java_input_inner-------------
+------------- 46: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java
 Line 30: Runtime.getRuntime().exec(cmd)
@@ -946,7 +1102,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                      Runtime.getRuntime().exec(cmd);
 
-------------- 41: taint_flow_java_input_inner-------------
+------------- 47: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/R.java
 Line 16: Runtime.getRuntime().exec(this.cmd)
@@ -967,12 +1123,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java
   AffectedNodeName: run
   26:  CALL:          Executors.newCachedThreadPool().execute(r);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java
-  AffectedNodeName: Executors.newCachedThreadPool()
-  26:  ARG PASS:          Executors.newCachedThreadPool().execute(r);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java
-  AffectedNodeName: run
-  26:  CALL:          Executors.newCachedThreadPool().execute(r);
  /src/main/java/com/sast/astbenchmark/model/custom/R.java
   AffectedNodeName: run
   14:  ARG PASS:      public void run() {
@@ -980,7 +1130,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 42: taint_flow_java_input_inner-------------
+------------- 48: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/TT.java
 Line 18: Runtime.getRuntime().exec(this.cmd)
@@ -1001,12 +1151,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java
   AffectedNodeName: run
   27:  CALL:          timer.schedule(tt, 2000);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java
-  AffectedNodeName: timer
-  27:  ARG PASS:          timer.schedule(tt, 2000);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java
-  AffectedNodeName: run
-  27:  CALL:          timer.schedule(tt, 2000);
  /src/main/java/com/sast/astbenchmark/model/custom/TT.java
   AffectedNodeName: run
   16:  ARG PASS:      public void run() {
@@ -1014,7 +1158,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   18:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 43: taint_flow_java_input_inner-------------
+------------- 49: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
 Line 39: Runtime.getRuntime().exec(obj.a)
@@ -1027,9 +1171,6 @@ Trace:
   AffectedNodeName: cmd
   26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
-  AffectedNodeName: obj.a
-  32:  Var Pass:                 obj.a = cmd;
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
   AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_009_T.testcase.<anonymousFunc_36_37_45_9>
   36:  CALL:          Thread thread2 = new Thread(() -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_009_T.java
@@ -1039,7 +1180,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   39:  SINK:                      Runtime.getRuntime().exec(obj.a);
 
-------------- 44: taint_flow_java_input_inner-------------
+------------- 50: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/CompletableFuture_asynchronous_001_T.java
 Line 44: Runtime.getRuntime().exec(result.get())
@@ -1058,7 +1199,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   44:  SINK:              Runtime.getRuntime().exec(result.get());
 
-------------- 45: taint_flow_java_input_inner-------------
+------------- 51: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignObjectAttribute_002_T.java
 Line 31: Runtime.getRuntime().exec(b.getCmd())
@@ -1083,7 +1224,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(b.getCmd());
 
-------------- 46: taint_flow_java_input_inner-------------
+------------- 52: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignedByFixedValue_002_T.java
 Line 25: Runtime.getRuntime().exec(cmd)
@@ -1099,7 +1240,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   25:  SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 47: taint_flow_java_input_inner-------------
+------------- 53: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/AssignedByVariable_002_T.java
 Line 28: Runtime.getRuntime().exec(a)
@@ -1118,7 +1259,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 48: taint_flow_java_input_inner-------------
+------------- 54: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/FlowSensitiveAlias_001_T.java
 Line 32: Runtime.getRuntime().exec(dc2.data)
@@ -1140,7 +1281,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(dc2.data);
 
-------------- 49: taint_flow_java_input_inner-------------
+------------- 55: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/normal_stmt/FlowSensitiveAlias_003_T.java
 Line 32: Runtime.getRuntime().exec(b.attr.b)
@@ -1159,7 +1300,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(b.attr.b);
 
-------------- 50: taint_flow_java_input_inner-------------
+------------- 56: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_001_T.java
 Line 30: Runtime.getRuntime().exec(cmd)
@@ -1175,7 +1316,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                  Runtime.getRuntime().exec(cmd);
 
-------------- 51: taint_flow_java_input_inner-------------
+------------- 57: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_003_T.java
 Line 28: Runtime.getRuntime().exec(ex.getMessage())
@@ -1189,7 +1330,7 @@ Trace:
   22:  SOURCE:      public Map<String, Object> testcase(@PathVariable String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_003_T.java
   AffectedNodeName: new RuntimeException(cmd)
-  25:  Throw Pass:              throw new RuntimeException(cmd);
+  25:  Var Pass:              throw new RuntimeException(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_003_T.java
   AffectedNodeName: ex
   26:  Var Pass:          } catch (RuntimeException ex) {
@@ -1204,7 +1345,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:                  Runtime.getRuntime().exec(ex.getMessage());
 
-------------- 52: taint_flow_java_input_inner-------------
+------------- 58: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_005_T.java
 Line 30: Runtime.getRuntime().exec(ex.getMessage())
@@ -1218,7 +1359,7 @@ Trace:
   23:  SOURCE:      public Map<String, Object> testcase(@PathVariable String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_005_T.java
   AffectedNodeName: new IOException(cmd)
-  27:  Throw Pass:              throw new IOException(cmd);
+  27:  Var Pass:              throw new IOException(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/exception_throw/Statement_TryStatement_005_T.java
   AffectedNodeName: ex
   28:  Var Pass:          } catch (IndexOutOfBoundsException | IOException ex) {
@@ -1233,7 +1374,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                  Runtime.getRuntime().exec(ex.getMessage());
 
-------------- 53: taint_flow_java_input_inner-------------
+------------- 59: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_001_T.java
 Line 33: Runtime.getRuntime().exec(a)
@@ -1252,7 +1393,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 54: taint_flow_java_input_inner-------------
+------------- 60: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_002_F.java
 Line 33: Runtime.getRuntime().exec(a)
@@ -1271,7 +1412,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 55: taint_flow_java_input_inner-------------
+------------- 61: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_003_T.java
 Line 36: Runtime.getRuntime().exec(a)
@@ -1290,7 +1431,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 56: taint_flow_java_input_inner-------------
+------------- 62: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_004_F.java
 Line 36: Runtime.getRuntime().exec(a)
@@ -1309,7 +1450,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 57: taint_flow_java_input_inner-------------
+------------- 63: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_005_T.java
 Line 33: Runtime.getRuntime().exec(a)
@@ -1328,7 +1469,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 58: taint_flow_java_input_inner-------------
+------------- 64: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_006_F.java
 Line 33: Runtime.getRuntime().exec(a)
@@ -1347,7 +1488,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 59: taint_flow_java_input_inner-------------
+------------- 65: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_007_T.java
 Line 36: Runtime.getRuntime().exec(a)
@@ -1366,7 +1507,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 60: taint_flow_java_input_inner-------------
+------------- 66: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/explicit_jump_control/Statement_InterruptStatement_008_F.java
 Line 36: Runtime.getRuntime().exec(a)
@@ -1385,7 +1526,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 61: taint_flow_java_input_inner-------------
+------------- 67: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/array/Base_ArrayAccess_001_T.java
 Line 28: Runtime.getRuntime().exec(cmdStr)
@@ -1404,7 +1545,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(cmdStr);
 
-------------- 62: taint_flow_java_input_inner-------------
+------------- 68: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/array/Base_ArrayAccess_003_T.java
 Line 28: Runtime.getRuntime().exec(cookies.0.getName())
@@ -1423,7 +1564,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(cookies[0].getName());
 
-------------- 63: taint_flow_java_input_inner-------------
+------------- 69: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/array/Base_ArrayAccess_005_T.java
 Line 27: Runtime.getRuntime().exec(arr)
@@ -1442,7 +1583,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(arr);
 
-------------- 64: taint_flow_java_input_inner-------------
+------------- 70: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/array/Base_ArrayAccess_007_T.java
 Line 28: Runtime.getRuntime().exec(data.0.0)
@@ -1461,7 +1602,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(data[0][0]);
 
-------------- 65: taint_flow_java_input_inner-------------
+------------- 71: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/array/Base_ArrayAccess_009_T.java
 Line 29: Runtime.getRuntime().exec(s)
@@ -1483,7 +1624,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(s);
 
-------------- 66: taint_flow_java_input_inner-------------
+------------- 72: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_List_001_T.java
 Line 33: Runtime.getRuntime().exec(cmd.get(0))
@@ -1499,7 +1640,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(cmd.get(0));
 
-------------- 67: taint_flow_java_input_inner-------------
+------------- 73: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_List_003_T.java
 Line 32: SinkUtil.sink(cmd)
@@ -1515,7 +1656,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   32:  SINK:          SinkUtil.sink(cmd);
 
-------------- 68: taint_flow_java_input_inner-------------
+------------- 74: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_List_005_T.java
 Line 32: SinkUtil.sink(list)
@@ -1534,7 +1675,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   32:  SINK:          SinkUtil.sink(list);
 
-------------- 69: taint_flow_java_input_inner-------------
+------------- 75: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_List_007_T.java
 Line 32: SinkUtil.sink(list)
@@ -1553,7 +1694,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   32:  SINK:          SinkUtil.sink(list);
 
-------------- 70: taint_flow_java_input_inner-------------
+------------- 76: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Queue_001_T.java
 Line 39: SinkUtil.sink(queue)
@@ -1572,7 +1713,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   39:  SINK:          SinkUtil.sink(queue);
 
-------------- 71: taint_flow_java_input_inner-------------
+------------- 77: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Queue_003_T.java
 Line 37: Runtime.getRuntime().exec(queue.peek())
@@ -1591,7 +1732,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   37:  SINK:              Runtime.getRuntime().exec(queue.peek());
 
-------------- 72: taint_flow_java_input_inner-------------
+------------- 78: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Queue_005_T.java
 Line 32: SinkUtil.sink(queue)
@@ -1610,7 +1751,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   32:  SINK:          SinkUtil.sink(queue);
 
-------------- 73: taint_flow_java_input_inner-------------
+------------- 79: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Set_001_T.java
 Line 38: SinkUtil.sink(stringSet)
@@ -1629,7 +1770,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   38:  SINK:          SinkUtil.sink(stringSet);
 
-------------- 74: taint_flow_java_input_inner-------------
+------------- 80: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Set_003_T.java
 Line 37: Runtime.getRuntime().exec(stringSet.stream().iterator().next())
@@ -1648,7 +1789,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   37:  SINK:              Runtime.getRuntime().exec(stringSet.stream().iterator().next());
 
-------------- 75: taint_flow_java_input_inner-------------
+------------- 81: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/collections/Base_Set_005_T.java
 Line 32: SinkUtil.sink(stringSet)
@@ -1667,7 +1808,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   32:  SINK:          SinkUtil.sink(stringSet);
 
-------------- 76: taint_flow_java_input_inner-------------
+------------- 82: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_001_T.java
 Line 28: Runtime.getRuntime().exec(a.getCmd())
@@ -1692,7 +1833,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(a.getCmd());
 
-------------- 77: taint_flow_java_input_inner-------------
+------------- 83: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/generics/CallExpression_CustomCode_Class_generics_003_T.java
 Line 28: Runtime.getRuntime().exec((String)a.getCmd())
@@ -1717,7 +1858,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec((String) a.getCmd());
 
-------------- 78: taint_flow_java_input_inner-------------
+------------- 84: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/map/Base_Map_001_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -1733,7 +1874,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 79: taint_flow_java_input_inner-------------
+------------- 85: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/map/Base_Map_003_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1749,7 +1890,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 80: taint_flow_java_input_inner-------------
+------------- 86: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_ByteArray_001_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -1765,7 +1906,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 81: taint_flow_java_input_inner-------------
+------------- 87: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_ByteArray_003_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1781,7 +1922,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 82: taint_flow_java_input_inner-------------
+------------- 88: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Byte_001_T.java
 Line 29: SinkUtil.sink(cmd)
@@ -1797,7 +1938,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:          SinkUtil.sink(cmd);
 
-------------- 83: taint_flow_java_input_inner-------------
+------------- 89: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Byte_003_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -1813,7 +1954,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 84: taint_flow_java_input_inner-------------
+------------- 90: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Byte_005_T.java
 Line 27: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1829,7 +1970,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 85: taint_flow_java_input_inner-------------
+------------- 91: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Byte_007_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1845,7 +1986,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 86: taint_flow_java_input_inner-------------
+------------- 92: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_CharArray_001_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -1861,7 +2002,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 87: taint_flow_java_input_inner-------------
+------------- 93: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_CharArray_003_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1877,7 +2018,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 88: taint_flow_java_input_inner-------------
+------------- 94: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Char_001_T.java
 Line 29: SinkUtil.sink(cmd)
@@ -1893,7 +2034,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:          SinkUtil.sink(cmd);
 
-------------- 89: taint_flow_java_input_inner-------------
+------------- 95: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Char_003_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -1909,7 +2050,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 90: taint_flow_java_input_inner-------------
+------------- 96: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Char_005_T.java
 Line 26: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1925,7 +2066,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 91: taint_flow_java_input_inner-------------
+------------- 97: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Char_007_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1941,7 +2082,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 92: taint_flow_java_input_inner-------------
+------------- 98: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Double_001_T.java
 Line 29: SinkUtil.sink(cmd)
@@ -1957,7 +2098,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:          SinkUtil.sink(cmd);
 
-------------- 93: taint_flow_java_input_inner-------------
+------------- 99: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Double_003_T.java
 Line 30: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -1973,7 +2114,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 94: taint_flow_java_input_inner-------------
+------------- 100: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Float_001_T.java
 Line 29: SinkUtil.sink(cmd)
@@ -1989,7 +2130,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:          SinkUtil.sink(cmd);
 
-------------- 95: taint_flow_java_input_inner-------------
+------------- 101: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Float_003_T.java
 Line 30: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -2005,7 +2146,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 96: taint_flow_java_input_inner-------------
+------------- 102: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Integer_001_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -2021,7 +2162,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 97: taint_flow_java_input_inner-------------
+------------- 103: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Integer_003_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -2037,7 +2178,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 98: taint_flow_java_input_inner-------------
+------------- 104: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Integer_005_T.java
 Line 26: SinkUtil.sink(cmd)
@@ -2053,7 +2194,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   26:  SINK:          SinkUtil.sink(cmd);
 
-------------- 99: taint_flow_java_input_inner-------------
+------------- 105: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Integer_007_T.java
 Line 26: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -2069,7 +2210,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 100: taint_flow_java_input_inner-------------
+------------- 106: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Long_001_T.java
 Line 29: SinkUtil.sink(cmd)
@@ -2085,7 +2226,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:          SinkUtil.sink(cmd);
 
-------------- 101: taint_flow_java_input_inner-------------
+------------- 107: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Long_003_T.java
 Line 33: SinkUtil.sink(cmd)
@@ -2101,7 +2242,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   33:  SINK:          SinkUtil.sink(cmd);
 
-------------- 102: taint_flow_java_input_inner-------------
+------------- 108: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Long_005_T.java
 Line 27: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -2117,7 +2258,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 103: taint_flow_java_input_inner-------------
+------------- 109: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/primitives/Base_Long_007_T.java
 Line 31: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -2133,7 +2274,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 104: taint_flow_java_input_inner-------------
+------------- 110: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/string/Base_StringArray_001_T.java
 Line 31: Runtime.getRuntime().exec(cmd.0)
@@ -2149,7 +2290,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(cmd[0]);
 
-------------- 105: taint_flow_java_input_inner-------------
+------------- 111: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/string/Base_StringBuffer_001_T.java
 Line 33: Runtime.getRuntime().exec(data.toString())
@@ -2168,7 +2309,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(data.toString());
 
-------------- 106: taint_flow_java_input_inner-------------
+------------- 112: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/string/Base_StringBuilder_001_T.java
 Line 33: Runtime.getRuntime().exec(data.toString())
@@ -2187,7 +2328,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(data.toString());
 
-------------- 107: taint_flow_java_input_inner-------------
+------------- 113: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/datatype/string/Base_String_001_T.java
 Line 31: Runtime.getRuntime().exec(cmd)
@@ -2203,7 +2344,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 108: taint_flow_java_input_inner-------------
+------------- 114: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/abstract_class/CallExpression_CustomCode_abstract_class_001_T.java
 Line 32: Runtime.getRuntime().exec(ac.getCmd())
@@ -2225,7 +2366,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(ac.getCmd());
 
-------------- 109: taint_flow_java_input_inner-------------
+------------- 115: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
 Line 35: Runtime.getRuntime().exec(ac.getCmd())
@@ -2241,16 +2382,13 @@ Trace:
   AffectedNodeName: setCmd
   34:  CALL:              ac.setCmd(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
-  AffectedNodeName: [return value]
-  31:  Return Value:                      return this.cmd;
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
   AffectedNodeName: getCmd
   35:  CALL RETURN:             Runtime.getRuntime().exec(ac.getCmd());
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/anonymous_object/CallExpression_CustomCode_anonymous_object_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   35:  SINK:              Runtime.getRuntime().exec(ac.getCmd());
 
-------------- 110: taint_flow_java_input_inner-------------
+------------- 116: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_001_T.java
 Line 28: Runtime.getRuntime().exec(a.getCmd())
@@ -2275,7 +2413,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(a.getCmd());
 
-------------- 111: taint_flow_java_input_inner-------------
+------------- 117: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Class_003_T.java
 Line 26: Runtime.getRuntime().exec(local(cmd))
@@ -2297,7 +2435,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(local(cmd));
 
-------------- 112: taint_flow_java_input_inner-------------
+------------- 118: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
 Line 28: Runtime.getRuntime().exec(s.getCmd(ls, cmd))
@@ -2311,12 +2449,15 @@ Trace:
   24:  SOURCE:      public Map<String, Object> testcase(@PathVariable String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
   AffectedNodeName: <anonymousFunc_27_46_27_60>
+  28:  CALL:              Runtime.getRuntime().exec(s.getCmd("ls", cmd));
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
+  AffectedNodeName: <anonymousFunc_27_46_27_60>
   28:  CALL RETURN:             Runtime.getRuntime().exec(s.getCmd("ls", cmd));
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/complex_object/CallExpression_CustomCode_Interface_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(s.getCmd("ls", cmd));
 
-------------- 113: taint_flow_java_input_inner-------------
+------------- 119: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/interface_class/simple_object/simple_object_001_T.java
 Line 29: SinkUtil.sink(a)
@@ -2338,7 +2479,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(a);
 
-------------- 114: taint_flow_java_input_inner-------------
+------------- 120: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/variable_scope/static_variable/static_variable_001_T.java
 Line 29: SinkUtil.sink(P.t)
@@ -2357,7 +2498,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(P.t);
 
-------------- 115: taint_flow_java_input_inner-------------
+------------- 121: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/T.java
 Line 16: Runtime.getRuntime().exec(this.cmd)
@@ -2378,12 +2519,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java
   AffectedNodeName: run
   25:  CALL:          t.start();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java
-  AffectedNodeName: t
-  25:  ARG PASS:          t.start();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java
-  AffectedNodeName: run
-  25:  CALL:          t.start();
  /src/main/java/com/sast/astbenchmark/model/custom/T.java
   AffectedNodeName: run
   14:  ARG PASS:      public void run() {
@@ -2391,7 +2526,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 116: taint_flow_java_input_inner-------------
+------------- 122: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java
 Line 30: Runtime.getRuntime().exec(cmd)
@@ -2413,7 +2548,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                      Runtime.getRuntime().exec(cmd);
 
-------------- 117: taint_flow_java_input_inner-------------
+------------- 123: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/R.java
 Line 16: Runtime.getRuntime().exec(this.cmd)
@@ -2434,12 +2569,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java
   AffectedNodeName: run
   26:  CALL:          Executors.newCachedThreadPool().execute(r);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java
-  AffectedNodeName: Executors.newCachedThreadPool()
-  26:  ARG PASS:          Executors.newCachedThreadPool().execute(r);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java
-  AffectedNodeName: run
-  26:  CALL:          Executors.newCachedThreadPool().execute(r);
  /src/main/java/com/sast/astbenchmark/model/custom/R.java
   AffectedNodeName: run
   14:  ARG PASS:      public void run() {
@@ -2447,7 +2576,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   16:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 118: taint_flow_java_input_inner-------------
+------------- 124: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/model/custom/TT.java
 Line 18: Runtime.getRuntime().exec(this.cmd)
@@ -2468,12 +2597,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_007_T.java
   AffectedNodeName: run
   27:  CALL:          timer.schedule(tt, 2000);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_007_T.java
-  AffectedNodeName: timer
-  27:  ARG PASS:          timer.schedule(tt, 2000);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_007_T.java
-  AffectedNodeName: run
-  27:  CALL:          timer.schedule(tt, 2000);
  /src/main/java/com/sast/astbenchmark/model/custom/TT.java
   AffectedNodeName: run
   16:  ARG PASS:      public void run() {
@@ -2481,7 +2604,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   18:  SINK:              Runtime.getRuntime().exec(this.cmd);
 
-------------- 119: taint_flow_java_input_inner-------------
+------------- 125: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
 Line 39: Runtime.getRuntime().exec(obj.a)
@@ -2494,9 +2617,6 @@ Trace:
   AffectedNodeName: cmd
   26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
-  AffectedNodeName: obj.a
-  32:  Var Pass:                 obj.a = cmd;
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
   AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_009_T.testcase.<anonymousFunc_36_37_45_9>
   36:  CALL:          Thread thread2 = new Thread(() -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_009_T.java
@@ -2506,7 +2626,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   39:  SINK:                      Runtime.getRuntime().exec(obj.a);
 
-------------- 120: taint_flow_java_input_inner-------------
+------------- 126: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_001_T.java
 Line 44: Runtime.getRuntime().exec(result.get())
@@ -2525,7 +2645,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   44:  SINK:              Runtime.getRuntime().exec(result.get());
 
-------------- 121: taint_flow_java_input_inner-------------
+------------- 127: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
 Line 47: Runtime.getRuntime().exec(notCleanedResult)
@@ -2541,31 +2661,8 @@ Trace:
   AffectedNodeName: result
   30:  Var Pass:          AtomicReference<String> result = new AtomicReference<>(cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  CALL:              }).thenAccept(notCleanedResult -> {
+  33:  CALL:              CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
   AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
   44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
@@ -2573,251 +2670,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   47:  SINK:                      Runtime.getRuntime().exec(notCleanedResult);
 
-------------- 122: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-Line 47: Runtime.getRuntime().exec(notCleanedResult)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: cmd
-  28:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: result
-  30:  Var Pass:          AtomicReference<String> result = new AtomicReference<>(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  CALL:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime()
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  47:  SINK:                      Runtime.getRuntime().exec(notCleanedResult);
-
-------------- 123: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-Line 47: Runtime.getRuntime().exec(notCleanedResult)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: cmd
-  28:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: result
-  30:  Var Pass:          AtomicReference<String> result = new AtomicReference<>(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  CALL:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime()
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: future
-  33:  Var Pass:              CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  Var Pass:                  // 异步任务开始
-  35:  Var Pass:                  try {
-  36:  Var Pass:                      Thread.sleep(2000); // 模拟长时间任务
-  37:  Var Pass:                      return "Task completed with input: " + result.get();
-  38:  Var Pass:                  } catch (InterruptedException e) {
-  39:  Var Pass:                      throw new RuntimeException(e);
-  40:  Var Pass:                  }
-  41:  Var Pass:              }, executorService).thenApply(output -> {
-  42:  Var Pass:                  // 处理结果
-  43:  Var Pass:                  return result.get();
-  44:  Var Pass:              }).thenAccept(notCleanedResult -> {
-  45:  Var Pass:                  // 最终操作
-  46:  Var Pass:                  try {
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
-  48:  Var Pass:                  } catch (Exception e) {
-  49:  Var Pass:                      modelMap.put("status", "error");
-  50:  Var Pass:                  }
-  51:  Var Pass:              });
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  47:  SINK:                      Runtime.getRuntime().exec(notCleanedResult);
-
-------------- 124: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-Line 47: Runtime.getRuntime().exec(notCleanedResult)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: cmd
-  28:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: result
-  30:  Var Pass:          AtomicReference<String> result = new AtomicReference<>(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  CALL:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.promise_callback_await.CompletableFuture_003_T.testcase.<anonymousFunc_44_27_51_13>
-  44:  ARG PASS:              }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime()
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: future
-  33:  Var Pass:              CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  Var Pass:                  // 异步任务开始
-  35:  Var Pass:                  try {
-  36:  Var Pass:                      Thread.sleep(2000); // 模拟长时间任务
-  37:  Var Pass:                      return "Task completed with input: " + result.get();
-  38:  Var Pass:                  } catch (InterruptedException e) {
-  39:  Var Pass:                      throw new RuntimeException(e);
-  40:  Var Pass:                  }
-  41:  Var Pass:              }, executorService).thenApply(output -> {
-  42:  Var Pass:                  // 处理结果
-  43:  Var Pass:                  return result.get();
-  44:  Var Pass:              }).thenAccept(notCleanedResult -> {
-  45:  Var Pass:                  // 最终操作
-  46:  Var Pass:                  try {
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
-  48:  Var Pass:                  } catch (Exception e) {
-  49:  Var Pass:                      modelMap.put("status", "error");
-  50:  Var Pass:                  }
-  51:  Var Pass:              });
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  37:  Return Value:                      return "Task completed with input: " + result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_33_76_41_13>
-  33:  CALL RETURN:             CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-  34:  CALL RETURN:                 // 异步任务开始
-  35:  CALL RETURN:                 try {
-  36:  CALL RETURN:                     Thread.sleep(2000); // 模拟长时间任务
-  37:  CALL RETURN:                     return "Task completed with input: " + result.get();
-  38:  CALL RETURN:                 } catch (InterruptedException e) {
-  39:  CALL RETURN:                     throw new RuntimeException(e);
-  40:  CALL RETURN:                 }
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: [return value]
-  43:  Return Value:                  return result.get();
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: <anonymousFunc_41_43_44_13>
-  41:  CALL RETURN:             }, executorService).thenApply(output -> {
-  42:  CALL RETURN:                 // 处理结果
-  43:  CALL RETURN:                 return result.get();
-  44:  CALL RETURN:             }).thenAccept(notCleanedResult -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime()
-  47:  Var Pass:                      Runtime.getRuntime().exec(notCleanedResult);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/CompletableFuture_003_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  47:  SINK:                      Runtime.getRuntime().exec(notCleanedResult);
-
-------------- 125: taint_flow_java_input_inner-------------
+------------- 128: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -2839,7 +2692,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 126: taint_flow_java_input_inner-------------
+------------- 129: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -2861,7 +2714,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 127: taint_flow_java_input_inner-------------
+------------- 130: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -2883,7 +2736,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 128: taint_flow_java_input_inner-------------
+------------- 131: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -2908,7 +2761,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 129: taint_flow_java_input_inner-------------
+------------- 132: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -2930,7 +2783,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 130: taint_flow_java_input_inner-------------
+------------- 133: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/loop_stmt/Statement_DoStatement_001_T.java
 Line 33: Runtime.getRuntime().exec(a)
@@ -2949,7 +2802,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 131: taint_flow_java_input_inner-------------
+------------- 134: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/loop_stmt/Statement_ForEachStatement_001_T.java
 Line 30: Runtime.getRuntime().exec(a)
@@ -2971,7 +2824,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 132: taint_flow_java_input_inner-------------
+------------- 135: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/loop_stmt/Statement_ForStatement_001_T.java
 Line 29: Runtime.getRuntime().exec(a)
@@ -2990,7 +2843,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 133: taint_flow_java_input_inner-------------
+------------- 136: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/loop_stmt/Statement_WhileStatement_001_T.java
 Line 31: Runtime.getRuntime().exec(a)
@@ -3009,7 +2862,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 134: taint_flow_java_input_inner-------------
+------------- 137: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/exception_error/assert_statement/Statement_AssertStatement_001_T.java
 Line 25: Runtime.getRuntime().exec(cmd)
@@ -3025,7 +2878,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   25:  SINK:              assert cmd == null : Runtime.getRuntime().exec(cmd);
 
-------------- 135: taint_flow_java_input_inner-------------
+------------- 138: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/exception_error/assert_statement/Statement_AssertStatement_002_F.java
 Line 25: Runtime.getRuntime().exec(cmd)
@@ -3041,7 +2894,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   25:  SINK:              assert cmd != null : Runtime.getRuntime().exec(cmd);
 
-------------- 136: taint_flow_java_input_inner-------------
+------------- 139: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/exception_error/exception_throw/Statement_FinallyStatement_001_T.java
 Line 30: Runtime.getRuntime().exec(cmd)
@@ -3057,7 +2910,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:                  Runtime.getRuntime().exec(cmd);
 
-------------- 137: taint_flow_java_input_inner-------------
+------------- 140: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/exception_error/exception_throw/Statement_TryBlock_001_T.java
 Line 25: Runtime.getRuntime().exec(cmd)
@@ -3073,7 +2926,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   25:  SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 138: taint_flow_java_input_inner-------------
+------------- 141: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/exception_error/exception_throw/Statement_TryCatchStatement_001_T.java
 Line 29: Runtime.getRuntime().exec(cmd)
@@ -3089,7 +2942,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:                  Runtime.getRuntime().exec(cmd);
 
-------------- 139: taint_flow_java_input_inner-------------
+------------- 142: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_AssignmentExpression_001_T.java
 Line 31: Runtime.getRuntime().exec(b.0)
@@ -3106,12 +2959,12 @@ Trace:
   30:  Var Pass:              System.arraycopy(cmd, 0, b, 0, 2);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_AssignmentExpression_001_T.java
   AffectedNodeName: b
-  31:  Throw Pass:              Runtime.getRuntime().exec(b[0]);
+  31:  Var Pass:              Runtime.getRuntime().exec(b[0]);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_AssignmentExpression_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(b[0]);
 
-------------- 140: taint_flow_java_input_inner-------------
+------------- 143: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_AssignmentExpression_003_T.java
 Line 27: Runtime.getRuntime().exec(a)
@@ -3130,7 +2983,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 141: taint_flow_java_input_inner-------------
+------------- 144: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_BitOperation_001_T.java
 Line 27: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -3146,13 +2999,10 @@ Trace:
   AffectedNodeName: cmd
   26:  Var Pass:             cmd = (char) (cmd << 1);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_BitOperation_001_T.java
-  AffectedNodeName: String
-  27:  Var Pass:              Runtime.getRuntime().exec(String.valueOf(cmd));
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_BitOperation_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 142: taint_flow_java_input_inner-------------
+------------- 145: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_ClassInstance_Infix_001_T.java
 Line 26: Runtime.getRuntime().exec(new String(cmd+ &))
@@ -3168,7 +3018,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(new String(cmd + " &"));
 
-------------- 143: taint_flow_java_input_inner-------------
+------------- 146: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_InfixExpression_001_T.java
 Line 27: Runtime.getRuntime().exec(a)
@@ -3187,7 +3037,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 144: taint_flow_java_input_inner-------------
+------------- 147: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_InstanceofExpression_001_T.java
 Line 28: Runtime.getRuntime().exec(data)
@@ -3206,7 +3056,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:                  Runtime.getRuntime().exec(data);
 
-------------- 145: taint_flow_java_input_inner-------------
+------------- 148: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_PostfixExpression_001_T.java
 Line 28: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -3222,7 +3072,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 146: taint_flow_java_input_inner-------------
+------------- 149: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_PrefixExpression_001_T.java
 Line 27: Runtime.getRuntime().exec(String.valueOf(cmd))
@@ -3238,7 +3088,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(String.valueOf(cmd));
 
-------------- 147: taint_flow_java_input_inner-------------
+------------- 150: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Statement_VariableDeclarationStatement_001_T.java
 Line 28: Runtime.getRuntime().exec(new String(data))
@@ -3257,7 +3107,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(new String(data));
 
-------------- 148: taint_flow_java_input_inner-------------
+------------- 151: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/service/SSRFShowManageImpl.java
 Line 72: httpclient.execute(httpget)
@@ -3291,7 +3141,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   72:  SINK:                      response = httpclient.execute(httpget);
 
-------------- 149: taint_flow_java_input_inner-------------
+------------- 152: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
 Line 44: httpclient.execute(httpGet)
@@ -3304,7 +3154,7 @@ Trace:
   AffectedNodeName: url
   25:  SOURCE:      public Map<String, Object> aTaintCase017(@RequestBody String url) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/lambda_expression/Expression_LambdaExpression_001_T.java
-  AffectedNodeName: <anonymousFunc_28_47_35_9>
+  AffectedNodeName: processUrl
   36:  CALL:          String result = processUrl.apply(url);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/lambda_expression/Expression_LambdaExpression_001_T.java
   AffectedNodeName: u
@@ -3341,7 +3191,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   44:  SINK:              response = httpclient.execute(httpGet);
 
-------------- 150: taint_flow_java_input_inner-------------
+------------- 153: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/service/DefaultSsrfClient.java
 Line 21: httpclient.execute(httpget)
@@ -3372,7 +3222,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   21:  SINK:              response = httpclient.execute(httpget);
 
-------------- 151: taint_flow_java_input_inner-------------
+------------- 154: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/service/SSRFShowManageImpl.java
 Line 36: httpclient.execute(httpget)
@@ -3393,37 +3243,6 @@ Trace:
  /src/main/java/com/sast/astbenchmark/service/SSRFShowManageImpl.java
   AffectedNodeName: doConnect
   29:  CALL:          super.doConnect(url, new SsrfClient() {
-  30:  CALL:              @Override
-  31:  CALL:              protected void doConnect(String url) {
-  32:  CALL:                  CloseableHttpClient httpclient = HttpClients.createDefault();
-  33:  CALL:                  HttpGet httpget = new HttpGet(url);
-  34:  CALL:                  CloseableHttpResponse response = null;
-  35:  CALL:                  try {
-  36:  CALL:                      response = (httpclient).execute(httpget);
-  37:  CALL:                      if (HttpStatus.SC_OK == response.getStatusLine().getStatusCode()) {
-  38:  CALL:                          HttpEntity httpEntity = response.getEntity();
-  39:  CALL:                          String result = EntityUtils.toString(httpEntity, "UTF-8");
-  40:  CALL:                          System.err.println(result);
-  41:  CALL:                      }
-  42:  CALL:                  } catch (IOException ioe) {
-  43:  CALL:                      ioe.printStackTrace();
-  44:  CALL:                  } finally {
-  45:  CALL:                      try {
-  46:  CALL:                          if (response != null) {
-  47:  CALL:                              response.close();
-  48:  CALL:                          }
-  49:  CALL:                      } catch (Exception e) {
-  50:  CALL:                      }
-  51:  CALL:                      try {
-  52:  CALL:                          if (httpclient != null) {
-  53:  CALL:                              httpclient.close();
-  54:  CALL:                          }
-  55:  CALL:                      } catch (Exception e) {
-  56:  CALL:                          e.printStackTrace();
-  57:  CALL:                      }
-  58:  CALL:                  }
-  59:  CALL:              }
-  60:  CALL:          });
  /src/main/java/com/sast/astbenchmark/service/BaseSSRFShowManagerImpl.java
   AffectedNodeName: url
   5:   ARG PASS:      public void doConnect(String url, SsrfClient ssrfClient) {
@@ -3440,7 +3259,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   36:  SINK:                      response = (httpclient).execute(httpget);
 
-------------- 152: taint_flow_java_input_inner-------------
+------------- 155: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/service/SSRFShowManageImpl.java
 Line 72: httpclient.execute(httpget)
@@ -3471,7 +3290,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   72:  SINK:                      response = httpclient.execute(httpget);
 
-------------- 153: taint_flow_java_input_inner-------------
+------------- 156: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/type_cast/Expression_CastExpression_001_T.java
 Line 28: Runtime.getRuntime().exec((String)cmdObject)
@@ -3490,7 +3309,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec((String) cmdObject);
 
-------------- 154: taint_flow_java_input_inner-------------
+------------- 157: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/type_cast/Expression_CastExpression_003_T.java
 Line 30: realUrl.openConnection()
@@ -3509,7 +3328,7 @@ Trace:
   AffectedNodeName: realUrl.openConnection
   30:  SINK:              HttpURLConnection connection = (HttpURLConnection) realUrl.openConnection();
 
-------------- 155: taint_flow_java_input_inner-------------
+------------- 158: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
 Line 44: httpclient.execute(httpGet)
@@ -3546,7 +3365,7 @@ Trace:
   AffectedNodeName: httpclient.execute
   44:  SINK:              response = httpclient.execute(httpGet);
 
-------------- 156: taint_flow_java_input_inner-------------
+------------- 159: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -3568,7 +3387,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 157: taint_flow_java_input_inner-------------
+------------- 160: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java
 Line 7: Runtime.getRuntime().exec(cmd)
@@ -3590,7 +3409,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   7:   SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 158: taint_flow_java_input_inner-------------
+------------- 161: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/chained_call/Expression_MethodInvocation_Argument_002_T.java
 Line 27: HttpRequest.post(http://localhost:39100/ataint/case00124/2?cmd=+cmd)
@@ -3606,7 +3425,7 @@ Trace:
   AffectedNodeName: HttpRequest.post
   27:  SINK:              HttpRequest.post("http://localhost:39100/ataint/case00124/2?cmd=" + cmd)
 
-------------- 159: taint_flow_java_input_inner-------------
+------------- 162: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/higher_order_function/higher_order_function_001_T.java
 Line 33: Runtime.getRuntime().exec(o)
@@ -3634,7 +3453,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   33:  SINK:              Runtime.getRuntime().exec(o);
 
-------------- 160: taint_flow_java_input_inner-------------
+------------- 163: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/CallExpression_NoSourceCode_Native_002_T.java
 Line 28: Runtime.getRuntime().exec(exec)
@@ -3653,7 +3472,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(exec);
 
-------------- 161: taint_flow_java_input_inner-------------
+------------- 164: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/CallExpression_NoSourceCode_Native_004_T.java
 Line 26: Runtime.getRuntime().exec(new String(cmd))
@@ -3669,7 +3488,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(new String(cmd));
 
-------------- 162: taint_flow_java_input_inner-------------
+------------- 165: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/CallExpression_NoSourceCode_Native_006_T.java
 Line 27: Runtime.getRuntime().exec(cmd)
@@ -3688,7 +3507,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 163: taint_flow_java_input_inner-------------
+------------- 166: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/Expression_CallExpression_Array_002_T.java
 Line 27: Runtime.getRuntime().exec(String.valueOf(chars))
@@ -3704,13 +3523,10 @@ Trace:
   AffectedNodeName: chars
   26:  Var Pass:              char[] chars = cmd.toCharArray();
  /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/Expression_CallExpression_Array_002_T.java
-  AffectedNodeName: String
-  27:  Var Pass:              Runtime.getRuntime().exec(String.valueOf(chars));
- /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/Expression_CallExpression_Array_002_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(String.valueOf(chars));
 
-------------- 164: taint_flow_java_input_inner-------------
+------------- 167: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/library_function/Expression_MethodInvocation_MethodInvocation_002_T.java
 Line 27: Runtime.getRuntime().exec(builder.toString())
@@ -3729,7 +3545,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(builder.toString());
 
-------------- 165: taint_flow_java_input_inner-------------
+------------- 168: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/override/Expression_Override_001_T.java
 Line 27: Runtime.getRuntime().exec(ps.getCmd())
@@ -3754,7 +3570,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(ps.getCmd());
 
-------------- 166: taint_flow_java_input_inner-------------
+------------- 169: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_001_T.java
 Line 31: Runtime.getRuntime().exec(o)
@@ -3785,7 +3601,35 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(o);
 
-------------- 167: taint_flow_java_input_inner-------------
+------------- 170: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+Line 31: Runtime.getRuntime().exec(o)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java","functionName":"returnValuePassing002F","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: __taint_src
+  19:  SOURCE:      public static void returnValuePassing002F(@RequestParam String __taint_src) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: process
+  20:  CALL:          String data = process(__taint_src);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: data
+  20:  Var Pass:          String data = process(__taint_src);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: __taint_sink
+  21:  CALL:          __taint_sink(data);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: o
+  29:  ARG PASS:      private static void __taint_sink(String o) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/return_value_passing/function_return_value_passing_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  31:  SINK:              Runtime.getRuntime().exec(o);
+
+------------- 171: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_field_001_T.java
 Line 30: Runtime.getRuntime().exec(MyClass.data)
@@ -3810,7 +3654,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(MyClass.data);
 
-------------- 168: taint_flow_java_input_inner-------------
+------------- 172: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/function_call/static_method/static_method_001_T.java
 Line 20: Runtime.getRuntime().exec(arg)
@@ -3838,7 +3682,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   20:  SINK:              Runtime.getRuntime().exec(arg);
 
-------------- 169: taint_flow_java_input_inner-------------
+------------- 173: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/ArrayOutOfBoundOrNot_001_T.java
 Line 27: Runtime.getRuntime().exec(arr)
@@ -3857,7 +3701,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(arr);
 
-------------- 170: taint_flow_java_input_inner-------------
+------------- 174: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/Array_index_001_T.java
 Line 26: Runtime.getRuntime().exec(arr.0)
@@ -3876,7 +3720,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              Runtime.getRuntime().exec(arr[0]);
 
-------------- 171: taint_flow_java_input_inner-------------
+------------- 175: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_001_T.java
 Line 28: Runtime.getRuntime().exec(map.get(key1))
@@ -3895,7 +3739,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(map.get("key1"));
 
-------------- 172: taint_flow_java_input_inner-------------
+------------- 176: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_003_T.java
 Line 29: SinkUtil.sink(map.values())
@@ -3914,7 +3758,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(map.values());
 
-------------- 173: taint_flow_java_input_inner-------------
+------------- 177: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_005_T.java
 Line 29: SinkUtil.sink(map.keySet())
@@ -3933,7 +3777,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(map.keySet());
 
-------------- 174: taint_flow_java_input_inner-------------
+------------- 178: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_007_T.java
 Line 29: SinkUtil.sink(map.entrySet())
@@ -3952,7 +3796,7 @@ Trace:
   AffectedNodeName: SinkUtil.sink
   29:  SINK:              SinkUtil.sink(map.entrySet());
 
-------------- 175: taint_flow_java_input_inner-------------
+------------- 179: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java
 Line 44: httpclient.execute(httpGet)
@@ -3992,116 +3836,32 @@ Trace:
   AffectedNodeName: httpclient.execute
   44:  SINK:              response = httpclient.execute(httpGet);
 
-------------- 176: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-Line 36: Runtime.getRuntime().exec(e)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: add
-  30:  CALL:              queue.add(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  CALL:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  ARG PASS:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  36:  SINK:                          Runtime.getRuntime().exec(e);
-
-------------- 177: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-Line 36: Runtime.getRuntime().exec(e)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  CALL:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  ARG PASS:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  34:  Var Pass:                  if (cmd.equals(e)) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  36:  SINK:                          Runtime.getRuntime().exec(e);
-
-------------- 178: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-Line 36: Runtime.getRuntime().exec(e)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: add
-  30:  CALL:              queue.add(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  CALL:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  ARG PASS:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  34:  Var Pass:                  if (cmd.equals(e)) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  36:  SINK:                          Runtime.getRuntime().exec(e);
-
-------------- 179: taint_flow_java_input_inner-------------
-Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
-File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-Line 36: Runtime.getRuntime().exec(e)
-SINK RULE:Runtime.getRuntime().exec
-SINK Attribute:JavaCommandExec
-entrypoint:
-{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
-Trace:
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: add
-  30:  CALL:              queue.add(cmd);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  CALL:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
-  33:  ARG PASS:              queue.stream().forEach(e -> {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: cmd
-  34:  Var Pass:                  if (cmd.equals(e)) {
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: Runtime.getRuntime()
-  36:  Var Pass:                          Runtime.getRuntime().exec(e);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
-  AffectedNodeName: Runtime.getRuntime().exec
-  36:  SINK:                          Runtime.getRuntime().exec(e);
-
 ------------- 180: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+Line 36: Runtime.getRuntime().exec(e)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: cmd
+  26:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: add
+  30:  CALL:              queue.add(cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
+  33:  CALL:              queue.stream().forEach(e -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.QueueWithLambda_001_T.testcase.<anonymousFunc_33_36_40_13>
+  33:  ARG PASS:              queue.stream().forEach(e -> {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/QueueWithLambda_001_T.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  36:  SINK:                          Runtime.getRuntime().exec(e);
+
+------------- 181: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_001_T.java
 Line 32: Runtime.getRuntime().exec(exec2)
@@ -4115,6 +3875,12 @@ Trace:
   24:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_001_T.java
   AffectedNodeName: getCmdWithContextSensitive
+  28:  CALL:          exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_001_T.java
+  AffectedNodeName: exec1
+  28:  Var Pass:         exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_001_T.java
+  AffectedNodeName: getCmdWithContextSensitive
   30:  CALL:          exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_001_T.java
   AffectedNodeName: getCmdWithContextSensitive
@@ -4126,7 +3892,29 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   32:  SINK:              Runtime.getRuntime().exec(exec2);
 
-------------- 181: taint_flow_java_input_inner-------------
+------------- 182: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java
+Line 33: Runtime.getRuntime().exec(exec2)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java
+  AffectedNodeName: cmd
+  25:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java
+  AffectedNodeName: getCmdWithContextSensitive
+  31:  CALL:          exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java
+  AffectedNodeName: exec2
+  31:  Var Pass:         exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_need_solve/DifferentParamsForFunction_need_solve_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  33:  SINK:              Runtime.getRuntime().exec(exec2);
+
+------------- 183: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/DifferentParamsForFunction_001_T.java
 Line 36: Runtime.getRuntime().exec(rx1.y.f)
@@ -4154,7 +3942,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   36:  SINK:              Runtime.getRuntime().exec(rx1.y.f);
 
-------------- 182: taint_flow_java_input_inner-------------
+------------- 184: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/DifferentParamsForFunction_003_T.java
 Line 29: Runtime.getRuntime().exec(c1)
@@ -4179,7 +3967,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(c1);
 
-------------- 183: taint_flow_java_input_inner-------------
+------------- 185: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
 Line 28: Runtime.getRuntime().exec(c2)
@@ -4195,19 +3983,19 @@ Trace:
   AffectedNodeName: id8
   26:  CALL:              String c1 = Invoke.id8(cmd1);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
-  AffectedNodeName: id8
-  26:  CALL RETURN:             String c1 = Invoke.id8(cmd1);
- /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
   AffectedNodeName: c1
   26:  Var Pass:              String c1 = Invoke.id8(cmd1);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
   AffectedNodeName: id8
   27:  CALL:              String c2 = Invoke.id8(c1);
  /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
+  AffectedNodeName: c2
+  27:  Var Pass:              String c2 = Invoke.id8(c1);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/multi_invoke_without_solve/MultiCallSite_001_T.java
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:              Runtime.getRuntime().exec(c2);
 
-------------- 184: taint_flow_java_input_inner-------------
+------------- 186: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/loop_stmt_init/Statement_ForStatement_init_001_T.java
 Line 28: Runtime.getRuntime().exec(a)
@@ -4226,7 +4014,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:                  Runtime.getRuntime().exec(a);
 
-------------- 185: taint_flow_java_input_inner-------------
+------------- 187: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/loop_stmt_update/Statement_ForStatement_update_001_T.java
 Line 26: Runtime.getRuntime().exec(a)
@@ -4245,7 +4033,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              for (int i = 0; i < 1; Runtime.getRuntime().exec(a)) {
 
-------------- 186: taint_flow_java_input_inner-------------
+------------- 188: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_001_T.java
 Line 27: Runtime.getRuntime().exec(exec)
@@ -4270,7 +4058,29 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   27:  SINK:              Runtime.getRuntime().exec(exec);
 
-------------- 187: taint_flow_java_input_inner-------------
+------------- 189: taint_flow_java_input_inner-------------
+Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
+File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java
+Line 27: Runtime.getRuntime().exec(exec)
+SINK RULE:Runtime.getRuntime().exec
+SINK Attribute:JavaCommandExec
+entrypoint:
+{"filePath":"/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java","functionName":"testcase","attribute":"HTTP","type":"functionCall"}
+Trace:
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java
+  AffectedNodeName: cmd
+  23:  SOURCE:      public Map<String, Object> testcase(@RequestParam String cmd) {
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java
+  AffectedNodeName: getCmdWithPathSensitive
+  25:  CALL:          String exec = getCmdWithPathSensitive(cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java
+  AffectedNodeName: exec
+  25:  Var Pass:          String exec = getCmdWithPathSensitive(cmd);
+ /src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/ConstantIfGuard_002_F.java
+  AffectedNodeName: Runtime.getRuntime().exec
+  27:  SINK:              Runtime.getRuntime().exec(exec);
+
+------------- 190: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/Statement_ForStatement_no_solver_001_T.java
 Line 29: Runtime.getRuntime().exec(a)
@@ -4289,7 +4099,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 188: taint_flow_java_input_inner-------------
+------------- 191: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/DifferentIfBranch_ArrayLength_001_T.java
 Line 29: Runtime.getRuntime().exec(arr)
@@ -4308,7 +4118,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(arr);
 
-------------- 189: taint_flow_java_input_inner-------------
+------------- 192: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/DifferentIfBranch_ArrayLength_003_T.java
 Line 30: Runtime.getRuntime().exec(arr2)
@@ -4327,7 +4137,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   30:  SINK:              Runtime.getRuntime().exec(arr2);
 
-------------- 190: taint_flow_java_input_inner-------------
+------------- 193: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Expression_InstanceofExpression_solver_001_T.java
 Line 26: Runtime.getRuntime().exec(cmd)
@@ -4343,7 +4153,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:                  Runtime.getRuntime().exec(cmd);
 
-------------- 191: taint_flow_java_input_inner-------------
+------------- 194: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Expression_InstanceofExpression_solver_003_T.java
 Line 28: Runtime.getRuntime().exec(cmd)
@@ -4359,7 +4169,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   28:  SINK:                  Runtime.getRuntime().exec(cmd);
 
-------------- 192: taint_flow_java_input_inner-------------
+------------- 195: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Statement_AssertStatement_solver_001_T.java
 Line 26: Runtime.getRuntime().exec(cmd)
@@ -4375,7 +4185,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              assert a > 0 : Runtime.getRuntime().exec(cmd);
 
-------------- 193: taint_flow_java_input_inner-------------
+------------- 196: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Statement_AssertStatement_solver_003_T.java
 Line 26: Runtime.getRuntime().exec(cmd)
@@ -4391,7 +4201,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   26:  SINK:              assert a > 0 : Runtime.getRuntime().exec(cmd);
 
-------------- 194: taint_flow_java_input_inner-------------
+------------- 197: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Statement_WhileStatement_solver_001_T.java
 Line 29: Runtime.getRuntime().exec(a)
@@ -4410,7 +4220,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   29:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 195: taint_flow_java_input_inner-------------
+------------- 198: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/solver/Statement_WhileStatement_solver_002_F.java
 Line 31: Runtime.getRuntime().exec(a)
@@ -4429,7 +4239,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   31:  SINK:              Runtime.getRuntime().exec(a);
 
-------------- 196: taint_flow_java_input_inner-------------
+------------- 199: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/cross_file_package_namespace/cross_file/cross_file_001_T/cross_file_001_T_b.java
 Line 23: Runtime.getRuntime().exec(cmd)
@@ -4451,7 +4261,7 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   23:  SINK:              Runtime.getRuntime().exec(cmd);
 
-------------- 197: taint_flow_java_input_inner-------------
+------------- 200: taint_flow_java_input_inner-------------
 Description:Java污点分析checker，不会使用CallGraph边界制作entrypoint，蚂蚁内部使用
 File:/src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/B/cross_directory_001_T_b.java
 Line 23: Runtime.getRuntime().exec(cmd)
@@ -4473,5 +4283,5 @@ Trace:
   AffectedNodeName: Runtime.getRuntime().exec
   23:  SINK:              Runtime.getRuntime().exec(cmd);
 ==========================================================
-  #Total-findings:197
+  #Total-findings:200
 ==========================================================

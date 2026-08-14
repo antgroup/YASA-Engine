@@ -32,11 +32,13 @@ export interface ValueRegistry extends ValueStore {
 export class ValueRefMap {
   _map: Map<string, ValueRef> = new Map()
   private _getSymbolTable: () => ValueRegistry | null
+  private _getOwner: (() => Unit | null) | null
   private _proxy: any
   private _proxyTarget: Record<string, any> = {}
 
-  constructor(getSymbolTable: () => ValueRegistry | null) {
+  constructor(getSymbolTable: () => ValueRegistry | null, getOwner?: () => Unit | null) {
     this._getSymbolTable = getSymbolTable
+    this._getOwner = getOwner || null
     this._proxy = this._createProxy()
     Object.defineProperty(this._proxy, RAW_TARGET, {
       value: this._proxyTarget,
@@ -69,6 +71,24 @@ export class ValueRefMap {
   }
 
   set(key: string, value: Unit | ValueRef | null | undefined): void {
+    this._setInternal(key, value)
+    // v5 hook #5：slot_bind 事件。每次成功 set 记一条边（value → ownerUnit）
+    // delete 语义（value==null）不记边
+    if (value != null && this._getOwner) {
+      const owner = this._getOwner()
+      if (owner) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { auditSlotBindEvent } = require('./unit-audit')
+          auditSlotBindEvent(value, owner, key)
+        } catch (_e) {
+          // 插桩失败不影响原逻辑
+        }
+      }
+    }
+  }
+
+  private _setInternal(key: string, value: Unit | ValueRef | null | undefined): void {
     if (value == null) {
       this._map.delete(key)
       delete this._proxyTarget[key]

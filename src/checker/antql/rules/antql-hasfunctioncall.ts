@@ -1,5 +1,5 @@
 import type { Finding } from '../../../engine/analyzer/common/common-types'
-import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
+import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint/entrypoint'
 
 const LocationUtil = require('../util/location-util')
 const EntrypointUtil = require('../util/entrypoint-util')

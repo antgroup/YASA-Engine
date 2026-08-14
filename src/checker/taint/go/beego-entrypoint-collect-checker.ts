@@ -28,6 +28,66 @@ const directTaintSourceFuncs = new Set<string>([
   'GetUint8',
 ])
 
+/** BeegoInput 上返回用户输入的方法（c.Ctx.Input.Query() 等） */
+const beegoInputSourceFuncs = new Set<string>([
+  'Query',
+  'Header',
+  'Cookie',
+  'Param',
+  'CopyBody',
+  'Session',
+  'Data',
+])
+
+/** Context 上绑定用户输入到参数的方法（c.Ctx.BindJSON(&obj) 等），第一个参数为绑定目标 */
+const ctxBindFuncs = new Set<string>([
+  'Bind',
+  'BindJSON',
+  'BindXML',
+  'BindYAML',
+  'BindForm',
+  'BindProtobuf',
+])
+
+/** Context 上返回用户输入的方法（c.Ctx.GetCookie() 等） */
+const ctxSourceFuncs = new Set<string>([
+  'GetCookie',
+])
+
+/**
+ * 判断 res 是否为 c.Ctx.Input.* 或 c.Ctx.Request.* 的直接子属性访问。
+ * Input 和 Request 是 Beego Context 中唯二包含用户输入的子结构，
+ * 其直接子属性（RequestBody、Body、URL、Header、Form 等）需要注册为独立 source
+ * 以获得精确的 trace 起点，而非继承 c.Ctx 的笼统位置。
+ */
+function isCtxUserInputSubfield(res: any): boolean {
+  const parent = res.object
+  if (parent?.type !== 'MemberAccess') return false
+  const parentProp = parent.property?.name
+  if (parentProp !== 'Input' && parentProp !== 'Request') return false
+  const grandparent = parent.object
+  if (grandparent?.property?.name !== 'Ctx') return false
+  return controllerQids.has(grandparent.object?._qid)
+}
+
+/** 判断 fclos.object 是否为 c.Ctx.Input（BeegoInput 实例） */
+function isBeegoInputMethod(fclos: any): boolean {
+  const obj = fclos.object
+  if (obj?.type !== 'MemberAccess') return false
+  if (obj.property?.name !== 'Input') return false
+  const parent = obj.object
+  if (parent?.property?.name !== 'Ctx') return false
+  return controllerQids.has(parent.object?._qid)
+}
+
+/** 判断 fclos.object 是否为 c.Ctx（Beego Context 实例，非 Controller 本身） */
+function isCtxMethod(fclos: any): boolean {
+  const obj = fclos.object
+  if (obj?.type !== 'MemberAccess') return false
+  if (obj.property?.name !== 'Ctx') return false
+  return controllerQids.has(obj.object?._qid)
+}
+
 /**
  *
  */
@@ -58,7 +118,10 @@ class BeegoEntrypointCollectChecker extends Checker {
           processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0', 'GO_INPUT')
         } else if (fclos._qid.includes('github.com/beego/beego/v2/server/web/filter/auth.NewBasicAuthenticator')) {
           processEntryPointAndTaintSource(analyzer, state, processedRouteRegistry, argvalues[0], '0, 1', 'GO_INPUT')
-        } else if (fclos._qid.includes('github.com/beego/beego/v2/server/web')) {
+        } else if (
+          fclos._qid.includes('github.com/beego/beego/v2/server/web') ||
+          fclos._qid.includes('github.com/astaxie/beego')
+        ) {
           this.handleHttpServerMethod(analyzer, scope, state, fclos.name, argvalues)
         }
       } else if (fclos.type === 'MemberAccess') {
@@ -93,14 +156,28 @@ class BeegoEntrypointCollectChecker extends Checker {
     if (config.entryPointMode === 'ONLY_CUSTOM') return
     if (fclos.vtype === 'symbol' && fclos.type === 'MemberAccess') {
       if (controllerQids.has(fclos.object._qid)) {
+        // Controller 方法：c.GetString() / c.GetInt() / c.Bind() 等
         if (directTaintSourceFuncs.has(fclos.property.name)) {
           IntroduceTaint.markTaintSource(ret, { path: node, kind: 'GO_INPUT' })
         } else if (fclos.property.name === 'Bind') {
           IntroduceTaint.markTaintSource(argvalues[0], { path: node, kind: 'GO_INPUT' })
         }
-      } else if (fclos.property.name === 'Bind' && controllerQids.has(fclos.object?.object?.object?._qid)) {
-        // e.g., this.Ctx.Input.Bind
-        IntroduceTaint.markTaintSource(argvalues[0], { path: node, kind: 'GO_INPUT' })
+      } else if (isBeegoInputMethod(fclos)) {
+        // BeegoInput 方法：c.Ctx.Input.Query() / c.Ctx.Input.Header() / c.Ctx.Input.Bind() 等
+        const methodName = fclos.property.name
+        if (beegoInputSourceFuncs.has(methodName)) {
+          IntroduceTaint.markTaintSource(ret, { path: node, kind: 'GO_INPUT' })
+        } else if (methodName === 'Bind') {
+          IntroduceTaint.markTaintSource(argvalues[0], { path: node, kind: 'GO_INPUT' })
+        }
+      } else if (isCtxMethod(fclos)) {
+        // Context 方法：c.Ctx.BindJSON(&obj) / c.Ctx.GetCookie() 等
+        const methodName = fclos.property.name
+        if (ctxBindFuncs.has(methodName)) {
+          IntroduceTaint.markTaintSource(argvalues[0], { path: node, kind: 'GO_INPUT' })
+        } else if (ctxSourceFuncs.has(methodName)) {
+          IntroduceTaint.markTaintSource(ret, { path: node, kind: 'GO_INPUT' })
+        }
       }
     }
   }
@@ -116,13 +193,16 @@ class BeegoEntrypointCollectChecker extends Checker {
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { res } = info
     if (config.entryPointMode === 'ONLY_CUSTOM') return
-    if (
-      res.vtype === 'symbol' &&
-      res.type === 'MemberAccess' &&
-      controllerQids.has(res.object._qid) &&
-      res.property.name === 'Ctx'
-    ) {
-      IntroduceTaint.markTaintSource(res, { path: node, kind: 'GO_INPUT' })
+    if (res.vtype === 'symbol' && res.type === 'MemberAccess') {
+      if (res.property.name === 'Ctx' && controllerQids.has(res.object._qid)) {
+        IntroduceTaint.markTaintSource(res, { path: node, kind: 'GO_INPUT' })
+      } else if (isCtxUserInputSubfield(res)) {
+        // c.Ctx.Input.* / c.Ctx.Request.* 子属性：清除继承的 trace，注册为独立 source
+        if (res.taint) {
+          res.taint.clearTrace()
+        }
+        IntroduceTaint.markTaintSource(res, { path: node, kind: 'GO_INPUT' })
+      }
     }
   }
 
@@ -264,25 +344,38 @@ class BeegoEntrypointCollectChecker extends Checker {
           })
         break
       case 'Router':
-      case 'NSRouter':
-        flattenUnionValues(argvalues.slice(2))
-          .filter((unit: any) => unit.vtype === 'primitive' && unit.literalType === 'STRING')
-          .forEach((stringVal) => {
-            const methodName = stringVal.value.slice(1, -1).split(':')[1]
-            flattenUnionValues([argvalues[1]]).forEach((controllerVal) => {
-              const controllerMethodVal = controllerVal.value?.[methodName]
-              if (controllerMethodVal?.ast?.node?.loc) {
-                const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
-                if (!processedRouteRegistry.has(hash)) {
-                  processedRouteRegistry.add(hash)
-                  controllerQids.add(controllerMethodVal._this?._qid ?? '')
-                  const entryPoint = completeEntryPoint(controllerMethodVal)
-                  analyzer.entryPoints.push(entryPoint)
+      case 'NSRouter': {
+        const methodStrings = flattenUnionValues(argvalues.slice(2)).filter(
+          (unit: any) => unit.vtype === 'primitive' && unit.literalType === 'STRING'
+        )
+        if (methodStrings.length > 0) {
+          methodStrings.forEach((stringVal) => {
+            // beego 三参 Router 第三参数格式："HTTP方法:控制器方法;HTTP方法:控制器方法;..."
+            // 先按 ; 分割再逐项按 : 提取方法名，支持多方法注册
+            const methodMappings = stringVal.value.slice(1, -1).split(';')
+            for (const mapping of methodMappings) {
+              const methodName = mapping.split(':')[1]
+              if (!methodName) continue
+              flattenUnionValues([argvalues[1]]).forEach((controllerVal) => {
+                const controllerMethodVal = controllerVal.value?.[methodName]
+                if (controllerMethodVal?.ast?.node?.loc) {
+                  const hash = JSON.stringify(controllerMethodVal.ast.node.loc)
+                  if (!processedRouteRegistry.has(hash)) {
+                    processedRouteRegistry.add(hash)
+                    controllerQids.add(controllerVal._this?._qid ?? '')
+                    const entryPoint = completeEntryPoint(controllerMethodVal)
+                    analyzer.entryPoints.push(entryPoint)
+                  }
                 }
-              }
-            })
+              })
+            }
           })
+        } else if (argvalues[1]) {
+          // v1 Router(path, &Ctrl{}) 2 参形态，语义等同 v2 AutoRouter
+          this.handleAutoControllerArgVal(analyzer, argvalues[1])
+        }
         break
+      }
       case 'Get':
       case 'Post':
       case 'Delete':

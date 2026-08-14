@@ -14,7 +14,8 @@ const Statistics = require('../../../../util/statistics')
 const config = require('../../../../config')
 const ScopeClass = require('../../common/scope')
 const constValue = require('../../../../util/constant')
-const EntryPointConfig = require('../../common/current-entrypoint')
+const EntryPointConfig = require('../../common/entrypoint/current-entrypoint')
+const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
 const { handleException } = require('../../common/exception-handler')
 
 const {
@@ -36,6 +37,7 @@ const _ = require('lodash')
  * 参照 JsAnalyzer 最小实现，支持单文件和项目分析
  */
 class PhpAnalyzer extends Analyzer {
+
   /** 跨文件模块 scope 缓存：filename → modClos，用于 symbolInterpret 阶段查找跨文件函数/类定义 */
   private moduleScopes = new Map<string, any>()
 
@@ -60,6 +62,7 @@ class PhpAnalyzer extends Analyzer {
       BasicRuleHandler
     )
     super(checkerManager, options)
+    this.enableNestedSourceLineIsolation = true
     this.options = options
     this.mainEntryPoints = []
     this.sourceScope = {
@@ -264,89 +267,143 @@ class PhpAnalyzer extends Analyzer {
   /**
    * 符号解释阶段
    */
-  symbolInterpret() {
+  async symbolInterpret(): Promise<boolean> {
     const { entryPoints } = this
     const state = this.initState(this.topScope)
     if (!entryPoints || entryPoints.length === 0) {
       logger.info('[symbolInterpret]：EntryPoints are not found')
       return true
     }
-    const hasAnalysised: string[] = []
+    const hasAnalysised = new Set<string>()
+    let epIdx = 0
     for (const entryPoint of entryPoints) {
-      this.symbolTable.clear()
-      if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
-        const key = `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-        if (hasAnalysised.includes(key)) {
-          continue
-        }
-        hasAnalysised.push(key)
-        EntryPointConfig.setCurrentEntryPoint(entryPoint)
-        logger.info('EntryPoint [%s.%s] is executing', entryPoint.filePath, entryPoint.functionName)
+      epIdx++
+      const metricStartTime = Date.now()
+      const findingsBefore = this.countFindings()
+      let skipped = false
+      let skipReason: string | undefined
+      try {
+        this.symbolTable.clear()
+        if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
+          const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+          if (entryPointMark.skipped) {
+            skipped = true
+            skipReason = entryPointMark.skipReason
+            continue
+          }
+          EntryPointConfig.setCurrentEntryPoint(entryPoint)
 
-        const argValues: any[] = []
-        for (const param of entryPoint.entryPointSymVal?.ast?.node?.parameters || []) {
-          argValues.push(this.processInstruction(entryPoint.entryPointSymVal, param, state))
-        }
+          const argValues: any[] = []
+          for (const param of entryPoint.entryPointSymVal?.ast?.node?.parameters || []) {
+            argValues.push(this.processInstruction(entryPoint.entryPointSymVal, param, state))
+          }
 
-        // 在参数值创建后再触发 Before hook，避免 taint 被后续 processInstruction 覆盖
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+          executeViaEntryPointExecutor(
+            {
+              analyzer: this,
+              entryPoint,
+              metricStartTime,
+              findingsBefore,
+              executionState: state,
+              overloadCount: 1,
+              epIndex: epIdx,
+              epTotal: entryPoints.length,
+            },
+            {
+              language: 'php',
+              classify: () => 'function',
+              execute: () => {
+                // 在参数值创建后再触发 Before hook，避免 taint 被后续 processInstruction 覆盖
+                this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
 
-        try {
-          this.executeCall(
-            entryPoint.entryPointSymVal?.ast?.node,
-            entryPoint.entryPointSymVal,
-            state,
-            entryPoint.scopeVal,
-            { callArgs: this.buildCallArgs(entryPoint.entryPointSymVal?.ast?.node, argValues, entryPoint.entryPointSymVal) }
+                try {
+                  this.executeCall(
+                    entryPoint.entryPointSymVal?.ast?.node,
+                    entryPoint.entryPointSymVal,
+                    state,
+                    entryPoint.scopeVal,
+                    {
+                      callArgs: this.buildCallArgs(
+                        entryPoint.entryPointSymVal?.ast?.node,
+                        argValues,
+                        entryPoint.entryPointSymVal
+                      ),
+                    }
+                  )
+                } catch (e) {
+                  handleException(
+                    e,
+                    `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret 失败`,
+                    `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed`
+                  )
+                }
+                this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+              },
+            },
+            this.checkerManager?.resultManagerProxy,
           )
-        } catch (e) {
-          handleException(
-            e,
-            `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret 失败`,
-            `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed`
-          )
-        }
-        this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
-      } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
-        const key = `fileBegin:${entryPoint.filePath}.${entryPoint.attribute}`
-        if (hasAnalysised.includes(key)) {
-          continue
-        }
-        hasAnalysised.push(key)
-        EntryPointConfig.setCurrentEntryPoint(entryPoint)
-        logger.info('EntryPoint [%s] is executing', entryPoint.filePath)
-        if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
-          try {
-            this.processCompileUnit(
-              entryPoint.scopeVal,
-              entryPoint.entryPointSymVal?.ast?.node,
-              this.initState(this.topScope)
-            )
-          } catch (e) {
-            handleException(
-              e,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret 失败`,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed`
-            )
+        } else if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
+          const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+          if (entryPointMark.skipped) {
+            skipped = true
+            skipReason = entryPointMark.skipReason
+            continue
+          }
+          EntryPointConfig.setCurrentEntryPoint(entryPoint)
+          if (!entryPoint.entryPointSymVal || !entryPoint.scopeVal) {
+            const { filePath } = entryPoint
+            const fileRecord = this.fileManager[filePath]
+            if (!fileRecord) {
+              skipped = true
+              skipReason = 'missing'
+              continue
+            }
+            entryPoint.entryPointSymVal = this.symbolTable.get(fileRecord.uuid)
+            entryPoint.scopeVal = this.symbolTable.get(fileRecord.uuid)
+          }
+          if (entryPoint.entryPointSymVal && entryPoint.scopeVal) {
+            const fileState = this.initState(this.topScope)
+            try {
+              executeViaEntryPointExecutor(
+                {
+                  analyzer: this,
+                  entryPoint,
+                  metricStartTime,
+                  findingsBefore,
+                  executionState: fileState,
+                  overloadCount: 1,
+                  epIndex: epIdx,
+                  epTotal: entryPoints.length,
+                },
+                {
+                  language: 'php',
+                  classify: () => 'file',
+                  before: () => {
+                    this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
+                  },
+                  execute: () => {
+                    this.processCompileUnit(entryPoint.scopeVal, entryPoint.entryPointSymVal?.ast?.node, fileState)
+                  },
+                  after: () => {
+                    this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
+                  },
+                },
+                this.checkerManager?.resultManagerProxy,
+              )
+            } catch (e) {
+              handleException(
+                e,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret 失败`,
+                `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed`
+              )
+            }
           }
         } else {
-          const { filePath } = entryPoint
-          entryPoint.entryPointSymVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-          entryPoint.scopeVal = this.symbolTable.get(this.fileManager[filePath].uuid)
-          try {
-            this.processCompileUnit(
-              entryPoint.scopeVal,
-              entryPoint.entryPointSymVal?.ast?.node,
-              this.initState(this.topScope)
-            )
-          } catch (e) {
-            handleException(
-              e,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret 失败`,
-              `[${entryPoint.entryPointSymVal?.ast?.node?.loc?.sourcefile} symbolInterpret failed`
-            )
-          }
+          skipped = true
+          skipReason = 'unsupported'
         }
+      } finally {
+        this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
       }
     }
     return true

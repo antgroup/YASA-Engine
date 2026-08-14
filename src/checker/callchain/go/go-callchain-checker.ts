@@ -36,7 +36,7 @@ class GoCallchainChecker extends CallchainChecker {
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { topScope } = analyzer
     const Config = require('../../../config')
-    const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+    const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
     const Constant = require('../../../util/constant')
     const logger = require('../../../util/logger')(__filename)
 
@@ -97,6 +97,8 @@ class GoCallchainChecker extends CallchainChecker {
     const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
     if (!_.isEmpty(ruleConfigEntryPoints) && Config.entryPointMode !== 'SELF_COLLECT') {
       logger.info(`[GoCallchainChecker] Processing ${ruleConfigEntryPoints.length} custom entrypoints`)
+      // 累加未匹配 EP 数，循环后聚合输出一行，避免逐条刷日志
+      let unmatchedEntryPointCount = 0
       for (const entrypoint of ruleConfigEntryPoints) {
         logger.info(`[GoCallchainChecker] Looking for: ${entrypoint.filePath}#${entrypoint.functionName}`)
         let entryPointSymVal
@@ -139,9 +141,7 @@ class GoCallchainChecker extends CallchainChecker {
         }
 
         if (_.isEmpty(entryPointSymVal)) {
-          logger.warn(
-            `[GoCallchainChecker] match entryPoint fail for ${entrypoint.filePath}#${entrypoint.functionName}`
-          )
+          unmatchedEntryPointCount++
           continue
         }
 
@@ -165,6 +165,9 @@ class GoCallchainChecker extends CallchainChecker {
           }
         }
       }
+      if (unmatchedEntryPointCount > 0) {
+        logger.warn(`[GoCallchainChecker] ${unmatchedEntryPointCount} entrypoints unmatched`)
+      }
     }
 
     logger.info(`[GoCallchainChecker] Total entryPoints: ${this.entryPoints.length}`)
@@ -181,7 +184,7 @@ class GoCallchainChecker extends CallchainChecker {
    */
   triggerAtFunctionCallBefore(analyzer: any, scope: any, node: any, state: any, info: any) {
     const { fclos, callInfo } = info
-    this.checkSinkMatch(node, fclos, callInfo, scope, state)
+    this.checkSinkMatch(node, fclos, callInfo, scope, state, analyzer)
   }
 
   /**
@@ -191,8 +194,9 @@ class GoCallchainChecker extends CallchainChecker {
    * @param callInfo
    * @param scope
    * @param state
+   * @param analyzer 可选：携带 typeResolver 用于 Go interface → concrete 穿透
    */
-  checkSinkMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any) {
+  checkSinkMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any, analyzer?: any) {
     if (fclos === undefined) {
       return
     }
@@ -202,7 +206,7 @@ class GoCallchainChecker extends CallchainChecker {
 
     const nodeCallee = node.callee || node
 
-    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo)
+    let rule = matchSinkAtFuncCallWithCalleeType(node, fclos, rules, scope, callInfo, analyzer)
     rule = rule.length > 0 ? rule[0] : null
 
     // 如果没有匹配到，尝试基于 AST node 的匹配（用于处理类型信息缺失的情况）

@@ -9,16 +9,18 @@
  *        ↓                  ↓                   ↓
  *     CallArgs           BoundCall           筛选出的 value[]
  *
- * 测试围绕这三层设计：
+ * 测试覆盖三层数据流：
  * 1. call-args.ts 工具函数 — CallInfo 字段提取与向后兼容
  * 2. Analyzer 方法 — buildCallArgs 构建 + bindCallArgs 绑定（positional/keyword/vararg/varkw/receiver）
  * 3. prepareArgs — 按 selector（position/keyword/all）从 CallArgs 中筛选参数，供 checker 使用
  *
- * fixture 设计：一个 callInfo 同时包含 positional + keyword + receiver + boundCall，
+ * fixture 使用同时包含 positional + keyword + receiver + boundCall 的 callInfo，
  * 各用例通过不同 rule 组合验证筛选行为。
  */
 import { describe, it } from 'mocha'
 import * as assert from 'assert'
+import './test-anonymous-callback-nodehash'
+import './test-callback-model'
 import {
   getLegacyArgValues,
   getExplicitArgCount,
@@ -27,6 +29,7 @@ import {
   type CallInfo,
   type CallArgs,
   type BoundCall,
+  INTERNAL_CALL,
 } from '../../src/engine/analyzer/common/call-args'
 
 const Analyzer = require('../../src/engine/analyzer/common/analyzer')
@@ -94,7 +97,7 @@ describe('call-args 工具函数', function () {
       assert.deepStrictEqual(getLegacyArgValues(info), ['val_0', 'val_1', 'val_2', 'val_3'])
     })
 
-    it('传入数组（旧路径已移除） → 空数组', function () {
+    it('传入非 CallInfo 数组 → 空数组', function () {
       const arr = ['a', 'b']
       assert.deepStrictEqual(getLegacyArgValues(arr as any), [])
     })
@@ -290,6 +293,66 @@ describe('Analyzer callargs 方法', function () {
     it('fdecl.parameters 为空 → 空 boundCall', function () {
       const bound = analyzer.bindCallArgs({}, {}, {}, { callArgs: { args: [] } })
       assert.strictEqual(bound.params.length, 0)
+    })
+
+    it('装饰器 *args/**kwargs 转发时复用原始 callInfo', function () {
+      const callsiteNode = {
+        type: 'CallExpression',
+        loc: {
+          sourcefile: '/case/backend.py',
+          start: { line: 98, column: 0 },
+          end: { line: 98, column: 24 },
+        },
+      } as CallInfo['callsiteNode']
+      const originalCallInfo: CallInfo = {
+        callArgs: {
+          receiver: { sid: 'instance' },
+          args: [
+            { index: 0, value: 'payload', kind: 'positional' },
+            { index: 1, value: 'flag', name: 'flag', kind: 'keyword' },
+          ],
+        },
+        callsiteNode,
+      }
+      const target = { ast: { fdef: { parameters: [] } }, vtype: 'fclos' }
+      analyzer.rememberDecoratorForwardedCallInfo(target, originalCallInfo)
+      const forwardedCallInfo: CallInfo = {
+        callArgs: {
+          args: [
+            { index: 0, value: ['lost'], kind: 'spread' },
+            { index: 1, value: { flag: 'lost_flag' }, kind: 'kwspread' },
+          ],
+        },
+      }
+      const restored = analyzer.getDecoratorForwardedCallInfo(target, forwardedCallInfo)
+      assert.deepStrictEqual(restored.callArgs?.receiver, originalCallInfo.callArgs?.receiver)
+      assert.deepStrictEqual(restored.callArgs?.args, [
+        { index: 0, value: 'payload', kind: 'positional' },
+        { index: 1, value: 'flag', name: 'flag', kind: 'keyword' },
+        { index: 1, value: 'lost_flag', name: 'flag', kind: 'keyword' },
+      ])
+      assert.strictEqual(restored.callsiteNode, callsiteNode)
+      assert.strictEqual(restored.callsiteNode?.type, 'CallExpression')
+      assert.deepStrictEqual(restored.callsiteNode?.loc, callsiteNode?.loc)
+      assert.notStrictEqual(restored, originalCallInfo)
+    })
+
+    it('普通内部调用不复用装饰器原始 callInfo', function () {
+      const originalCallInfo: CallInfo = { callArgs: { args: [{ index: 0, value: 'outer', kind: 'positional' }] } }
+      const target = { ast: { fdef: { parameters: [] } }, vtype: 'fclos' }
+      analyzer.rememberDecoratorForwardedCallInfo(target, originalCallInfo)
+      const normalCallInfo: CallInfo = { callArgs: { args: [{ index: 0, value: 'inner', kind: 'positional' }] } }
+      const restored = analyzer.getDecoratorForwardedCallInfo(target, normalCallInfo)
+      assert.strictEqual(restored, normalCallInfo)
+    })
+
+    it('空参数内部调用可复用装饰器原始 callInfo', function () {
+      const originalCallInfo: CallInfo = { callArgs: { args: [{ index: 0, value: 'outer', kind: 'positional' }] } }
+      const target = { ast: { fdef: { parameters: [] } }, vtype: 'fclos' }
+      analyzer.rememberDecoratorForwardedCallInfo(target, originalCallInfo)
+      const restored = analyzer.getDecoratorForwardedCallInfo(target, INTERNAL_CALL)
+      assert.deepStrictEqual(restored.callArgs?.args, originalCallInfo.callArgs?.args)
+      assert.notStrictEqual(restored, originalCallInfo)
     })
   })
 

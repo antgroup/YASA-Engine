@@ -47,6 +47,21 @@ export class UnionValue extends DataValue {
 
     // 通过 value setter 设置（触发 wrapFieldArray，匹配旧行为）
     this.value = (value && Array.isArray(value)) ? value : []
+
+    // v5 第 6 类 hook：UnionValue 合成事件
+    // runtime 语义：union.taint = OR(children.taint)；离线 DB 需显式 (child → union) edge
+    // 覆盖全部 18+ `new UnionValue(...)` 调用点（memStateBVT / analyzer / memSpace / memState / union.ts）
+    // 详见 W-MFIX2-DIAG.md §3-§4
+    if (value && Array.isArray(value) && value.length > 0) {
+      try {
+        const { auditUnionComposeEvent } = require('./unit-audit')
+        for (const child of value) {
+          if (child) auditUnionComposeEvent(child, this)
+        }
+      } catch (_e) {
+        // 插桩失败不影响分析流程
+      }
+    }
   }
 
 
@@ -266,6 +281,16 @@ export class UnionValue extends DataValue {
     this.value.push(valueToPush)
     this.set.add(val)
     this.elements.push(val)
+
+    // v5 POC union_compose hook 扩展出口：覆盖 appendValue/_pushValue 动态添加路径
+    // runtime 语义：union.taint = OR(children.taint)，离线 DB 需 (child → union) edge
+    // 补充 constructor hook（入参非空），覆盖 appendValue 逐步追加场景
+    try {
+      const { auditUnionComposeEvent } = require('./unit-audit')
+      auditUnionComposeEvent(val, this)
+    } catch (_e) {
+      // 插桩失败不影响分析流程
+    }
   }
 
   /**

@@ -4,7 +4,7 @@ const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker'
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { markTaintSource } = require('../common-kit/source-util')
-const { isTornadoCall, tornadoSourceAPIs, isRequestAttributeAccess } = require('./tornado-util')
+const { isTornadoCall, tornadoSourceAPIs, isPreparedBodyRead, isRequestAttributeAccess } = require('./tornado-util')
 const { extractRelativePath } = require('../../../util/file-util')
 
 // Metadata storage
@@ -166,6 +166,12 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
         const ep = completeEntryPoint(fclos)
         if (ep) {
           ep.funcReceiverType = cls.ast?.node?.id?.name || cls.sid || 'Unknown'
+          // Tornado handler 方法被自定义装饰器包裹时，引擎 executeCallWithDecorators 执行 wrapper
+          // 而非原始方法体，导致 self.request.body 等 source 从未触发。
+          // 标记 skipDecorators 让入口点执行时直接跳过装饰器。
+          if (fclos.decorators?.length > 0) {
+            ep.skipDecorators = true
+          }
           const isDuplicate = analyzer.entryPoints.some(
             (existing: any) =>
               existing.functionName === ep.functionName &&
@@ -255,6 +261,16 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     if (tornadoSourceAPIs.has(name)) {
       markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
     }
+    // 反序列化函数透传：orjson.loads / json.loads 等不改变数据的用户输入性质，
+    // 若参数已携带 PYTHON_INPUT tag，返回值也应标记
+    if (name === 'loads' || name === 'load') {
+      const argsHasInput = argvalues.some(
+        (v: { taint?: { containsTag: (tag: string) => boolean } }) => v?.taint?.containsTag('PYTHON_INPUT'),
+      )
+      if (argsHasInput) {
+        markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
+      }
+    }
   }
 
   /**
@@ -267,6 +283,9 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    */
   triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
     if (isRequestAttributeAccess(node)) {
+      markTaintSource(info.res, { path: node, kind: 'PYTHON_INPUT' })
+    }
+    if (isPreparedBodyRead(node)) {
       markTaintSource(info.res, { path: node, kind: 'PYTHON_INPUT' })
     }
   }

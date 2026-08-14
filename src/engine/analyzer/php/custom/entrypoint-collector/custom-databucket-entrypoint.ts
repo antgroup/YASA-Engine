@@ -18,7 +18,7 @@
  * taint 层把所有参数都当 source（走 SOA 同样的全参污点分支）。
  */
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const logger = require('../../../../../util/logger')(__filename)
 const {

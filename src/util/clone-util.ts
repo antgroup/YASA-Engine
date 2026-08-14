@@ -9,6 +9,12 @@ import { SymbolValue } from '../engine/analyzer/common/value/symbolic'
 import { PackageValue } from '../engine/analyzer/common/value/package'
 import { FunctionValue } from '../engine/analyzer/common/value/function'
 import { Scoped } from '../engine/analyzer/common/value/scoped'
+import type Unit from '../engine/analyzer/common/value/unit'
+
+type WritableValueContainer = Record<string, unknown> | unknown[]
+type CloneParent = Unit & { value?: WritableValueContainer; raw_value?: WritableValueContainer }
+type CloneFieldHolder = { _field?: Record<string | symbol, unknown>; value?: unknown }
+type AnalyzerWithSymbolTable = { symbolTable: { get(uuid: string): unknown } }
 
 /**
  * 浅拷贝值，不触发 getter/setter
@@ -115,6 +121,38 @@ function buildNewValueInstance(
   recursiveDepth = 1,
   options?: { skipTagTraceMap?: boolean; qidSuffix?: string; forceVtype?: string }
 ): any {
+  const isArrayKey = (key: string | number): boolean => typeof key === 'number' || /^\d+$/.test(key)
+  const ensureWritableValueContainer = (parentObj: CloneParent | undefined, key: string | number): WritableValueContainer | undefined => {
+    if (!parentObj || typeof parentObj !== 'object') {
+      return undefined
+    }
+    if (parentObj.value && typeof parentObj.value === 'object') {
+      return parentObj.value
+    }
+    // clone 父节点可能只有 _field 成员，value 容器必须存在才能承接子实例回填。
+    const container: WritableValueContainer = isArrayKey(key) ? [] : {}
+    let proto = Object.getPrototypeOf(parentObj)
+    let hasValueAccessor = false
+    while (proto) {
+      const desc = Object.getOwnPropertyDescriptor(proto, 'value')
+      if (desc?.get || desc?.set) {
+        hasValueAccessor = true
+        break
+      }
+      proto = Object.getPrototypeOf(proto)
+    }
+    if (hasValueAccessor) {
+      Object.defineProperty(parentObj, 'raw_value', {
+        value: container,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    } else {
+      parentObj.value = container
+    }
+    return parentObj.value
+  }
   const qidSuffix = options?.qidSuffix || ''
   const forceVtype = options?.forceVtype
   const opts = { ...originalObj, vtype: forceVtype || 'object' }
@@ -164,6 +202,7 @@ function buildNewValueInstance(
     obj.parent = scope
   }
   if (typeof originalObj.value === 'object') {
+    ensureWritableValueContainer(obj, Array.isArray(originalObj.value) ? 0 : '')
     const instanceTag = `<instance_${sig}_endtag>`
     const visited = new WeakSet()
     const MAX_RECURSION_DEPTH = recursiveDepth // 最大递归层数，默认往下1层，总共2层
@@ -227,7 +266,12 @@ function buildNewValueInstance(
           newVal._logicalQid = undefined
           newVal._this = parentObj
           newVal.parent = parentObj
-          parentObj.value[key] = newVal
+          const parentValue = ensureWritableValueContainer(parentObj, key)
+          if (Array.isArray(parentValue)) {
+            parentValue[Number(key)] = newVal
+          } else if (parentValue) {
+            parentValue[String(key)] = newVal
+          }
         }
       }
 
@@ -252,7 +296,11 @@ function buildNewValueInstance(
 
       // 递归处理 _field 中的值
       if (newVal._field && typeof newVal._field === 'object') {
-        const fieldTarget = (newVal._field as any)[RAW_TARGET] || newVal._field
+        const fieldHolder = newVal as CloneFieldHolder
+        const fieldTarget: WritableValueContainer | undefined = fieldHolder._field?.[RAW_TARGET] as WritableValueContainer | undefined || fieldHolder._field
+        if (fieldTarget !== newVal.value) {
+          ensureWritableValueContainer(newVal, Array.isArray(fieldTarget) ? 0 : '')
+        }
 
         // 如果是数组（union 类型）
         if (Array.isArray(fieldTarget)) {
@@ -260,7 +308,7 @@ function buildNewValueInstance(
             const element = fieldTarget[i]
             // 如果是 UUID，从符号表中获取实际对象并递归处理
             if (typeof element === 'string' && element.startsWith('symuuid_')) {
-              const unit = analyzer.symbolTable.get(element)
+              const unit = (analyzer as AnalyzerWithSymbolTable).symbolTable.get(element)
               if (unit) {
                 addInstanceTagRecursive(unit, newVal, i, depth + 1)
               }
@@ -276,7 +324,7 @@ function buildNewValueInstance(
               const fieldValue = fieldTarget[fieldKey]
               // 如果是 UUID，从符号表中获取实际对象并递归处理
               if (typeof fieldValue === 'string' && fieldValue.startsWith('symuuid_')) {
-                const unit = analyzer.symbolTable.get(fieldValue)
+                const unit = (analyzer as AnalyzerWithSymbolTable).symbolTable.get(fieldValue)
                 if (unit) {
                   addInstanceTagRecursive(unit, newVal, fieldKey, depth + 1)
                 }
@@ -339,7 +387,52 @@ function buildNewCopiedWithTag(analyzer: any, value: any, tag: string) {
  * then appends a timestamp+random tag to qid and re-registers in symbolTable.
  * @param value
  */
-function lodashCloneWithTag(value: any) {
+function normalizeCloneReadablePart(value: unknown): string {
+  if (typeof value !== 'string' && typeof value !== 'number') return ''
+  return String(value)
+    .replace(/<cloned_[^>]*_endtag>/g, '')
+    .replace(/[\r\n|#\s]+/g, '-')
+    .slice(0, 48)
+}
+
+function countCloneTokens(value: unknown): number {
+  return typeof value === 'string' ? value.match(/<cloned_[^>]*_endtag>/g)?.length ?? 0 : 0
+}
+
+function cloneReadableRecord(value: unknown): Record<string, unknown> {
+  return value && (typeof value === 'object' || typeof value === 'function') ? (value as Record<string, unknown>) : {}
+}
+
+function readClonePath(value: unknown, path: readonly string[]): unknown {
+  let current = value
+  for (const key of path) {
+    current = cloneReadableRecord(current)[key]
+    if (current === undefined || current === null) break
+  }
+  return current
+}
+
+function readCloneValueName(value: unknown): string {
+  return normalizeCloneReadablePart(
+    readClonePath(value, ['name']) ||
+      readClonePath(value, ['id', 'name']) ||
+      readClonePath(value, ['ast', 'node', 'id', 'name']) ||
+      readClonePath(value, ['ast', 'fdef', 'id', 'name']) ||
+      readClonePath(value, ['ast', 'id', 'name']) ||
+      readClonePath(value, ['_qid']) ||
+      readClonePath(value, ['qid'])
+  )
+}
+
+function buildCloneReadableTag(value: unknown, reason: string, depth: number): string {
+  const ctorName = normalizeCloneReadablePart(readClonePath(value, ['constructor', 'name']))
+  const valueName = readCloneValueName(value)
+  const qidSummary = normalizeCloneReadablePart(readClonePath(value, ['_qid']) || readClonePath(value, ['qid']))
+  const parts = [`${reason || valueName || 'clone'}#${depth}`, ctorName, valueName, qidSummary].filter(Boolean)
+  return parts.join(':').slice(0, 160)
+}
+
+function lodashCloneWithTag(value: any, reason?: string) {
   const newVal = typeof value?.cloneAlias === 'function' ? value.cloneAlias() : _.clone(value)
   if (newVal.qid) {
     const timestamp = Date.now().toString().slice(-8)
@@ -347,8 +440,17 @@ function lodashCloneWithTag(value: any) {
       .toString()
       .padStart(4, '0')
     const copiedTag = `<cloned_${timestamp}_${random}_endtag>`
+    const parentQid = typeof value?._qid === 'string' ? value._qid : typeof value?.qid === 'string' ? value.qid : ''
+    const parentDepth = typeof value?._cloneDepth === 'number' ? value._cloneDepth : countCloneTokens(parentQid)
+    const cloneReason = reason || readCloneValueName(value)
+    const cloneDepth = parentDepth + 1
     newVal._qid += copiedTag
     newVal._logicalQid = undefined
+    newVal._cloneTag = copiedTag
+    newVal._cloneReadableTag = buildCloneReadableTag(value, cloneReason, cloneDepth)
+    newVal._cloneReason = cloneReason
+    newVal._cloneDepth = cloneDepth
+    newVal._cloneParentQid = parentQid
     newVal.uuid = null
     newVal.calculateAndRegisterUUID()
   }

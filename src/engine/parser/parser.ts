@@ -120,13 +120,18 @@ function loadWorker(workerName: string): any {
   const isCompiled = __dirname.includes('/dist/') || __dirname.includes('\\dist\\')
   // pkg 打包后 execPath 指向二进制自身，不支持 execArgv 中的 V8 flag
   const isPkg = !!(process as any).pkg
+  // macOS 隐私保护修复：worker 进程需要预加载 antlr4ts require 重定向
+  const antlr4tsFixPath = path.join(__dirname, '..', '..', '..', 'node_modules', '.antlr4ts-require-fix.js')
+  const hasAntlr4tsFix = fs.existsSync(antlr4tsFixPath)
 
   if (isCompiled) {
     const workerPath = path.join(__dirname, `${workerName}.js`)
     if (fs.existsSync(workerPath)) {
+      const execArgv = ['--max-old-space-size=2048']
+      if (hasAntlr4tsFix) execArgv.push('--require', antlr4tsFixPath)
       return fork(path.resolve(workerPath), [], isPkg
-        ? { execArgv: [], env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=2048' } }
-        : { execArgv: ['--max-old-space-size=2048'] })
+        ? { execArgv: [], env: { ...process.env, NODE_OPTIONS: `--max-old-space-size=2048${hasAntlr4tsFix ? ` --require ${antlr4tsFixPath}` : ''}` } }
+        : { execArgv })
     }
     throw new Error(`Worker file not found: ${workerPath}`)
   }

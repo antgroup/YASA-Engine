@@ -6,12 +6,14 @@
  * CallInfo: container passed through the call chain
  */
 
+import type { BaseNode, Node } from '../../../types/uast'
+
 export type CallArgKind = 'positional' | 'keyword' | 'spread' | 'kwspread'
 
 export interface CallArg {
   index: number        // original position in node.arguments
   value: any           // evaluated result
-  node?: any           // AST node (for SourceLine)
+  node?: BaseNode      // AST node (for SourceLine)
   name?: string        // keyword name (keyword/kwspread only)
   kind: CallArgKind
 }
@@ -19,6 +21,7 @@ export interface CallArg {
 export interface CallArgs {
   receiver?: any       // MemberAccess thisObj
   args: CallArg[]
+  node?: unknown       // 调用表达式节点，用于构造稳定 callsite 维度
 }
 
 export interface BoundParam {
@@ -37,6 +40,7 @@ export interface BoundCall {
 export interface CallInfo {
   callArgs?: CallArgs
   boundCall?: BoundCall
+  callsiteNode?: Node
 }
 
 /**

@@ -2,9 +2,8 @@ import { primitiveToString } from '../../../util/variable-util'
 import { AstRefList } from './value/ast-ref-list'
 import type { ISymbolTableManager } from './symbol-table-interface'
 import type { Invocation } from '../../../resolver/common/value/invocation'
+import type { TraceItem } from '../../../util/finding-util'
 import type {
-  BaseNode,
-  Node,
   Identifier,
   Literal,
   CompileUnit,
@@ -40,6 +39,8 @@ import type {
   SpreadElement,
   YieldExpression,
   ExportStatement,
+  Node,
+  BaseNode,
 } from '../../../types/uast'
 import type {
   Scope as ScopeType,
@@ -50,19 +51,47 @@ import type {
   SpreadValue as SpreadValueType,
 } from '../../../types/analyzer'
 import { BaseAnalyzer } from './base-analyzer'
+import { FindingsCheckpointWriter, writeFindingsCheckpoint, type FindingsCheckpointReason } from './findings-checkpoint'
 import { BinaryExprValue } from './value/binary-expr'
 import { UnaryExprValue } from './value/unary-expr'
 import { CallExprValue } from './value/call-expr'
 import { AnalysisContext } from './analysis-context'
+import {
+  buildEntryPointAnalysisKey,
+  buildEntryPointMetricDiagnostics,
+  EntryPointMetricsCollector,
+  getEntryPointMetricType,
+  markEntryPointForAnalysis,
+  type EntryPointMetric,
+} from '../../../util/entrypoint-metrics'
+import type { CallArg, CallArgs, CallInfo, BoundCall, BoundParam } from './call-args'
+import { getLegacyArgValues, INTERNAL_CALL } from './call-args'
+import {
+  createDefaultCallSummarySessions,
+  executeWithCallSummary,
+  type CallSummaryReturnLike,
+  type CallSummaryRiskContext,
+} from './call-summary'
+import { defaultCallSummaryPolicy } from './call-summary/language/default'
+import type { CallSummaryLanguagePolicy, CallSummaryLanguagePolicyContext } from './call-summary/language/types'
+import {
+  applyCallSummaryReplayDelta,
+  buildCallSummaryReplayReturn,
+  buildHitReturn,
+  captureCallSummarySideEffectSnapshot,
+} from './call-summary/adapter'
 
 const _ = require('lodash')
 const Uuid = require('node-uuid')
 const logger = require('../../../util/logger')(__filename)
 const Config = require('../../../config')
+
+function isDataflowInstrumentationEnabled(): boolean {
+  return Config.dataflowDb
+}
+const constValue = require('../../../util/constant')
 const Initializer = require('./initializer')
 const NativeResolver = require('./native-resolver')
-import type { CallArg, CallArgs, CallInfo, BoundParam, BoundCall } from './call-args'
-import { getLegacyArgValues, INTERNAL_CALL } from './call-args'
 const MemState = require('./memState')
 const Scope = require('./scope')
 const SourceLine = require('./source-line')
@@ -70,7 +99,7 @@ const AstUtil = require('../../../util/ast-util')
 const StateUtil = require('../../util/state-util')
 const SymAddress = require('./sym-address')
 const { unionAllValues } = require('./memStateBVT')
-const { shallowCopyValue, buildNewValueInstance, lodashCloneWithTag } = require('../../../util/clone-util')
+const { shallowCopyValue, buildNewValueInstance, buildNewCopiedWithTag, lodashCloneWithTag } = require('../../../util/clone-util')
 const { handleException } = require('./exception-handler')
 const {
   ValueUtil: {
@@ -82,7 +111,6 @@ const {
     SymbolValue,
     PackageValue,
     VoidValue,
-    SpreadValue,
   },
 } = require('../../util/value-util')
 
@@ -95,11 +123,166 @@ const { moveExistElementsToBuffer, addElementToBuffer } = require('../java/commo
 const { performanceTracker } = require('../../../util/performance-tracker')
 const { checkInvocationMatchSink } = require('../../../checker/taint/common-kit/sink-util')
 const OutputStrategyAutoRegister = require('./output-strategy-auto-register')
+// 单入口内存护栏：基类 hook + Python override 写状态；状态由子类持有
+import type { MemoryGuardState } from './memory-guard/entrypoint-memory-guard'
+const { logDiagnostics } = require('../../../util/diagnostics-log-util')
+type IncrementalManagerModule = typeof import('../../../incremental/incremental-manager')
+
+function loadIncrementalManager(): IncrementalManagerModule {
+  return require('../../../incremental/incremental-manager') as IncrementalManagerModule
+}
 
 const ASTManager = require('./ast-manager')
 const SymbolTableManager = require('./symbol-table-manager')
 const { setGlobalASTManager, setGlobalSymbolTable, getGlobalSymbolTable } = require('../../../util/global-registry')
 const { prettyPrint } = require('../../../util/ast-util')
+
+type TaintLike = {
+  isTaintedRec?: boolean
+  getTags?: () => string[]
+  getTagTracesMap?: () => Map<string, TraceItem[]>
+  getTrace?: (tag: string) => TraceItem[] | null
+  mergeTracesFrom?: (source: TaintLike) => void
+  mergeTracesDedup?: (source: TaintLike) => void
+  containsTag?: (tag: string) => boolean
+  markSource?: () => void
+  addTag?: (tag: string) => void
+  materializeTagTrace?: (tag: string, trace: TraceItem[]) => void
+  tagTraces?: Map<string, TraceItem[]>
+}
+
+type ValueLike = {
+  taint?: TaintLike
+  hasTagRec?: boolean
+  misc_?: {
+    buffer?: unknown[]
+    'pass-in'?: unknown[]
+  }
+  _field?: Record<string, unknown>
+  value?: unknown
+}
+
+/**
+ * wrapper-return 候选：方法体返回 UndefinedValue 时，从 fscope 中收集仍带 taint 的载体值，
+ * 让 wrapper 类方法（filterValidActivityByConsult 等）仍能把 taint 透传给调用者。
+ */
+type WrapperReturnCandidate = {
+  value: any
+  score: number
+}
+
+/** Java 集合/数组类型 qid 关键字（lowercase 匹配）：用于在 carrier scorer 中加权识别真实集合载体。 */
+const COLLECTION_QID_PATTERNS = [
+  'arraylist',
+  'linkedlist',
+  'copyonwritearraylist',
+  'hashset',
+  'linkedhashset',
+  'treeset',
+  'hashmap',
+  'linkedhashmap',
+  'treemap',
+  'concurrenthashmap',
+  'collections',
+  'arrays',
+  'list',
+  'set',
+  'map',
+]
+
+function getAstTypeName(node: any): string {
+  if (!node) return ''
+  if (typeof node === 'string') return node
+  if (typeof node.name === 'string') return node.name
+  if (typeof node.value === 'string') return node.value
+  if (node.id) return getAstTypeName(node.id)
+  if (node.elementType) return getAstTypeName(node.elementType)
+  if (node.base) return getAstTypeName(node.base)
+  if (node.object) return getAstTypeName(node.object)
+  if (Array.isArray(node.typeParameters) && node.typeParameters.length > 0) return getAstTypeName(node.typeParameters[0])
+  return ''
+}
+
+function getDeclaredReturnTypeName(fdecl: any): string {
+  const returnType = fdecl?.returnType || fdecl?._meta?.returnType
+  return getAstTypeName(returnType).toLowerCase()
+}
+
+/**
+ * 判断方法返回类型是否属于"可被 wrapper-return 兜底"的容器/复合类型。
+ * 仅这类返回 UndefinedValue 时才会触发 candidate 兜底，
+ * 避免误把基本类型方法返回值替换为对象。
+ * 白名单机制：只对已知可恢复类型生效，防止过宽匹配覆盖 fallbackCallbackTraceTarget 路径。
+ */
+function isRecoverableDeclaredReturn(fdecl: any): boolean {
+  const declaredType = getDeclaredReturnTypeName(fdecl)
+  if (!declaredType || declaredType === 'void') return false
+  return declaredType.includes('list') || declaredType.includes('collection') || declaredType.includes('set') || declaredType.includes('map') ||
+    declaredType.includes('array') || declaredType.includes('object') || declaredType.includes('response') || declaredType.includes('result') ||
+    declaredType.includes('dto') || declaredType.includes('vo') || declaredType.includes('bo') ||
+    declaredType === 'string' || declaredType.includes('prompt')
+}
+
+/** 检查 value.qid（或 vtype 字符串）是否命中 Java collection-like 关键字。 */
+function isCollectionLikeQid(value: any): boolean {
+  const qid = typeof value?.qid === 'string' ? value.qid.toLowerCase() : ''
+  if (!qid) return false
+  for (const pattern of COLLECTION_QID_PATTERNS) {
+    if (qid.includes(pattern)) return true
+  }
+  return false
+}
+
+function collectWrapperReturnCandidates(value: any, candidates: WrapperReturnCandidate[], seen: WeakSet<object>, depth: number = 0): void {
+  if (!value || typeof value !== 'object' || seen.has(value) || depth > 4) return
+  seen.add(value)
+  const tainted = !!value.taint?.isTaintedRec
+  const buffer = typeof value.getMisc === 'function' ? value.getMisc('buffer') : value.misc_?.buffer
+  const passIn = typeof value.getMisc === 'function' ? value.getMisc('pass-in') : value.misc_?.['pass-in']
+  if (tainted && value.vtype !== 'undefine' && value.vtype !== 'void') {
+    // collection 载体（如 ArrayList）应优先于通用 DTO（如 PrizeReceiveRecordQuery）
+    // 让 wrapper 方法把 taint 透传给后续真正消费集合元素的下游
+    const bufferScore = Array.isArray(buffer) ? Math.min(buffer.length, 20) : 0
+    const typeScore = value.vtype === 'object' || value.vtype === 'symbol' || value.vtype === 'union' ? 8 : 0
+    const collectionBonus = isCollectionLikeQid(value) ? 6 : 0
+    // collection 元素层级（list-element）不应被深度重罚，改为半价
+    const depthPenalty = Math.floor(depth * 0.5)
+    candidates.push({ value, score: 10 + typeScore + bufferScore + collectionBonus - depthPenalty })
+  }
+  if (Array.isArray(buffer)) {
+    for (const item of buffer) collectWrapperReturnCandidates(item, candidates, seen, depth + 1)
+  }
+  if (Array.isArray(passIn)) {
+    for (const item of passIn) collectWrapperReturnCandidates(item, candidates, seen, depth + 1)
+  }
+  if (value.vtype === 'union' && Array.isArray(value.value)) {
+    for (const item of value.value) collectWrapperReturnCandidates(item, candidates, seen, depth + 1)
+  }
+  const fields = value.value && typeof value.value === 'object' ? value.value : value._field
+  if (fields && typeof fields === 'object' && depth < 2) {
+    for (const item of Object.values(fields)) collectWrapperReturnCandidates(item, candidates, seen, depth + 1)
+  }
+}
+
+type LibFuncTagPropagationRule = {
+  applyWithBody?: boolean
+  func?: {
+    calleeType?: string
+    fsig?: string
+    argNum?: number
+  }
+  source?: {
+    type?: string
+    index?: number | number[]
+  }
+  target?: {
+    type?: string
+    index?: number
+    propagateToOwner?: boolean
+    returnThis?: boolean
+    tripleWrite?: boolean
+  }
+}
 
 /**
  * 临时符号表管理器：包装原始符号表，在执行 symbolInterpretFn 期间自动拷贝符号值
@@ -289,6 +472,33 @@ class TemporarySymbolTableManager {
  * @param checker
  * @constructor
  */
+
+type IteratorAnalyzerValue = {
+  vtype?: string
+  value?: IteratorAnalyzerValue[]
+  rtype?: { type?: unknown; definiteType?: unknown; vagueType?: unknown }
+  qid?: string
+  uuid?: string | null
+  members?: { get: (key: string) => IteratorAnalyzerValue | undefined }
+  getRawValue?: () => Record<string, IteratorAnalyzerValue | string | undefined>
+  cloneAlias?: () => IteratorAnalyzerValue
+}
+
+type ValueIteratorFilter = (value: IteratorAnalyzerValue | string | undefined) => boolean
+
+type DecoratedCallInfoCarrier = Record<string, unknown> & {
+  __decoratedOriginalCallInfo?: CallInfo
+  value?: { value?: unknown }
+}
+
+type EstimatedInstructionNode = Record<string, unknown> & { type?: string }
+
+type CallsiteFrame = {
+  code: string
+  nodeHash?: string
+  loc?: unknown
+}
+
 class Analyzer extends BaseAnalyzer {
   options: any
 
@@ -302,11 +512,28 @@ class Analyzer extends BaseAnalyzer {
 
   _entry_fclos: any // 内部存储，通过 getter/setter 访问
 
+  // analyzeProject 启动时间戳，用于计算超时 entrypoint 重跑的时间预算
+  scanStartTimestamp: number = 0
+
   inRange: boolean
 
   ainfo: Record<string, any>
 
   sourceCodeCache: Map<string, string[]>
+
+  enableNestedSourceLineIsolation: boolean
+
+  // 仅在 Python analyzer 上启用跨 addSrcLineInfo 调用 visited memo（卡点 A Step A）。
+  crossCallVisitedEnabled: boolean = false
+
+  // 分析器实例持有默认会话配置，具体阶段在执行入口重新开启边界。
+  protected readonly callSummarySessions = createDefaultCallSummarySessions(Config.callSummaryStageStrategies)
+
+  protected readonly callSummaryLanguagePolicy?: CallSummaryLanguagePolicy
+
+  protected readonly entryPointMetrics = new EntryPointMetricsCollector()
+
+  private readonly estimatedInstructionCountCache: WeakMap<object, number> = new WeakMap()
 
   _lastProcessedNode: any // 内部存储，通过 getter/setter 访问
 
@@ -337,6 +564,240 @@ class Analyzer extends BaseAnalyzer {
 
   preprocessState: boolean | undefined
 
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null
+  }
+
+  private getRecordProperty(value: unknown, key: string): unknown {
+    return this.isRecord(value) ? value[key] : undefined
+  }
+
+  private getNodeType(value: unknown): string | undefined {
+    const nodeType = this.getRecordProperty(value, 'type')
+    return typeof nodeType === 'string' ? nodeType : undefined
+  }
+
+  rememberDecoratorForwardedCallInfo(target: unknown, callInfo: CallInfo): void {
+    if (!this.isDecoratorCallInfoCarrier(target)) return
+    const originalCallInfo = this.cloneDecoratorCallInfo(callInfo)
+    target.__decoratedOriginalCallInfo = originalCallInfo
+    const wrapped = target.value?.value
+    if (this.isDecoratorCallInfoCarrier(wrapped)) {
+      wrapped.__decoratedOriginalCallInfo = originalCallInfo
+    }
+  }
+
+  private shouldUseDecoratorForwardedCallInfo(callInfo: CallInfo): boolean {
+    const args = callInfo.callArgs?.args ?? []
+    return args.length === 0 || args.some((arg: CallArg) => arg.kind === 'spread' || arg.kind === 'kwspread')
+  }
+
+  getDecoratorForwardedCallInfo(fclos: unknown, callInfo: CallInfo): CallInfo {
+    if (!this.shouldUseDecoratorForwardedCallInfo(callInfo) || !this.isDecoratorCallInfoCarrier(fclos)) {
+      return callInfo
+    }
+    const originalCallInfo = fclos.__decoratedOriginalCallInfo
+    if (!originalCallInfo) return callInfo
+    return this.mergeDecoratorForwardedKeywords(this.cloneDecoratorCallInfo(originalCallInfo), callInfo)
+  }
+
+  private mergeDecoratorForwardedKeywords(restoredCallInfo: CallInfo, forwardedCallInfo: CallInfo): CallInfo {
+    const restoredArgs = restoredCallInfo.callArgs?.args
+    const forwardedArgs = forwardedCallInfo.callArgs?.args ?? []
+    if (!restoredArgs) return restoredCallInfo
+    for (const arg of forwardedArgs) {
+      if (arg.kind === 'keyword' && arg.name) {
+        restoredArgs.push({ ...arg })
+      } else if (arg.kind === 'kwspread') {
+        for (const [name, value] of this.resolveKwSpreadEntries(arg.value)) {
+          restoredArgs.push({ index: arg.index, value, name, kind: 'keyword' })
+        }
+      }
+    }
+    return restoredCallInfo
+  }
+
+  private isDecoratorCallInfoCarrier(value: unknown): value is DecoratedCallInfoCarrier {
+    return this.isRecord(value)
+  }
+
+  private cloneDecoratorCallInfo(callInfo: CallInfo): CallInfo {
+    return {
+      callArgs: callInfo.callArgs
+        ? {
+            receiver: callInfo.callArgs.receiver,
+            args: callInfo.callArgs.args.map((arg: CallArg) => ({ ...arg })),
+          }
+        : undefined,
+      callsiteNode: callInfo.callsiteNode,
+    }
+  }
+
+  private estimateInstructionCount(node: unknown, depth: number = 0): number {
+    if (!node || typeof node !== 'object') return 0
+    const record = node as EstimatedInstructionNode
+    const cached = this.estimatedInstructionCountCache.get(record)
+    if (cached !== undefined) return cached
+    if (depth >= 12) return record.type ? 1 : 0
+
+    let count = record.type ? 1 : 0
+    for (const [key, value] of Object.entries(record)) {
+      if (key === 'parent' || key === 'loc' || key === '_meta') continue
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          count += this.estimateInstructionCount(child, depth + 1)
+        }
+      } else if (value && typeof value === 'object') {
+        count += this.estimateInstructionCount(value, depth + 1)
+      }
+    }
+    // 估算只用于日志，缓存避免 summary hit 路径反复递归同一函数体。
+    this.estimatedInstructionCountCache.set(record, count)
+    return count
+  }
+
+  private estimateFunctionBodyInstructionCount(fclos: unknown): number {
+    const fdef = this.getRecordProperty(this.getRecordProperty(fclos, 'ast'), 'fdef')
+    const body = this.getRecordProperty(fdef, 'body')
+    return this.estimateInstructionCount(body)
+  }
+
+  private getCallReturnUsed(node: unknown): boolean | 'unknown' {
+    const parent = this.getRecordProperty(node, 'parent')
+    if (!this.isRecord(parent)) return 'unknown'
+
+    const parentType = this.getNodeType(parent)
+    if (parentType === 'MemberAccess' && this.getRecordProperty(parent, 'object') === node) return true
+    if (parentType === 'AssignmentExpression' && this.getRecordProperty(parent, 'right') === node) return true
+    if (parentType === 'VariableDeclaration' && this.getRecordProperty(parent, 'init') === node) return true
+    if (parentType === 'ReturnStatement' && this.getRecordProperty(parent, 'argument') === node) return true
+    if (parentType === 'ExpressionStatement') return false
+    if (parentType === 'ScopedStatement' || parentType === 'CompileUnit') return false
+    return 'unknown'
+  }
+
+  private getPrettyRtype(value: unknown): string | null {
+    if (!value) return null
+    try {
+      return AstUtil.prettyPrintAST(value)
+    } catch (_error) {
+      if (this.isRecord(value)) {
+        const definiteType = this.getRecordProperty(value, 'definiteType')
+        if (definiteType && definiteType !== value) return this.getPrettyRtype(definiteType)
+        const type = this.getNodeType(value)
+        if (type) return type
+      }
+      return String(value)
+    }
+  }
+
+  private getLibCallDiagnosticName(fclos: unknown): string {
+    const qid = this.getRecordProperty(fclos, 'qid')
+    if (typeof qid === 'string' && qid.length > 0) return qid
+    const sid = this.getRecordProperty(fclos, 'sid')
+    if (typeof sid === 'string' && sid.length > 0) return sid
+    return 'unknown'
+  }
+
+  private getLibCallSemanticClass(calleeName: string): string {
+    const lowerName = calleeName.toLowerCase()
+    if (/\.(len|cap)$/.test(calleeName) || /(^|\.)len$/.test(calleeName)) return 'noise'
+    if (lowerName.includes('log') || lowerName.includes('.debug') || lowerName.includes('.error')) return 'noise'
+    if (/\.(exec|query|post|json|do|run)$/.test(calleeName) || lowerName.includes('net/http.post')) return 'sink_like'
+    if (/\.(write|encode|bind|scan)$/.test(calleeName)) return 'out_receiver'
+    if (/\.(append|make)$/.test(calleeName)) return 'container'
+    if (
+      lowerName.includes('gorm.io/gorm') ||
+      lowerName.includes('k8s.io/client-go') ||
+      calleeName.includes('CoreV1') ||
+      calleeName.includes('RESTClient') ||
+      calleeName.includes('Resource') ||
+      calleeName.includes('Namespace') ||
+      calleeName.includes('Pods') ||
+      calleeName.includes('BuildConfigFromFlags') ||
+      calleeName.includes('NewForConfig')
+    ) {
+      return 'receiver_rtype'
+    }
+    if (
+      calleeName.includes('fmt.Sprintf') ||
+      calleeName.includes('fmt.Errorf') ||
+      calleeName.includes('strings.Split') ||
+      calleeName.includes('strings.Contains') ||
+      calleeName.includes('strings.Replace') ||
+      calleeName.includes('strconv.Atoi') ||
+      calleeName.includes('strconv.Itoa') ||
+      calleeName.includes('strconv.FormatInt') ||
+      calleeName.includes('encoding/json.Marshal') ||
+      calleeName.includes('json-iterator/go.Marshal') ||
+      calleeName.includes('gjson.Get') ||
+      calleeName.includes('net/url.ParseQuery')
+    ) {
+      return 'arg_to_ret_likely'
+    }
+    return 'manual'
+  }
+
+  private getLibCallSemanticClassCode(semanticClass: string): number {
+    const codes: Record<string, number> = {
+      arg_to_ret_likely: 1,
+      out_receiver: 2,
+      container: 3,
+      sink_like: 4,
+      receiver_rtype: 5,
+      noise: 6,
+      manual: 7,
+    }
+    return codes[semanticClass] ?? 0
+  }
+
+  private buildLibCallDiagnosticsSnapshot(node: unknown, fclos: unknown, argCount: number) {
+    const callee = this.getRecordProperty(node, 'callee')
+    const receiver = this.getNodeType(callee) === 'MemberAccess' ? this.getRecordProperty(callee, 'object') : undefined
+    const fclosRtype = this.getRecordProperty(fclos, 'rtype')
+    const fclosRtypePresent = fclosRtype !== undefined && fclosRtype !== null
+    const fclosObject = this.getRecordProperty(fclos, 'object')
+    const objectRtype = this.getRecordProperty(fclosObject, 'rtype')
+    const receiverRtype = this.getRecordProperty(receiver, 'rtype') ?? objectRtype
+    const calleeName = this.getLibCallDiagnosticName(fclos)
+    const semanticClass = this.getLibCallSemanticClass(calleeName)
+    const returnUsed = this.getCallReturnUsed(node)
+    const hasReceiver = receiver !== undefined || fclosObject !== undefined
+    const receiverRtypePresent = receiverRtype !== undefined && receiverRtype !== null
+    return {
+      arg_count: argCount,
+      return_used: returnUsed,
+      has_receiver: hasReceiver,
+      call_kind: hasReceiver ? 'member_call' : 'function_call',
+      receiver_rtype_present: receiverRtypePresent,
+      receiver_rtype: this.getPrettyRtype(receiverRtype),
+      fclos_rtype_present: fclosRtypePresent,
+      fclos_rtype_pretty: this.getPrettyRtype(fclosRtype),
+      semantic_class: semanticClass,
+      semantic_class_code: this.getLibCallSemanticClassCode(semanticClass),
+      project: this.options?.maindir ?? null,
+    }
+  }
+
+  private emitLibCallDiagnostics(
+    logKey: 'lib_call_matched_rule' | 'lib_call_no_rule',
+    node: unknown,
+    fclos: unknown,
+    snapshot: ReturnType<Analyzer['buildLibCallDiagnosticsSnapshot']>
+  ): void {
+    const loc = this.getRecordProperty(node, 'loc')
+    const start = this.getRecordProperty(loc, 'start')
+    const line = this.getRecordProperty(start, 'line')
+    logDiagnostics(logKey, {
+      string1: this.getLibCallDiagnosticName(fclos),
+      string2: typeof line === 'number' ? `line:${line}` : null,
+      string3: JSON.stringify(snapshot),
+      number1: snapshot.arg_count,
+      number2: snapshot.semantic_class_code,
+      number3: snapshot.fclos_rtype_present ? 1 : 0,
+    })
+  }
+
   performanceTracker: import('../../../util/performance-tracker').IPerformanceTracker
 
   backUpSymbolTable: any
@@ -365,6 +826,7 @@ class Analyzer extends BaseAnalyzer {
     this.inRange = false // 范围语句标志
     this.ainfo = {} // 整个分析过程中的信息
     this.sourceCodeCache = new Map<string, string[]>() // 缓存的源代码（文件路径 -> 代码行数组）
+    this.enableNestedSourceLineIsolation = false
     // 设置全局 analyzer 引用，使 source-line.ts 可以访问 sourceCodeCache
     SourceLine.setGlobalAnalyzer(this)
     this._lastProcessedNode = null // 最后处理的节点（存储 UUID 或 AST 节点）
@@ -733,6 +1195,16 @@ class Analyzer extends BaseAnalyzer {
 
     this.performanceTracker.end('startAnalyze')
 
+    if (Config.incrementalRuntime?.cacheDir) {
+      const { applyIncrementalEntrypointAllowlist } = loadIncrementalManager()
+      this.entryPoints = applyIncrementalEntrypointAllowlist(
+        this.entryPoints,
+        Config.incrementalRuntime,
+        this.options?.maindir || Config.maindir || '',
+        Config.reportDir
+      )
+    }
+
     // dumpEntrypoint：收集完入口点后输出 entrypoints.json
     if (Config.dumpEntrypoint && Config.reportDir) {
       const fs = require('fs')
@@ -741,17 +1213,23 @@ class Analyzer extends BaseAnalyzer {
       const entryPointData = {
         entryPoints: (this.entryPoints || []).map((ep: any) => {
           const loc = ep.entryPointSymVal?.ast?.node?.loc
-          const location = loc ? {
-            start: loc.start,
-            end: loc.end,
-            sourcefile: loc.sourcefile && sourceRoot && loc.sourcefile.startsWith(sourceRoot)
-              ? loc.sourcefile.substring(sourceRoot.length)
-              : (loc.sourcefile || ''),
-          } : null
+          const location = loc
+            ? {
+                start: loc.start,
+                end: loc.end,
+                sourcefile:
+                  loc.sourcefile && sourceRoot && loc.sourcefile.startsWith(sourceRoot)
+                    ? loc.sourcefile.substring(sourceRoot.length)
+                    : loc.sourcefile || '',
+              }
+            : null
           return {
             filePath: ep.filePath || '',
             functionName: ep.functionName || '',
             type: ep.type || '',
+            attribute: ep.attribute || '',
+            funcLocStart: ep.funcLocStart ?? loc?.start?.line ?? 0,
+            funcLocEnd: ep.funcLocEnd ?? loc?.end?.line ?? 0,
             location,
           }
         }),
@@ -767,13 +1245,15 @@ class Analyzer extends BaseAnalyzer {
 
       this.performanceTracker.start('symbolInterpret')
 
+      this.beginCallSummarySession(this.callSummarySessions[1])
       // 切换到临时符号表
       this.switchToTemporarySymbolTable()
 
       try {
-        this.symbolInterpret()
+        await this.symbolInterpret()
       } finally {
         this.restoreSymbolTable()
+        this.callSummarySessions[1].finish()
       }
       this.performanceTracker.end('symbolInterpret')
     }
@@ -817,6 +1297,7 @@ class Analyzer extends BaseAnalyzer {
    * @returns 分析结果
    */
   async analyzeProject(processingDir: any) {
+    this.scanStartTimestamp = Date.now()
     try {
       if (typeof this.preProcess === 'function' && typeof this.symbolInterpret === 'function') {
         if (typeof this.initAfterUsingCache !== 'function') {
@@ -849,6 +1330,66 @@ class Analyzer extends BaseAnalyzer {
       return resultManager.getFindings()
     }
     return null
+  }
+
+
+  getEntryPointMetrics(): EntryPointMetric[] {
+    return this.entryPointMetrics.snapshot()
+  }
+
+  protected recordEntryPointLoopMetric(
+    entryPoint: unknown,
+    metricStartTime: number,
+    findingsBefore: number,
+    skipped: boolean,
+    skipReason: string | undefined,
+    overloadCount: number
+  ): void {
+    const durationMs = Date.now() - metricStartTime
+    const findingsAfter = this.countFindings()
+    const findingDelta = findingsAfter - findingsBefore
+    const diagnostics = buildEntryPointMetricDiagnostics(entryPoint, constValue.ENGIN_START_FUNCALL, constValue.ENGIN_START_FILE_BEGIN)
+    this.entryPointMetrics.record({
+      type: getEntryPointMetricType(entryPoint, constValue.ENGIN_START_FILE_BEGIN),
+      entryPoint,
+      durationMs,
+      skipped,
+      skipReason,
+      overloadCount: skipped ? 0 : overloadCount,
+      findingDelta,
+      diagnostics,
+    })
+    // skip 属 runtime EP 去重的内部细节，metrics 已在上方记录，不再逐条刷 stdout
+    if (skipped) {
+      return
+    }
+  }
+
+  protected countFindings(): number {
+    const findings = this.recordCheckerFindings()
+    if (!findings) return 0
+    let total = 0
+    for (const key of Object.keys(findings)) {
+      const findingList = findings[key]
+      if (Array.isArray(findingList)) total += findingList.length
+    }
+    return total
+  }
+
+  protected markEntryPointForAnalysis(
+    entryPoint: unknown,
+    analyzedEntryPointKeys: Set<string>
+  ): { analysisKey: string; skipped: boolean; skipReason?: string } {
+    return markEntryPointForAnalysis(
+      entryPoint,
+      analyzedEntryPointKeys,
+      constValue.ENGIN_START_FUNCALL,
+      constValue.ENGIN_START_FILE_BEGIN
+    )
+  }
+
+  protected buildEntryPointAnalysisKey(entryPoint: unknown): string {
+    return buildEntryPointAnalysisKey(entryPoint, constValue.ENGIN_START_FUNCALL, constValue.ENGIN_START_FILE_BEGIN)
   }
 
   /**
@@ -919,6 +1460,10 @@ class Analyzer extends BaseAnalyzer {
     if (node.vtype) {
       return node
     }
+    // 单入口内存护栏：在指令边界提前退出当前入口（与 Java 超时 hook 同位点）
+    if (this.shouldAbortExecutionForMemory(state)) {
+      return new UndefinedValue()
+    }
     this.lastProcessedNode = node
 
     if (scope.vtype === 'union') {
@@ -952,6 +1497,9 @@ class Analyzer extends BaseAnalyzer {
     }
     // TODO 添加判断，后续指令是否是跟在return或throw后且在同一个scope内无法执行的指令 4+
     this.statistics.numProcessedInstructions++
+    if (this.callSummarySessions[1].keys) {
+      this.callSummarySessions[1].instructionTotal++
+    }
 
     // 如果启用了性能日志（enablePerformanceLogging），会自动记录指令执行时间和次数
     this.performanceTracker.startInstruction()
@@ -1048,6 +1596,11 @@ class Analyzer extends BaseAnalyzer {
     }
     const info = { res }
     this.checkerManager.checkAtIdentifier(this, scope, node, state, info)
+    if (isDataflowInstrumentationEnabled()) {
+      const { tryGetExistingNodeId, updateNodeMetadata } = require('./dataflow-edge-stats')
+      const nodeId = tryGetExistingNodeId(info.res)
+      if (nodeId !== null) updateNodeMetadata(nodeId, { astName: node.name })
+    }
     return info.res
   }
 
@@ -1307,8 +1860,7 @@ class Analyzer extends BaseAnalyzer {
       !Array.isArray(rightVal) &&
       (this.inRange ||
         rightVal?.vtype === 'primitive' ||
-        Object.keys(rightVal.getRawValue()).filter((key) => !key.startsWith('__yasa')).length === 0 ||
-        rightVal?.vtype === 'union')
+        Object.keys(rightVal.getRawValue()).filter((key) => !key.startsWith('__yasa')).length === 0)
     ) {
       if (value) {
         if (value.type === 'VariableDeclaration') {
@@ -1381,6 +1933,13 @@ class Analyzer extends BaseAnalyzer {
     // lastReturnValue should be treated as union since there are multi return points in one func
     if (node.argument) {
       const returnValue = this.processInstruction(scope, node.argument, state)
+
+      if (isDataflowInstrumentationEnabled()) {
+        const { recordEdge, recordNodeTag } = require('./dataflow-edge-stats')
+        recordEdge(returnValue, scope, 'return', { targetKind: 'function_return', producerKind: 'return_expr', provenance: 'common.processReturnStatement' })
+        recordNodeTag(returnValue, 'return_expr', '1', 'common.processReturnStatement')
+        recordNodeTag(scope, 'function_return', '1', 'common.processReturnStatement')
+      }
       if (!node.isYield) {
         if (!this.lastReturnValue) {
           this.lastReturnValue = returnValue
@@ -1465,7 +2024,7 @@ class Analyzer extends BaseAnalyzer {
           throw_value,
           node,
           node.loc && node.loc.sourcefile,
-          'Throw Pass: ',
+          'Var Pass: ',
           (node.argument.type === 'Identifier' ? node.argument.name : null) ||
             AstUtil.prettyPrintAST(node.argument).slice(0, 50)
         )
@@ -1552,10 +2111,14 @@ class Analyzer extends BaseAnalyzer {
     // definition hoisting handle definion first
     node.body
       .filter((n: any) => needCompileFirst(n.type))
-      .forEach((s: any) => this.processInstruction(block_scope, s, state))
+      .forEach((s: any) => {
+        this.processInstruction(block_scope, s, state)
+      })
     node.body
       .filter((n: any) => !needCompileFirst(n.type))
-      .forEach((s: any) => this.processInstruction(block_scope, s, state))
+      .forEach((s: any) => {
+        this.processInstruction(block_scope, s, state)
+      })
 
     if (this.checkerManager && this.checkerManager.checkAtEndOfBlock) {
       this.checkerManager.checkAtEndOfBlock(this, scope, node, state, {})
@@ -1685,6 +2248,7 @@ class Analyzer extends BaseAnalyzer {
           }
           tmpVal = SourceLine.addSrcLineInfo(tmpVal, node, node.loc && node.loc.sourcefile, 'Var Pass:', leftAsAny.name)
           this.saveVarInScope(scope, left, tmpVal, state, oldVal)
+
         }
         return tmpVal
       }
@@ -1787,8 +2351,12 @@ class Analyzer extends BaseAnalyzer {
       `${scope.qid}.<union@cond:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
       node
     )
-    res.appendValue(this.processInstruction(scope, node.consequent, lstate))
-    res.appendValue(this.processInstruction(rscope, node.alternative, rstate))
+    const consequentVal = this.processInstruction(scope, node.consequent, lstate)
+
+    const alternativeVal = this.processInstruction(rscope, node.alternative, rstate)
+
+    res.appendValue(consequentVal)
+    res.appendValue(alternativeVal)
     return res
   }
 
@@ -1956,6 +2524,17 @@ class Analyzer extends BaseAnalyzer {
     res = new ObjectValue(scope.qid, { ...res, sid: objSid })
     res.vtype = 'object'
     res._this = res
+
+    if (isDataflowInstrumentationEnabled() && res?.value) {
+      const { recordEdge } = require('./dataflow-edge-stats')
+      for (const k of Object.keys(res.value)) {
+        const fv = res.value[k]
+        if (fv && typeof fv === 'object' && fv !== res) {
+          recordEdge(fv, res, 'field_write')
+        }
+      }
+    }
+
     return res
   }
 
@@ -1965,8 +2544,11 @@ class Analyzer extends BaseAnalyzer {
    * Build CallArgs from evaluated argvalues and call-site AST node.
    * Base implementation: all args are positional, keyword determined by node.names.
    * Language-specific analyzers can override (e.g. Python buildPythonCallArgs).
+   * @param node
+   * @param argvalues
+   * @param fclos
    */
-  buildCallArgs(node: any, argvalues: any[], fclos: any): CallArgs {
+  buildCallArgs(node: BaseNode & { arguments?: BaseNode[] }, argvalues: any[], fclos: any): CallArgs {
     const args: CallArg[] = []
     for (let i = 0; i < argvalues.length; i++) {
       const name = this.getCallArgName(node, i)
@@ -1979,13 +2561,15 @@ class Analyzer extends BaseAnalyzer {
       })
     }
     const receiver = this.getCallReceiver(fclos, node)
-    return { receiver, args }
+    return { receiver, args, node }
   }
 
   /**
    * Get the keyword name for argument at given index from node.names.
+   * @param node
+   * @param index
    */
-  getCallArgName(node: any, index: number): string | undefined {
+  getCallArgName(node: BaseNode & { names?: string[] }, index: number): string | undefined {
     if (node.names && Array.isArray(node.names) && index < node.names.length) {
       const name = node.names[index]
       if (name && typeof name === 'string') return name
@@ -1995,8 +2579,10 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * Get the receiver (this/self) from fclos for MemberAccess calls.
+   * @param fclos
+   * @param node
    */
-  getCallReceiver(fclos: any, node: any): any {
+  getCallReceiver(fclos: any, node: BaseNode & { callee?: Node }): any {
     if (node?.callee?.type === 'MemberAccess') {
       return fclos?._this || fclos?.getThisObj?.()
     }
@@ -2005,6 +2591,9 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * 确保 callInfo 有效：缺失时创建空对象，callArgs 缺失时构建空 callArgs。
+   * @param node
+   * @param fclos
+   * @param callInfo
    */
   ensureCallInfo(node: any, fclos: any, callInfo?: CallInfo): CallInfo {
     const activeCallInfo: CallInfo = callInfo || ({ callArgs: { args: [] } } as CallInfo)
@@ -2014,13 +2603,118 @@ class Analyzer extends BaseAnalyzer {
     return activeCallInfo
   }
 
+  protected canUseCallSummary(
+    scope: ScopeType,
+    fclos: Value | undefined,
+    callInfo: CallInfo | undefined,
+    state?: State
+  ): boolean {
+    if (!scope || !fclos || !callInfo?.callArgs) return false
+    if (!state) return true
+    const policy = this.callSummaryLanguagePolicy
+    if (!policy) return true
+    const context = this.buildCallSummaryLanguagePolicyContext(scope, fclos, callInfo, state)
+    const callNode = policy.getCallNode?.(context)
+    const disabledReason = policy.getDisabledReason?.(context, callNode)
+    if (disabledReason) {
+      this.setFirstCallSummaryDisabledReason(disabledReason)
+      return false
+    }
+    return true
+  }
+
+  protected buildCallSummaryRiskContext(
+    scope: ScopeType,
+    fclos: Value | undefined,
+    callInfo: CallInfo | undefined,
+    state: State
+  ): CallSummaryRiskContext {
+    const context = this.buildCallSummaryLanguagePolicyContext(scope, fclos, callInfo, state)
+    return (this.callSummaryLanguagePolicy ?? defaultCallSummaryPolicy).buildRiskContext(context)
+  }
+
+  protected buildCallSummaryLanguagePolicyContext(
+    scope: ScopeType,
+    fclos: Value | undefined,
+    callInfo: CallInfo | undefined,
+    state: State
+  ): CallSummaryLanguagePolicyContext {
+    return { scope, fclos, callInfo, state }
+  }
+
+  protected buildCallSummaryRiskContextForCall(
+    scope: ScopeType,
+    fclos: Value | undefined,
+    callInfo: CallInfo | undefined,
+    state: State
+  ): CallSummaryRiskContext {
+    return this.buildCallSummaryRiskContext(scope, fclos, callInfo, state)
+  }
+
+  protected executeWithSummary(
+    scope: ScopeType,
+    fclos: Value | undefined,
+    callInfo: CallInfo,
+    state: State,
+    execute: () => Value,
+    options?: {
+      readonly includeStage?: boolean
+      readonly getReplayValue?: (value: Value) => CallSummaryReturnLike
+    }
+  ): Value {
+    return executeWithCallSummary({
+      sessions: this.callSummarySessions,
+      context: {
+        callerQid: scope?.qid,
+        callee: fclos,
+        callArgs: callInfo.callArgs?.args,
+        riskContext: this.buildCallSummaryRiskContextForCall(scope, fclos, callInfo, state),
+      },
+      canUse: this.canUseCallSummary(scope, fclos, callInfo, state),
+      includeStage: options?.includeStage,
+      runtime: {
+        receiver: callInfo.callArgs?.receiver,
+        pcond: state.pcond,
+      },
+      captureSideEffectSnapshot: () => captureCallSummarySideEffectSnapshot(this),
+      getReturnUsed: () => this.getCallReturnUsed(callInfo.callArgs?.node),
+      execute,
+      getReplayValue: options?.getReplayValue,
+      applyReplayDelta: applyCallSummaryReplayDelta,
+      buildReplayReturn: (replayDelta) => buildCallSummaryReplayReturn(scope?.qid, replayDelta),
+      buildHitReturn: () => buildHitReturn(scope?.qid),
+    })
+  }
+
+  protected beginCallSummarySession(session: typeof this.callSummarySessions[number]): void {
+    session.beginForLanguage(Config.language)
+  }
+
+  protected beginPrimaryCallSummarySession(language?: string): void {
+    this.callSummarySessions[0].beginForLanguage(language ?? Config.language)
+  }
+
+  protected finishPrimaryCallSummarySession(): void {
+    this.callSummarySessions[0].finish()
+  }
+
+  protected setFirstCallSummaryDisabledReason(reason: string): void {
+    for (const session of this.callSummarySessions) {
+      if (session.isActive()) session.setFirstDisabledReason(reason)
+    }
+  }
+
   /**
    * Bind CallArgs to function parameters, producing BoundCall.
    * 核心绑定逻辑：将 CallArgs 中的实参绑定到 BoundCall 的形参上。
    * 替代旧的 for-loop + node.names.indexOf 方式。
+   * @param node
+   * @param fclos
+   * @param fdecl
+   * @param callInfo
    */
   bindCallArgs(node: any, fclos: any, fdecl: any, callInfo: CallInfo): BoundCall {
-    const callArgs = callInfo.callArgs
+    const { callArgs } = callInfo
     const params = fdecl?.parameters
     const boundCall: BoundCall = {
       receiver: callArgs?.receiver,
@@ -2049,6 +2743,7 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * 判定形参类型：vararg（*args/rest）、varkw（**kwargs）、keyword_only、positional_only 或普通
+   * @param param
    */
   getParamKind(param: any): string {
     if (param?._meta?.parameterKind) {
@@ -2072,8 +2767,19 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * 统一赋值：普通参数直接赋值，vararg 收集为数组，varkw 收集为对象
+   * @param boundCall
+   * @param params
+   * @param paramIndex
+   * @param value
+   * @param argIndex
    */
-  private assignParamValue(boundCall: BoundCall, params: any[], paramIndex: number, value: any, argIndex: number): void {
+  private assignParamValue(
+    boundCall: BoundCall,
+    params: any[],
+    paramIndex: number,
+    value: any,
+    argIndex: number
+  ): void {
     if (paramIndex < 0 || paramIndex >= boundCall.params.length) return
     const target = boundCall.params[paramIndex]
     const paramKind = this.getParamKind(params[paramIndex])
@@ -2099,6 +2805,7 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * 展开 *args spread 值为数组
+   * @param value
    */
   resolveSpreadValues(value: any): any[] {
     if (Array.isArray(value)) {
@@ -2128,6 +2835,7 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * 展开 **kwargs kwspread 值为 [name, value] 对
+   * @param value
    */
   resolveKwSpreadEntries(value: any): Array<[string, any]> {
     if (!value) return []
@@ -2151,6 +2859,10 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * receiver（self/cls/this）绑定到第一个形参，返回 positional 绑定的起始索引
+   * @param boundCall
+   * @param params
+   * @param callArgs
+   * @param node
    */
   bindReceiverParam(boundCall: BoundCall, params: any[], callArgs: CallArgs, node: any): number {
     if (!callArgs.receiver || params.length === 0) return 0
@@ -2169,6 +2881,10 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * positional/spread 实参绑定到形参，溢出部分收集到 vararg
+   * @param boundCall
+   * @param params
+   * @param callArgs
+   * @param startIndex
    */
   bindPositionalArgs(boundCall: BoundCall, params: any[], callArgs: CallArgs, startIndex: number): void {
     let nextPositionalIndex = startIndex
@@ -2207,6 +2923,9 @@ class Analyzer extends BaseAnalyzer {
 
   /**
    * keyword/kwspread 实参按名称匹配形参，未匹配的收集到 varkw（**kwargs）
+   * @param boundCall
+   * @param params
+   * @param callArgs
    */
   bindKeywordArgs(boundCall: BoundCall, params: any[], callArgs: CallArgs): void {
     const keywordEntries: Array<{ name: string; value: any; argIndex: number }> = []
@@ -2282,7 +3001,8 @@ class Analyzer extends BaseAnalyzer {
       // 如果参数适配建模，则会进入相应的逻辑模拟执行，例如array.push
       if (arg.type === 'FunctionDefinition' && !fclos?.ast.fdef && !fclos?.runtime?.execute) {
         const funcDef = arg as FunctionDefinition & { name?: string }
-        if (funcDef.name?.includes('<anonymous')) {
+        // 无名函数（Java lambda 的 FunctionDefinition.name 在 AST 阶段为 undefined）或匿名函数（JS/TS）都进入 inline 分析
+        if (!funcDef.name || funcDef.name.includes('<anonymous')) {
           // let subscope = Scope.createSubScope(argv.sid + '_scope', scope,'scope')
           argv = this.processAndCallFuncDef(scope, funcDef, argv, state)
         }
@@ -2298,10 +3018,9 @@ class Analyzer extends BaseAnalyzer {
     if (same_args) argvalues = node.arguments
 
     // build structured call info
-    const callInfo: CallInfo = { callArgs: this.buildCallArgs(node, argvalues, fclos) }
-
+    const callInfo: CallInfo = { callArgs: this.buildCallArgs(node, argvalues, fclos), callsiteNode: node }
     // analyze the resolved function closure and the function arguments
-    const res = this.executeCall(node, fclos, state, scope, callInfo)
+    const res = this.executeWithSummary(scope, fclos, callInfo, state, () => this.executeCall(node, fclos, state, scope, callInfo))
 
     // function definition not found, examine possible call-back functions in the arguments
     if (fclos.vtype !== 'fclos' && Config.invokeCallbackOnUnknownFunction) {
@@ -2330,14 +3049,22 @@ class Analyzer extends BaseAnalyzer {
    * @param state
    * @param argValues
    */
-  processAndCallFuncDef(scope: any, fDef: any, fClos: any, state: any, argValues?: any) {
+  processAndCallFuncDef(
+    scope: ScopeType,
+    fDef: FunctionDefinition,
+    fClos: Value,
+    state: State,
+    argValues?: Value[],
+    traceCallNode?: Node
+  ): Value {
     if (fDef?.type !== 'FunctionDefinition' || fClos?.vtype !== 'fclos') return fClos
 
     try {
+      const parameters = Array.isArray(fDef.parameters) ? fDef.parameters : []
       if (!argValues) {
         // process FuncDef的参数
         argValues = []
-        for (const para of fDef.parameters) {
+        for (const para of parameters) {
           const argv = this.processInstruction(scope, para, state)
           if (Array.isArray(argv)) {
             argValues.push(...argv)
@@ -2347,8 +3074,8 @@ class Analyzer extends BaseAnalyzer {
         }
       }
 
-      // execute call
       const callInfo: CallInfo = { callArgs: this.buildCallArgs(fDef, argValues, fClos) }
+      if (traceCallNode) callInfo.callsiteNode = traceCallNode
       return this.executeCall(fDef, fClos, state, scope, callInfo)
     } catch (e) {
       handleException(
@@ -2767,6 +3494,76 @@ class Analyzer extends BaseAnalyzer {
     }
   }
 
+  private shouldApplyLibPropagationForCallableWithBody(node: CallExpression, fclos: SymbolValueType, callInfo: CallInfo | undefined, scope: ScopeType): boolean {
+    if (!fclos?.ast?.fdef || fclos?.runtime?.execute) {
+      return false
+    }
+    if (this.hasEmptyCallableBody(fclos)) {
+      return true
+    }
+    return this.isExplicitLibDslWrapperCall(node, fclos, callInfo, scope)
+  }
+
+  private hasEmptyCallableBody(fclos: SymbolValueType): boolean {
+    const body = (fclos?.ast?.fdef as { body?: unknown } | undefined)?.body
+    if (!body) return true
+    const statements = Array.isArray(body) ? body : Array.isArray((body as { body?: unknown }).body) ? (body as { body: unknown[] }).body : []
+    return statements.length === 0
+  }
+
+  private isExplicitLibDslWrapperCall(node: CallExpression, fclos: SymbolValueType, callInfo: CallInfo | undefined, scope: ScopeType): boolean {
+    return this.loadLibFuncTagPropagationRule().some((rule: LibFuncTagPropagationRule) => {
+      if (rule.applyWithBody !== true || rule?.source?.type !== 'ARG' || rule?.target?.type !== 'THIS' || rule?.target?.tripleWrite !== true) {
+        return false
+      }
+      if (!rule.func) {
+        return false
+      }
+      return matchSinkAtFuncCallWithCalleeType(node, fclos, [rule.func], scope, callInfo)?.length > 0
+    })
+  }
+
+  /**
+   * 子类可在长函数调用边界中断执行，例如 Java 入口点超时。
+   */
+  protected shouldAbortExecutionForTimeout(_state: State): boolean {
+    return false
+  }
+
+  /**
+   * 单入口内存护栏 hook：子类 override 在 processInstruction/executeCall 边界检查 heapUsed，
+   * 超阈返回 true 提前退出当前入口。基类默认 false（护栏 disabled 或子类未实装）。
+   */
+  protected shouldAbortExecutionForMemory(_state: State): boolean {
+    return false
+  }
+
+  /**
+   * 内存护栏状态：子类（如 Python）override 时持有，基类默认 undefined。
+   * symbolInterpret 主循环每入口开始前通过 resetMemoryGuardForEntryPoint 重置。
+   */
+  protected memoryGuardState: MemoryGuardState | undefined
+
+  /**
+   * 入口开始前重置护栏状态。子类 override 写入具体 state（基类 noop）。
+   * 默认实现确保未实装护栏的语言不会崩溃。
+   */
+  protected resetMemoryGuardForEntryPoint(_entryPointLabel: string): void {
+    // 基类 noop，子类可 override
+  }
+
+  /**
+   * 入口结束后处理护栏 diagnostics + flush。子类 override 写入具体行为。
+   * 返回是否触发了 abort（用于上层 recordEntryPointLoopMetric skipReason）。
+   */
+  protected onEntryPointMemoryGuardFinalize(_entryPoint: unknown, _findingsBefore: number): {
+    aborted: boolean
+    peakHeapMb: number
+    deltaHeapMb: number
+  } {
+    return { aborted: false, peakHeapMb: 0, deltaHeapMb: 0 }
+  }
+
   /**
    * process function calls; handle function unions
    * @param node: AST function call node
@@ -2777,15 +3574,24 @@ class Analyzer extends BaseAnalyzer {
    * @param argvalues
    * @param state
    * @param scope
+   * @param callInfo
    * @returns {*}
    */
   executeCall(node: any, fclos: any, state: State, scope: any, callInfo: CallInfo): any {
+    if (this.shouldAbortExecutionForTimeout(state)) return new UndefinedValue()
+    if (this.shouldAbortExecutionForMemory(state)) return new UndefinedValue()
     callInfo = this.ensureCallInfo(node, fclos, callInfo)
+    callInfo = this.getDecoratorForwardedCallInfo(fclos, callInfo)
     const argvalues = getLegacyArgValues(callInfo)
     if (Config.miniSaveContextEnvironment) {
       return new CallExprValue(scope.qid, fclos, argvalues, node, node?.loc, fclos)
     }
-    if (Config.makeAllCG && state.callstack?.length > 0 && fclos?.ast.fdef?.type === 'FunctionDefinition' && this.ainfo?.callgraph?.nodes) {
+    if (
+      Config.makeAllCG &&
+      state.callstack?.length > 0 &&
+      fclos?.ast.fdef?.type === 'FunctionDefinition' &&
+      this.ainfo?.callgraph?.nodes
+    ) {
       for (const callgraphnode of this.ainfo?.callgraph?.nodes.values()) {
         // 从 nodehash 还原 funcDef
         let callgraphFuncDef = callgraphnode.opts?.funcDef
@@ -2816,12 +3622,16 @@ class Analyzer extends BaseAnalyzer {
 
     // process the function body
     if (fclos.ast.fdef || fclos.runtime?.execute) {
+      const shouldApplyLibPropagation = this.shouldApplyLibPropagationForCallableWithBody(node, fclos, callInfo, scope)
+      const libPropagationResult = shouldApplyLibPropagation
+        ? this.processLibFuncTagPropagation(node, fclos, callInfo, scope, state)
+        : undefined
       const { decorators } = fclos
       // const decorators = fclos.ast && fclos.ast.decorators;
-      if (decorators && decorators.length > 0) {
-        return this.executeCallWithDecorators(_.clone(decorators), fclos, state, node, scope, callInfo)
-      }
-      return this.executeSingleCall(fclos, state, node, scope, callInfo)
+      const bodyResult = decorators && decorators.length > 0
+        ? this.executeCallWithDecorators(_.clone(decorators), fclos, state, node, scope, callInfo)
+        : this.executeSingleCall(fclos, state, node, scope, callInfo)
+      return bodyResult ?? libPropagationResult?.res
     }
     if (fclos.vtype === 'union') {
       const res: any[] = []
@@ -2860,14 +3670,30 @@ class Analyzer extends BaseAnalyzer {
     const native = NativeResolver.processNativeFunction.call(this, node, fclos, argvalues, state)
     if (native) return native
 
-    const libFuncTagPropagationRuleFound = this.processLibFuncTagPropagation(node, fclos, callInfo, scope, state)
-    if (!libFuncTagPropagationRuleFound) {
+    const shouldLogLibCallDiagnostics = Config.enableLibCallDiagnostics === true
+    const libCallDiagnosticsSnapshot = shouldLogLibCallDiagnostics
+      ? this.buildLibCallDiagnosticsSnapshot(node, fclos, argvalues.length)
+      : null
+    const libPropagationResult = this.processLibFuncTagPropagation(node, fclos, callInfo, scope, state)
+    if (shouldLogLibCallDiagnostics && libCallDiagnosticsSnapshot) {
+      this.emitLibCallDiagnostics(
+        libPropagationResult.matched ? 'lib_call_matched_rule' : 'lib_call_no_rule',
+        node,
+        fclos,
+        libCallDiagnosticsSnapshot
+      )
+    }
+    if (!libPropagationResult.matched) {
       // 没有配置的库函数，采用默认处理方式：arg->ret
       const res = this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
       if (this.enableLibArgToThis) {
-        this.processLibArgToThis(node, fclos, argvalues, -1, scope, state)
+        this.processLibArgToThis(node, fclos, argvalues, -1, scope, state, false, { preserveElements: true, mergeTraces: true, receiver: callInfo?.callArgs?.receiver })
       }
       return res
+    }
+    // ARG→RET schema 显式声明时，由 lib rule 构造的 res 必须返回，使下游 `request = JSON.parseObject(...)` 类赋值能拿到带 buffer 的返回值
+    if (libPropagationResult.res !== undefined) {
+      return libPropagationResult.res
     }
   }
 
@@ -2878,6 +3704,7 @@ class Analyzer extends BaseAnalyzer {
    * @param argvalues
    * @param scope
    * @param state
+   * @param callInfo
    */
   processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any, callInfo: CallInfo) {
     // the case without function body, still process the call, e.g. perform taint propagation
@@ -2885,7 +3712,7 @@ class Analyzer extends BaseAnalyzer {
     res.expression = fclos
     res.arguments = argvalues
     res.ast = node
-    const argsSignature = AstUtil.prettyPrintAST(node.arguments)
+    const argsSignature = this.buildLibCallArgsSignature(node.arguments)
     res.sid = `${fclos?.sid}(${argsSignature})`
     res.qid = `${fclos?.qid}(${argsSignature})`
     // res.field = {}
@@ -2928,7 +3755,7 @@ class Analyzer extends BaseAnalyzer {
         const thisVal = fclos.getThisObj()
         if (
           thisVal &&
-          ['symbol', 'object'].includes(thisVal.vtype) &&
+          ['symbol', 'object', 'uninitialized'].includes(thisVal.vtype) &&
           res.expression &&
           !res.expression.object &&
           thisVal.taint?.isTaintedRec
@@ -2946,13 +3773,25 @@ class Analyzer extends BaseAnalyzer {
     res = new SymbolValue('', { sid: res.sid, qid: res.qid, ...res }) // esp. for member getter function
     if (isTainted) {
       res.taint?.markSource()
+      // 参数影响返回值时，把参数挂到返回值 buffer，保留参数到返回值的传播关系。
+      // 不直接复制参数 trace 到返回值自身，否则会绕过中间传播节点，改变 trace 形态并产生重复路径。
+      for (const arg of argvalues) {
+        if (arg?.taint?.isTaintedRec && _.isFunction(res.setMisc)) {
+          addElementToBuffer(res, arg)
+          this.materializeRecursiveInputTags(res, this.collectLibTagSources(arg))
+        }
+      }
     }
 
-    // receiver 污点的形式化数据传播：将 receiver 加入返回值的 buffer，使 satisfy 遍历时能找到 taint tags
-    if (node.callee?.type === 'MemberAccess' && res.hasTagRec) {
+    // 成员方法返回值可能由 receiver 派生；receiver 已污染时，把 receiver 挂到返回值上保留传播关系。
+    if (node.callee?.type === 'MemberAccess') {
       const thisObj = fclos.getThisObj?.()
-      if (thisObj?.hasTagRec && _.isFunction(res.setMisc)) {
-        addElementToBuffer(res, thisObj)
+      if (thisObj?.hasTagRec || thisObj?.taint?.isTaintedRec) {
+        if (!res?.taint?.isTaintedRec) res?.taint?.markSource?.()
+        if (_.isFunction(res.setMisc)) {
+          addElementToBuffer(res, thisObj)
+          this.materializeRecursiveInputTags(res, this.collectLibTagSources(thisObj))
+        }
       }
     }
 
@@ -2960,7 +3799,30 @@ class Analyzer extends BaseAnalyzer {
     if (argvalues.length > 0) {
       res.setMisc('pass-in', argvalues)
     }
+
+    // 采集阶段: 记录 arg→ret 边（对应 runtime 的 isTainted→markSource + setMisc 行为）
+    // 同时补 receiver→ret 边：MemberAccess lib call（x.foo()）的 receiver 污点也应传到返回值，
+    // 对齐上方 L2993-2998 addElementToBuffer(res, thisObj) 的 runtime 语义。
+    if (isDataflowInstrumentationEnabled()) {
+      const { recordEdge } = require('./dataflow-edge-stats')
+      for (const arg of argvalues) {
+        if (arg) recordEdge(arg, res, 'lib_arg_to_ret')
+      }
+      if (node.callee?.type === 'MemberAccess') {
+        const thisObj = fclos.getThisObj?.()
+        if (thisObj) recordEdge(thisObj, res, 'lib_arg_to_ret')
+      }
+    }
     return res
+  }
+
+
+  buildLibCallArgsSignature(args: any): string {
+    if (!Array.isArray(args) || args.length === 0) return ''
+    return args.map((arg: any) => {
+      const printed = AstUtil.prettyPrintAST(arg)
+      return printed.length > 80 ? `${printed.slice(0, 80)}...` : printed
+    }).join(', ')
   }
 
   /**
@@ -2968,17 +3830,18 @@ class Analyzer extends BaseAnalyzer {
    * @param node
    * @param fclos
    * @param argvalues
+   * @param callInfo
    * @param scope
    * @param state
    */
-  processLibFuncTagPropagation(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any) {
+  processLibFuncTagPropagation(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any): { matched: boolean; res?: any } {
     const argvalues = getLegacyArgValues(callInfo)
     let matchRuleFound = false
+    let retValue: any
     const libFuncTagPropagationRuleArray = this.loadLibFuncTagPropagationRule()
     for (const libFuncTagPropagationRule of libFuncTagPropagationRuleArray) {
       if (
-        matchSinkAtFuncCallWithCalleeType(node, fclos, [libFuncTagPropagationRule.func], scope, callInfo)?.length >
-          0 ||
+        matchSinkAtFuncCallWithCalleeType(node, fclos, [libFuncTagPropagationRule.func], scope, callInfo)?.length > 0 ||
         this.findMatchedRuleByCallGraph(node, scope, [libFuncTagPropagationRule.func])?.length > 0
       ) {
         const sourceType = libFuncTagPropagationRule.source?.type
@@ -2988,15 +3851,29 @@ class Analyzer extends BaseAnalyzer {
         }
 
         if (sourceType === 'ARG' && targetType === 'ARG') {
-          this.processLibArgToArg(
-            node,
-            fclos,
-            argvalues,
-            libFuncTagPropagationRule.source.index,
-            libFuncTagPropagationRule.target.index,
-            scope,
-            state
-          )
+          const needsArgToArgTraceMaterialization = libFuncTagPropagationRule.target?.tripleWrite === true
+          if (needsArgToArgTraceMaterialization) {
+            // 显式三写规则需要 materialize 语言级 tag key，避免仅 buffer 传播被后续识别跳过。
+            this.processLibArgToArgWithBuffer(
+              node,
+              fclos,
+              argvalues,
+              libFuncTagPropagationRule.source.index,
+              libFuncTagPropagationRule.target.index,
+              scope,
+              state
+            )
+          } else {
+            this.processLibArgToArg(
+              node,
+              fclos,
+              argvalues,
+              libFuncTagPropagationRule.source.index,
+              libFuncTagPropagationRule.target.index,
+              scope,
+              state
+            )
+          }
           matchRuleFound = true
         } else if (sourceType === 'ARG' && targetType === 'THIS') {
           this.processLibArgToThis(
@@ -3006,17 +3883,198 @@ class Analyzer extends BaseAnalyzer {
             libFuncTagPropagationRule.source.index,
             scope,
             state,
-            !!libFuncTagPropagationRule.target?.propagateToOwner
+            !!libFuncTagPropagationRule.target?.propagateToOwner,
+            { mergeTraces: libFuncTagPropagationRule.target?.tripleWrite === true, receiver: callInfo?.callArgs?.receiver }
           )
+
+          if (libFuncTagPropagationRule.target?.returnThis === true) {
+            retValue = callInfo?.callArgs?.receiver ?? (typeof fclos?.getThisObj === 'function' ? fclos.getThisObj() : fclos?._this)
+          }
           matchRuleFound = true
         } else if (sourceType === 'THIS' && targetType === 'ARG') {
           this.processLibThisToArg(node, fclos, argvalues, libFuncTagPropagationRule.target.index, scope, state)
+          matchRuleFound = true
+        } else if (sourceType === 'ARG' && targetType === 'RET') {
+          // 显式声明型 ARG→RET 双写：构造 res + markSource + addElementToBuffer(res, arg)。
+          // 用于反序列化（如 JSON.parseObject）等返回新对象、需把 arg 端 buffer 的深层 tag 复制到 RET 的 lib 调用
+
+          const sourceIndexes = Array.isArray(libFuncTagPropagationRule.source.index)
+            ? libFuncTagPropagationRule.source.index
+            : [libFuncTagPropagationRule.source.index]
+          for (const sourceIndex of sourceIndexes) {
+            retValue = this.processLibArgToRetWithBuffer(node, fclos, argvalues, sourceIndex, scope, state, callInfo, retValue)
+          }
+          matchRuleFound = true
+        } else if (sourceType === 'THIS' && targetType === 'RET') {
+          // 显式声明型 THIS→RET 三写：构造 res + markSource + addElementToBuffer(res, _this)。
+          // 用于 dict-access 模式（如 JSONObject.getString(key)）等 receiver 携 carrier、key 是字面量且返回字段值的 lib 调用
+          retValue = this.processLibThisToRetWithBuffer(node, fclos, argvalues, scope, state, callInfo)
           matchRuleFound = true
         }
       }
     }
 
-    return matchRuleFound
+    return { matched: matchRuleFound, res: retValue }
+  }
+
+  /**
+   * lib ARG→RET 双写：构造 res（复用 processLibArgToRet 的语义）后显式 addElementToBuffer(res, arg)，
+   * 让 arg 端 buffer 子层语言级 tag（JAVA_INPUT 等）在 res 端可被 satisfy BFS 递归发现
+   * @param node
+   * @param fclos
+   * @param argvalues
+   * @param sourceIndex source ARG index
+   * @param scope
+   * @param state
+   * @param callInfo
+   */
+
+  processLibArgToRetWithBuffer(
+    node: CallExpression,
+    fclos: SymbolValueType,
+    argvalues: Value[],
+    sourceIndex: number,
+    scope: ScopeType,
+    state: State,
+    callInfo: CallInfo | undefined,
+    existingRes?: Value
+  ): Value {
+    const res = existingRes ?? this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo as CallInfo)
+    if (argvalues && sourceIndex !== undefined && sourceIndex !== null && sourceIndex >= 0 && argvalues[sourceIndex] !== undefined) {
+      const arg = argvalues[sourceIndex]
+      if (arg && _.isFunction(res?.setMisc)) {
+        if (!res?.taint?.isTaintedRec && (arg.taint?.isTaintedRec || arg.hasTagRec)) {
+          res?.taint?.markSource?.()
+        }
+        addElementToBuffer(res, arg)
+        // 把 arg.tagTraces 合到 res.tagTraces（含语言级 tag key 如 JAVA_INPUT），不依赖 sink-side BFS 深层遍历
+
+        if ((arg.taint?.getTags?.().length ?? 0) > 0 && _.isFunction(res?.taint?.mergeTracesFrom)) {
+          res.taint.mergeTracesFrom(arg.taint)
+        } else if (arg.taint?.isTaintedRec) {
+          // arg 自身 tagTraces 空但递归 tainted（典型：getInput 类 getter 把 invoke 放 buffer）→ 浅扫 arg.misc_.buffer 一层把内层 tag key 复制到 res
+          const buf = arg?.misc_?.buffer
+          if (Array.isArray(buf)) {
+            for (const elem of buf) {
+
+              if ((elem?.taint?.getTags?.().length ?? 0) > 0 && _.isFunction(res?.taint?.mergeTracesFrom)) {
+                res.taint.mergeTracesFrom(elem.taint)
+              }
+            }
+          }
+        }
+      }
+    }
+    return res
+  }
+
+  mergeLibSourceTracesIntoTarget(target: ValueLike, source: ValueLike): void {
+    if (!target?.taint || !source?.taint?.isTaintedRec || typeof target.taint.mergeTracesFrom !== 'function') {
+      return
+    }
+    const candidateTagSources = this.collectLibTagSources(source)
+    for (const src of candidateTagSources) {
+      if (typeof target.taint.mergeTracesDedup === 'function') {
+        target.taint.mergeTracesDedup(src)
+      } else {
+        target.taint.mergeTracesFrom(src)
+      }
+    }
+    this.materializeRecursiveInputTags(target, candidateTagSources)
+  }
+
+  materializeRecursiveInputTags(target: ValueLike, candidateTagSources: TaintLike[]): void {
+    if (!target?.taint || candidateTagSources.length === 0) return
+    const inputTags = ['JAVA_INPUT', 'PYTHON_INPUT', 'GO_INPUT', 'PHP_INPUT', 'JS_INPUT', 'JAVASCRIPT_INPUT']
+    for (const sourceTaint of candidateTagSources) {
+      const tagTraceMap = typeof sourceTaint.getTagTracesMap === 'function'
+        ? sourceTaint.getTagTracesMap()
+        : sourceTaint.tagTraces
+      if (!(tagTraceMap instanceof Map)) continue
+      for (const tag of inputTags) {
+        if (!tagTraceMap.has(tag)) continue
+        const targetTrace = typeof target.taint.getTrace === 'function' ? target.taint.getTrace(tag) : undefined
+        if (Array.isArray(targetTrace) && targetTrace.length > 0) continue
+        target.taint.markSource?.()
+        const trace = typeof sourceTaint.getTrace === 'function' ? sourceTaint.getTrace(tag) : tagTraceMap.get(tag)
+        if (Array.isArray(trace) && trace.length > 0 && typeof target.taint.materializeTagTrace === 'function') {
+          target.taint.materializeTagTrace(tag, trace)
+        } else if (!target.taint.containsTag?.(tag)) {
+          target.taint.addTag?.(tag)
+        }
+      }
+    }
+  }
+
+  collectLibTagSources(source: unknown, visited: Set<object> = new Set(), depth: number = 0): TaintLike[] {
+    if (!source || typeof source !== 'object' || visited.has(source) || depth > 8) return []
+    visited.add(source)
+    const sourceValue = source as ValueLike
+    const result: TaintLike[] = []
+    const sourceTaint = sourceValue.taint
+    if (sourceTaint && (sourceTaint.getTags?.().length ?? 0) > 0) {
+      result.push(sourceTaint)
+    }
+    const visitChild = (child: unknown): void => {
+      result.push(...this.collectLibTagSources(child, visited, depth + 1))
+    }
+    const buf = sourceValue.misc_?.buffer
+    if (Array.isArray(buf)) {
+      for (const child of buf) visitChild(child)
+    }
+    const passIn = sourceValue.misc_?.['pass-in']
+    if (Array.isArray(passIn)) {
+      for (const child of passIn) visitChild(child)
+    }
+    if (sourceValue._field && typeof sourceValue._field === 'object') {
+      for (const child of Object.values(sourceValue._field)) visitChild(child)
+    }
+    if (sourceValue.value && typeof sourceValue.value === 'object') {
+      if (Array.isArray(sourceValue.value)) {
+        for (const child of sourceValue.value) visitChild(child)
+      } else {
+        for (const child of Object.values(sourceValue.value as Record<string, unknown>)) visitChild(child)
+      }
+    }
+    return result
+  }
+
+  /**
+   * lib THIS→RET 三写：构造 res（复用 processLibArgToRet 的语义）后显式 addElementToBuffer(res, _this)，
+   * 让 receiver 端 buffer 子层语言级 tag（JAVA_INPUT 等）在 res 端可被 satisfy BFS 递归发现。
+   * 适用于 dict-access 模式：receiver 携 carrier、key 是字面量、返回字段值（如 fastjson JSONObject.getString(key)）。
+   * 与 processLibArgToRetWithBuffer 对称，区别仅在 source 端从 ARG[index] 改为 fclos._this / fclos.getThisObj()。
+   * @param node
+   * @param fclos
+   * @param argvalues
+   * @param scope
+   * @param state
+   * @param callInfo
+   */
+  processLibThisToRetWithBuffer(node: any, fclos: any, argvalues: any, scope: any, state: any, callInfo: CallInfo | undefined) {
+    const res = this.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo as CallInfo)
+    const thisVal = typeof fclos?.getThisObj === 'function' ? fclos.getThisObj() : fclos?._this
+    if (thisVal && _.isFunction(res?.setMisc)) {
+      if (!res?.taint?.isTaintedRec && (thisVal.taint?.isTaintedRec || thisVal.hasTagRec)) {
+        res?.taint?.markSource?.()
+      }
+      addElementToBuffer(res, thisVal)
+      // 把 receiver.tagTraces 合到 res.tagTraces（含语言级 tag key 如 JAVA_INPUT），不依赖 sink-side BFS 深层遍历
+      if (thisVal.taint?.tagTraces instanceof Map && thisVal.taint.tagTraces.size > 0 && _.isFunction(res?.taint?.mergeTracesFrom)) {
+        res.taint.mergeTracesFrom(thisVal.taint)
+      } else if (thisVal.taint?.isTaintedRec) {
+        // receiver 自身 tagTraces 空但递归 tainted（如 parseObject 三写后 receiver 把 carrier 放 buffer 而非自身 tagTraces）→ 浅扫 receiver.misc_.buffer 一层
+        const buf = thisVal?.misc_?.buffer
+        if (Array.isArray(buf)) {
+          for (const elem of buf) {
+            if (elem?.taint?.tagTraces instanceof Map && elem.taint.tagTraces.size > 0 && _.isFunction(res?.taint?.mergeTracesFrom)) {
+              res.taint.mergeTracesFrom(elem.taint)
+            }
+          }
+        }
+      }
+    }
+    return res
   }
 
   /**
@@ -3055,11 +4113,90 @@ class Analyzer extends BaseAnalyzer {
       passIn.push(arg)
       if (arg.taint?.isTaintedRec) {
         res.taint?.markSource()
+        // 参数影响目标参数时，只在目标参数上记录当前调用点；原始 source trace 继续留在 buffer 中。
+        // 这样 sink 侧仍能沿 buffer 找到 source，同时 trace 保留库调用这个中间传播节点。
         res = SourceLine.addSrcLineInfo(res, node, node.loc && node.loc.sourcefile, 'Var Pass: ', res.sid)
       }
     }
 
     res.setMisc('buffer', passIn)
+  }
+
+  /**
+   * lib ARG→ARG 三写（opt-in via schema target.tripleWrite=true）：
+   * 复用 processLibArgToArg 的 markSource + buffer push，再显式把 arg.tagTraces 的语言级 tag key 合到 target.taint。
+   * 与 processLibArgToRetWithBuffer 的语言级 tag 合并保持对称，让 satisfy BFS 起点过滤 `tagTraces.has(JAVA_INPUT)` 在 target 自身命中，
+   * 而不依赖深层 buffer 走 walk（buffer-only 无法满足后续 sink 起点过滤）。
+   * 仅显式声明 `target.tripleWrite=true` 的 schema rule 触发，对未声明的 ARG→ARG 默认路径零影响（不污染 BeanUtils.copyProperties / System.arraycopy 等既有 rule 表现）。
+   * @param node
+   * @param fclos
+   * @param argvalues
+   * @param sourceIndex
+   * @param targetIndex
+   * @param scope
+   * @param state
+   */
+  processLibArgToArgWithBuffer(
+    node: any,
+    fclos: any,
+    argvalues: any,
+    sourceIndex: any,
+    targetIndex: any,
+    scope: any,
+    state: any
+  ) {
+    if (!argvalues || argvalues.length < 2 || !targetIndex || targetIndex >= argvalues.length) {
+      return
+    }
+    if (sourceIndex === undefined || sourceIndex === null || sourceIndex < 0 || sourceIndex >= argvalues.length) {
+      return
+    }
+    const target = argvalues[targetIndex]
+    const arg = argvalues[sourceIndex]
+    if (!arg?.taint?.isTaintedRec || !target?.taint || typeof target.taint.mergeTracesFrom !== 'function') {
+      return
+    }
+    // 收集要合并的 tag key 集合（arg 自身优先；arg 自身 tagTraces 空则浅扫一层 buffer 取深层 key）
+    const candidateTagSources: any[] = []
+    if (arg.taint?.tagTraces instanceof Map && arg.taint.tagTraces.size > 0) {
+      candidateTagSources.push(arg.taint)
+    } else {
+      const buf = arg?.misc_?.buffer
+      if (Array.isArray(buf)) {
+        for (const child of buf) {
+          if (child?.taint?.tagTraces instanceof Map && child.taint.tagTraces.size > 0) {
+            candidateTagSources.push(child.taint)
+          }
+        }
+      }
+    }
+    if (candidateTagSources.length === 0) {
+      return
+    }
+    // 幂等守卫：若 target.tagTraces 已包含所有候选 tag key，则完全跳过，防止重试或同一调用点多次解释时累积重复 buffer。
+    // 典型场景是循环内反复向同一容器写入等价污点，首次染色后后续等价写入可视为无变化。
+    const targetTraces = target.taint?.tagTraces
+    if (targetTraces instanceof Map && targetTraces.size > 0) {
+      let allPresent = true
+      for (const src of candidateTagSources) {
+        for (const [k] of src.tagTraces) {
+          if (!targetTraces.has(k)) { allPresent = false; break }
+        }
+        if (!allPresent) break
+      }
+      if (allPresent) {
+        return
+      }
+    }
+    // 第一次染：base processLibArgToArg 完成 markSource + buffer push，再做三写 mergeTracesDedup 把 source tag key 拷到 target.taint
+    this.processLibArgToArg(node, fclos, argvalues, sourceIndex, targetIndex, scope, state)
+    for (const src of candidateTagSources) {
+      if (typeof target.taint.mergeTracesDedup === 'function') {
+        target.taint.mergeTracesDedup(src)
+      } else {
+        target.taint.mergeTracesFrom(src)
+      }
+    }
   }
 
   /**
@@ -3070,6 +4207,7 @@ class Analyzer extends BaseAnalyzer {
    * @param sourceIndex
    * @param scope
    * @param state
+   * @param propagateToOwner
    */
   processLibArgToThis(
     node: any,
@@ -3078,9 +4216,10 @@ class Analyzer extends BaseAnalyzer {
     sourceIndex: any,
     scope: any,
     state: any,
-    propagateToOwner: boolean = false
+    propagateToOwner: boolean = false,
+    options: { preserveElements?: boolean; mergeTraces?: boolean; receiver?: any } = {}
   ) {
-    let thisVal = fclos.getThisObj()
+    let thisVal = options.receiver ?? fclos.getThisObj()
 
     if (!argvalues || argvalues.length === 0 || !thisVal || !this.isValidLibArgToThisTarget(thisVal)) {
       return
@@ -3096,7 +4235,12 @@ class Analyzer extends BaseAnalyzer {
             continue
           }
           const arg = argvalues[argIndex]
-          addElementToBuffer(thisVal, arg)
+          const argHasSource = !!(arg?.taint?.isTaintedRec || arg?.hasTagRec)
+          if (!argHasSource) {
+            continue
+          }
+          const bufferArg = options.preserveElements ? this.snapshotEscapedElementValue(arg) : arg
+          addElementToBuffer(thisVal, bufferArg)
           if (arg.taint?.isTaintedRec) {
             thisVal.taint?.markSource()
             if (node?.parent?.type !== 'AssignmentExpression') {
@@ -3107,6 +4251,9 @@ class Analyzer extends BaseAnalyzer {
                 'Var Pass: ',
                 node?.callee?.object ? prettyPrint(node.callee.object) : thisVal.sid
               )
+            }
+            if (options.mergeTraces === true) {
+              this.mergeLibSourceTracesIntoTarget(thisVal, arg)
             }
           }
         }
@@ -3160,8 +4307,8 @@ class Analyzer extends BaseAnalyzer {
     // 内部类实例（sid 含 <instance）不应被 parentClass guard 阻止
     if (val?.parent?.vtype === 'class' && !val.sid?.includes('<instance')) return false
     if (val?.parent?._isConstructor && !val.sid?.includes('<instance')) return false
-    if (val?._this?.vtype === 'class') return false
-    if (val?._this?._isConstructor) return false
+    if (val?._this?.vtype === 'class' && !val.sid?.includes('<instance')) return false
+    if (val?._this?._isConstructor && !val.sid?.includes('<instance')) return false
     if (val.qid?.startsWith('<global>.syslib_from')) return false
     return true
   }
@@ -3184,8 +4331,13 @@ class Analyzer extends BaseAnalyzer {
         return false
       }
       const normalizedKeyword = keyword.trim().toLowerCase()
-      return normalizedKeyword.length > 0 && sid.includes(normalizedKeyword)
+      return normalizedKeyword.length > 0 && this.matchesLibArgToThisSidKeyword(sid, normalizedKeyword)
     })
+  }
+
+  matchesLibArgToThisSidKeyword(sid: string, keyword: string): boolean {
+    if (!sid || !keyword) return false
+    return sid.split(/[^a-z0-9_]+/).some((segment) => segment === keyword)
   }
 
   /**
@@ -3244,6 +4396,7 @@ class Analyzer extends BaseAnalyzer {
    * @param state
    * @param node
    * @param scope
+   * @param callInfo
    */
   executeCallWithDecorators(decorators: any, fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
     if (!decorators || decorators.length === 0) {
@@ -3253,15 +4406,40 @@ class Analyzer extends BaseAnalyzer {
     // The decorator expressions get called top to bottom, and produce decorators,
     // while decorators themselves run in the opposite direction, bottom to top.
 
+    // 同名 shadowing 防御所需：保留本轮处理的全部 decorator sid 集合（pop 会清空 decorators）
+    const originalDecoratorSids = new Set<string>(
+      (decorators || []).map((d: any) => d?.sid).filter((s: any): s is string => Boolean(s))
+    )
+
     let decorator = decorators.pop()
     let descriptor_fclos = fclos
     const class_obj = fclos.getThisObj() // fclos represents class method, the parent of it is class object
 
     while (decorator) {
+      // preprocess 阶段兄弟 FunctionDefinition 尚未就绪，此处 decorator 可能是 SymbolValue（vtype=symbol）。
+      // processInstruction 对已带 vtype 的 Value 会直接 return（analyzer.ts:919），所以必须用 sid 构造 Identifier AST
+      // 从 runtime scope 重查 fclos；查不到就保持原 symbol，不阻塞后续 guard（guard 会跳过 executeCall）。
+      if (decorator?.vtype !== 'fclos' && decorator?.sid) {
+        const lookupNode = { type: 'Identifier', name: decorator.sid, loc: decorator.ast?.node?.loc }
+        const resolved = this.getMemberValue(scope, lookupNode, state)
+        if (resolved?.vtype === 'fclos') {
+          decorator = resolved
+        }
+      }
+
       let descriptor = new ObjectValue(descriptor_fclos.qid, { sid: 'descriptor' })
       descriptor.value.value = lodashCloneWithTag(descriptor_fclos)
       const { name } = decorator // both function decl and identifier have name
-      const target = decorator
+      // target 应为被装饰函数（descriptor_fclos），而非装饰器本体；Python descriptor 协议下装饰器形参接收被装饰函数。
+      // 若 descriptor_fclos 自身带 decorators（只在第一轮：fclos 就是入口函数），要去掉 target 自身的 decorators 再传给装饰器，
+      // 避免装饰器 wrapper 内 `return f(*args, **kwargs)` 触发 executeCall(target) 时再次进入 executeCallWithDecorators 递归消耗预算。
+      let target: any = descriptor_fclos
+      if (descriptor_fclos?.decorators && descriptor_fclos.decorators.length > 0) {
+        target = lodashCloneWithTag(descriptor_fclos)
+        target.decorators = []
+      }
+      this.rememberDecoratorForwardedCallInfo(target, callInfo)
+      this.rememberDecoratorForwardedCallInfo(descriptor_fclos, callInfo)
       decorator._this = class_obj
       let descriptor_res
       // const decorator_clos = this.getMemberValue(scope, decorator, state);
@@ -3270,14 +4448,30 @@ class Analyzer extends BaseAnalyzer {
       // if decorator is not found, just skip it
       // TODO decorators that can't be found should be summary analyzed
       if (decorator_clos?.vtype === 'fclos' && !shallowEqual(decorator_clos.ast?.node, decorator)) {
-        const decoratorCallInfo: CallInfo = { callArgs: this.buildCallArgs(node, [target, name, descriptor], decorator) }
-        descriptor_res = this.executeCall(node, decorator, state, scope, decoratorCallInfo)
+// 同名 shadowing 防御：装饰器自身（outer fclos）若挂着与本轮 decorator 链同 sid 的 decorators
+        // （例如 view.py 的 `@jiekou_save` 通过 sid 反查关联到 jiekou_save.py 的 outer def，
+        // outer def 又因同名被错误归属为「自己装饰自己」），调用它会再次进入 executeCallWithDecorators，
+        // 与 executeCall(2822) 形成无门控环。此处把 decorator 自身的 decorators 剥离后再 dispatch
+        let decoratorForCall = decorator
+        if (
+          decoratorForCall?.decorators?.length > 0 &&
+          decoratorForCall?.sid &&
+          originalDecoratorSids.has(decoratorForCall.sid)
+        ) {
+          decoratorForCall = lodashCloneWithTag(decoratorForCall)
+          decoratorForCall.decorators = []
+        }
+        const decoratorCallInfo: CallInfo = { callArgs: this.buildCallArgs(node, [target, name, descriptor], decoratorForCall) }
+        descriptor_res = this.executeCall(node, decoratorForCall, state, scope, decoratorCallInfo)
       } else {
         descriptor_res = null
       }
 
       if (descriptor_res && descriptor_res.value.value) {
         descriptor = descriptor_res
+      } else if (descriptor_res?.vtype === 'fclos') {
+        // 装饰器直接返回 wrapper fclos（未包在 descriptor.value.value 里）：把 wrapper 塞进 descriptor 以便后续 getMemberValue 取到
+        descriptor.value.value = descriptor_res
       }
 
       descriptor_fclos = this.getMemberValue(
@@ -3288,6 +4482,17 @@ class Analyzer extends BaseAnalyzer {
       // descriptor_fclos runs with class object as it's [this], which can be located from parent of class method
       descriptor_fclos._this = class_obj
       decorator = decorators.pop()
+    }
+    // 同名 shadowing 防御：装饰器链回卷得到的 descriptor_fclos 与原 decorator 同 sid（Python 内层 wrapper 与外层 def 同名场景），
+    // 若仍携带继承的 decorators 则会在 executeSingleCall→processInstruction→executeCall 再次进入 executeCallWithDecorators 形成无门控环
+    if (
+      descriptor_fclos?.vtype === 'fclos' &&
+      descriptor_fclos.decorators?.length > 0 &&
+      descriptor_fclos.sid &&
+      originalDecoratorSids.has(descriptor_fclos.sid)
+    ) {
+      descriptor_fclos = lodashCloneWithTag(descriptor_fclos)
+      descriptor_fclos.decorators = []
     }
     return this.executeSingleCall(descriptor_fclos, state, descriptor_fclos.ast?.node, scope, callInfo)
   }
@@ -3300,6 +4505,7 @@ class Analyzer extends BaseAnalyzer {
    * @param node: for accessing AST information
    * @param node
    * @param scope
+   * @param callInfo
    * @returns {undefined|*}
    */
   executeSingleCall(fclos: any, state: State, node: any, scope: any, callInfo: CallInfo) {
@@ -3445,11 +4651,12 @@ class Analyzer extends BaseAnalyzer {
     }
 
     // 在进入 executeFdeclOrExecute 前，预计算形参绑定
-    if (callInfo) {
-      const boundCall = this.bindCallArgs(node, fclos, fdecl, callInfo)
-      callInfo.boundCall = boundCall
+    const activeCallInfo = this.getDecoratorForwardedCallInfo(fclos, callInfo)
+    if (activeCallInfo) {
+      const boundCall = this.bindCallArgs(node, fclos, fdecl, activeCallInfo)
+      activeCallInfo.boundCall = boundCall
     }
-    const return_value = this.executeFdeclOrExecute(fclos, state, node, scope, fdecl, fname, execute_builtin, callInfo)
+    const return_value = this.executeFdeclOrExecute(fclos, state, node, scope, fdecl, fname, execute_builtin, activeCallInfo)
     extraFuncDefs = extraFuncDefs.filter((extraFuncDef) => extraFuncDef !== fclos.ast?.node)
     if (extraFuncDefs.length === 0) {
       return return_value
@@ -3467,7 +4674,7 @@ class Analyzer extends BaseAnalyzer {
       fclos.ast = extraFuncDef
       fclos.ast.fdef = extraFuncDef
       // 每个 overload 需要独立绑定
-      const extraCallInfo: CallInfo = { callArgs: callInfo?.callArgs }
+      const extraCallInfo: CallInfo = { callArgs: callInfo?.callArgs, callsiteNode: callInfo?.callsiteNode }
       const extraBoundCall = this.bindCallArgs(node, fclos, fdecl, extraCallInfo)
       extraCallInfo.boundCall = extraBoundCall
       const extraReturnValue = this.executeFdeclOrExecute(fclos, state, node, scope, fdecl, fname, false, extraCallInfo)
@@ -3486,7 +4693,34 @@ class Analyzer extends BaseAnalyzer {
    * @param fdecl
    * @param fname
    * @param execute_builtin
+   * @param callInfo
    */
+
+  /**
+   * Hook：形参 boundCall 绑定完成、body 执行之前调用。
+   * 子类可 override 注入语言专用的形参后处理（例如 Python 装饰器路径下
+   * 形参 SOURCE 显式 trigger）。基类默认空实现。
+   */
+  protected onParamsBound(fscope: any, params: any[], state: State, node: any): void {
+    // intentionally empty — language analyzers override as needed
+  }
+
+  private shouldEmitAnonymousCallbackEntryTrace(node: Node, callInfo: CallInfo | undefined): boolean {
+    const callsiteNode = callInfo?.callsiteNode
+    return node?.type === 'FunctionDefinition' && Boolean(callsiteNode?.loc && callsiteNode !== node && callsiteNode.type !== 'FunctionDefinition')
+  }
+
+  private addAnonymousCallbackEntryTrace(targetValue: Value, callsiteNode: Node, fdecl: FunctionDefinition, fname: string): Value {
+    const callbackNode = fdecl.loc ? fdecl : undefined
+    if (!callsiteNode?.loc || !callbackNode?.loc) return targetValue
+    const provenance = {
+      callbackEdge: true,
+      callbackClosureOwnerHash: fdecl?._meta?.nodehash,
+    }
+    const callTraced = SourceLine.addSrcLineInfo(targetValue, callsiteNode, callsiteNode.loc.sourcefile, 'CALL: ', fname, provenance)
+    return SourceLine.addSrcLineInfo(callTraced, callbackNode, callbackNode.loc.sourcefile, 'ARG PASS: ', fname, provenance)
+  }
+
   executeFdeclOrExecute(
     fclos: any,
     state: State,
@@ -3530,25 +4764,29 @@ class Analyzer extends BaseAnalyzer {
     const new_state = _.clone(state)
     new_state.parent = state
     new_state.callstack = state.callstack ? state.callstack.concat([fclos]) : [fclos]
-    new_state.callsites = state.callsites
-      ? state.callsites.concat([
-          {
-            code: AstUtil.getRawCode(node).slice(0, 100),
-            nodeHash: node?._meta?.nodehash,
-            loc: node?.loc,
-          },
-        ])
-      : [
-          {
-            code: AstUtil.getRawCode(node).slice(0, 100),
-            nodeHash: node?._meta?.nodehash,
-            loc: node?.loc,
-          },
-        ]
+    const callsiteNode = callInfo?.callsiteNode || node
+    const callsiteFrame: CallsiteFrame = {
+      code: AstUtil.getRawCode(callsiteNode).slice(0, 100),
+      nodeHash: callsiteNode?._meta?.nodehash,
+      loc: callsiteNode?.loc,
+    }
+    new_state.callsites = state.callsites ? state.callsites.concat([callsiteFrame]) : [callsiteFrame]
     new_state.brs = ''
     // this.recordFunctionDefinitions(fscope, fdecl.body, new_state);
 
+    // 调用点拆分: push 当前调用点到全局 callsite 栈，让进入函数体期间 ensureNode 能拿到完整 callsite_id
+    // frame 用 callsite node loc，对齐 N2 SSA 粒度（调用点粒度设计）
+    const _csFile = node?.loc?.sourcefile || node?.loc?.start?.sourcefile || ''
+    const _csLine = node?.loc?.start?.line ?? (Array.isArray(node?.loc) ? node.loc[0] : 0)
+    const _csFrame = `${_csFile}:${_csLine}`
+    let _csPushed = false
+    if (isDataflowInstrumentationEnabled()) {
+      const { pushCallsiteFrame } = require('./entrypoint/current-entrypoint')
+      pushCallsiteFrame(_csFrame)
+      _csPushed = true
+    }
     let return_value
+    try {
     if (execute_builtin) {
       this?.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
         callInfo,
@@ -3566,7 +4804,7 @@ class Analyzer extends BaseAnalyzer {
       for (let i = 0; i < argvalues.length; i++) {
         argvalues[i] = SourceLine.addSrcLineInfo(argvalues[i], node, node?.loc && node.loc.sourcefile, 'CALL: ', fname)
       }
-      return_value = fclos.runtime!.execute!.call(this, fclos, argvalues, new_state, node, scope)
+      return_value = fclos.runtime!.execute!.call(this, fclos, argvalues, new_state, node, scope, callInfo)
     } else {
       // now go into the function body
       this?.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
@@ -3596,6 +4834,8 @@ class Analyzer extends BaseAnalyzer {
       params?.forEach((param: any) => {
         this.processInstruction(fscope, param, new_state)
       })
+
+      const hasProvidedBoundParam = (activeBoundCall?.params || []).some((param: BoundParam) => param?.provided)
 
       // 遍历 boundCall.params 绑定实参到形参
       for (const boundParam of activeBoundCall?.params || []) {
@@ -3628,14 +4868,39 @@ class Analyzer extends BaseAnalyzer {
             field: val,
           })
         }
-
         // SourceLine 信息
-        if (param.loc && oldThisFClos && node.type !== 'FunctionDefinition') {
-          val = SourceLine.addSrcLineInfo(val, node, node.loc && node.loc.sourcefile, 'CALL: ', fname)
+        if (param.loc && oldThisFClos && (node.type !== 'FunctionDefinition' || this.shouldEmitAnonymousCallbackEntryTrace(node, callInfo))) {
+          const callTraceNode = this.shouldEmitAnonymousCallbackEntryTrace(node, callInfo) ? callsiteNode : node
+          const callbackProvenance = this.shouldEmitAnonymousCallbackEntryTrace(node, callInfo)
+            ? { callbackEdge: true, callbackClosureOwnerHash: fdecl?._meta?.nodehash }
+            : undefined
+          val = SourceLine.addSrcLineInfo(
+            val,
+            callTraceNode,
+            callTraceNode.loc && callTraceNode.loc.sourcefile,
+            'CALL: ',
+            fname,
+            callbackProvenance
+          )
           const fdeclParam = Array.isArray(fdecl.parameters) ? fdecl.parameters[0] : fdecl.parameters
           if (fdeclParam.loc.end?.line === param.loc.end?.line)
-            val = SourceLine.addSrcLineInfo(val, fdeclParam, fdeclParam.loc.sourcefile, 'ARG PASS: ', paramName)
-          else val = SourceLine.addSrcLineInfo(val, param, param.loc && param.loc.sourcefile, 'ARG PASS: ', paramName)
+            val = SourceLine.addSrcLineInfo(
+              val,
+              fdeclParam,
+              fdeclParam.loc.sourcefile,
+              'ARG PASS: ',
+              paramName,
+              callbackProvenance
+            )
+          else
+            val = SourceLine.addSrcLineInfo(
+              val,
+              param,
+              param.loc && param.loc.sourcefile,
+              'ARG PASS: ',
+              paramName,
+              callbackProvenance
+            )
         }
 
         // checkpoint function parameter declaration
@@ -3647,8 +4912,12 @@ class Analyzer extends BaseAnalyzer {
             fdef: fdecl,
           })
         }
-
         this.saveVarInCurrentScope(fscope, param, val, new_state)
+        // actual_arg → param_value：调用方实参直接连接到函数体内参数值（精确仿真，不经过 formal_in）
+        if (isDataflowInstrumentationEnabled() && val && boundParam.value && typeof boundParam.value === 'object') {
+          const { recordEdge } = require('./dataflow-edge-stats')
+          recordEdge(boundParam.value, val, 'arg_to_param')
+        }
       }
 
       // 未绑定的形参初始化为 UndefinedValue
@@ -3658,6 +4927,12 @@ class Analyzer extends BaseAnalyzer {
           this.saveVarInCurrentScope(fscope, param.id, new UndefinedValue(), state)
         }
       })
+
+      // Hook：boundCall 绑定完成、body 执行前；语言 analyzer 可 override 注入
+      // 语言专用的形参后处理（例如 Python 装饰器路径下形参 SOURCE 显式 trigger）
+      new_state.callInfo = callInfo
+      this.onParamsBound(fscope, params, new_state, node)
+      delete new_state.callInfo
 
       let objectVal
       if (node?.callee?.type === 'MemberAccess') {
@@ -3688,27 +4963,72 @@ class Analyzer extends BaseAnalyzer {
       // execute the body
       const oldReturnValue = this.lastReturnValue
       this.lastReturnValue = undefined
-      this.processInstruction(fscope, fdecl.body, new_state)
+      // 方法体内 builtin 循环迭代预算计数器初始化：在 builtin（stream/forEach 等）回调循环里累加并校验，
+      // 防止 stream pipeline 路径爆炸耗尽 entrypoint timeout
+      if ((new_state as any)._methodBodyInstructionCount === undefined) {
+        (new_state as any)._methodBodyInstructionCount = 0
+      }
+      if (!this.shouldAbortExecutionForTimeout(new_state)) {
+        this.processInstruction(fscope, fdecl.body, new_state)
+      }
 
-      // Java lambda 表达式体隐式返回值：匿名函数的 ScopedStatement 无 ReturnStatement 时，取最后一个表达式的值
-      if (
-        !this.lastReturnValue &&
-        Config.language === 'java' &&
-        fdecl.body?.type === 'ScopedStatement' &&
-        fname?.includes('<anonymous')
-      ) {
-        const stmts = fdecl.body.body
-        if (stmts && stmts.length > 0) {
-          const lastStmt = stmts[stmts.length - 1]
-          const hasReturn = stmts.some((s: any) => s.type === 'ReturnStatement')
-          if (!hasReturn && lastStmt.type !== 'ReturnStatement') {
-            this.lastReturnValue = this.processInstruction(fscope, lastStmt, new_state)
-          }
-        }
+      const shouldAddAnonymousCallbackEntryTrace = this.shouldEmitAnonymousCallbackEntryTrace(node, callInfo) && !hasProvidedBoundParam
+      const fallbackCallbackTraceTarget = shouldAddAnonymousCallbackEntryTrace ? this.lastReturnValue || fclos.parent || scope : undefined
+
+      // 函数体执行后的语言相关后处理钩子（如 Java lambda 隐式返回值）
+      this.postProcessFunctionBody(fscope, fdecl, fname, new_state)
+
+      if (shouldAddAnonymousCallbackEntryTrace) {
+        const returnValue = this.lastReturnValue as Value | undefined
+        const targetValue = returnValue?.taint?.isTaintedRec ? returnValue : fallbackCallbackTraceTarget
+        this.lastReturnValue = this.addAnonymousCallbackEntryTrace(targetValue, callsiteNode, fdecl, fname)
       }
 
       return_value = this.lastReturnValue || new UndefinedValue()
       this.lastReturnValue = oldReturnValue
+
+      // wrapper-return recovery：方法体跑完但 lastReturnValue 仍是 UndefinedValue
+      // （例如 wrapper 方法体内 return 表达式失败、被某些路径裁剪跳过），
+      // 而声明返回类型是可恢复的容器/复合类型时，从 fscope 收集仍带 taint 的载体值作为返回，
+      // 让 wrapper 类方法仍能把 taint 透传给调用者。
+      if (return_value?.vtype === 'undefine' && isRecoverableDeclaredReturn(fdecl)) {
+        const candidates: WrapperReturnCandidate[] = []
+        collectWrapperReturnCandidates(fscope, candidates, new WeakSet<object>())
+        if (candidates.length > 0) {
+          candidates.sort((left, right) => right.score - left.score)
+          return_value = candidates[0].value
+        }
+      }
+
+      // Iterator.next() 接收者 taint 传播：当自定义迭代器（有 fdef 方法体的 next/hasNext）的
+      // next() 返回值无 taint 但迭代器接收者有 taint 时，将接收者 taint 合并到返回值。
+      // 仅对有方法体实现的迭代器生效（排除 java.util.Iterator builtin 和普通集合迭代器），
+      // 因为自定义迭代器的 next() 方法体内部可能调用外部 DB 查询（如 MyBatis mapper），
+      // 引擎无法追踪 taint 通过查询结果返回，但语义上迭代器由 tainted 数据构造
+      // 则 next() 返回值也应为 tainted。
+      if (fname === 'next' && return_value && !return_value.taint?.isTaintedRec) {
+        const receiverObj = fclos._this || fclos.getThisObj?.()
+        const hasNextMethod = receiverObj?.members?.get?.('hasNext')
+        const nextMethod = receiverObj?.members?.get?.('next')
+        // 仅对自定义迭代器生效：next/hasNext 必须有 fdef（方法体），排除 builtin 迭代器
+        const isCustomIterator = receiverObj?.taint?.isTaintedRec
+          && receiverObj.members?.has?.('hasNext')
+          && (hasNextMethod?.ast?.fdef || nextMethod?.ast?.fdef)
+        if (isCustomIterator) {
+          if (typeof return_value.taint?.markSource === 'function') {
+            return_value.taint.markSource()
+          }
+          if (typeof return_value.taint?.mergeTracesFrom === 'function' && receiverObj.taint) {
+            return_value.taint.mergeTracesFrom(receiverObj.taint)
+          }
+          if (typeof return_value.setMisc === 'function') {
+            const buf = return_value.getMisc('buffer')
+            if (!Array.isArray(buf) || !buf.includes(receiverObj)) {
+              return_value.setMisc('buffer', [...(buf || []), receiverObj])
+            }
+          }
+        }
+      }
 
       const tag = 'CALL RETURN:' // size ? 'RETURN: ' : null;
       return_value = SourceLine.addSrcLineInfo(return_value, node, node.loc && node.loc.sourcefile, tag, fname)
@@ -3722,6 +5042,25 @@ class Analyzer extends BaseAnalyzer {
     this.inRange = savedInRange
 
     return return_value
+    } finally {
+      // 调用点拆分: 无论函数体走 builtin / 用户函数 / early-return / 抛异常都要 pop
+      if (_csPushed) {
+        const { popCallsiteFrame } = require('./entrypoint/current-entrypoint')
+        popCallsiteFrame()
+      }
+    }
+  }
+
+  /**
+   * 函数体执行完毕后的后处理钩子，供子类覆盖处理语言相关的语义（如 Java lambda 隐式返回值）。
+   * 基类默认无操作。
+   * @param _fscope
+   * @param _fdecl
+   * @param _fname
+   * @param _state
+   */
+  postProcessFunctionBody(_fscope: any, _fdecl: any, _fname: any, _state: any): void {
+    // no-op by default; language-specific analyzers may override
   }
 
   /**
@@ -3783,6 +5122,7 @@ class Analyzer extends BaseAnalyzer {
    * @param state
    * @param node
    * @param scope
+   * @param callInfo
    * @returns {*}
    */
   buildNewObject(fdef: any, fclos: any, state: State, node: any, scope: any, callInfo: CallInfo) {
@@ -3803,8 +5143,7 @@ class Analyzer extends BaseAnalyzer {
         return !v
       },
       1,
-      '',
-      'object'
+      { forceVtype: 'object' }
     )
 
     if (_.isFunction(fclos.runtime?.execute)) {
@@ -3824,6 +5163,18 @@ class Analyzer extends BaseAnalyzer {
         } else {
           // 将传入参数存入 misc_，hasTagRec 迭代时可发现污点参数
           obj.setMisc('pass-in', argvalues)
+        }
+
+        // F1 改动 β：库类 ctor argvalues → instance 的 field_write 边
+        // 对齐 runtime hasTagRec 遍历 obj.arguments / obj.misc_['pass-in'] 语义——
+        // 库类（无 fdef）实例通过 arguments 间接持有 argv 的 taint，offline 必须显式建边
+        if (isDataflowInstrumentationEnabled() && obj && typeof obj === 'object') {
+          const { recordEdge } = require('./dataflow-edge-stats')
+          for (const argv of argvalues) {
+            if (argv && typeof argv === 'object' && argv !== obj) {
+              recordEdge(argv, obj, 'field_write')
+            }
+          }
         }
       }
       return obj
@@ -3882,7 +5233,7 @@ class Analyzer extends BaseAnalyzer {
           }
           if (newMethodAst) {
             this.processInstruction(fclos, newMethodAst, state)
-            const newClos = obj.value?.['__new__']
+            const newClos = obj.value?.__new__
             if (newClos?.vtype === 'fclos') {
               ctorClos = newClos
               paras = newMethodAst.parameters
@@ -4008,7 +5359,24 @@ class Analyzer extends BaseAnalyzer {
                 loc: callsite_node.loc,
               },
             ]
-        this.executeCall(callsite_node, fclos, new_state, scope, INTERNAL_CALL)
+        // 调用点拆分: callback fork-call 也要 push/pop callsite，frame 取 callsite_node loc
+        const _csFile = callsite_node?.loc?.sourcefile || callsite_node?.loc?.start?.sourcefile || ''
+        const _csLine = callsite_node?.loc?.start?.line ?? (Array.isArray(callsite_node?.loc) ? callsite_node.loc[0] : 0)
+        const _csFrame = `${_csFile}:${_csLine}`
+        let _csPushed = false
+        if (isDataflowInstrumentationEnabled()) {
+          const { pushCallsiteFrame } = require('./entrypoint/current-entrypoint')
+          pushCallsiteFrame(_csFrame)
+          _csPushed = true
+        }
+        try {
+          this.executeCall(callsite_node, fclos, new_state, scope, INTERNAL_CALL)
+        } finally {
+          if (_csPushed) {
+            const { popCallsiteFrame } = require('./entrypoint/current-entrypoint')
+            popCallsiteFrame()
+          }
+        }
       }
     }
   }
@@ -4172,7 +5540,29 @@ class Analyzer extends BaseAnalyzer {
    * @param rightVal
    * @param filter
    */
-  *getValueIterator(rightVal: any, filter: any) {
+  private snapshotIteratorValue(value: IteratorAnalyzerValue): IteratorAnalyzerValue {
+    return this.snapshotEscapedElementValue(value)
+  }
+
+  protected snapshotEscapedElementValue<T extends IteratorAnalyzerValue | undefined>(value: T): T {
+    if (!value || typeof value !== 'object') return value
+    const snapshot = value.qid ? buildNewCopiedWithTag(this, value, 'element') : (typeof value.cloneAlias === 'function' ? value.cloneAlias() : value)
+    if (snapshot?.rtype) {
+      snapshot.rtype = { ...snapshot.rtype }
+    }
+    return snapshot as T
+  }
+
+  *getValueIterator(
+    rightVal: IteratorAnalyzerValue | undefined,
+    filter: ValueIteratorFilter | undefined
+  ): Generator<{ k: string; v: IteratorAnalyzerValue }, void, unknown> {
+    if (rightVal?.vtype === 'union' && Array.isArray(rightVal.value)) {
+      for (const element of rightVal.value) {
+        yield* this.getValueIterator(element, filter)
+      }
+      return
+    }
     if (rightVal && typeof rightVal.getRawValue === 'function') {
       const fields = rightVal.getRawValue()
       for (const key in fields) {
@@ -4186,11 +5576,19 @@ class Analyzer extends BaseAnalyzer {
           if (val && typeof val === 'string' && val.startsWith('symuuid_')) {
             const resolved = this.symbolTable.get(val)
             if (resolved) {
-              val = resolved
+              val = resolved as IteratorAnalyzerValue
             }
           }
-          if (!filter) yield { k: key, v: val }
-          else if (filter(val)) yield { k: key, v: val }
+          if (typeof val !== 'string' && val?.vtype === 'union' && Array.isArray(val.value)) {
+            for (const element of val.value) {
+              if (!filter || filter(element)) yield { k: key, v: this.snapshotIteratorValue(element) }
+            }
+            continue
+          }
+          if (typeof val !== 'string' && val !== undefined) {
+            if (!filter) yield { k: key, v: this.snapshotIteratorValue(val) }
+            else if (filter(val)) yield { k: key, v: this.snapshotIteratorValue(val) }
+          }
         }
       }
     }
@@ -4283,18 +5681,31 @@ class Analyzer extends BaseAnalyzer {
    * output all the findings of all registered checker
    * @param {any} printf - Print function for output
    */
-  async outputAnalyzerExistResult(printf?: any) {
-    let allFindings = null
+  async outputAnalyzerExistResult(printf?: unknown, reason: FindingsCheckpointReason = 'normal', checkpointWriter?: FindingsCheckpointWriter): Promise<void> {
     const { resultManager } = this.getCheckerManager()
-    if (resultManager && Config.reportDir) {
-      const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
-      outputStrategyAutoRegister.autoRegisterAllStrategies()
-      allFindings = resultManager.getFindings()
-      for (const outputStrategyId in allFindings) {
-        const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
-        if (strategy && typeof strategy.outputFindings === 'function') {
-          strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
-        }
+    if (!resultManager || !Config.reportDir) return
+    if (reason !== 'normal') {
+      const writer = checkpointWriter ?? new FindingsCheckpointWriter({
+        filePath: require('path').join(Config.reportDir, 'findings-checkpoint.json'),
+        reason,
+      })
+      const checkpoint = writer.writeOnce(resultManager)
+      if (checkpoint.status === 'error') {
+        throw new Error(`Findings checkpoint persistence failed: ${checkpoint.error?.code}: ${checkpoint.error?.message}`)
+      }
+      return
+    }
+    const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+    outputStrategyAutoRegister.autoRegisterAllStrategies()
+    const allFindings = resultManager.getFindings()
+    for (const outputStrategyId in allFindings) {
+      const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
+      if (strategy && typeof strategy.outputFindings === 'function') {
+        const strategyStartedAt = Date.now()
+        const strategyFindings = allFindings[outputStrategyId]
+        const rawFindingCount = Array.isArray(strategyFindings) ? strategyFindings.length : 0
+        strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
+        logger.info(`[outputFindings] strategy=${outputStrategyId} phase=total raw=${rawFindingCount} elapsed=${Date.now() - strategyStartedAt}ms`)
       }
     }
   }

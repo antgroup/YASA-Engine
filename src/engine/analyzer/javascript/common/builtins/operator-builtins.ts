@@ -1,3 +1,6 @@
+import type Unit from '../../../common/value/unit'
+import type { BinaryExprValue } from '../../../../../types/analyzer'
+
 const _ = require('lodash')
 const {
   valueUtil: {
@@ -5,10 +8,16 @@ const {
   },
 } = require('../../../common')
 
-const BINARY_OPERATOR_PROCESS_MAP: Record<string, any> = {
+type OperatorScope = unknown
+type OperatorAstNode = unknown
+type OperatorState = unknown
+type BinaryOperatorProcessor = (resValue: BinaryExprValue, scope: OperatorScope, node: OperatorAstNode, state: OperatorState) => Unit
+
+const BINARY_OPERATOR_PROCESS_MAP: Record<string, BinaryOperatorProcessor> = {
   '&&': processAndOperator,
   '||': processOrOperator,
   '??': processNullMergeOperator,
+  '+': processPlusOperator,
 }
 
 /**
@@ -18,10 +27,10 @@ const BINARY_OPERATOR_PROCESS_MAP: Record<string, any> = {
  * @param node
  * @param state
  */
-function processBinaryOperator(resValue: any, scope: any, node: any, state: any) {
+function processBinaryOperator(resValue: BinaryExprValue, scope: OperatorScope, node: OperatorAstNode, state: OperatorState): Unit {
   try {
     const op = resValue?.operator
-    const processFunction = (BINARY_OPERATOR_PROCESS_MAP as any)[op] ?? processUnknownOperator
+    const processFunction = BINARY_OPERATOR_PROCESS_MAP[op] ?? processUnknownOperator
     if (!checkLhsAndRhsValid(resValue)) return resValue
     return processFunction(resValue, scope, node, state)
   } catch (error) {
@@ -34,8 +43,9 @@ function processBinaryOperator(resValue: any, scope: any, node: any, state: any)
  * @param resValue
  * @returns {boolean}
  */
-function checkLhsAndRhsValid(resValue: any) {
-  return !!(resValue?.left && resValue?.right && resValue?.ast?.node?.left && resValue?.ast?.node?.right)
+function checkLhsAndRhsValid(resValue: BinaryExprValue): boolean {
+  const astNode = (resValue?.ast?.node ?? resValue?.ast) as { left?: unknown; right?: unknown } | undefined
+  return !!(resValue?.left && resValue?.right && astNode?.left && astNode?.right)
 }
 
 /**
@@ -144,6 +154,22 @@ function processNullMergeOperator(resValue: any, scope: any, node: any, state: a
 }
 
 /**
+ * JS 模板字符串在 UAST 中会降级为字符串加法链，保留二元节点并合并两侧污点。
+ * @param resValue - 二元表达式值
+ * @param scope - 当前作用域
+ * @param node - 当前 AST 节点
+ * @param state - 分析状态
+ */
+function processPlusOperator(resValue: BinaryExprValue, scope: OperatorScope, node: OperatorAstNode, state: OperatorState): BinaryExprValue {
+  const leftValue = resValue.left
+  const rightValue = resValue.right
+  if (leftValue?.taint?.isTaintedRec || rightValue?.taint?.isTaintedRec) {
+    resValue.taint.mergeFrom([leftValue, rightValue])
+  }
+  return resValue
+}
+
+/**
  * 未处理操作符 后续补充
  * @param resValue
  * @param scope
@@ -151,7 +177,7 @@ function processNullMergeOperator(resValue: any, scope: any, node: any, state: a
  * @param state
  * @returns {*}
  */
-function processUnknownOperator(resValue: any, scope: any, node: any, state: any) {
+function processUnknownOperator(resValue: BinaryExprValue, scope: OperatorScope, node: OperatorAstNode, state: OperatorState): BinaryExprValue {
   return resValue
 }
 

@@ -35,7 +35,7 @@ class JsCallchainChecker extends CallchainChecker {
     const { topScope, fileManager } = analyzer
     const loader = require('../../../util/loader')
     const commonUtil = require('../../../util/common-util')
-    const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+    const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
     const constValue = require('../../../util/constant')
     const { handleException } = require('../../../engine/analyzer/common/exception-handler')
 

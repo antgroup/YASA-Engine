@@ -53,8 +53,11 @@ deps-runtime/
 test/javascript/test-report
 test/trace-accuracy-reports
 test/java/report
+test/java/report-sarif-codeflow-quality
+test/java/intermediate-sarif-codeflow-quality
 test/python/report
 test/javascript/report
 test/php/report
 deps
 node_modules
+native/better-sqlite3/*.tar.gz

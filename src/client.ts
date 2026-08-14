@@ -1,4 +1,5 @@
 import type { ResponseObject, PrintFunction } from './engine/analyzer/common/common-types'
+import type { IResultManager } from './engine/analyzer/common/result-manager'
 
 const readline = require('readline')
 const { initAnalyzer } = require('./interface/starter')
@@ -34,7 +35,7 @@ class IoSession {
    * 交互式命令行具体执行的逻辑，选择checker执行handleInput / handleOutput
    * @param message ： { command:"", arguments:[""]}
    */
-  onMessage(message: string): ResponseObject | null {
+  async onMessage(message: string): Promise<ResponseObject | null> {
     const response = {
       body: '',
     }
@@ -85,10 +86,10 @@ class IoSession {
       clearTotalErrors()
       checker.handleInput(request.arguments)
       this.analyzer.startAnalyze()
-      this.analyzer.symbolInterpret()
+      await this.analyzer.symbolInterpret()
       this.analyzer.endAnalyze()
       checker.handleOutput()
-      return outputAnalyzerResult(this.analyzer, checker)
+      return await outputAnalyzerResult(this.analyzer, checker)
     } catch (e) {
       logger.error(e)
     }
@@ -110,7 +111,12 @@ class IoSession {
     rl.on('line', (input: string) => {
       const message = input.trim()
       this.onMessage(message)
-      rl.prompt()
+        .catch((error: unknown) => {
+          logger.error('Error', error)
+        })
+        .finally(() => {
+          rl.prompt()
+        })
     })
 
     rl.on('close', () => {
@@ -153,22 +159,31 @@ async function main(): Promise<void> {
  * @param checker
  * @param printf
  */
-function outputAnalyzerResult(analyzer: any, checker: any, printf?: PrintFunction): null {
+async function outputAnalyzerResult(
+  analyzer: { getCheckerManager(): { resultManager?: IResultManager } },
+  checker: { getStrategyId(): string[] | undefined },
+  printf?: PrintFunction
+): Promise<null> {
   if (!printf || typeof printf !== 'function') {
     printf = logger.info.bind(logger)
   }
   const allFindings = null
   const { resultManager } = analyzer.getCheckerManager()
-  if (resultManager && Config.reportDir && checker.getStrategyId()) {
+  const strategyIds = checker.getStrategyId()
+  if (resultManager && Config.reportDir && strategyIds) {
     const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
     outputStrategyAutoRegister.autoRegisterAllStrategies()
 
     const { yasaSeparator } = require('./util/format-util')
     yasaSeparator('outputFindings')
-    for (const outputStrategyId of checker.getStrategyId()) {
+    for (const outputStrategyId of strategyIds) {
       const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
       if (strategy && typeof strategy.outputFindings === 'function') {
+        const strategyStartedAt = Date.now()
+        const strategyFindings = resultManager.getFindings()[outputStrategyId]
+        const rawFindingCount = Array.isArray(strategyFindings) ? strategyFindings.length : 0
         strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
+        logger.info(`[outputFindings] strategy=${outputStrategyId} phase=total raw=${rawFindingCount} elapsed=${Date.now() - strategyStartedAt}ms`)
       }
     }
     yasaSeparator('')

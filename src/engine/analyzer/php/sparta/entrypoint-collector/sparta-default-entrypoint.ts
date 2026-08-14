@@ -7,7 +7,7 @@
  * - 两个参数的方法被识别为 HTTP 入口
  */
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const logger = require('../../../../../util/logger')(__filename)
 

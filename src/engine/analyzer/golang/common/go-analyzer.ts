@@ -1,9 +1,38 @@
 import GoTypeRelatedInfoResolver from '../../../../resolver/go/go-type-related-info-resolver'
+import SymAddress from '../../common/sym-address'
 import { buildNewCopiedWithTag } from '../../../../util/clone-util'
 import { AstRefList } from '../../common/value/ast-ref-list'
 import { BinaryExprValue } from '../../common/value/binary-expr'
-import type { Scope, State, Value, SymbolValue as SymbolValueType } from '../../../../types/analyzer'
-import type { CallExpression, VariableDeclaration, NewExpression, ThisExpression, CompileUnit, BinaryExpression, MemberAccess, Identifier, TupleExpression } from '../../../../types/uast'
+import type {
+  FunctionValue as FunctionValueType,
+  Scope,
+  State,
+  Value,
+  SymbolValue as SymbolValueType,
+} from '../../../../types/analyzer'
+import type {
+  AssignmentExpression,
+  CallExpression,
+  VariableDeclaration,
+  NewExpression,
+  ThisExpression,
+  CompileUnit,
+  BinaryExpression,
+  MemberAccess,
+  Identifier,
+  TupleExpression,
+  Node,
+  UnaryExpression,
+  ReturnStatement,
+} from '../../../../types/uast'
+import type { BoundCall, CallArgs, CallInfo } from '../../common/call-args'
+import { processGoFrameworkCall } from '../framework-call-model'
+import { goExternalReturnModelResolver, type GoExternalReturnModel, type GoTypeAstNode } from './go-external-return-model'
+import { goCallSummaryPolicy } from '../../common/call-summary/language/golang'
+import type { CallSummaryLanguagePolicy } from '../../common/call-summary/language/types'
+import { INTERNAL_CALL } from '../../common/call-args'
+import type { ClassHierarchy } from '../../../../resolver/common/value/class-hierarchy'
+import { EntryPointMetricsCollector, type EntryPointMetric, type EntryPointMetricType } from '../../../../util/entrypoint-metrics'
 
 const path = require('path')
 const _ = require('lodash')
@@ -15,17 +44,15 @@ const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../..
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const Parser = require('../../../parser/parser')
 const {
-  ValueUtil: { FunctionValue },
+  ValueUtil: { FunctionValue, ObjectValue },
 } = require('../../../util/value-util')
 const { shallowCopyValue, buildNewValueInstance, lodashCloneWithTag } = require('../../../../util/clone-util')
 
 const {
   valueUtil: {
-    ValueUtil: { Scoped, PackageValue, PrimitiveValue, UndefinedValue, SymbolValue, UnionValue, ObjectValue },
+    ValueUtil: { Scoped, PackageValue, PrimitiveValue, UndefinedValue, SymbolValue, UnionValue },
   },
 } = require('../../common')
-import type { CallInfo } from '../../common/call-args'
-import { INTERNAL_CALL } from '../../common/call-args'
 const { getLegacyArgValues } = require('../../common/call-args')
 const Config = require('../../../../config')
 const SourceLine = require('../../common/source-line')
@@ -33,16 +60,179 @@ const FileUtil = require('../../../../util/file-util')
 const AstUtil = require('../../../../util/ast-util')
 const MemState = require('../../common/memState')
 const CheckerManager = require('../../common/checker-manager')
-const entryPointConfig = require('../../common/current-entrypoint')
+const entryPointConfig = require('../../common/entrypoint/current-entrypoint')
+const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
 const { unionAllValues } = require('../../common/memStateBVT')
 const constValue = require('../../../../util/constant')
 const { handleException } = require('../../common/exception-handler')
 const { ErrorCode } = require('../../../../util/error-code')
 
+type CapturableValue = Value & {
+  qid?: unknown
+  logicalQid?: unknown
+  argument?: CapturableValue
+}
+
+interface CapturingFclos {
+  qid?: unknown
+  ast?: {
+    node?: Node
+    fdef?: Node
+  }
+}
+
+type CallbackCaller = Value | Scope | null | undefined
+
+type GoRuntimeValue = Value & {
+  sid?: unknown
+  name?: unknown
+  vtype?: string
+  type?: string
+  value?: unknown
+  isTuple?: boolean
+  ast?: {
+    node?: Node
+    fdef?: Node & { body?: Node }
+  }
+  getFieldValue?: (key: string) => unknown
+}
+
+type GoRuntimeRecord = Record<string, GoRuntimeValue | null | undefined>
+
+type GoCallableValue = Value & {
+  ast?: {
+    fdef?: Node & { body?: Node }
+  }
+}
+
+type GoClassDefinitionValue = Value & {
+  sid?: string
+  ast?: {
+    cdef?: {
+      body?: unknown
+    }
+  }
+}
+
+/**
+ *
+ * @param value
+ */
+function isTaintedValue(value: unknown): value is CapturableValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { taint?: { isTaintedRec?: boolean } }).taint?.isTaintedRec === true
+  )
+}
+
+/**
+ *
+ * @param value
+ */
+function isCapturableValue(value: unknown): value is CapturableValue {
+  return typeof value === 'object' && value !== null && 'taint' in value
+}
+
+/**
+ *
+ * @param node
+ */
+function isIdentifierNode(node: unknown): node is Identifier {
+  return typeof node === 'object' && node !== null && (node as { type?: unknown }).type === 'Identifier'
+}
+
+/**
+ *
+ * @param node
+ */
+function isUnaryExpressionNode(node: unknown): node is UnaryExpression {
+  return typeof node === 'object' && node !== null && (node as { type?: unknown }).type === 'UnaryExpression'
+}
+
+/**
+ *
+ * @param value
+ */
+function isGoRuntimeValue(value: unknown): value is GoRuntimeValue {
+  return typeof value === 'object' && value !== null
+}
+
+/**
+ *
+ * @param value
+ */
+function isGoRuntimeRecord(value: unknown): value is GoRuntimeRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ *
+ * @param value
+ * @param key
+ */
+function getRuntimeFieldValue(value: GoRuntimeValue, key: string): unknown {
+  return typeof value.getFieldValue === 'function' ? value.getFieldValue(key) : value
+}
+
+type GoNameNode = Node & {
+  argument?: Node
+  object?: Node
+  property?: Node
+  value?: unknown
+  name?: unknown
+}
+
+/**
+ *
+ * @param node
+ */
+function getNodeName(node: Node): string {
+  const goNode = node as GoNameNode
+  if (node.type === 'Identifier') return node.name
+  if (node.type === 'Literal') {
+    const rawValue = String(goNode.value ?? '')
+    const encodedValue = JSON.stringify(goNode.value)
+    return typeof goNode.value === 'string' && /^["'`].*["'`]$/.test(rawValue) ? rawValue : (encodedValue ?? rawValue)
+  }
+  if (node.type === 'DereferenceExpression') return `*${goNode.argument ? getNodeName(goNode.argument) : ''}`
+  if (node.type === 'MemberAccess') {
+    const objectName = goNode.object ? getNodeName(goNode.object) : ''
+    const propertyName = goNode.property ? getNodeName(goNode.property) : ''
+    if (goNode.property?.type === 'Literal')
+      return objectName && propertyName ? `${objectName}[${propertyName}]` : AstUtil.prettyPrintAST(node).trim()
+    return objectName && propertyName ? `${objectName}.${propertyName}` : AstUtil.prettyPrintAST(node).trim()
+  }
+  if (typeof goNode.name === 'string') return goNode.name
+  return AstUtil.prettyPrintAST(node).trim()
+}
+
+/**
+ *
+ * @param node
+ */
+function getNodeSourceFile(node: Node | undefined): string | null {
+  const sourcefile = (node as { loc?: { sourcefile?: unknown } } | undefined)?.loc?.sourcefile
+  return typeof sourcefile === 'string' ? sourcefile : null
+}
+const GO_CONTEXT_VALUE_FIELD = '__yasa_go_context_value'
+const GO_CONTEXT_PARENT_FIELD = '__yasa_go_context_parent'
+const GO_CONTEXT_KEY_FIELD = '__yasa_go_context_key'
+const GO_COBRA_CONTEXT_FIELD = '__yasa_go_context'
+const GO_CONTEXT_AND_COBRA_METHODS = new Set(['WithValue', 'SetContext', 'Context', 'Value'])
+const GO_EXTERNAL_RETURN_MODEL_RESOLVER = goExternalReturnModelResolver
+
 /**
  *
  */
 class GoAnalyzer extends Analyzer {
+  protected override readonly callSummaryLanguagePolicy: CallSummaryLanguagePolicy = goCallSummaryPolicy
+
+  /** 由 Go checker triggerAtStartOfAnalyze 调 typeResolver.findClassHierarchy 后写入，CHA dispatch / sink 穿透读取 */
+  classHierarchyMap?: Map<string, ClassHierarchy>
+
+  /** Cobra 子命令执行上下文会共享根命令的 context。 */
+  goCobraContextFallback?: SymbolValueType
 
   /**
    *
@@ -80,7 +270,6 @@ class GoAnalyzer extends Analyzer {
         'find no target compileUnit of the project : no go file found in source path'
       )
       process.exitCode = ErrorCode.no_valid_source_file
-      return
     }
   }
 
@@ -120,7 +309,7 @@ class GoAnalyzer extends Analyzer {
       }
       let { goModPath } = this.topScope.context.modules
       if (!goModPath) goModPath = ''
-      // TODO 如果模块名叫code.alipay.com/antjail/antdpa，进去会截断
+      // 模块名包含多级路径时，解析结果不能被截断
       const modulePackageManager = defaultScope || this.topScope.context.packages.getSubPackage(moduleName, true)
 
       // 计算项目模块根路径(go.mod所在目录)
@@ -142,8 +331,13 @@ class GoAnalyzer extends Analyzer {
 
       // 开始 ProcessModule 阶段：处理模块（分析 AST）
       this.performanceTracker.start('preProcess.processModule')
-      this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
-      this.performanceTracker.end('preProcess.processModule')
+      this.callSummarySessions[0].beginForLanguage('Go')
+      try {
+        this._scanPackages(modulePackageManager, dirName, rootDir, state, true)
+      } finally {
+        this.callSummarySessions[0].finish()
+        this.performanceTracker.end('preProcess.processModule')
+      }
     } finally {
       // 确保 parseCode 阶段总是被正确结束（如果之前没有结束，如提前返回的情况）
       if (!parseCodeEnded) {
@@ -301,6 +495,8 @@ class GoAnalyzer extends Analyzer {
   /**
    * Go 嵌入结构体方法延迟解析：实例上找不到方法时，通过 ClassDefinition 的 SpreadElement 找嵌入类型的方法。
    * 解决文件按字母序处理时，SpreadElement 阶段嵌入类型方法尚未注册导致继承失败的问题。
+   * @param defscope
+   * @param methodName
    */
   _resolveEmbeddedMethod(defscope: any, methodName: string): any {
     // 从实例的 sid 提取类名
@@ -335,8 +531,8 @@ class GoAnalyzer extends Analyzer {
    * @param node
    * @param state
    */
-  override processCallExpression(scope: Scope, node: CallExpression, state: State): SymbolValueType {
-    if (node._meta.defer) {
+  override processCallExpression(scope: Scope, node: CallExpression, state: State): Value {
+    if (node._meta?.defer) {
       const encloseFclos = this.getEncloseFclos(scope)
       if (encloseFclos) {
         encloseFclos._defers = encloseFclos._defers || []
@@ -361,6 +557,9 @@ class GoAnalyzer extends Analyzer {
 
     const fclos = this.processInstruction(scope, node.callee, state)
     let ret
+    if (!fclos) {
+      return new UndefinedValue()
+    }
     if (fclos?.vtype === 'class' && node.arguments.length === 1) {
       ret = this.processInstruction(scope, node.arguments[0], state)
     } else {
@@ -380,14 +579,13 @@ class GoAnalyzer extends Analyzer {
       // super.processCallExpression 内部 executeFdeclOrExecute 统一处理 sink 匹配，避免重复 finding
       const fclosBody = fclos?.ast?.fdef?.body
       const isUnresolvableCall = !fclos || fclos.vtype !== 'fclos' || !fclosBody || fclosBody.type === 'Noop'
-      const callInfo: CallInfo | undefined = isUnresolvableCall
-        ? { callArgs: this.buildCallArgs(node, argvalues, fclos) }
-        : undefined
+      const callInfo: CallInfo = { callArgs: this.buildCallArgs(node, argvalues, fclos) }
+      const beforeCallInfo: CallInfo | undefined = isUnresolvableCall ? callInfo : undefined
       if (argvalues && this.checkerManager) {
         this.checkerManager.checkAtFunctionCallBefore(this, scope, node, state, {
           argvalues,
           fclos,
-          callInfo,
+          callInfo: beforeCallInfo,
           pcond: state.pcond,
           entry_fclos: this.entry_fclos,
           einfo: state.einfo,
@@ -396,15 +594,87 @@ class GoAnalyzer extends Analyzer {
           ainfo: this.ainfo,
         })
       }
-      ret = super.processCallExpression(scope, node, state)
+      ret = this.processGoContextAndCobraCall(scope, node, state, fclos, argvalues)
+      if (!ret) {
+        ret = processGoFrameworkCall({
+          analyzer: this,
+          scope,
+          node,
+          state,
+          fclos,
+          argvalues,
+        })
+      }
+      if (!ret) {
+        ret = this.executeWithSummary(scope, fclos, callInfo, state, () =>
+          super.processCallExpression(scope, node, state)
+        )
+      }
+      this.applyGoExternalReturnTypeModel(scope, node, fclos, ret)
+      const shouldForceGoShortVarCallback = node._meta?.goShortVarRhs && this.hasGoCallbackArgument(node, argvalues)
+      if (!fclos?.ast?.fdef?.body || fclos.ast.fdef.body.type === 'Noop' || shouldForceGoShortVarCallback) {
+        this.executeFunctionArgumentsForGo(scope, fclos, node, argvalues, state)
+      }
+
+      // 递归检查 UnionValue 内部元素的 taint（Go 多返回值赋值产生 UnionValue）
+      const _hasDeepTaint = (v: any): boolean => {
+        if (!v) return false
+        if (v.taint?.hasTags?.()) return true
+        if (v.vtype === 'union' && v.values) {
+          return v.values.some((e: any) => _hasDeepTaint(e))
+        }
+        return false
+      }
+
+      // 只在有 taint 流入 + receiver 是接口时才强制 CHA
+      const _hasTaintedArgs =
+        argvalues?.some((a: any) => _hasDeepTaint(a)) || _hasDeepTaint(fclos?._this) || _hasDeepTaint(fclos?.object)
+
+      // 接口方法强制 CHA：receiver 有接口 rtype 且在 classHierarchyMap 中有实现时，绕过普通 guard
+      let _chaByReceiverRtype = false
+      let _chaImplsByRtype: any[] = []
+      if (this.classHierarchyMap && node.callee?.type === 'MemberAccess') {
+        let _recvRtype = fclos?.parent?.rtype || fclos?.object?.rtype || fclos?._this?.rtype
+        // fclos 解析失败时（如接口 stub），从 AST receiver 节点获取 rtype
+        if (!_recvRtype && node.callee.object) {
+          const _recvObj = this.processInstruction(scope, node.callee.object, state)
+          _recvRtype = _recvObj?.rtype
+        }
+        if (_recvRtype) {
+          // rtype 可能是 AST 节点（type='Identifier'/'PointerType'/'MemberAccess'）或 wrapper（type=undefined, definiteType=...）
+          const _effectiveRtype =
+            _recvRtype.type && _recvRtype.type !== undefined ? _recvRtype : (_recvRtype.definiteType ?? _recvRtype)
+          const _recvTypeName =
+            _effectiveRtype.type === 'Identifier'
+              ? _effectiveRtype.name
+              : _effectiveRtype.type === 'PointerType'
+                ? _effectiveRtype.element?.name
+                : _effectiveRtype.type === 'MemberAccess'
+                  ? _effectiveRtype.property?.name || (_effectiveRtype.property as any)?.value
+                  : null
+          if (_recvTypeName) {
+            const _methodName = node.callee.property?.name || (node.callee.property as any)?.value
+            if (_methodName) {
+              const _impls = this.findCHAImplementationsByTypeName(_recvTypeName, _methodName)
+              if (_impls.length > 0) {
+                _chaByReceiverRtype = true
+                _chaImplsByRtype = _impls
+              }
+            }
+          }
+        }
+      }
 
       // CHA fallback：正常 dispatch 未生效时，通过 ClassHierarchy 查找接口实现并执行
       if (
-        (this as any).classHierarchyMap &&
+        this.classHierarchyMap &&
         (fclos?.vtype !== 'fclos' || this.checkFclosInInterface(fclos)) &&
         (!ret || ret.vtype === 'symbol')
       ) {
         let implementations = this.findCHAImplementations(fclos)
+        if (_hasTaintedArgs && _chaByReceiverRtype) {
+          implementations = _chaImplsByRtype
+        }
 
         // rtype fallback：fclos.parent 不是接口时，通过 receiver 的 rtype 查找接口
         if (implementations.length === 0 && node.callee?.type === 'MemberAccess') {
@@ -417,9 +687,16 @@ class GoAnalyzer extends Analyzer {
               rtype = receiver?.rtype
             }
             if (rtype) {
-              const rtypeName = rtype.type === 'Identifier' ? rtype.name
-                : rtype.type === 'PointerType' ? rtype.element?.name
-                : null
+              // rtype wrapper 解包：accessValueFromDefScope 产出的 wrapper 需取 definiteType
+              const effectiveRtype = rtype.type && rtype.type !== undefined ? rtype : (rtype.definiteType ?? rtype)
+              const rtypeName =
+                effectiveRtype.type === 'Identifier'
+                  ? effectiveRtype.name
+                  : effectiveRtype.type === 'PointerType'
+                    ? effectiveRtype.element?.name
+                    : effectiveRtype.type === 'MemberAccess'
+                      ? effectiveRtype.property?.name || (effectiveRtype.property as any)?.value
+                      : null
               if (rtypeName) {
                 implementations = this.findCHAImplementationsByTypeName(rtypeName, methodName)
               }
@@ -443,14 +720,40 @@ class GoAnalyzer extends Analyzer {
             // 剪枝：Noop body 跳过
             if (implFclos.ast?.fdef?.body?.type === 'Noop') continue
 
-            // 绑定 this 并执行
+            // 绑定 this 并执行。caller 的 _this 指向接口 receiver（rtype=interface），
+            // 直接共享会让 impl 函数体内的 receiver.field MemberAccess 继承错误 interface 类型。
+            // Go method body 内的 receiver 变量从当前 receiver 对象继承 rtype。
+            // 修复：进入 impl 前把 receiver 对象的 rtype 原地改为 impl struct 类型节点，
+            // 执行完毕立刻恢复，避免污染全局 provider 的 rtype 跨 impl 迭代泄漏。
             const oldThis = implFclos._this
-            if (fclos?._this) implFclos._this = fclos._this
-            else if (typeof fclos?.getThisObj === 'function') implFclos._this = fclos.getThisObj()
+            const baseThis = fclos?._this ?? (typeof fclos?.getThisObj === 'function' ? fclos.getThisObj() : undefined)
+            let savedBaseRtype: unknown
+            let rtypeOverridden = false
+            if (baseThis) {
+              const implReceiverTypeNode = this._getImplReceiverTypeNode(implFclos)
+              if (implReceiverTypeNode) {
+                savedBaseRtype = baseThis.rtype
+                try {
+                  baseThis.rtype = implReceiverTypeNode
+                  rtypeOverridden = true
+                } catch (_e) {
+                  rtypeOverridden = false
+                }
+              }
+              implFclos._this = baseThis
+            }
 
             const r = this.executeCall(node, implFclos, state, scope, {
               callArgs: this.buildCallArgs(node, argvalues, implFclos),
             })
+
+            if (rtypeOverridden && baseThis) {
+              try {
+                baseThis.rtype = savedBaseRtype
+              } catch (_e) {
+                /* defensive：同上，恢复失败忽略 */
+              }
+            }
             implFclos._this = oldThis
 
             if (r && r.vtype !== 'symbol') results.push(r)
@@ -483,6 +786,280 @@ class GoAnalyzer extends Analyzer {
     }
 
     return ret
+  }
+
+  /**
+   * Go 外部库无函数体时，按已知签名补返回值类型，供后续 receiver calleeType 匹配。
+   */
+  applyGoExternalReturnTypeModel(scope: Scope, node: CallExpression, fclos: Value | null | undefined, ret: Value | null | undefined): void {
+    const fclosBody = (fclos as GoCallableValue | null | undefined)?.ast?.fdef?.body
+    if (!ret || (fclosBody && fclosBody.type !== 'Noop')) return
+    const model = this.getGoExternalReturnTypeModel(fclos)
+    if (!model) return
+    if (model.returnTypes.length > 1) {
+      this.applyGoTupleReturnTypes(scope, node, ret, model.returnTypes, model)
+      return
+    }
+    this.applyGoValueReturnType(ret, model.returnTypes[0])
+  }
+
+  private getGoExternalReturnTypeModel(fclos: Value | null | undefined): GoExternalReturnModel | null {
+    return GO_EXTERNAL_RETURN_MODEL_RESOLVER.findForFclos(fclos)
+  }
+
+  private getGoExternalReturnTypeModelForCallNode(node: CallExpression): GoExternalReturnModel | null {
+    return GO_EXTERNAL_RETURN_MODEL_RESOLVER.findForCallNode(node)
+  }
+
+  private formatGoExternalReturnCallQid(node: CallExpression, model?: GoExternalReturnModel): string {
+    return GO_EXTERNAL_RETURN_MODEL_RESOLVER.formatCallQid(node, model)
+  }
+
+  private applyGoExternalReturnTypeModelForCallNode(scope: Scope, node: CallExpression, ret: unknown): void {
+    if (!isGoRuntimeValue(ret)) return
+    const model = this.getGoExternalReturnTypeModelForCallNode(node)
+    if (!model) return
+    if (model.returnTypes.length > 1) {
+      this.applyGoTupleReturnTypes(scope, node, ret, model.returnTypes, model)
+      return
+    }
+    this.applyGoValueReturnType(ret, model.returnTypes[0])
+  }
+
+  private applyGoTupleReturnTypes(scope: Scope, node: CallExpression, ret: Value, returnTypes: GoTypeAstNode[], model?: GoExternalReturnModel): void {
+    if (isGoRuntimeValue(ret) && ret.vtype === 'union' && Array.isArray(ret.value)) {
+      ret.isTuple = true
+      if (!ret.misc_) ret.misc_ = {}
+      ret.misc_.goExternalReturnQid = this.formatGoExternalReturnCallQid(node, model)
+      ret.rtype = { type: 'TupleType', elements: returnTypes }
+      const minLen = Math.min(ret.value.length, returnTypes.length)
+      for (let index = 0; index < minLen; index++) {
+        this.applyGoValueReturnType(getRuntimeFieldValue(ret, String(index)), returnTypes[index])
+      }
+      return
+    }
+
+    const tupleValues = returnTypes.map((returnType: GoTypeAstNode, index: number) => {
+      const value = index === 0 ? ret : new UndefinedValue()
+      this.applyGoValueReturnType(value, returnType)
+      return value
+    })
+    const tupleValue = new UnionValue(
+      tupleValues,
+      undefined,
+      `${scope.qid}.<union@go_ext_ret:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+      node
+    )
+    tupleValue.isTuple = true
+    if (!tupleValue.misc_) tupleValue.misc_ = {}
+    tupleValue.misc_.goExternalReturnQid = this.formatGoExternalReturnCallQid(node, model)
+    tupleValue.rtype = { type: 'TupleType', elements: returnTypes }
+    this.copyGoTupleReturnToValue(ret, tupleValue)
+  }
+
+  private applyGoValueReturnType(value: unknown, returnType: GoTypeAstNode | undefined): void {
+    if (!returnType || !isGoRuntimeValue(value)) return
+    value.rtype = returnType
+  }
+
+  private materializeGoExternalReturnValue(
+    scope: Scope,
+    target: Node,
+    returnType: GoTypeAstNode | undefined,
+    sourceValue?: unknown
+  ): Value | undefined {
+    if (!returnType) return undefined
+    const targetName = isIdentifierNode(target) ? target.name : getNodeName(target)
+    const sourceSid = isGoRuntimeValue(sourceValue) && typeof sourceValue.sid === 'string' ? sourceValue.sid : targetName
+    const externalReturnQid = isGoRuntimeValue(sourceValue) && typeof sourceValue.misc_?.goExternalReturnQid === 'string'
+      ? sourceValue.misc_.goExternalReturnQid
+      : null
+    const sourceQid = externalReturnQid ?? (isGoRuntimeValue(sourceValue) && typeof sourceValue.qid === 'string' ? sourceValue.qid : `${scope.qid}.${targetName}`)
+    const retValue = new SymbolValue({
+      sid: sourceSid,
+      qid: sourceQid,
+      type: 'Identifier',
+      loc: target.loc,
+      _skipRegister: true,
+    })
+    retValue.rtype = returnType
+    return retValue
+  }
+
+  private copyGoTupleReturnToValue(target: Value, tupleValue: Value): void {
+    Object.assign(target, tupleValue)
+  }
+
+  /**
+   * Go context / Cobra 会把业务对象藏在运行时状态里；这里仅恢复这条状态边，不扩散字段别名。
+   */
+  processGoContextAndCobraCall(scope: Scope, node: CallExpression, state: State, fclos: Value | null | undefined, argvalues: Value[]): SymbolValueType | null {
+    const callee = node.callee
+    if (!callee || callee.type !== 'MemberAccess') return null
+    const methodName = this.getGoMemberName(callee.property)
+    if (!methodName || !GO_CONTEXT_AND_COBRA_METHODS.has(methodName)) return null
+    const receiver = this.processInstruction(scope, callee.object, state)
+    if (methodName === 'WithValue' && this.isGoContextPackage(receiver) && argvalues.length >= 3) {
+      const ctx = new ObjectValue(scope.qid, {
+        sid: `WithValue(${argvalues[0]?.sid ?? 'parent'}, ${argvalues[1]?.sid ?? 'key'}, ${argvalues[2]?.sid ?? 'value'})`,
+        qid: `${scope.qid}.<go_context_with_value_${node.loc?.start?.line ?? 'x'}_${node.loc?.start?.column ?? 'x'}>`,
+        parent: scope,
+        loc: node.loc,
+        ast: node,
+      })
+      this.setGoContextMember(ctx, GO_CONTEXT_PARENT_FIELD, argvalues[0])
+      this.setGoContextMember(ctx, GO_CONTEXT_KEY_FIELD, argvalues[1])
+      this.setGoContextMember(ctx, GO_CONTEXT_VALUE_FIELD, argvalues[2])
+      return ctx
+    }
+    if (methodName === 'SetContext' && this.isCobraCommandContextReceiver(receiver) && argvalues[0]) {
+      this.setGoContextMember(receiver, GO_COBRA_CONTEXT_FIELD, argvalues[0])
+      this.goCobraContextFallback = argvalues[0] as SymbolValueType
+      return fclos?.vtype === 'fclos' ? null : argvalues[0] as SymbolValueType
+    }
+
+    if (methodName === 'Context' && this.isCobraCommandContextReceiver(receiver)) {
+      const stored = this.getGoContextMember(receiver, GO_COBRA_CONTEXT_FIELD) ?? this.goCobraContextFallback
+      if (stored) return stored as SymbolValueType
+      return null
+    }
+
+    if (methodName === 'Value') {
+      const storedContext = this.findGoContextValueObject(receiver)
+      if (storedContext) return this.resolveGoContextValue(storedContext, argvalues[0]) as SymbolValueType
+    }
+
+    return null
+  }
+
+  setGoContextMember(target: Value | null | undefined, fieldName: string, value: Value | null | undefined): void {
+    if (!target || !value) return
+    target.members?.set(fieldName, value)
+    if (!target.misc_) target.misc_ = {}
+    target.misc_[fieldName] = value
+  }
+
+  getGoContextMember(target: Value | null | undefined, fieldName: string): Value | undefined {
+    return target?.misc_?.[fieldName] ?? target?.members?.get(fieldName)
+  }
+
+  findGoContextValueObject(value: Value | null | undefined): Value | null {
+    if (!value) return null
+    if (this.getGoContextMember(value, GO_CONTEXT_VALUE_FIELD)) return value
+    if (value.vtype === 'union' && Array.isArray(value.value)) {
+      return value.value.find((item: Value) => this.getGoContextMember(item, GO_CONTEXT_VALUE_FIELD)) ?? null
+    }
+    return null
+  }
+
+  getGoMemberName(property: { name?: unknown; value?: unknown; sid?: unknown } | null | undefined): string | null {
+    if (!property) return null
+    if (typeof property.name === 'string') return property.name
+    if (typeof property.value === 'string') return property.value
+    if (typeof property.sid === 'string') return property.sid
+    return null
+  }
+
+  isGoContextPackage(value: Value | null | undefined): boolean {
+    const id = `${value?.qid ?? ''}.${value?.sid ?? ''}.${value?.name ?? ''}`
+    return value?.vtype === 'package' && /(^|\.)context(\.|$)/.test(id)
+  }
+
+  isCobraCommandContextReceiver(value: Value | null | undefined): boolean {
+    if (!value || typeof value !== 'object') return false
+    const id = `${value.qid ?? ''}.${value.sid ?? ''}`
+    if (/github\.com\/spf13\/cobra\.Command|cobra\.Command/.test(id)) return true
+    const rtypeName = this.extractGoContextKeyText(value.rtype?.definiteType ?? value.rtype)
+    const normalizedType = this.normalizeGoContextKeyText(rtypeName).replace(/^\*+/, '')
+    return normalizedType === 'Command' || normalizedType === 'cobra.Command' || normalizedType.endsWith('.cobra.Command')
+  }
+
+  resolveGoContextValue(ctx: Value, key: Value | undefined): Value {
+    const storedKey = this.getGoContextMember(ctx, GO_CONTEXT_KEY_FIELD)
+    const storedValue = this.getGoContextMember(ctx, GO_CONTEXT_VALUE_FIELD)
+    if (storedValue && this.isSameGoContextKey(storedKey, key)) {
+      return storedValue
+    }
+    const parent = this.getGoContextMember(ctx, GO_CONTEXT_PARENT_FIELD)
+    if (parent && this.getGoContextMember(parent, GO_CONTEXT_VALUE_FIELD)) return this.resolveGoContextValue(parent, key)
+    return new UndefinedValue()
+  }
+
+  isSameGoContextKey(left: Value | undefined, right: Value | undefined): boolean {
+    if (!left || !right) return false
+    if (left === right) return true
+    const leftType = this.normalizeGoContextKeyType(left)
+    const rightType = this.normalizeGoContextKeyType(right)
+    if (leftType && rightType) return leftType === rightType
+    const leftId = this.normalizeGoContextKeyId(left)
+    const rightId = this.normalizeGoContextKeyId(right)
+    return leftId !== '' && rightId !== '' && leftId === rightId
+  }
+
+  normalizeGoContextKeyType(value: Value | undefined): string {
+    const rawType = value?.rtype?.definiteType ?? value?.rtype ?? value?._meta?.type ?? value?.definiteType
+    const typeName = this.extractGoContextKeyText(rawType)
+    return this.normalizeGoContextKeyText(typeName)
+  }
+
+  normalizeGoContextKeyId(value: Value | undefined): string {
+    const idParts = [value?.qid, value?.sid, value?.name]
+      .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    return this.normalizeGoContextKeyText(idParts.join('.'))
+  }
+
+  extractGoContextKeyText(value: unknown): string {
+    if (!value) return ''
+    if (typeof value === 'string') return value
+    if (typeof value !== 'object') return AstUtil.prettyPrint(value)
+    const namedValue = value as { name?: unknown; qid?: unknown; sid?: unknown }
+    if (typeof namedValue.name === 'string') return namedValue.name
+    if (typeof namedValue.qid === 'string') return namedValue.qid
+    if (typeof namedValue.sid === 'string') return namedValue.sid
+    return AstUtil.prettyPrint(value)
+  }
+
+  normalizeGoContextKeyText(value: string): string {
+    return value
+      .replace(/<instance_[^>]*>/g, '')
+      .replace(/<copied_[^>]*>/g, '')
+      .replace(/\.\d+(?=\.|$)/g, '')
+      .replace(/\.+/g, '.')
+      .replace(/^\.|\.$/g, '')
+  }
+
+  isGoNonNilObjectValue(value: Value | null | undefined): boolean {
+    return value?.vtype === 'object'
+  }
+
+  /**
+   *
+   * @param value
+   */
+  isGoNilValue(value: Value | null | undefined): boolean {
+    return value?.vtype === 'primitive' && value?.sid === 'nil'
+  }
+
+  /**
+   *
+   * @param value
+   * @param scope
+   * @param node
+   */
+  narrowGoInstanceofObject(value: Value | null | undefined, scope: Scope, node: BinaryExpression): Value | null {
+    if (value?.vtype === 'object') return value
+    if (value?.vtype !== 'union' || !Array.isArray(value.value)) return null
+    const narrowed = new UnionValue(
+      undefined,
+      undefined,
+      `${scope.qid}.<union@go_instanceof:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+      node
+    )
+    value.value.forEach((item: Value) => {
+      if (item?.vtype === 'object') narrowed.appendValue(item, false)
+    })
+    if (narrowed.value.length === 1) return narrowed.value[0]
+    return narrowed.value.length > 0 ? narrowed : null
   }
 
   /**
@@ -644,15 +1221,15 @@ class GoAnalyzer extends Analyzer {
    */
   override processVariableDeclaration(scope: Scope, node: VariableDeclaration, state: State): SymbolValueType {
     const initialNode = node.init
-    const id = node.id  // LVal: Identifier | MemberAccess | TupleExpression
-    if (!id || (id.type === 'Identifier' && id.name === '_')) return new UndefinedValue() // e.g. in Go
+    const { id } = node // LVal: Identifier | MemberAccess | TupleExpression
+    if (!id || (id.type === 'Identifier' && id.name === '_' && initialNode?.type !== 'ImportExpression'))
+      return new UndefinedValue() // e.g. in Go: `_ = expr` 跳过；但 `_ "pkg"` 需走 import 处理
 
     let initVal
     if (!initialNode) {
       let cscope
       if (node.varType) {
         cscope = this.processInstruction(scope, node.varType, state)
-        // if (cscope && cscope.vtype !== 'undefine')
         if (cscope) {
           initVal = this.buildNewObject(cscope?.ast.fdef, cscope, state, node, scope, INTERNAL_CALL)
           // 全局变量类型推导：将声明类型写入 rtype，使 sink 匹配时能获取 calleeType
@@ -661,6 +1238,11 @@ class GoAnalyzer extends Analyzer {
           }
         } else {
           initVal = this.createVarDeclarationScope(id, scope)
+          // 外部类型（如 *gin.Context）无源码时 cscope 为 null，仍需写入 varType 作为 rtype，
+          // 使 processMemberAccess 能把类型传播到 c.Query 等 fclos，让 calleeType 匹配生效
+          if (node.varType && initVal) {
+            initVal.rtype = node.varType
+          }
         }
       }
       initVal.uninit = !initialNode
@@ -672,6 +1254,9 @@ class GoAnalyzer extends Analyzer {
         id.type === 'Identifier' ? id.name : undefined
       )
     } else {
+      if (initialNode.type === 'CallExpression') {
+        initialNode._meta = { ...initialNode._meta, goShortVarRhs: true }
+      }
       initVal = this.processInstruction(scope, initialNode, state)
       if (node.cloned && !initVal?.runtime?.refCount) {
         initVal = shallowCopyValue(initVal)
@@ -702,6 +1287,10 @@ class GoAnalyzer extends Analyzer {
         entry_fclos: this.entry_fclos,
         fdef: state.callstack && state.callstack[state.callstack.length - 1],
       })
+    if (id.type === 'TupleExpression' && initialNode?.type === 'CallExpression') {
+      this.applyGoExternalReturnTypeModelForCallNode(scope, initialNode, initVal)
+    }
+
     if (id.type === 'TupleExpression') {
       // 解构Tuple赋值，分别分发到Tuple里的每个元素
       const tupleId = id as TupleExpression
@@ -709,9 +1298,17 @@ class GoAnalyzer extends Analyzer {
         const substates = MemState.forkStates(state, 1)
         if (initVal.isTuple) {
           // 直接 tuple：按索引 1-to-1 映射
-          const minLen = Math.min(tupleId.elements.length, initVal.value.length)
+          const externalReturnModel = initialNode?.type === 'CallExpression' ? this.getGoExternalReturnTypeModelForCallNode(initialNode) : null
+          const minLen = Math.min(tupleId.elements.length, externalReturnModel?.returnTypes.length ?? initVal.value.length)
           for (let i = 0; i < minLen; i++) {
-            this.saveVarInCurrentScope(scope, tupleId.elements[i], initVal.getFieldValue(String(i)), state)
+            const sourceValue = initVal.getFieldValue(String(i))
+            const positionValue = this.materializeGoExternalReturnValue(
+              scope,
+              tupleId.elements[i],
+              externalReturnModel?.returnTypes[i],
+              sourceValue
+            ) ?? sourceValue
+            this.saveVarInCurrentScope(scope, tupleId.elements[i], positionValue, state)
           }
         } else {
           // union-of-returns：每个元素可能是 isTuple union 或单值，按位置提取后合并
@@ -737,9 +1334,17 @@ class GoAnalyzer extends Analyzer {
           }
         }
       } else if (Array.isArray(initVal.value) && initVal.value.length >= 1) {
-        const minLen = Math.min(tupleId.elements.length, initVal.value.length)
+        const externalReturnModel = initialNode?.type === 'CallExpression' ? this.getGoExternalReturnTypeModelForCallNode(initialNode) : null
+        const minLen = Math.min(tupleId.elements.length, externalReturnModel?.returnTypes.length ?? initVal.value.length)
         for (let i = 0; i < minLen; i++) {
-          this.saveVarInCurrentScope(scope, tupleId.elements[i], initVal.getFieldValue(String(i)), state)
+          const sourceValue = initVal.getFieldValue(String(i))
+          const positionValue = this.materializeGoExternalReturnValue(
+            scope,
+            tupleId.elements[i],
+            externalReturnModel?.returnTypes[i],
+            sourceValue
+          ) ?? sourceValue
+          this.saveVarInCurrentScope(scope, tupleId.elements[i], positionValue, state)
         }
       } else {
         for (const i in tupleId.elements) {
@@ -774,6 +1379,258 @@ class GoAnalyzer extends Analyzer {
     }
 
     return initVal
+  }
+
+  /**
+   *
+   * @param state
+   * @param caller
+   * @param callsiteNode
+   * @param traceNode
+   */
+  private buildCallbackState(
+    state: State,
+    caller: CallbackCaller,
+    callsiteNode: CallExpression,
+    traceNode: Node = callsiteNode
+  ): State {
+    const newState: State = _.clone(state)
+    newState.parent = state
+    newState.callstack = state.callstack ? state.callstack.concat([caller]) : [caller]
+    const callsite = {
+      code: AstUtil.getRawCode(traceNode).slice(0, 100),
+      nodeHash: traceNode._meta?.nodehash,
+      loc: traceNode.loc,
+    }
+    newState.callsites = state.callsites ? state.callsites.concat([callsite]) : [callsite]
+    return newState
+  }
+
+  /**
+   *
+   * @param scope
+   * @param caller
+   * @param callsiteNode
+   * @param argvalues
+   * @param state
+   */
+  private executeFunctionArgumentsForGo(
+    scope: Scope,
+    caller: CallbackCaller,
+    callsiteNode: CallExpression,
+    argvalues: unknown[],
+    state: State
+  ): void {
+    const needInvoke = Config.invokeCallbackOnUnknownFunction
+    if (needInvoke !== 1 && needInvoke !== 2) return
+
+    for (const arg of argvalues) {
+      if (!isGoRuntimeValue(arg)) continue
+      if (arg.vtype === 'fclos' && callsiteNode._meta?.goShortVarRhs) {
+        const fclos = lodashCloneWithTag(arg)
+        this.executeCall(
+          callsiteNode,
+          fclos,
+          this.buildCallbackState(state, caller, callsiteNode, arg.ast?.node ?? callsiteNode),
+          scope,
+          INTERNAL_CALL
+        )
+      } else if (arg.vtype === 'object') {
+        const obj = lodashCloneWithTag(arg)
+        if (!isGoRuntimeRecord(obj.value)) continue
+        Object.values(obj.value).forEach((field: unknown) => {
+          if (!isGoRuntimeValue(field) || field.vtype !== 'fclos') return
+          if (!field.ast?.node) return
+          if (!field.ast.node._meta?.modifiers?.includes('@Override')) return
+          this.executeCall(
+            callsiteNode,
+            field,
+            this.buildCallbackState(state, caller, callsiteNode),
+            scope,
+            INTERNAL_CALL
+          )
+        })
+      }
+    }
+  }
+
+  /**
+   *
+   * @param callsiteNode
+   * @param argvalues
+   */
+  private hasGoCallbackArgument(callsiteNode: CallExpression, argvalues: unknown[]): boolean {
+    return (callsiteNode.arguments ?? []).some((argument: Node | null | undefined, index: number) => {
+      if (this.isGoCallbackAstArgument(argument)) return true
+      const value = argvalues[index]
+      if (!isGoRuntimeValue(value)) return false
+      if (value.vtype === 'fclos') return true
+      if (value.vtype !== 'object' || !isGoRuntimeRecord(value.value)) return false
+      return Object.values(value.value).some((field: unknown) => {
+        if (!isGoRuntimeValue(field) || field.vtype !== 'fclos') return false
+        return this.isGoCallbackAstArgument(field.ast?.node)
+      })
+    })
+  }
+
+  /**
+   *
+   * @param node
+   */
+  private isGoCallbackAstArgument(node: Node | null | undefined): boolean {
+    if (!node) return false
+    if (node.type === 'FunctionDefinition') return true
+    if (node._meta?.modifiers?.includes('@Override')) return true
+    return false
+  }
+
+  /**
+   *
+   * @param tmpVal
+   * @param leftCount
+   * @param state
+   */
+  private extractAssignmentValues(tmpVal: unknown, leftCount: number, state: State): unknown[] {
+    const perPos: unknown[] = new Array(leftCount).fill(null)
+    if (isGoRuntimeValue(tmpVal) && tmpVal.vtype === 'union' && tmpVal.type !== 'TupleExpression') {
+      if (tmpVal.isTuple) {
+        for (let k = 0; k < leftCount; k++) perPos[k] = getRuntimeFieldValue(tmpVal, String(k)) ?? tmpVal
+      } else {
+        const buckets: unknown[][] = Array.from({ length: leftCount }, () => [])
+        const branches: unknown[] = Array.isArray(tmpVal.value) ? tmpVal.value : []
+        for (const elem of branches) {
+          if (isGoRuntimeValue(elem) && elem.isTuple && elem.vtype === 'union' && Array.isArray(elem.value)) {
+            for (let j = 0; j < leftCount; j++) buckets[j].push(j < elem.value.length ? elem.value[j] : elem)
+          } else {
+            for (let j = 0; j < leftCount; j++) buckets[j].push(elem)
+          }
+        }
+        for (let k = 0; k < leftCount; k++) perPos[k] = unionAllValues(buckets[k], state)
+      }
+    } else if (isGoRuntimeValue(tmpVal) && Array.isArray(tmpVal.value) && tmpVal.value.length >= 1) {
+      for (let k = 0; k < leftCount; k++) perPos[k] = getRuntimeFieldValue(tmpVal, String(k)) ?? tmpVal
+    } else {
+      for (let k = 0; k < leftCount; k++) perPos[k] = tmpVal
+    }
+    return perPos
+  }
+
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param target
+   * @param val
+   * @param oldV
+   * @param state
+   */
+  private saveAssignmentValue(
+    scope: Scope,
+    node: AssignmentExpression,
+    target: Node,
+    val: unknown,
+    oldV: unknown,
+    state: State
+  ): void {
+    let savedVal: unknown = val
+    if (!savedVal) savedVal = new UndefinedValue()
+    if (typeof savedVal !== 'object') {
+      savedVal = new PrimitiveValue(scope.qid, `<literal_${savedVal}>`, savedVal, null, 'Literal', node.right?.loc)
+    }
+    const runtimeSavedVal: GoRuntimeValue = isGoRuntimeValue(savedVal) ? savedVal : new UndefinedValue()
+    const targetName = getNodeName(target)
+    if (
+      runtimeSavedVal.sid === undefined ||
+      runtimeSavedVal.sid === null ||
+      (typeof runtimeSavedVal.sid === 'string' && runtimeSavedVal.sid.includes('<object'))
+    ) {
+      runtimeSavedVal.sid = SymAddress.toStringID(target) ?? ''
+    }
+    savedVal = SourceLine.addSrcLineInfo(
+      runtimeSavedVal,
+      node,
+      node.loc && node.loc.sourcefile,
+      'Var Pass:',
+      targetName
+    )
+    this.saveVarInScope(scope, target, savedVal, state, oldV)
+    if (this.checkerManager?.checkAtAssignment) {
+      this.checkerManager.checkAtAssignment(this, scope, node, state, {
+        lscope: this.getDefScope(scope, target),
+        lvalue: oldV,
+        rvalue: savedVal,
+        pcond: state.pcond,
+        binfo: state.binfo,
+        entry_fclos: this.entry_fclos,
+        einfo: state.einfo,
+        state,
+        ainfo: this.ainfo,
+      })
+    }
+  }
+
+  /**
+   * Go 赋值支持普通赋值和短变量声明：短声明同样需要执行 RHS，才能解释 callback helper 内的闭包。
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processAssignmentExpression(scope: Scope, node: AssignmentExpression, state: State): any {
+    const operator = node.operator as string
+    if ((operator === '=' || operator === ':=') && node.left?.type === 'Identifier' && node.left.name === '_') {
+      return this.processInstruction(scope, node.right, state)
+    }
+    if (operator !== '=' && operator !== ':=') {
+      return super.processAssignmentExpression(scope, node, state)
+    }
+
+    if (operator === ':=' && node.right?.type === 'CallExpression') {
+      node.right._meta = { ...node.right._meta, goShortVarRhs: true }
+    }
+    const tmpVal: unknown = this.processInstruction(scope, node.right, state)
+    const oldVal: unknown = operator === ':=' ? null : this.processInstruction(scope, node.left, state)
+    if (node.left?.type === 'TupleExpression' && node.right?.type === 'CallExpression') {
+      this.applyGoExternalReturnTypeModelForCallNode(scope, node.right, tmpVal)
+    }
+    if (node.left?.type !== 'TupleExpression') {
+      this.saveAssignmentValue(scope, node, node.left, tmpVal, oldVal, state)
+      return tmpVal
+    }
+
+    const left = node.left as TupleExpression
+    if (
+      left.elements.every((element: Node | null | undefined) => element?.type === 'Identifier' && element.name === '_')
+    )
+      return tmpVal
+
+    const isUnionTuple = isGoRuntimeValue(tmpVal) && tmpVal.vtype === 'union' && tmpVal.type !== 'TupleExpression'
+    const tmpTainted = isGoRuntimeValue(tmpVal) && tmpVal.taint?.isTaintedRec
+    if (operator === '=' && !isUnionTuple && !tmpTainted) return tmpVal
+    if (operator === '=' && !isUnionTuple && tmpTainted) return super.processAssignmentExpression(scope, node, state)
+
+    const perPos = this.extractAssignmentValues(tmpVal, left.elements.length, state)
+    const externalReturnModel = node.right?.type === 'CallExpression' ? this.getGoExternalReturnTypeModelForCallNode(node.right) : null
+    for (let k = 0; k < left.elements.length; k++) {
+      const x = left.elements[k]
+      if (!x) continue
+      const xName = x.type === 'Identifier' ? (x as Identifier).name : undefined
+      if (xName === '_') continue
+      const oldV =
+        isGoRuntimeValue(oldVal) &&
+        oldVal.type === 'TupleExpression' &&
+        Array.isArray((oldVal as { elements?: unknown[] }).elements)
+          ? (oldVal as { elements: unknown[] }).elements[k]
+          : oldVal
+      const sourceValue = perPos[k] ?? tmpVal
+      const positionValue = this.materializeGoExternalReturnValue(
+        scope,
+        x,
+        externalReturnModel?.returnTypes[k],
+        sourceValue
+      ) ?? sourceValue
+      this.saveAssignmentValue(scope, node, x, positionValue, oldV, state)
+    }
+    return tmpVal
   }
 
   /**
@@ -822,7 +1679,9 @@ class GoAnalyzer extends Analyzer {
     const { fdef } = fclos
     // if (analysisutil.isInCallStack(fdef, state.callstack)) return;
 
-    const obj = this.buildNewObject(fdef, fclos, state, node, scope, { callArgs: this.buildCallArgs(node, argvalues, fclos) })
+    const obj = this.buildNewObject(fdef, fclos, state, node, scope, {
+      callArgs: this.buildCallArgs(node, argvalues, fclos),
+    })
     if (logger.isTraceEnabled()) logger.trace(`new expression: ${this.formatScope(obj)}`)
 
     if (obj && this.checkerManager?.checkAtNewExprAfter) {
@@ -1058,8 +1917,26 @@ class GoAnalyzer extends Analyzer {
       const declRetType = fclos.ast.node.returnType
       if (declRetType.type === 'TupleType') {
         const retNum = declRetType.elements.length
+        // 外层 union-of-returns 自身也携带 TupleType，供下游变量层兜底读取
+        retVal.rtype = declRetType
         for (const i in retVal.value) {
           const eachRetVal = retVal.value[i]
+          // 内层 isTuple union（多 return 各 tuple 分支）按位置展开 rtype 到各元素
+          if (eachRetVal?.vtype === 'union' && eachRetVal?.isTuple && Array.isArray(eachRetVal.value)) {
+            const innerLen = Math.min(eachRetVal.value.length, declRetType.elements.length)
+            for (let j = 0; j < innerLen; j++) {
+              const innerVal = eachRetVal.value[j]
+              if (!innerVal || (innerVal.type === 'Identifier' && innerVal.name === 'nil')) continue
+              innerVal.rtype = declRetType.elements[j]
+              if (innerVal.rtype !== 'DynamicType') {
+                const cscope = this.processInstruction(scope, innerVal.rtype, state)
+                if (cscope?.vtype === 'class') {
+                  eachRetVal.value[j] = this.buildTypeObject(innerVal, cscope)
+                }
+              }
+            }
+            continue
+          }
           eachRetVal.rtype = declRetType.elements[Number(i) % retNum]
           // 尝试将每个 retVal 转换成 返回值声明的类型
           if (eachRetVal.rtype !== 'DynamicType') {
@@ -1073,6 +1950,9 @@ class GoAnalyzer extends Analyzer {
       } else {
         // declRetType.type !== 'TupleType'
         if (!retVal.value || !retVal.value[Symbol.iterator]) return retVal
+        // 单返回值 callee 的 retVal 可能是 union-of-returns，
+        // 外层 retVal.rtype 原本未设，导致 processVariableDeclaration 守卫失效，lhs 变量 rtype 丢失
+        retVal.rtype = fclos.ast.node.returnType
         for (let rawValue of retVal.value) {
           rawValue.rtype = fclos.ast.node.returnType
           if (rawValue.rtype !== 'DynamicType') {
@@ -1118,6 +1998,7 @@ class GoAnalyzer extends Analyzer {
    * @param state
    * @param node
    * @param scope
+   * @param callInfo
    */
   override executeSingleCall(fclos: any, state: any, node: any, scope: any, callInfo: CallInfo) {
     const retVal = super.executeSingleCall(fclos, state, node, scope, callInfo)
@@ -1126,18 +2007,142 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
+   *
+   * @param value
+   * @param node
+   * @param sourcefile
+   * @param tag
+   * @param affectedNodeName
+   */
+  private _materializeGoCarrierTrace(
+    value: Value,
+    node: Node,
+    sourcefile: string,
+    tag: string,
+    affectedNodeName: string
+  ): Value {
+    return SourceLine.addSrcLineInfo(value, node, sourcefile, tag, affectedNodeName) as Value
+  }
+
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   */
+  override processReturnStatement(scope: Scope, node: ReturnStatement, state: State): Value {
+    const returnValue = super.processReturnStatement(scope, node, state)
+    if (!node?.argument || !this.lastReturnValue?.taint?.isTaintedRec || !node.loc?.sourcefile) return returnValue
+    const tracedValue = this.lastReturnValue as unknown as {
+      taint?: { addTraceToAllTags?: (item: unknown, options?: unknown) => void }
+    }
+    tracedValue.taint?.addTraceToAllTags?.({
+      file: node.loc.sourcefile,
+      line: node.loc.start?.line,
+      node,
+      tag: 'Return Value: ',
+      affectedNodeName: '[return value]',
+    })
+    return returnValue
+  }
+
+  /**
+   *
+   * @param fscope
+   * @param params
+   * @param state
+   * @param _node
+   */
+  protected override onParamsBound(fscope: Scope, params: VariableDeclaration[], state: State, _node: Node): void {
+    for (const param of params || []) {
+      const paramId = param?.id
+      if (paramId?.type !== 'Identifier') continue
+      const value = this._getMemberValueDirect(fscope, paramId, state, false, 0, new Set()) as Value | undefined
+      if (!value?.taint?.isTaintedRec || !param.loc?.sourcefile) continue
+      const tracedValue = this._materializeGoCarrierTrace(
+        value,
+        param,
+        param.loc.sourcefile,
+        'ARG PASS: ',
+        paramId.name
+      )
+      if (tracedValue && tracedValue !== value) this.saveVarInCurrentScope(fscope, paramId, tracedValue, state)
+    }
+  }
+
+  /**
+   *
+   * @param node
+   * @param argvalues
+   * @param fclos
+   */
+  override buildCallArgs(node: CallExpression, argvalues: Value[], fclos: FunctionValueType): CallArgs {
+    const callArgs = super.buildCallArgs(node, argvalues, fclos)
+    if (node?.callee?.type === 'MemberAccess' && !callArgs.receiver) {
+      callArgs.receiver = fclos?._this || fclos?.object || fclos?.getThisObj?.()
+    }
+    return callArgs
+  }
+
+  /**
+   *
+   * @param boundCall
+   * @param params
+   * @param callArgs
+   * @param node
+   */
+  override bindReceiverParam(
+    boundCall: BoundCall,
+    params: Array<VariableDeclaration | { varType?: GoTypeAstNode }>,
+    callArgs: CallArgs,
+    node: CallExpression
+  ): number {
+    if (!callArgs.receiver || params.length === 0) return 0
+    const firstParam = params[0]
+    const firstParamType = firstParam?.varType?.type
+    const firstParamName = (firstParam as { id?: { name?: string } })?.id?.name
+    const receiverName = node?.callee?.type === 'MemberAccess' ? node.callee.object?.name : undefined
+    const isGoReceiverParam =
+      node?.callee?.type === 'MemberAccess' &&
+      Boolean(firstParamName && receiverName && firstParamName === receiverName) &&
+      (firstParamType === 'PointerType' || (firstParamType === 'Identifier' && firstParam?.varType?.name !== 'string'))
+    if (!isGoReceiverParam) return super.bindReceiverParam(boundCall, params, callArgs, node)
+    const bp = boundCall.params[0]
+    if (bp) {
+      bp.value = callArgs.receiver
+      bp.provided = true
+    }
+    return 1
+  }
+
+  /**
    * 检查 fclos 是否属于 interface（Go 没有 abstract class）
+   * @param fclos
    */
   checkFclosInInterface(fclos: any): boolean {
-    return !!(
-      fclos?.parent?.isInterface ||
-      fclos?.ast?.fdef?.parent?._meta?.isInterface
-    )
+    return !!(fclos?.parent?.isInterface || fclos?.ast?.fdef?.parent?._meta?.isInterface)
+  }
+
+  /**
+   * 从 CHA impl 的 method fclos 推回 impl struct 类型节点，供 CHA dispatch 时克隆 _this.rtype 用。
+   * method fclos.parent 指向 struct ClassDefinition scope，其 sid / logicalQid 即 struct 类型名。
+   * @param implFclos
+   */
+  _getImplReceiverTypeNode(implFclos: any): { type: 'Identifier'; name: string } | null {
+    const parent = implFclos?.parent
+    if (!parent) return null
+    const typeName = parent.sid || parent.logicalQid || parent.qid
+    if (!typeName || typeof typeName !== 'string') return null
+    // 取短名（去包前缀），让 _extractTypeName / _findAllClassDefsByName 能按 sid 精确匹配
+    const shortName = typeName.includes('.') ? typeName.split('.').pop() : typeName
+    if (!shortName) return null
+    return { type: 'Identifier', name: shortName }
   }
 
   /**
    * 从 classHierarchyMap 查找接口方法的所有具体实现
    * 递归遍历 implementedBy 链（包含间接实现）
+   * @param fclos
    */
   findCHAImplementations(fclos: any): any[] {
     if (!this.classHierarchyMap) return []
@@ -1179,6 +2184,8 @@ class GoAnalyzer extends Analyzer {
   /**
    * 通过类型名和方法名在 classHierarchyMap 中查找接口实现
    * 用于 rtype fallback：当 fclos.parent 不是接口时，通过 receiver 声明类型查找
+   * @param typeName
+   * @param methodName
    */
   findCHAImplementationsByTypeName(typeName: string, methodName: string): any[] {
     if (!this.classHierarchyMap || !typeName || !methodName) return []
@@ -1187,7 +2194,7 @@ class GoAnalyzer extends Analyzer {
     for (const [qid, hierarchy] of this.classHierarchyMap as Map<string, any>) {
       if (hierarchy.typeDeclaration !== 'interface') continue
       // 匹配：qid 末尾是 typeName（考虑包名前缀）
-      if (qid !== typeName && !qid.endsWith('.' + typeName)) continue
+      if (qid !== typeName && !qid.endsWith(`.${typeName}`)) continue
       if (!hierarchy.implementedBy || hierarchy.implementedBy.length === 0) continue
 
       const results: any[] = []
@@ -1238,7 +2245,7 @@ class GoAnalyzer extends Analyzer {
         }
       )
       if (obj.members?.has(x)) continue
-      if (!obj.members) continue  // Guard: skip if members is undefined
+      if (!obj.members) continue // Guard: skip if members is undefined
       obj.members.set(x, v_copy)
       v_copy._this = obj
       v_copy.parent = obj
@@ -1291,7 +2298,7 @@ class GoAnalyzer extends Analyzer {
    *
    * @returns {boolean}
    */
-  symbolInterpret() {
+  async symbolInterpret(): Promise<boolean> {
     this._isSymbolInterpretPhase = true
     const { entryPoints } = this
     const state = this.initState(this.topScope)
@@ -1304,79 +2311,101 @@ class GoAnalyzer extends Analyzer {
       logger.info('[symbolInterpret]：EntryPoints are not found')
       return true
     }
-    const hasAnalysised: string[] = []
+    const hasAnalysised = new Set<string>()
     // 自定义source入口方式，并根据入口自主加载source
     let index = 0
     while (index < entryPoints.length) {
       const entryPoint = entryPoints[index++]
-      if (entryPoint.isPreProcess && this.isTmpSymbolTableOpen) {
-        this.restoreSymbolTable()
-      } else if (this.isTmpSymbolTableOpen) {
-        this.symbolTable.clear()
-      }
-
-      if (!entryPoint.isPreProcess && !this.isTmpSymbolTableOpen) {
-        this.switchToTemporarySymbolTable()
-      }
-
-      if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) continue
-      entryPointConfig.setCurrentEntryPoint(entryPoint)
-      if (
-        (isFromRule || entryPoint.functionName === 'main') &&
-        hasAnalysised.includes(
-          `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-        )
-      ) {
-        continue
-      }
-
-      hasAnalysised.push(
-        `${entryPoint.filePath}.${entryPoint.functionName}/${entryPoint?.entryPointSymVal?.qid}#${entryPoint.entryPointSymVal.ast.node.parameters}.${entryPoint.attribute}`
-      )
-
-      logger.info(
-        'EntryPoint [%s.%s] is executing',
-        entryPoint.filePath?.substring(0, entryPoint?.filePath.lastIndexOf('.')),
-        entryPoint.functionName ||
-          `<anonymousFunc_${entryPoint.entryPointSymVal?.ast?.node?.loc.start?.line}_${
-            entryPoint.entryPointSymVal?.ast?.node?.loc.end?.line
-          }>`
-      )
-
-      this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, { entryPoint })
-
-      const argValues = []
-
-      for (const key in entryPoint.entryPointSymVal?.ast?.node?.parameters) {
-        argValues.push(
-          this.processInstruction(
-            entryPoint.entryPointSymVal,
-            entryPoint.entryPointSymVal?.ast?.node?.parameters[key].id,
-            state
-          )
-        )
-      }
-
+      const metricStartTime = Date.now()
+      const findingsBefore = this.countFindings()
+      let skipped = false
+      let skipReason: string | undefined
       try {
-        this.executeCall(
-          entryPoint.entryPointSymVal?.ast?.node,
-          entryPoint.entryPointSymVal,
-          state,
-          entryPoint.scopeVal,
-          { callArgs: this.buildCallArgs(entryPoint.entryPointSymVal?.ast?.node, argValues, entryPoint.entryPointSymVal) }
+        if (entryPoint.isPreProcess && this.isTmpSymbolTableOpen) {
+          this.restoreSymbolTable()
+        } else if (this.isTmpSymbolTableOpen) {
+          this.symbolTable.clear()
+        }
+
+        if (!entryPoint.isPreProcess && !this.isTmpSymbolTableOpen) {
+          this.switchToTemporarySymbolTable()
+        }
+
+        if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
+          skipped = true
+          skipReason = 'unsupported'
+          continue
+        }
+        entryPointConfig.setCurrentEntryPoint(entryPoint)
+        const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
+        if (entryPointMark.skipped) {
+          skipped = true
+          skipReason = entryPointMark.skipReason
+          continue
+        }
+
+        executeViaEntryPointExecutor(
+          {
+            analyzer: this,
+            entryPoint,
+            metricStartTime,
+            findingsBefore,
+            executionState: state,
+            overloadCount: 1,
+            epIndex: index,
+            epTotal: entryPoints.length,
+          },
+          {
+            language: 'go',
+            classify: () => 'function',
+            execute: () => {
+              this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, { entryPoint })
+
+              const argValues = []
+
+              for (const key in entryPoint.entryPointSymVal?.ast?.node?.parameters) {
+                argValues.push(
+                  this.processInstruction(
+                    entryPoint.entryPointSymVal,
+                    entryPoint.entryPointSymVal?.ast?.node?.parameters[key].id,
+                    state
+                  )
+                )
+              }
+
+              try {
+                this.executeCall(
+                  entryPoint.entryPointSymVal?.ast?.node,
+                  entryPoint.entryPointSymVal,
+                  state,
+                  entryPoint.scopeVal,
+                  {
+                    callArgs: this.buildCallArgs(
+                      entryPoint.entryPointSymVal?.ast?.node,
+                      argValues,
+                      entryPoint.entryPointSymVal
+                    ),
+                  }
+                )
+              } catch (e) {
+                handleException(
+                  e,
+                  `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`,
+                  `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`
+                )
+              }
+              if (index === entryPoints.length && !isFromRule) {
+                this.entryPoints.push(...this.ruleEntrypoints)
+                isFromRule = true
+              }
+              this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, { entryPoint })
+            },
+          },
+          this.checkerManager?.resultManagerProxy,
         )
-      } catch (e) {
-        handleException(
-          e,
-          `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`,
-          `[${entryPoint.entryPointSymVal?.ast?.node?.id?.name} symbolInterpret failed. Exception message saved in error log`
-        )
+      } finally {
+        this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
       }
-      if (index === entryPoints.length && !isFromRule) {
-        this.entryPoints.push(...this.ruleEntrypoints)
-        isFromRule = true
-      }
-      this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, { entryPoint })
     }
     return true
   }
@@ -1405,42 +2434,14 @@ class GoAnalyzer extends Analyzer {
    * @param argvalues
    * @param state
    */
-  override executeFunctionInArguments(scope: any, caller: any, callsiteNode: any, argvalues: any, state: any) {
-    const needInvoke = Config.invokeCallbackOnUnknownFunction
-    if (needInvoke !== 1 && needInvoke !== 2) return
-
-    for (let i = 0; i < argvalues.length; i++) {
-      const arg = argvalues[i]
-      if (arg && arg.vtype === 'object') {
-        const obj = lodashCloneWithTag(arg) // 浅拷贝即可
-        const newState = _.clone(state)
-        newState.parent = state
-        newState.callstack = state.callstack ? state.callstack.concat([caller]) : [caller]
-        newState.callsites = state.callsites
-          ? state.callsites.concat([
-              {
-                code: AstUtil.getRawCode(callsiteNode).slice(0, 100),
-                nodeHash: callsiteNode._meta?.nodehash,
-                loc: callsiteNode.loc,
-              },
-            ])
-          : [
-              {
-                code: AstUtil.prettyPrintAST(callsiteNode).slice(0, 100),
-                nodeHash: callsiteNode._meta?.nodehash,
-                loc: callsiteNode.loc,
-              },
-            ]
-        Object.values(obj.value).forEach((field: any) => {
-          if (field?.vtype === 'fclos') {
-            // only override methods will be concerned
-            if (!field.ast.node) return
-            if (!field?.ast?.node?._meta?.modifiers?.includes('@Override')) return
-            this.executeCall(callsiteNode, field, newState, scope, INTERNAL_CALL)
-          }
-        })
-      }
-    }
+  override executeFunctionInArguments(
+    scope: Scope,
+    caller: CallbackCaller,
+    callsiteNode: CallExpression,
+    argvalues: unknown[],
+    state: State
+  ): void {
+    this.executeFunctionArgumentsForGo(scope, caller, callsiteNode, argvalues, state)
   }
 
   /**
@@ -1469,6 +2470,19 @@ class GoAnalyzer extends Analyzer {
     const newLeft = this.processInstruction(scope, node.left, state)
     const newRight = this.processInstruction(scope, node.right, state)
 
+    if (node.operator === '!=' && this.isGoNonNilObjectValue(newLeft) && this.isGoNilValue(newRight)) {
+      return new PrimitiveValue(scope.qid, 'true', true, null, 'Literal', node.loc) as BinaryExprValue
+    }
+    if (node.operator === '!=' && this.isGoNilValue(newLeft) && this.isGoNonNilObjectValue(newRight)) {
+      return new PrimitiveValue(scope.qid, 'true', true, null, 'Literal', node.loc) as BinaryExprValue
+    }
+    if (node.operator === '==' && this.isGoNonNilObjectValue(newLeft) && this.isGoNilValue(newRight)) {
+      return new PrimitiveValue(scope.qid, 'false', false, null, 'Literal', node.loc) as BinaryExprValue
+    }
+    if (node.operator === '==' && this.isGoNilValue(newLeft) && this.isGoNonNilObjectValue(newRight)) {
+      return new PrimitiveValue(scope.qid, 'false', false, null, 'Literal', node.loc) as BinaryExprValue
+    }
+
     if (node.operator === 'push') {
       this.processOperator(newLeft, node.left, newRight, node.operator, state)
     }
@@ -1484,12 +2498,16 @@ class GoAnalyzer extends Analyzer {
     if (this.checkerManager && this.checkerManager.checkAtBinaryOperation)
       this.checkerManager.checkAtBinaryOperation(this, scope, node, state, { newNode })
 
-      const result = new BinaryExprValue(scope.qid, node.operator, newLeft, newRight, node, node.loc) as any
+    const result = new BinaryExprValue(scope.qid, node.operator, newLeft, newRight, node, node.loc) as any
     if (hasTag) {
       result.taint?.mergeFrom([newLeft, newRight])
     }
     if (node.operator === 'instanceof') {
       result.value = newLeft.value
+      if (node.right?.type === 'DereferenceExpression') {
+        const narrowed = this.narrowGoInstanceofObject(newLeft, scope, node)
+        if (narrowed) return narrowed as BinaryExprValue
+      }
     }
     return result
   }
@@ -1517,20 +2535,29 @@ class GoAnalyzer extends Analyzer {
 
   /**
    * 防止已 resolved 的符号值被 resolveIndices 二次处理导致 qid 损坏
+   * @param scope
+   * @param node
+   * @param value
+   * @param state
+   * @param evalScope
    */
-  saveVarInCurrentScope(scope: any, node: any, value: any, state: any): any {
+  saveVarInCurrentScope(scope: any, node: any, value: any, state: any, evalScope?: any): any {
     if (node?.vtype && node.vtype !== 'undefine' && node?.sid?.startsWith('<indice_')) {
       return this.saveVarInScopeRec(scope, node, value, state)
     }
-    return super.saveVarInCurrentScope(scope, node, value, state)
+    return super.saveVarInCurrentScope(scope, node, value, state, evalScope)
   }
 
   /**
    * Go map computed index 归一化 + UAST 扁平化修复
    * 1. 先修复 UAST 扁平化的 map[obj.field] 模式
    * 2. 再将求值结果为 primitive 字符串的 index 转为 Identifier 格式的 SymbolValue
+   * @param scope
+   * @param node
+   * @param state
+   * @param evalScope
    */
-  resolveIndices(scope: any, node: any, state: any): any {
+  resolveIndices(scope: any, node: any, state: any, evalScope?: any): any {
     // UAST 扁平化修复：map[obj.field] → (map[obj]).field
     let inputNode = node
     if (node?.type === 'MemberAccess' && node?.computed) {
@@ -1539,15 +2566,30 @@ class GoAnalyzer extends Analyzer {
         inputNode = fixed
       }
     }
-    const resolved = super.resolveIndices(scope, inputNode, state)
+    const resolved = super.resolveIndices(scope, inputNode, state, evalScope)
     if (!resolved || resolved.type !== 'MemberAccess' || !resolved.computed) return resolved
     // key 归一化
     const prop = resolved.property
     if (prop?.vtype === 'primitive' && typeof prop.value === 'string') {
-      const normalized = new SymbolValue(prop.qid, { sid: `<indice_${prop.value}>`, name: prop.value, type: 'Identifier', loc: prop.loc })
+      const normalized = new SymbolValue(prop.qid, {
+        sid: `<indice_${prop.value}>`,
+        name: prop.value,
+        type: 'Identifier',
+        loc: prop.loc,
+      })
       resolved.property = normalized
-    } else if (prop?.vtype === 'symbol' && !prop.sid?.startsWith('<indice_') && prop.name && typeof prop.name === 'string') {
-      const normalized = new SymbolValue(prop.qid, { sid: `<indice_${prop.name}>`, name: prop.name, type: 'Identifier', loc: prop.loc })
+    } else if (
+      prop?.vtype === 'symbol' &&
+      !prop.sid?.startsWith('<indice_') &&
+      prop.name &&
+      typeof prop.name === 'string'
+    ) {
+      const normalized = new SymbolValue(prop.qid, {
+        sid: `<indice_${prop.name}>`,
+        name: prop.name,
+        type: 'Identifier',
+        loc: prop.loc,
+      })
       resolved.property = normalized
     }
     return resolved
@@ -1566,7 +2608,12 @@ class GoAnalyzer extends Analyzer {
     const effectiveNode = this._tryUnflattenMapIndex(node) ?? node
     const defscope = this.processInstruction(scope, effectiveNode.object, state)
     if (defscope.vtype === 'union' && Array.isArray(defscope.value)) {
-      const ret = new UnionValue(undefined, undefined, `${scope.qid}.<union@go_mem:${node.loc?.start?.line}:${node.loc?.start?.column}>`, node)
+      const ret = new UnionValue(
+        undefined,
+        undefined,
+        `${scope.qid}.<union@go_mem:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+        node
+      )
       defscope.value.forEach((defScp: any) => {
         ret.appendValue(this.accessValueFromDefScope(scope, effectiveNode, state, defScp))
       })
@@ -1602,16 +2649,38 @@ class GoAnalyzer extends Analyzer {
       const res = this.getMemberValue(defscope, resolvedProp, state)
 
       // Go struct 实例方法解析：实例 _field 为空时，通过 rtype 链查找 ClassDefinition 方法
-      if (this._isSymbolInterpretPhase && defscope.vtype === 'symbol' && defscope.rtype && defscope.rtype !== 'DynamicType') {
+      if (
+        this._isSymbolInterpretPhase &&
+        ['symbol', 'object'].includes(defscope.vtype) &&
+        defscope.rtype &&
+        defscope.rtype !== 'DynamicType'
+      ) {
         const methodFclos = this.resolveGoMethod(defscope, resolvedProp?.name)
         if (methodFclos) {
+          // 与下方 getMemberValue 路径对齐：设置 _this + rtype，使 calleeType 匹配可用
+          if (node.object.type !== 'SuperExpression') {
+            methodFclos._this = defscope
+          }
+          methodFclos.object = defscope
+          methodFclos.property = resolvedProp
+          if (methodFclos.rtype === undefined) {
+            methodFclos.rtype = { type: undefined }
+            methodFclos.rtype.definiteType = defscope.rtype.type ? defscope.rtype : defscope.rtype.definiteType
+            methodFclos.rtype.vagueType = defscope.rtype.vagueType
+              ? `${defscope.rtype.vagueType}.${resolvedProp.name}`
+              : resolvedProp.name
+          }
           return methodFclos
         }
       }
 
       // Go 嵌入结构体方法解析：实例方法未找到时，通过 ClassDefinition 的 SpreadElement 查找嵌入类型的方法
-      if (this._isSymbolInterpretPhase && defscope.vtype === 'object' && resolvedProp?.name
-          && (!res || !res.ast?.fdef)) {
+      if (
+        this._isSymbolInterpretPhase &&
+        defscope.vtype === 'object' &&
+        resolvedProp?.name &&
+        (!res || !res.ast?.fdef)
+      ) {
         const embeddedMethod = this._resolveEmbeddedMethod(defscope, resolvedProp.name)
         if (embeddedMethod) {
           return embeddedMethod
@@ -1621,14 +2690,29 @@ class GoAnalyzer extends Analyzer {
       if (node.object.type !== 'SuperExpression' && (res.vtype !== 'union' || !Array.isArray(res.value))) {
         res._this = defscope
       }
-      if (defscope.rtype && defscope.rtype !== 'DynamicType' && res && res.rtype === undefined) {
-        res.rtype = { type: undefined }
-        res.rtype.definiteType = defscope.rtype.type ? defscope.rtype : defscope.rtype.definiteType
-        res.rtype.vagueType = defscope.rtype.vagueType
-          ? `${defscope.rtype.vagueType}.${resolvedProp.name}`
-          : resolvedProp.name
+      if (
+        defscope.rtype &&
+        defscope.rtype !== 'DynamicType' &&
+        res &&
+        (res.rtype === undefined || (res.rtype && !res.rtype.definiteType)) &&
+        resolvedProp?.name
+      ) {
+        const parentTypeNode = defscope.rtype.type ? defscope.rtype : defscope.rtype.definiteType
+        const parentTypeName = this._extractTypeName(parentTypeNode)
+        const fieldTypeNode = this._resolveFieldTypeViaTypeChain(parentTypeName || '', resolvedProp.name)
+        const fallbackTypeNode = fieldTypeNode ?? this._resolveGoEmbeddedFieldType(parentTypeName || '', resolvedProp.name)
+        const externalReceiverTypeNode =
+          !fallbackTypeNode && res.rtype === undefined && !this._hasGoClassDef(parentTypeName || '') ? parentTypeNode : null
+        const resolvedTypeNode = fallbackTypeNode ?? externalReceiverTypeNode
+        if (resolvedTypeNode) {
+          // 字段类型优先使用声明或嵌入类型；外部库方法保留 receiver 类型供 calleeType 匹配。
+          res.rtype = { type: undefined }
+          res.rtype.definiteType = resolvedTypeNode
+          res.rtype.vagueType = defscope.rtype.vagueType
+            ? `${defscope.rtype.vagueType}.${resolvedProp.name}`
+            : resolvedProp.name
+        }
       }
-
       if (this.checkerManager) {
         this.checkerManager.checkAtMemberAccess(this, defscope, node, state, { res })
       }
@@ -1644,6 +2728,7 @@ class GoAnalyzer extends Analyzer {
    * 正确语义应为：
    *   MemberAccess(computed=true, X, MemberAccess(computed=false, Y, Z))
    * 返回重构后的临时节点，或 null 表示不需要修复。
+   * @param node
    */
   private _tryUnflattenMapIndex(node: MemberAccess): MemberAccess | null {
     // 条件1：外层 computed=true
@@ -1667,8 +2752,8 @@ class GoAnalyzer extends Analyzer {
     const newInnerProp: any = {
       type: 'MemberAccess',
       computed: false,
-      object: innerNode.property,  // Y（mc）
-      property: node.property,     // Z（name）
+      object: innerNode.property, // Y（mc）
+      property: node.property, // Z（name）
       loc: {
         start: innerNode.property.loc?.start,
         end: node.property.loc?.end,
@@ -1677,8 +2762,8 @@ class GoAnalyzer extends Analyzer {
     const rewritten: any = {
       type: 'MemberAccess',
       computed: true,
-      object: innerNode.object,    // X（startModules）
-      property: newInnerProp,      // mc.name
+      object: innerNode.object, // X（startModules）
+      property: newInnerProp, // mc.name
       loc: node.loc,
     }
     return rewritten as MemberAccess
@@ -1688,9 +2773,11 @@ class GoAnalyzer extends Analyzer {
    * 策略1：从 rtype 链中提取父 ClassDefinition，再从其字段的类型找到目标 ClassDefinition 的方法
    * 策略2：遍历 packages 查找包含该方法的非接口 ClassDefinition
    * 注意：不调用 processInstruction（symbolInterpret 阶段有副作用），只做数据结构遍历
+   * @param defscope
+   * @param methodName
    */
   resolveGoMethod(defscope: any, methodName: string): any {
-    const rtype = defscope.rtype
+    const { rtype } = defscope
     if (!rtype || typeof rtype !== 'object') return null
 
     // 策略1：从 rtype 链提取字段名和父类型名，然后在 packages 中精确查找
@@ -1707,11 +2794,18 @@ class GoAnalyzer extends Analyzer {
       }
     }
 
-    // 策略2：全局搜索兜底
-    const fallbackKey = `global:${methodName}`
+    // 策略2：hint-based 查找（外部类型放弃 / 无父类型名放弃 / 严格 typeName 匹配）
+    const hintParentTypeName = parentTypeNode ? this._extractTypeName(parentTypeNode) : null
+    const hintIsExternal = !!rtype._isExternal
+    // 缓存 key 必须包含 hint，否则不同 hint 的命中结果会互相污染
+    const fallbackKey = `global:${methodName}:${hintIsExternal ? 'ext' : 'int'}:${hintParentTypeName ?? ''}`
     if (fallbackKey in this._methodResolveCache) return this._methodResolveCache[fallbackKey]
 
-    const found = this._searchMethodInPackages(methodName)
+    const found = this._searchMethodInPackages(methodName, {
+      parentTypeNode,
+      parentTypeName: hintParentTypeName,
+      isExternal: hintIsExternal,
+    })
     this._methodResolveCache[fallbackKey] = found
     return found
   }
@@ -1721,6 +2815,9 @@ class GoAnalyzer extends Analyzer {
    * 从 PointerType/Identifier AST 节点提取父类型名 → 在 packages 中找到所有同名 ClassDefinition
    * → 遍历每个候选，从 body 中查找目标字段 → 提取字段的 varType → 找到目标 ClassDefinition 的方法
    * 解决同名类型歧义：多个包定义同名 struct 时，通过字段名精确匹配正确的 ClassDefinition
+   * @param parentTypeNode
+   * @param fieldName
+   * @param methodName
    */
   _resolveMethodViaTypeChain(parentTypeNode: any, fieldName: string, methodName: string): any {
     const parentTypeName = this._extractTypeName(parentTypeNode)
@@ -1736,8 +2833,12 @@ class GoAnalyzer extends Analyzer {
 
       let fieldTypeName: string | null = null
       for (const stmt of bodyStmts) {
-        if (stmt.type === 'VariableDeclaration' && stmt.id?.type === 'Identifier'
-          && stmt.id.name === fieldName && stmt.varType) {
+        if (
+          stmt.type === 'VariableDeclaration' &&
+          stmt.id?.type === 'Identifier' &&
+          stmt.id.name === fieldName &&
+          stmt.varType
+        ) {
           fieldTypeName = this._extractTypeName(stmt.varType)
           break
         }
@@ -1760,13 +2861,147 @@ class GoAnalyzer extends Analyzer {
       }
     }
 
-    // 所有候选都不满足时，全局兜底
-    return this._searchMethodInPackages(methodName)
+    // 所有候选都不满足时，hint-based 兜底（用 parentTypeName 严格查，避免全局深搜误命中）
+    return this._searchMethodInPackages(methodName, {
+      parentTypeNode,
+      parentTypeName,
+      isExternal: false,
+    })
+  }
+
+  /**
+   * 纯数据遍历（无副作用）：在 packages 中找 parentTypeName 的所有同名 ClassDefinition
+   * → 遍历 body 字段声明 → 命中 fieldName 返回字段声明类型 rtype（原始 AST 节点，形如 Identifier/PointerType）。
+   *
+   * 用于 accessValueFromDefScope 在 interface receiver 上做 field access 时，替代"把 receiver rtype 抄给字段"的 fallback：
+   * interface 类型本身没有字段，直接查声明类型得到 undefined 即自然退回 fallback；
+   * struct 类型字段命中 → 返回字段声明类型（如 `*ExternalClient`）修正 rtype 漂移。
+   * @param parentTypeName
+   * @param fieldName
+   */
+  _resolveFieldTypeViaTypeChain(parentTypeName: string, fieldName: string): GoTypeAstNode | null {
+    if (!parentTypeName || !fieldName) return null
+    const cacheKey = `fieldType:${parentTypeName}:${fieldName}`
+    if (cacheKey in this._methodResolveCache) return this._methodResolveCache[cacheKey] as GoTypeAstNode | null
+
+    const parentClassDefs = this._findAllClassDefsByName(parentTypeName)
+    let resolved: GoTypeAstNode | null = null
+    let sawInterface = false
+    for (const parentClassDef of parentClassDefs) {
+      if (parentClassDef.isInterface) {
+        sawInterface = true
+        continue
+      }
+      const bodyStmts = this._getClassDefBodyStmts(parentClassDef)
+      if (!bodyStmts) continue
+      for (const stmt of bodyStmts) {
+        if (stmt.type !== 'VariableDeclaration' || !stmt.varType) continue
+        if (stmt.id?.type === 'Identifier' && stmt.id.name === fieldName) {
+          resolved = stmt.varType as GoTypeAstNode
+          break
+        }
+      }
+      if (resolved) break
+    }
+
+    // interface fallback：parentTypeName 是 interface 且自身无字段时，遍历 classHierarchyMap 中的 implementers，
+    // 取第一个有该字段声明的 impl struct 的字段类型。用于修复 CHA dispatch 下 p.field 的 rtype 漂移：
+    // `p` 实际指向全局 provider 对象（rtype=接口），字段访问需按 impl 字段类型反推。
+    if (!resolved && sawInterface && this.classHierarchyMap) {
+      const chMap: Map<string, ClassHierarchy> = this.classHierarchyMap
+      let hierarchy: ClassHierarchy | undefined = chMap.get(parentTypeName)
+      if (!hierarchy) {
+        const suffix = `.${parentTypeName}`
+        for (const [qid, h] of chMap) {
+          if (qid === parentTypeName || qid.endsWith(suffix)) {
+            hierarchy = h
+            break
+          }
+        }
+      }
+      if (hierarchy?.typeDeclaration === 'interface' && Array.isArray(hierarchy.implementedBy)) {
+        for (const impl of hierarchy.implementedBy) {
+          // implementer 可能以 ClassHierarchy 形态存在，真实字段名见 go-type-related-info-resolver.ts：
+          // impl.value?.sid 是 Go struct 的短名，impl.type 是 qid；两者择优
+          const implName: string | undefined =
+            impl?.value?.sid || (typeof impl?.type === 'string' ? impl.type.split('.').pop() : undefined)
+          if (!implName) continue
+          const implFieldType = this._resolveFieldTypeViaTypeChainInternal(implName, fieldName)
+          if (implFieldType) {
+            resolved = implFieldType
+            break
+          }
+        }
+      }
+    }
+
+    this._methodResolveCache[cacheKey] = resolved
+    return resolved
+  }
+
+  /**
+   * 仅走 struct 字段查询（不再递归到 interface implementers fallback），
+   * 防止 _resolveFieldTypeViaTypeChain 的 interface fallback 递归回来。
+   * @param parentTypeName
+   * @param fieldName
+   */
+  _resolveFieldTypeViaTypeChainInternal(parentTypeName: string, fieldName: string): GoTypeAstNode | null {
+    if (!parentTypeName || !fieldName) return null
+    const parentClassDefs = this._findAllClassDefsByName(parentTypeName)
+    for (const parentClassDef of parentClassDefs) {
+      if (parentClassDef.isInterface) continue
+      const bodyStmts = this._getClassDefBodyStmts(parentClassDef)
+      if (!bodyStmts) continue
+      for (const stmt of bodyStmts) {
+        if (stmt.type !== 'VariableDeclaration' || !stmt.varType) continue
+        if (stmt.id?.type === 'Identifier' && stmt.id.name === fieldName) {
+          return stmt.varType as GoTypeAstNode
+        }
+      }
+    }
+    return null
+  }
+
+  _resolveGoEmbeddedFieldType(parentTypeName: string, fieldName: string): GoTypeAstNode | null {
+    if (!parentTypeName || !fieldName) return null
+    const cacheKey = `embeddedFieldType:${parentTypeName}:${fieldName}`
+    if (cacheKey in this._methodResolveCache) return this._methodResolveCache[cacheKey] as GoTypeAstNode | null
+
+    let resolved: GoTypeAstNode | null = null
+    const parentClassDefs = this._findAllClassDefsByName(parentTypeName)
+    for (const parentClassDef of parentClassDefs) {
+      if (parentClassDef.isInterface) continue
+      const bodyStmts = this._getClassDefBodyStmts(parentClassDef)
+      if (!bodyStmts) continue
+      for (const stmt of bodyStmts) {
+        if (stmt.type !== 'SpreadElement') continue
+        const embeddedTypeName = this._extractTypeName(stmt.argument)
+        if (embeddedTypeName === fieldName) {
+          resolved = stmt.argument as GoTypeAstNode
+          break
+        }
+      }
+      if (resolved) break
+    }
+
+    this._methodResolveCache[cacheKey] = resolved
+    return resolved
+  }
+
+  _hasGoClassDef(typeName: string): boolean {
+    if (!typeName) return false
+    const cacheKey = `hasClassDef:${typeName}`
+    if (cacheKey in this._methodResolveCache) return this._methodResolveCache[cacheKey] as boolean
+    const hasClassDef = this._findAllClassDefsByName(typeName).length > 0
+    this._methodResolveCache[cacheKey] = hasClassDef
+    return hasClassDef
   }
 
   /**
    * 接口实现查找：从接口的 body 提取方法名列表，
    * 在 packages 树中搜索具备所有这些方法（带 fdef）的非接口 ClassDefinition，返回目标方法
+   * @param interfaceClassDef
+   * @param methodName
    */
   _findInterfaceImplMethod(interfaceClassDef: any, methodName: string): any {
     const bodyStmts = this._getClassDefBodyStmts(interfaceClassDef)
@@ -1800,16 +3035,19 @@ class GoAnalyzer extends Analyzer {
         // 非接口 ClassDefinition，且具备目标方法
         if (child.ast?.cdef && !child.isInterface && child.value?.[methodName]?.ast?.fdef) {
           // 验证该 ClassDef 实现了接口的所有方法
-          const hasAll = interfaceMethodNames.every(
-            (m: string) => child.value?.[m]?.ast?.fdef
-          )
+          const hasAll = interfaceMethodNames.every((m: string) => child.value?.[m]?.ast?.fdef)
           if (hasAll) {
             found = child.value[methodName]
             return
           }
         }
 
-        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module' || child.vtype === 'class') {
+        if (
+          child.vtype === 'object' ||
+          child.vtype === 'package' ||
+          child.vtype === 'module' ||
+          child.vtype === 'class'
+        ) {
           search(child, depth + 1)
         }
       }
@@ -1821,12 +3059,23 @@ class GoAnalyzer extends Analyzer {
 
   /**
    * 从 AST 类型节点提取类型名（不调用 processInstruction）
-   * 支持：Identifier、MemberAccess、PointerType
+   * 支持：Identifier / PointerType / StarExpression / MemberAccess /
+   *       ArrayType（取 element） / MapType（取 valueType） /
+   *       DereferenceExpression / UnaryExpression(operator='*')（取 argument） /
+   *       嵌套形态（如 *[]T / *map[K]V / []*T）通过递归处理
+   * @param node
    */
   _extractTypeName(node: any): string | null {
     if (!node) return null
     if (node.type === 'Identifier') return node.name
-    if (node.type === 'PointerType' || node.type === 'StarExpression') return this._extractTypeName(node.element || node.argument)
+    if (node.type === 'PointerType' || node.type === 'StarExpression')
+      return this._extractTypeName(node.element || node.argument)
+    // 解引用 / 一元 *：递归 argument
+    if (node.type === 'DereferenceExpression') return this._extractTypeName(node.argument || node.element)
+    if (node.type === 'UnaryExpression' && node.operator === '*') return this._extractTypeName(node.argument)
+    // 容器：取元素 / value 类型（receiver 取自元素，key 类型不做 receiver）
+    if (node.type === 'ArrayType') return this._extractTypeName(node.element)
+    if (node.type === 'MapType') return this._extractTypeName(node.valueType)
     if (node.type === 'MemberAccess' && node.property?.name) return node.property.name
     // 嵌套结构化 rtype
     if (node.name) return node.name
@@ -1840,12 +3089,13 @@ class GoAnalyzer extends Analyzer {
    * - BlockStatement：body.body 是数组
    * - ObjectExpression：body.properties 是数组
    * - 直接数组：body 本身是数组
+   * @param classDef
    */
   _getClassDefBodyStmts(classDef: any): any[] | null {
     const cdef = classDef?.ast?.cdef
     if (!cdef?.body) return null
 
-    const body = cdef.body
+    const { body } = cdef
     if (Array.isArray(body)) return body
     if (Array.isArray(body.body)) return body.body
     if (Array.isArray(body.properties)) return body.properties
@@ -1853,7 +3103,23 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
+   * 按调用点词法作用域解析类型名，找不到局部声明时再回退到包级唯一候选。
+   * @param scope
+   * @param typeName
+   * @param state
+   */
+  _resolveClassDefByTypeNameInScope(scope: Scope, typeName: string, state: State): GoClassDefinitionValue | null {
+    const typeIdent = { type: 'Identifier', name: typeName }
+    const lexicalValue = this.getMemberValueNoCreate(scope, typeIdent as Identifier, state)
+    if (lexicalValue?.ast?.cdef && lexicalValue.sid === typeName) return lexicalValue
+
+    const packageCandidates = this._findAllClassDefsByName(typeName)
+    return packageCandidates.length === 1 ? packageCandidates[0] : null
+  }
+
+  /**
    * 在 packages 树中按类型名查找所有同名 ClassDefinition（解决同名歧义）
+   * @param name
    */
   _findAllClassDefsByName(name: string): any[] {
     const cacheKey = `classDefs:${name}`
@@ -1878,7 +3144,12 @@ class GoAnalyzer extends Analyzer {
           results.push(child)
         }
 
-        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module' || child.vtype === 'class') {
+        if (
+          child.vtype === 'object' ||
+          child.vtype === 'package' ||
+          child.vtype === 'module' ||
+          child.vtype === 'class'
+        ) {
           search(child, depth + 1)
         }
       }
@@ -1890,38 +3161,42 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
-   * 遍历 packages 树查找包含目标方法（带 fdef）的非接口 ClassDefinition
+   * 策略 2 hint-based 查找：按父类型名严格匹配 ClassDef，再取目标方法（非接口、有 fdef）
+   *
+   * hint 字段：
+   * - parentTypeNode：父类型 AST 节点（保留供后续调试 / 扩展）
+   * - parentTypeName：父类型名（_extractTypeName 提取的结果）
+   * - isExternal：源头打标信号，true 表示父类型来自外部 lib stub（processLibArgToRet 注入）
+   *
+   * 行为：
+   * - hint.isExternal=true → 直接 return null（外部类型让 res.rtype 兜底接管）
+   * - hint.parentTypeName 缺失 → return null（不做无父类型名的全局深搜）
+   * - 严格匹配：通过 _findAllClassDefsByName 在 packages 中查 sid===parentTypeName 的 ClassDef，
+   *   仅取非 interface 且方法带 fdef 的命中，避免全局深搜跨包同名方法误命中
+   * @param methodName
+   * @param hint
+   * @param hint.parentTypeNode
+   * @param hint.parentTypeName
+   * @param hint.isExternal
    */
-  _searchMethodInPackages(methodName: string): any {
-    const packages = this.topScope?.context?.packages
-    if (!packages) return null
+  _searchMethodInPackages(
+    methodName: string,
+    hint: {
+      parentTypeNode?: any
+      parentTypeName?: string | null
+      isExternal?: boolean
+    } = {}
+  ): any {
+    if (hint.isExternal) return null
+    if (!hint.parentTypeName) return null
 
-    let found: any = null
-    const visited = new Set<any>()
-
-    const search = (node: any, depth: number): void => {
-      if (depth > 15 || !node || visited.has(node) || found) return
-      visited.add(node)
-      if (!node.value || typeof node.value !== 'object' || Array.isArray(node.value)) return
-
-      for (const key of Object.keys(node.value)) {
-        if (found) return
-        const child = node.value[key]
-        if (!child) continue
-
-        if (child.ast?.cdef && !child.isInterface && child.value?.[methodName]?.ast?.fdef) {
-          found = child.value[methodName]
-          return
-        }
-
-        if (child.vtype === 'object' || child.vtype === 'package' || child.vtype === 'module') {
-          search(child, depth + 1)
-        }
+    const candidates = this._findAllClassDefsByName(hint.parentTypeName)
+    for (const cdef of candidates) {
+      if (cdef && !cdef.isInterface && cdef.value?.[methodName]?.ast?.fdef) {
+        return cdef.value[methodName]
       }
     }
-
-    search(packages, 0)
-    return found
+    return null
   }
 
   /**
@@ -1943,12 +3218,85 @@ class GoAnalyzer extends Analyzer {
    * @param argvalues
    * @param scope
    * @param state
+   * @param callInfo
    */
   override processLibArgToRet(node: any, fclos: any, argvalues: any, scope: any, state: any, callInfo: CallInfo) {
     const ret = super.processLibArgToRet(node, fclos, argvalues, scope, state, callInfo)
-    // 将fclos的rtype信息保留给返回值
-    if (fclos.rtype) ret.rtype = fclos.rtype
+    // 将 fclos 的 rtype 信息保留给返回值，并源头打标外部 lib stub
+    // 浅 clone 避免 fclos.rtype 跨调用共享引用被反复打标污染上游
+    if (fclos.rtype) {
+      const wrapper: any = typeof fclos.rtype === 'object' && fclos.rtype !== null ? { ...fclos.rtype } : fclos.rtype
+      if (wrapper && typeof wrapper === 'object') {
+        wrapper._isExternal = true
+      }
+      ret.rtype = wrapper
+    }
     return ret
+  }
+
+  /**
+   *
+   * @param argNodes
+   * @param argvalues
+   * @param scope
+   */
+  private attachClosureCaptureTraceToArgs(
+    argNodes: Node[] | undefined,
+    argvalues: unknown[] | undefined,
+    scope: Scope
+  ): void {
+    const currentFclos = this.getEncloseFclos(scope) as CapturingFclos | null | undefined
+    const closureNode = currentFclos?.ast?.node ?? currentFclos?.ast?.fdef
+    if (!currentFclos?.qid || !getNodeSourceFile(closureNode) || !Array.isArray(argNodes) || !Array.isArray(argvalues))
+      return
+    for (let i = 0; i < argNodes.length; i++) {
+      if (closureNode) {
+        argvalues[i] = this.attachClosureCaptureTraceToValue(argNodes[i], argvalues[i], currentFclos, closureNode)
+      }
+    }
+  }
+
+  /**
+   *
+   * @param node
+   * @param value
+   * @param currentFclos
+   * @param closureNode
+   */
+  private attachClosureCaptureTraceToValue(
+    node: Node | undefined,
+    value: unknown,
+    currentFclos: CapturingFclos,
+    closureNode: Node
+  ): unknown {
+    if (!node || !value) return value
+    if (isIdentifierNode(node)) {
+      const sourcefile = getNodeSourceFile(closureNode)
+      if (sourcefile && isTaintedValue(value) && this.isCapturedFromOuterScope(value, currentFclos)) {
+        return SourceLine.addSrcLineInfo(value, closureNode, sourcefile, 'ARG PASS: ', node.name)
+      }
+      return value
+    }
+    if (isUnaryExpressionNode(node) && isCapturableValue(value)) {
+      value.argument = this.attachClosureCaptureTraceToValue(
+        node.argument,
+        value.argument,
+        currentFclos,
+        closureNode
+      ) as CapturableValue | undefined
+      return value
+    }
+    return value
+  }
+
+  /**
+   *
+   * @param value
+   * @param currentFclos
+   */
+  private isCapturedFromOuterScope(value: CapturableValue, currentFclos: CapturingFclos): boolean {
+    const qid = typeof value.qid === 'string' ? value.qid : value.logicalQid
+    return typeof qid === 'string' && typeof currentFclos.qid === 'string' && !qid.startsWith(`${currentFclos.qid}.`)
   }
 
   /**

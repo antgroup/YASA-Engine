@@ -4,7 +4,7 @@ const _ = require('lodash')
 const CallchainChecker = require('../callchain-checker')
 const { matchSinkAtFuncCall, matchRegex } = require('../../taint/common-kit/sink-util')
 const FullCallGraphFileEntryPoint = require('../../common/full-callgraph-file-entrypoint')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const Config = require('../../../config')
 const AstUtil = require('../../../util/ast-util')
@@ -82,6 +82,8 @@ class PhpCallchainChecker extends CallchainChecker {
     const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
     if (!_.isEmpty(ruleConfigEntryPoints) && Config.entryPointMode !== 'SELF_COLLECT') {
       logger.info(`[PhpCallchainChecker] Processing ${ruleConfigEntryPoints.length} custom entrypoints`)
+      // 累加未匹配 EP 数，循环后聚合输出一行，避免逐条刷日志
+      let unmatchedEntryPointCount = 0
       for (const entrypoint of ruleConfigEntryPoints) {
         logger.info(`[PhpCallchainChecker] Looking for: ${entrypoint.filePath}#${entrypoint.functionName}`)
 
@@ -106,9 +108,7 @@ class PhpCallchainChecker extends CallchainChecker {
           )
 
           if (_.isEmpty(entryPointSymVal)) {
-            logger.warn(
-              `[PhpCallchainChecker] match entryPoint fail for ${entrypoint.filePath}#${entrypoint.functionName}`
-            )
+            unmatchedEntryPointCount++
             continue
           }
 
@@ -135,6 +135,9 @@ class PhpCallchainChecker extends CallchainChecker {
           ep.attribute = entrypoint.attribute
           this.entryPoints.push(ep)
         }
+      }
+      if (unmatchedEntryPointCount > 0) {
+        logger.warn(`[PhpCallchainChecker] ${unmatchedEntryPointCount} entrypoints unmatched`)
       }
     }
 

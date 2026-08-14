@@ -10,7 +10,7 @@ const {
   lookupFclos,
 } = require('../../../engine/analyzer/python/common/entrypoint-collector/python-entrypoint')
 const Constant = require('../../../util/constant')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Config = require('../../../config')
 const { extractRelativePath } = require('../../../util/file-util')
 const logger = require('../../../util/logger')(__filename)
@@ -110,12 +110,14 @@ class PythonCallchainChecker extends CallchainChecker {
     // 构建 fclos 索引，一次遍历替代多次查找
     const fclosIndex = buildFclosIndex(moduleManager, dir, extractRelativePath)
 
+    // 累加未匹配 EP 数，循环后聚合输出一行，避免逐条刷日志
+    let unmatchedEntryPointCount = 0
     for (const funCallEntryPoint of funCallEntryPoints) {
       // 使用索引查找，O(1) 操作
       let valFuncs = lookupFclos(fclosIndex, funCallEntryPoint.filePath, funCallEntryPoint.functionName)
 
       if (_.isEmpty(valFuncs)) {
-        logger.info('match entryPoint fail')
+        unmatchedEntryPointCount++
         continue
       }
 
@@ -130,6 +132,9 @@ class PythonCallchainChecker extends CallchainChecker {
         entryPoint.entryPointSymVal = valFunc
         this.entryPoints.push(entryPoint)
       }
+    }
+    if (unmatchedEntryPointCount > 0) {
+      logger.info(`${unmatchedEntryPointCount} entrypoints unmatched`)
     }
 
     for (const fileEntryPoint of fileEntryPoints) {

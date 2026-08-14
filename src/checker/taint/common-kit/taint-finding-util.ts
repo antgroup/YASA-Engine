@@ -9,7 +9,7 @@ const Statistics = require('../../../util/statistics').default
 const { shortenSourceFile } = require('../../../util/finding-util')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
-const { getOutputTrace } = require('./taint-trace-output')
+const { getOutputTrace, getTerminalStringValueOfNormalizedTrace } = require('./taint-trace-output')
 
 /**
  * output taint flow result to console
@@ -95,7 +95,7 @@ function outputCheckerResultToConsole(findings: TaintFinding[], printf: PrintFun
  * convert the finding to the string format
  * @param finding
  */
-function formatTaintFinding(finding: TaintFinding): Record<string, any> {
+function formatTaintFinding(finding: TaintFinding, options?: { preserveTerminalStringValueOfTrace?: boolean }): Record<string, any> {
   const res: Record<string, any> = {}
   res.type = finding.type
   if (finding.subtype) res.subtype = finding.subtype
@@ -113,7 +113,7 @@ function formatTaintFinding(finding: TaintFinding): Record<string, any> {
   if (finding.node) {
     const { loc } = finding.node
     const line_str = loc.start?.line == loc.end?.line ? loc.start?.line : `[${loc.start?.line}, ${loc.end?.line}]`
-    let code = AstUtil.prettyPrint(finding.node)
+    let code = finding.node._prettyPrint ?? AstUtil.prettyPrint(finding.node)
     if (code.startsWith('{\n "type'))
       // non-pretty-printed ast
       code = SourceLine.formatTraces([{ file: finding.sourcefile, line: loc.start?.line }])
@@ -122,7 +122,9 @@ function formatTaintFinding(finding: TaintFinding): Record<string, any> {
     logger.warn('finding.node is null')
   }
   // the trace of the origin of the issue
-  const outputTrace = getOutputTrace(finding)
+  const outputTrace = options?.preserveTerminalStringValueOfTrace === true
+    ? getOutputTrace(finding)
+    : getTerminalStringValueOfNormalizedTrace(finding)
   if (outputTrace) {
     for (const item of outputTrace) {
       if (item.file) item.shortfile = shortenSourceFile(item.file)
@@ -148,4 +150,5 @@ function formatTaintFinding(finding: TaintFinding): Record<string, any> {
 
 module.exports = {
   outputCheckerResultToConsole,
+  formatTaintFinding,
 }

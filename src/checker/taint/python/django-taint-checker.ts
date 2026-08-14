@@ -1,6 +1,7 @@
 const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { extractRelativePath } = require('../../../util/file-util')
+const { markTaintSource } = require('../common-kit/source-util')
 
 const AstUtil = require('../../../util/ast-util')
 const Config = require('../../../config')
@@ -29,6 +30,15 @@ interface PendingView {
   targetSrcName: string[]
 }
 
+/** 待延迟处理的 CBV as_view() 调用（类符号尚未解析出 HTTP 动词方法绑定） */
+interface PendingClassView {
+  analyzer: any
+  scope: any
+  state: any
+  viewFunction: ASTObject
+  targetSrcName: string[]
+}
+
 /** ValueRefMap 的接口子集，用于 modules.members */
 interface ModuleMembers {
   get(key: string): ASTObject | null
@@ -49,8 +59,25 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
   /** 延迟处理的视图函数列表，等待模块加载后重新解析 */
   private pendingViews: PendingView[] = []
 
+  /** 延迟处理的 CBV as_view() 列表，等待类符号方法绑定解析后重新枚举 */
+  private pendingClassViews: PendingClassView[] = []
+
   /** 循环引用防护：已访问的 include 文件路径集合 */
   private visitedFiles: Set<string> = new Set<string>()
+
+  /** 已识别的 Django CBV 类源文件路径集合，用于在 triggerAtMemberAccess 内限定 self.kwargs/self.args 污染范围 */
+  private cbvSourceFiles: Set<string> = new Set<string>()
+
+  /** Django CBV 中承载 URL 路径参数的实例属性名 */
+  private static readonly CBV_URL_KWARG_ATTRS: Set<string> = new Set<string>(['kwargs', 'args'])
+
+  /** Django CBV 内除 HTTP 动词外消费 URL kwargs 的常见 hook 方法 */
+  private static readonly CBV_HOOK_METHODS: Set<string> = new Set<string>([
+    'get_context_data',
+    'form_valid',
+    'form_invalid',
+    'dispatch',
+  ])
 
   /**
    * constructor
@@ -142,6 +169,20 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
       }
 
       this.pendingViews = stillPendingViews
+    }
+
+    // 处理待解析的 CBV as_view()（类符号方法绑定在首次 processInstruction 时未就绪）
+    if (this.pendingClassViews.length > 0) {
+      const stillPendingClassViews: PendingClassView[] = []
+
+      for (const pending of this.pendingClassViews) {
+        const resolved = this.tryResolvePendingClassView(pending)
+        if (!resolved) {
+          stillPendingClassViews.push(pending)
+        }
+      }
+
+      this.pendingClassViews = stillPendingClassViews
     }
   }
 
@@ -536,44 +577,208 @@ class DjangoTaintChecker extends PythonTaintAbstractChecker {
     // 提取类名
     const clsObj = viewFunction.callee.object
     const clsSymVal = analyzer.processInstruction(scope, clsObj, state)
-    const httpMethods = new Set(['get', 'post', 'put', 'delete', 'patch', 'head', 'options'])
-    const entrypoints = Object.entries(clsSymVal.value)
-      .filter(([key, value]: [string, any]) => httpMethods.has(key) && value.vtype === 'fclos')
-      .map(([, value]: [string, any]) => value)
-    if (targetSrcName.length > 0) {
-      const targetName = targetSrcName[0]
-      for (const ep of entrypoints as any[]) {
-        for (const param of ep.ast.fdef.parameters) {
-          if (param.id.name === targetName) {
-            this.sourceScope.value.push({
-              path: param.id.name,
-              kind: 'PYTHON_INPUT',
-              scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
-              scopeFunc: ep.ast.fdef?.id?.name,
-              locStart: param.loc.start?.line,
-              locEnd: param.loc.end?.line,
-            })
-          }
-        }
-        analyzer.entryPoints.push(completeEntryPoint(ep))
-      }
-    } else {
-      for (const ep of entrypoints as any[]) {
-        for (const param of ep.ast.fdef.parameters) {
-          if (param.id.name === 'request') {
-            this.sourceScope.value.push({
-              path: param.id.name,
-              kind: 'PYTHON_INPUT',
-              scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
-              scopeFunc: ep.ast.fdef?.id?.name,
-              locStart: param.loc.start.line,
-              locEnd: param.loc.end.line,
-            })
-          }
-        }
-        analyzer.entryPoints.push(completeEntryPoint(ep))
-      }
+    // 类符号方法绑定尚未就绪时延迟到 endOfCompileUnit 重试
+    // 覆盖三种未解析形态：
+    //   (a) vtype === 'symbol'（类引用未解析为对象）
+    //   (b) value 完全为空对象 {}（Identifier 形态从 `from .views import XxxView` 导入）
+    //   (c) value 仅含 as_view 且非 fclos（MemberAccess 形态 `views.XxxView.as_view()`，类 body 未就绪）
+    if (!this.classSymbolResolved(clsSymVal)) {
+      this.pendingClassViews.push({ analyzer, scope, state, viewFunction, targetSrcName })
+      return
     }
+    this.registerClassViewEntrypointsFromSym(analyzer, clsSymVal, targetSrcName)
+  }
+
+  /**
+   * 判定类符号是否已解析出可枚举的方法绑定
+   * 只要 value 中存在任一 fclos，即认为类 body 已就绪，可放行注册
+   * 接受多种已解析 vtype：'obj'/'oref'（实例化/引用）/'class'（类对象本身）
+   */
+  private classSymbolResolved(clsSymVal: any): boolean {
+    if (!clsSymVal) return false
+    // symbol：未解析；fclos：函数（不应作为 class 候选）；其它已解析的复合 vtype 都允许，
+    // 由 value 中是否含 HTTP 动词 fclos 最终决定
+    if (clsSymVal.vtype === 'symbol' || clsSymVal.vtype === 'fclos') return false
+    const value = clsSymVal.value
+    if (!value || typeof value !== 'object') return false
+    for (const v of Object.values(value) as any[]) {
+      if (v && v.vtype === 'fclos') return true
+    }
+    return false
+  }
+
+  /**
+   * 尝试解析待处理的 CBV as_view()，成功则注册 entrypoint 并返回 true
+   */
+  private tryResolvePendingClassView(pending: PendingClassView): boolean {
+    const { analyzer, scope, state, viewFunction, targetSrcName } = pending
+    const clsObj = viewFunction.callee?.object
+    if (!clsObj) return false
+    const clsSymVal = analyzer.processInstruction(scope, clsObj, state)
+    if (this.classSymbolResolved(clsSymVal)) {
+      this.registerClassViewEntrypointsFromSym(analyzer, clsSymVal, targetSrcName)
+      return true
+    }
+    // 旁路：从 modules.members 直接拿目标 module scope，取类 symbol 的方法绑定
+    // urls.py scope 上下文下 processInstruction 对 `views.XxxView` 这类 MemberAccess 解析不到类对象方法表
+    // （typically 只挂 as_view 占位），需绕开 scope 直接读已加载模块
+    const fallbackSym = this.resolveClassSymbolFromModules(analyzer, scope, clsObj)
+    if (fallbackSym && this.classSymbolResolved(fallbackSym)) {
+      this.registerClassViewEntrypointsFromSym(analyzer, fallbackSym, targetSrcName)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * 旁路：从已加载模块 scope 中查找类符号的方法绑定 dict
+   * 处理 MemberAccess 形态（如 `views.XxxView`）和 Identifier 形态（如 `from .views import XxxView`）
+   * 与 resolveViewFromModules 同思路，但目标是 class 而非 function
+   */
+  private resolveClassSymbolFromModules(
+    analyzer: any,
+    scope: any,
+    clsObj: ASTObject
+  ): any | null {
+    let clsName: string | undefined
+    let moduleName: string | undefined
+    if (clsObj.type === 'MemberAccess') {
+      clsName = clsObj.property?.name
+      moduleName = clsObj.object?.name
+    } else if (clsObj.type === 'Identifier') {
+      clsName = clsObj.name
+    }
+    if (!clsName) return null
+
+    // 优先：当前 urls.py scope 已 import 的 module 引用
+    if (moduleName) {
+      const moduleVal = scope?.value?.[moduleName]
+      const direct = moduleVal?.value?.[clsName]
+      if (this.classSymbolResolved(direct)) return direct
+    }
+
+    // 次选：遍历 modules.members 找包含同名 class 的 module scope
+    // MemberAccess 形态（如 `views.WebScanResultGetView`）：moduleName='views' 仅作路径提示，不强制 endsWith /views.py，
+    //   因 Django 中 views 常以包形态存在（views/__init__.py + views/scan.py），class 散在子模块
+    // Identifier 形态（如 `from .views import XxxView`）：moduleName 缺失，直接按 clsName 全局搜索
+    const members: ModuleMembers | undefined =
+      analyzer.topScope?.context?.modules?.members
+    if (!members) return null
+    let firstMatch: any = null
+    for (const [filePath, moduleScope] of members.entries()) {
+      if (!filePath.endsWith('.py')) continue
+      const scopeValue = (moduleScope as any)?.value
+      const candidate = scopeValue?.[clsName]
+      if (!this.classSymbolResolved(candidate)) continue
+      // moduleName 提示命中（文件路径含 /<moduleName>/ 或 /<moduleName>.py）：直接返回
+      if (moduleName && (filePath.includes('/' + moduleName + '/') || filePath.endsWith('/' + moduleName + '.py'))) {
+        return candidate
+      }
+      // 否则记录首个匹配，作为兜底
+      if (!firstMatch) firstMatch = candidate
+    }
+    return firstMatch
+  }
+
+  /**
+   * 从已解析的类符号枚举 HTTP 动词 / CBV hook 方法，注册 entrypoint 并标记 source
+   */
+  private registerClassViewEntrypointsFromSym(
+    analyzer: any,
+    clsSymVal: any,
+    targetSrcName: string[]
+  ): void {
+    const httpMethods = new Set(['get', 'post', 'put', 'delete', 'patch', 'head', 'options'])
+    const LOCAL_DEF_PREFIX = '<localDef_'
+
+    // CBV entrypoint 候选：HTTP 动词方法 + CBV hook 方法（消费 self.kwargs 的常见入口）
+    // 优先选择 <localDef_xxx> 子类覆盖版本（sourcefile 指向子类文件），而非继承版本（指向基类文件）
+    const entrypoints: any[] = []
+    for (const [key, value] of Object.entries(clsSymVal.value) as [string, any][]) {
+      if (value.vtype !== 'fclos') continue
+      const baseName = key.startsWith(LOCAL_DEF_PREFIX)
+        ? key.slice(LOCAL_DEF_PREFIX.length, key.length - 1)
+        : key
+      const isEntryPoint = httpMethods.has(baseName) || DjangoTaintChecker.CBV_HOOK_METHODS.has(baseName)
+      if (!isEntryPoint) continue
+      // 若存在 <localDef_xxx> 版本且当前 key 不是 <localDef_>，跳过继承版本
+      if (!key.startsWith(LOCAL_DEF_PREFIX)) {
+        const localDefKey = `${LOCAL_DEF_PREFIX}${key}>`
+        if (clsSymVal.value[localDefKey]?.vtype === 'fclos') continue
+      }
+      entrypoints.push(value)
+    }
+
+    // 记录 CBV 类源文件，供 triggerAtMemberAccess 限定 self.kwargs/self.args 污染范围
+    // 同时收集 <localDef_xxx> 子类覆盖方法的 sourcefile（即使它们不是 entrypoint 候选）
+    // 根因：继承方法的 sourcefile 指向基类文件，子类覆盖方法的 sourcefile 指向子类文件；
+    // triggerAtMemberAccess 在子类文件中遇到 self.kwargs 时需要 cbvSourceFiles 包含子类文件路径
+    for (const [key, value] of Object.entries(clsSymVal.value) as [string, any][]) {
+      if (value.vtype !== 'fclos') continue
+      const sf: string | undefined = value?.ast?.fdef?.loc?.sourcefile
+      if (!sf) continue
+      this.cbvSourceFiles.add(sf)
+    }
+    // 为每个 entrypoint 形参打 source：
+    // - targetSrcName 命中：URL 路径参数按命名形参模型（历史行为，保留）
+    // - request：Django CBV 的 HTTP 请求对象
+    // - **kwargs / 名为 'kwargs' 的形参：Django CBV 运行时 URL 路径参数实际通过
+    //   as_view 闭包 self.kwargs = kwargs 落入实例属性，命名形参模型失配，需以
+    //   **kwargs 为载体打 source
+    const targetName = targetSrcName.length > 0 ? targetSrcName[0] : null
+    for (const ep of entrypoints as any[]) {
+      for (const param of ep.ast.fdef.parameters) {
+        const paramName: string | undefined = param?.id?.name
+        const isVarkw = param?._meta?.varkw === true || paramName === 'kwargs'
+        const shouldMark =
+          (targetName !== null && paramName === targetName) || paramName === 'request' || isVarkw
+        if (!shouldMark) continue
+        this.sourceScope.value.push({
+          path: paramName,
+          kind: 'PYTHON_INPUT',
+          scopeFile: extractRelativePath(param?.loc?.sourcefile, Config.maindir),
+          scopeFunc: ep.ast.fdef?.id?.name,
+          locStart: param.loc.start?.line,
+          locEnd: param.loc.end?.line,
+        })
+      }
+      analyzer.entryPoints.push(completeEntryPoint(ep))
+    }
+  }
+
+  /**
+   * Django CBV 实例属性 source 注入：
+   * 当 MemberAccess 为 self.kwargs / self.args，且宿主文件属于已识别的 CBV 类源文件时，
+   * 将其返回值标记为 PYTHON_INPUT source。
+   *
+   * 根因：Django as_view 闭包 `self.kwargs = kwargs` 把 URL 路径参数写入实例属性，
+   * 但引擎不跨闭包传播该属性赋值，故**kwargs 形参级 source 无法到达 self.kwargs 读点。
+   * 通过访问点直接注入 source 绕过该传播断点。
+   * @param analyzer
+   * @param scope
+   * @param node
+   * @param state
+   * @param info
+   */
+  triggerAtMemberAccess(analyzer: any, scope: any, node: any, state: any, info: any): void {
+    if (!info?.res) return
+    if (!this.isSelfUrlKwargAccess(node)) return
+    const sf: string | undefined = node?.loc?.sourcefile
+    if (!sf || !this.cbvSourceFiles.has(sf)) return
+    markTaintSource(info.res, { path: node, kind: 'PYTHON_INPUT' })
+  }
+
+  /**
+   * 判定 node 是否为 self.kwargs / self.args（Django CBV URL 路径参数容器）
+   * @param node
+   */
+  private isSelfUrlKwargAccess(node: any): boolean {
+    if (node?.type !== 'MemberAccess') return false
+    const obj = node.object
+    if (obj?.type !== 'Identifier' || obj?.name !== 'self') return false
+    const prop = node.property?.name
+    if (typeof prop !== 'string') return false
+    return DjangoTaintChecker.CBV_URL_KWARG_ATTRS.has(prop)
   }
 
   /**

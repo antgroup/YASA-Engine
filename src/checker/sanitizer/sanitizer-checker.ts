@@ -600,7 +600,7 @@ class SanitizerChecker extends Checker {
     if (!sanitizer || !sanitizer.id || !val) {
       return
     }
-    if (this.checkSanitizerTagExist(val.taint.getTags(), sanitizer, node)) {
+    if (this.checkSanitizerTagExist(val.taint.getSanitizerTags(), sanitizer, node)) {
       return
     }
 
@@ -656,7 +656,8 @@ class SanitizerChecker extends Checker {
       (sanitizer: any) => sanitizer.sanitizerScenario === SANITIZER.SANITIZER_SCENARIO.CONFIG_BY_FUNCTIONCALL
     )
     const fConfig = (nd: any) => {
-      const tags = nd?.taint ? nd.taint.getTags() : undefined
+      // findMatchedSanitizerTag 严判 instanceof SanitizerTag，必须用 getSanitizerTags()
+      const tags = nd?.taint ? nd.taint.getSanitizerTags() : undefined
       return tags && SanitizerChecker.findMatchedSanitizerTag(Configs, tags)?.length > 0
     }
 
@@ -664,13 +665,13 @@ class SanitizerChecker extends Checker {
     if (sanitizerNd) {
       if (Array.isArray(sanitizerNd)) {
         for (const n of sanitizerNd) {
-          const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, n.taint ? n.taint.getTags() : undefined)
+          const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, n.taint ? n.taint.getSanitizerTags() : undefined)
           if (matchedConfigSanitizerTags) {
             matchedSanitizerTagsForAllTrace.push(...matchedConfigSanitizerTags)
           }
         }
       } else {
-        const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, sanitizerNd.taint ? sanitizerNd.taint.getTags() : undefined)
+        const matchedConfigSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(sanitizers, sanitizerNd.taint ? sanitizerNd.taint.getSanitizerTags() : undefined)
         if (matchedConfigSanitizerTags) {
           matchedSanitizerTagsForAllTrace.push(...matchedConfigSanitizerTags)
         }
@@ -709,7 +710,7 @@ class SanitizerChecker extends Checker {
         } while (currentNd)
       }
       for (const parentNd of parentNdList) {
-        const matchedFlowSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(flowSanitizers, parentNd.taint ? parentNd.taint.getTags() : undefined)
+        const matchedFlowSanitizerTags = SanitizerChecker.findMatchedSanitizerTag(flowSanitizers, parentNd.taint ? parentNd.taint.getSanitizerTags() : undefined)
         if (matchedFlowSanitizerTags) {
           matchedSanitizerTags.push(...matchedFlowSanitizerTags)
         }

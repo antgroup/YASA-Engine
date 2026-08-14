@@ -35,15 +35,25 @@ fi
 success "清理历史结果完成"
 
 # 步骤 1: 安装依赖
-info "步骤 1/8: 安装依赖 (npm install --package-lock=false)"
-if ! npm install --package-lock=false > /dev/null; then
+info "步骤 1/8: 安装依赖 (npm install --ignore-scripts --package-lock=false)"
+if ! npm install --ignore-scripts --package-lock=false > /dev/null; then
     alert "npm install 失败"
 fi
 success "依赖安装完成"
 
-# 步骤 1.5: patch @ant-yasa/uast-parser-php 规避 pkg 对 require.resolve('*.wasm') 的 UTF-8 mangle
-info "步骤 1.5/8: patch uast-parser-php (node scripts/patch-uast-parser-php.js)"
-if ! node scripts/patch-uast-parser-php.js; then
+# 步骤 1.5: 下载并校验 SQLite native addon
+info "步骤 1.5/8: 准备 better-sqlite3 三平台 native addon"
+if ! bash scripts/download-better-sqlite3-native.sh; then
+    alert "better-sqlite3 native addon 准备失败"
+fi
+success "better-sqlite3 native addon 准备完成"
+
+# 步骤 1.6: patch @ant-yasa/uast-parser-php 规避 pkg 对 require.resolve('*.wasm') 的 UTF-8 mangle
+info "步骤 1.6/8: patch uast-parser-php (node scripts/patch-uast-parser-php.js)"
+mkdir -p dist
+UAST_PHP_PATCH_LOG="$(pwd)/dist/uast-parser-php-patch.log"
+if ! node scripts/patch-uast-parser-php.js > "$UAST_PHP_PATCH_LOG" 2>&1; then
+    cat "$UAST_PHP_PATCH_LOG" >&2
     alert "uast-parser-php patch 失败"
 fi
 success "uast-parser-php patch 完成"
@@ -115,15 +125,37 @@ EOF
 
 # 步骤 7: 打包二进制
 info "步骤 7/8: 打包二进制 (npx pkg)"
-# 只重定向 stdout，保留 stderr 以便显示错误信息
+PKG_BUILD_LOG="$(pwd)/dist/pkg-build.log"
 set +e
-npx pkg . --options max-old-space-size=11264 > /dev/null
+npx pkg . --options max-old-space-size=11264,expose-gc > /dev/null 2> "$PKG_BUILD_LOG"
 PKG_EXIT_CODE=$?
 set -e
 if [ $PKG_EXIT_CODE -ne 0 ]; then
+    cat "$PKG_BUILD_LOG" >&2
     alert "打包失败 (退出码: $PKG_EXIT_CODE)，请查看上方的错误信息"
 fi
 success "打包完成"
+
+# 步骤 7.5: 为每个可执行文件附带匹配的 native addon
+info "步骤 7.5/8: 布置 better-sqlite3 native addon"
+for target in linux-x64 macos-x64 macos-arm64; do
+    executable="yasa-engine-${target}"
+    native_platform="${target/macos/darwin}"
+    native_source="native/better-sqlite3/${native_platform}/better_sqlite3.node"
+    native_destination="${executable}.native/better-sqlite3.node"
+
+    if [ ! -f "$executable" ]; then
+        alert "未找到 pkg 产物: $executable"
+    fi
+    if [ ! -f "$native_source" ]; then
+        alert "未找到 native addon: $native_source"
+    fi
+
+    rm -rf "${executable}.native"
+    mkdir -p "${executable}.native"
+    cp "$native_source" "$native_destination"
+done
+success "better-sqlite3 native addon 布置完成"
 
 # 步骤 8: 删除 dist 文件
 info "步骤 8/8: 删除 dist 文件"

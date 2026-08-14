@@ -1,8 +1,10 @@
 import type TypeRelatedInfoResolver from '../../resolver/common/type-related-info-resolver'
+import type { ClassHierarchy } from '../../resolver/common/value/class-hierarchy'
+import type { Invocation } from '../../resolver/common/value/invocation'
 import symAddressCallgraph from '../../engine/analyzer/common/sym-address'
 
 const config = require('../../config')
-const EntryPoint = require('../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../engine/analyzer/common/entrypoint/entrypoint')
 const constValue = require('../../util/constant')
 const CheckerManager = require('../../engine/analyzer/common/checker-manager')
 const BasicRuleHandler = require('./rules-basic-handler')
@@ -264,9 +266,297 @@ function makeFullCallGraphByType(analyzer: any, resolver: TypeRelatedInfoResolve
       }
     }
   })
+
+  // caller-aware specialization：在 callgraph 落盘前做 receiver-sensitive 收敛
+  // 当 abstract base method 的所有 caller 都是具体子类时，删除被 specialized 覆盖的 may-dispatch 假扇出
+  applyCallerAwareSpecialization(analyzer, resolver, graph, extractFuncDefInfo, extractCallSiteInfo)
+
   analyzer.ainfo.callgraph = graph
 
   performanceTracker.end('startAnalyze.makeFullCallGraphByType')
+}
+
+/**
+ * 判断 callsite callee 是否为 self-dispatch 形态（裸 Identifier 或 this.X）
+ * 不处理 SuperExpression（super 走 invokeSuper 分支，由 resolveCallExpression 单独处理）
+ *
+ * @param callSite CallExpression AST
+ */
+function isSelfDispatchCallee(callSite: any): boolean {
+  const callee = callSite?.callee
+  if (!callee) return false
+  if (callee.type === 'Identifier') return true
+  if (callee.type === 'MemberAccess' && callee.object?.type === 'ThisExpression') return true
+  return false
+}
+
+/**
+ * funcSymbol 的 owner class scope（vtype='class'），找不到返回 undefined
+ *
+ * @param funcSymbol
+ */
+function getOwnerClassScope(funcSymbol: any): any | undefined {
+  const parent = funcSymbol?.parent
+  if (parent && parent.vtype === 'class') return parent
+  return undefined
+}
+
+/**
+ * 从 class scope AST 读取 _meta.modifiers 判断是否为 abstract class
+ * finalization 层独立读，避免跨 resolver / checker 耦合
+ * 非 Java 语言无 abstract 概念，_meta 缺失时返回 false
+ *
+ * @param classScope
+ */
+function isAbstractClassScope(classScope: any): boolean {
+  const modifiers = classScope?.ast?.node?._meta?.modifiers
+  if (!Array.isArray(modifiers)) return false
+  return modifiers.includes('abstract')
+}
+
+/**
+ * 从 funcSymbol（toScope）提取 owner class qid（logicalQid 优先）
+ * logicalQid 与 classHierarchyMap key 一致（见 JavaTypeRelatedInfoResolver.findClassHierarchy）
+ *
+ * @param funcSymbol
+ */
+function getOwnerClassQid(funcSymbol: any): string | undefined {
+  const ownerClass = getOwnerClassScope(funcSymbol)
+  if (!ownerClass) return undefined
+  return ownerClass.logicalQid ?? ownerClass.qid
+}
+
+/**
+ * 判断静态类型 qid 是否为"concrete class"
+ *   - interface → false（保留全扇出，接口多态合理）
+ *   - abstract class → false（abstract base 自身无法收敛，保留全扇出）
+ *   - classHierarchyMap miss → false（receiver 不可解析，保留全扇出）
+ *   - Object / java.lang.Object → false（顶级类型无收敛收益）
+ *
+ * @param qid
+ * @param classHierarchyMap
+ */
+function isConcreteClassByHierarchy(
+  qid: string | undefined,
+  classHierarchyMap: Map<string, ClassHierarchy>
+): boolean {
+  if (!qid) return false
+  if (qid === 'Object' || qid === 'java.lang.Object') return false
+  let h = classHierarchyMap.get(qid)
+  // 短名 fallback：inv.calleeType 在某些场景是短名（如 import 后的简单引用），
+  // hierarchyMap 用 fqn 作 key 时会 miss。遍历 map 找唯一 endsWith('.qid') 候选；
+  // 多于 1 个保守视为不可解析，返回 false（不删扇出）。
+  if (!h && !qid.includes('.')) {
+    let candidate: ClassHierarchy | undefined
+    let count = 0
+    const suffix = `.${qid}`
+    for (const [k, v] of classHierarchyMap) {
+      if (k === qid || k.endsWith(suffix)) {
+        candidate = v
+        count += 1
+        if (count > 1) break
+      }
+    }
+    if (count === 1) h = candidate
+  }
+  if (!h) return false
+  if (h.typeDeclaration !== 'class') return false
+  const modifiers = h.value?.ast?.node?._meta?.modifiers
+  if (Array.isArray(modifiers) && modifiers.includes('abstract')) return false
+  return true
+}
+
+/**
+ * 反查 funcSymbolTable 构建 incomingMap
+ * key = toScope（funcSymbol reference，identity 比较，规避 qid 冲突 / cloneAlias）
+ * value = 调用该 toScope 的所有 caller invocation（callerCalleeType = 静态 receiver 类型）
+ *
+ * inherited 处理：当 caller 的 invocation.toScope 是子类继承 copy（func.inherited=true，
+ * _base 指向 base class fclos），同时把该 caller 也注册到 base class 同名 method funcSymbol 的
+ * incoming entry——这样 base class abstract method 才能在 applyCallerAwareSpecialization
+ * 阶段找到 caller，按 caller 的具体子类 receiver 做 specialization。
+ *
+ * @param analyzer
+ */
+function buildIncomingInvocationMap(
+  analyzer: any
+): Map<any, Array<{ callerInvocation: Invocation; callerCalleeType: string }>> {
+  const incoming = new Map<any, Array<{ callerInvocation: Invocation; callerCalleeType: string }>>()
+  const funcSymbolTable = analyzer?.funcSymbolTable
+  if (!funcSymbolTable) return incoming
+  for (const funcSymbol of Object.values(funcSymbolTable)) {
+    const funcSymbolAny = funcSymbol as any
+    if (!(funcSymbolAny.invocationMap instanceof Map)) continue
+    for (const invocationArray of funcSymbolAny.invocationMap.values()) {
+      for (const inv of invocationArray as Invocation[]) {
+        if (!inv.toScope) continue
+        let arr = incoming.get(inv.toScope)
+        if (!arr) {
+          arr = []
+          incoming.set(inv.toScope, arr)
+        }
+        arr.push({ callerInvocation: inv, callerCalleeType: inv.calleeType })
+        // 如果 toScope 是子类 inherited copy，把同 caller 也聚合到 base class 同名 method
+        // _base = base class fclos, fsig = method 名；base class fclos.value[fsig] = base method funcSymbol
+        const inherited = (inv.toScope as any)?.func?.inherited
+        if (inherited) {
+          const baseClassFclos = (inv.toScope as any)?._base
+          const fsig = inv.fsig
+          if (baseClassFclos && fsig && baseClassFclos.value) {
+            const baseMethod = baseClassFclos.value[fsig]
+            if (baseMethod && baseMethod !== inv.toScope) {
+              let baseArr = incoming.get(baseMethod)
+              if (!baseArr) {
+                baseArr = []
+                incoming.set(baseMethod, baseArr)
+              }
+              baseArr.push({ callerInvocation: inv, callerCalleeType: inv.calleeType })
+            }
+          }
+        }
+      }
+    }
+  }
+  return incoming
+}
+
+/**
+ * caller-aware specialization：在 callgraph 落盘前做 receiver-sensitive 收敛
+ *
+ * 算法分两阶段：
+ *
+ * 采集阶段 扫描：对每个 funcSymbol M（owner class 是 abstract）的 fan-out callsite，
+ *   反查 incomingMap[M]。安全门槛——**全部** caller 的 callerCalleeType 必须是
+ *   concrete class（hierarchy 命中 + 非 abstract + 非 interface + 非 Object）。
+ *   任一不满足 → 整 callsite skip（保留 CHA 全 fan-out 作保守 fallback）。
+ *   全满足时 receiverSet = 所有 caller calleeType。在 fan-out invocations 中筛
+ *   toScope.ownerClass ∈ receiverSet 的为 keepTargets；keepTargets 为空 → skip
+ *   （不能 wipe-out 整个 callsite）。
+ *
+ * 离线阶段 删边：对 safeToDelete 集合，遍历 graph.edges，删除属于该 (fromNode,
+ *   sharedCallSite) 但 toScope 不在 keepTargets 内的边。
+ *
+ * 设计要点：
+ *   - 安全门槛保证不删反射 / 框架回调 / interface caller 场景的合理 fan-out
+ *   - 不写 specialized 字段——callgraph.json 直接呈现 caller-aware 真图
+ *   - inherited copy 的 caller 通过 buildIncomingInvocationMap 中的 _base 反查聚合到
+ *     base method funcSymbol 的 incoming entry，保证 abstract base method 能找到 caller
+ *
+ * @param analyzer
+ * @param resolver
+ * @param graph 已填充原 fan-out 边的 Graph 实例
+ * @param extractFuncDefInfo 主循环同款 helper（保留入参签名兼容；离线阶段 不再 addNode）
+ * @param extractCallSiteInfo 主循环同款 helper（保留入参签名兼容；离线阶段 不再 addEdge）
+ */
+function applyCallerAwareSpecialization(
+  analyzer: any,
+  resolver: TypeRelatedInfoResolver,
+  graph: any,
+  extractFuncDefInfo: (ast: any) => { loc?: any; name?: any; id?: any } | null,
+  extractCallSiteInfo: (callSite: any) => { loc?: any } | null
+): void {
+  // 占位引用避免 lint 报未用参数（保留入参签名兼容主循环调用 + 单测 fixture）
+  void extractFuncDefInfo
+  void extractCallSiteInfo
+
+  const classHierarchyMap = resolver.classHierarchyMap
+  if (!(classHierarchyMap instanceof Map) || classHierarchyMap.size === 0) return
+
+  const incomingMap = buildIncomingInvocationMap(analyzer)
+
+  // 采集阶段 收集 deletePlans
+  type DeletePlan = {
+    fromScope: any
+    sharedCallSite: any
+    keepTargetSet: Set<any>
+  }
+  const deletePlans: DeletePlan[] = []
+
+  for (const funcSymbol of Object.values(analyzer.funcSymbolTable ?? {})) {
+    const funcSymbolAny = funcSymbol as any
+    if (!(funcSymbolAny.invocationMap instanceof Map)) continue
+
+    // M 的 owner class 必须是 abstract class（C4）
+    const ownerClass = getOwnerClassScope(funcSymbolAny)
+    if (!ownerClass || !isAbstractClassScope(ownerClass)) continue
+
+    const incoming = incomingMap.get(funcSymbolAny)
+    if (!incoming || incoming.length === 0) continue
+
+    for (const invocationArray of funcSymbolAny.invocationMap.values()) {
+      const invocations = invocationArray as Invocation[]
+      // C1：fan-out 数 >= 2
+      if (!Array.isArray(invocations) || invocations.length < 2) continue
+      // C2：所有 invocation 共享同一 callsite AST
+      const sharedCallSite = invocations[0].callSite
+      if (!sharedCallSite) continue
+      if (!invocations.every((inv) => inv.callSite === sharedCallSite)) continue
+      // C3：callsite 是 self-dispatch 形态
+      if (!isSelfDispatchCallee(sharedCallSite)) continue
+
+      // 安全门槛：**全部** caller callerCalleeType 必须是 concrete class，任一不满足 → skip
+      let allConcrete = true
+      const receiverSet = new Set<string>()
+      for (const entry of incoming) {
+        if (!isConcreteClassByHierarchy(entry.callerCalleeType, classHierarchyMap)) {
+          allConcrete = false
+          break
+        }
+        receiverSet.add(entry.callerCalleeType)
+      }
+      if (!allConcrete || receiverSet.size === 0) continue
+
+      // 在 fan-out invocations 中筛 toScope.ownerClass ∈ receiverSet 的 keepTargets
+      const keepTargetSet = new Set<any>()
+      for (const inv of invocations) {
+        const subOwnerQid = getOwnerClassQid(inv.toScope)
+        if (subOwnerQid && receiverSet.has(subOwnerQid)) {
+          keepTargetSet.add(inv.toScope)
+        }
+      }
+      // 边界 C5：keepTargets 集合为空（receiver 类型与 fan-out toScope.ownerClass 不交集）
+      // 不能 wipe-out 整 callsite，回退保留 fan-out
+      if (keepTargetSet.size === 0) continue
+
+      deletePlans.push({
+        fromScope: invocations[0].fromScope,
+        sharedCallSite,
+        keepTargetSet,
+      })
+    }
+  }
+
+  if (deletePlans.length === 0) return
+
+  // 离线阶段：删除被 specialized 覆盖的扇出边
+  // 边归属判定：edge.opts.callSite.loc 与 sharedCallSite.loc 三元组（sourcefile + start.line + end.line）相等
+  // 主循环灌图通过 extractCallSiteInfo 把 AST callSite 浅拷贝成 { loc } 后存入 edge.opts.callSite，
+  // 所以必须用 loc 字段比较，AST 节点引用已不可用
+  // keepTarget 判定：targetNode opts.funcSymbol identity ∈ keepTargetSet
+  const edgesToDelete: string[] = []
+  for (const [edgeId, edge] of graph.edges.entries()) {
+    const edgeAny = edge as any
+    const csLoc = edgeAny.opts?.callSite?.loc
+    if (!csLoc) continue
+    const targetNode = graph.nodes.get(edgeAny.targetNodeId)
+    if (!targetNode) continue
+    const toFs = targetNode.opts?.funcSymbol
+    if (!toFs) continue
+    for (const plan of deletePlans) {
+      const planLoc = plan.sharedCallSite?.loc
+      if (!planLoc) continue
+      if (csLoc.sourcefile !== planLoc.sourcefile) continue
+      if (csLoc.start?.line !== planLoc.start?.line) continue
+      if (csLoc.end?.line !== planLoc.end?.line) continue
+      if (csLoc.start?.column !== planLoc.start?.column) continue
+      if (plan.keepTargetSet.has(toFs)) continue
+      edgesToDelete.push(edgeId as string)
+      break
+    }
+  }
+  for (const id of edgesToDelete) {
+    graph.edges.delete(id)
+  }
 }
 
 /**
@@ -655,4 +945,12 @@ module.exports = {
   getFclosEntryPointsUsingCallGraphByTargetNode,
   getEntryPointsUsingCallGraphByKeyWords,
   prettyPrint,
+  // caller-aware specialization helpers（finalization 层各阶段 helper，单测引用）
+  applyCallerAwareSpecialization,
+  buildIncomingInvocationMap,
+  isSelfDispatchCallee,
+  isAbstractClassScope,
+  isConcreteClassByHierarchy,
+  getOwnerClassScope,
+  getOwnerClassQid,
 }

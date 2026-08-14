@@ -5,9 +5,11 @@ const _ = require('lodash')
 const AstUtil = require('../../../util/ast-util')
 const { prepareArgs, matchField } = require('../../common/rules-basic-handler')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
-const { Scope } = require('../../../engine/analyzer/common')
+const Scope = require('../../../engine/analyzer/common/scope')
 const QidUnifyUtil = require('../../../util/qid-unify-util')
+const entryPointConfig = require('../../../engine/analyzer/common/entrypoint/current-entrypoint')
 
+import type { TraceItem } from '../../../util/finding-util'
 import { SymbolValue } from '../../../engine/analyzer/common/value/symbolic'
 
 // 全局统计：实际标记的 source 数量
@@ -27,6 +29,10 @@ function resetMarkedSourceCount(): void {
   markedSourceCount = 0
 }
 
+function addMarkedSourceCount(delta: number): void {
+  if (delta > 0) markedSourceCount += delta
+}
+
 /**
  *
  * @param res
@@ -36,10 +42,19 @@ function setTaint(res: any, tagType: any): void {
   // taint 在 Unit 构造函数中已创建
   if (Array.isArray(tagType)) {
     for (const item of tagType) {
-      res.taint.addTag(item)
+      if (typeof item === 'string') {
+        res.taint.addTag(item)
+      } else if (item) {
+        res.taint.addSanitizerTag(item)
+      }
     }
   } else if (tagType) {
-    res.taint.addTag(tagType)
+    // SanitizerTagValue 对象走 sanitizerTags 旁路；string 走 tagTraces
+    if (typeof tagType === 'string') {
+      res.taint.addTag(tagType)
+    } else {
+      res.taint.addSanitizerTag(tagType)
+    }
   }
 }
 
@@ -50,30 +65,72 @@ function setTaint(res: any, tagType: any): void {
  * @param root0.path
  * @param root0.kind
  */
-function markTaintSource(unit: any, { path, kind }: { path: any; kind: any }): void {
+function markTaintSource(
+  unit: any,
+  { path, kind, replaceInheritedSource = false }: { path: any; kind: any; replaceInheritedSource?: boolean }
+): void {
   if (!BasicRuleHandler.getPreprocessReady()) {
     return
   }
   setTaint(unit, kind)
   markedSourceCount++ // 统计实际标记的 source
-  // 如果已有 trace 但首项不是 SOURCE，清空 trace
+  // 显式返回值 source 可替换从 receiver 继承的边界；其他 source 保持原 canonical 行为。
   const existingTrace = unit.taint.getFirstTrace()
-  if (existingTrace && Array.isArray(existingTrace) && existingTrace[0]?.tag !== 'SOURCE: ') {
+  if (existingTrace && Array.isArray(existingTrace) &&
+      (existingTrace[0]?.tag !== 'SOURCE: ' || replaceInheritedSource)) {
     unit.taint.clearTrace()
   }
   if (!unit.taint.hasTraces()) {
     const start_line = path?.loc?.start?.line
     const end_line = path?.loc?.end?.line
     const tline = start_line === end_line ? start_line : _.range(start_line, end_line + 1)
-    const traceItem = {
+    const traceItem: TraceItem = {
       file: path?.loc?.sourcefile,
       line: tline,
       node: path,
       tag: 'SOURCE: ',
       affectedNodeName: AstUtil.prettyPrint(path),
     }
+    const sourceOwnerEp = entryPointConfig.getEntryPointOwnerKey()
+    if (sourceOwnerEp) traceItem.source_owner_ep = sourceOwnerEp
     unit.taint.setAllTraces([traceItem])
   }
+}
+
+/**
+ * Return source calleeType 匹配需要兼容 Go receiver 类型的多种承载位置。
+ * 成员调用的类型信息可能挂在方法闭包、receiver 或嵌入类型元信息上；
+ * 统一识别这些位置可以避免 Gin 请求读取 API 的返回值漏标为 source。
+ * @param scope 方法闭包 fclos
+ * @param fclos 方法闭包，用于嵌入类型信息兜底
+ * @param expectedType rule 中的 calleeType
+ */
+function matchReturnSourceCalleeType(scope: any, fclos: any, expectedType: string): boolean {
+  if (!expectedType || expectedType === '*') return true
+
+  // 方法闭包自身带有 receiver 类型时优先直接匹配。
+  if (AstUtil.prettyPrint(scope?.rtype?.definiteType) === expectedType) return true
+
+  // Go 成员调用的 receiver 类型常挂在 object 上，需要与规则 calleeType 对齐。
+  const receiver = scope?.object
+  if (receiver) {
+    if (AstUtil.prettyPrint(receiver?.rtype) === expectedType) return true
+    if (AstUtil.prettyPrint(receiver?.rtype?.definiteType) === expectedType) return true
+  }
+
+  // 嵌入类型只保留逻辑类型名时，使用基础类型信息兜底。
+  if (fclos?._base) {
+    const baseQid = fclos._base.logicalQid || fclos._base.qid || ''
+    const baseType = expectedType.replace(/^\*/, '')
+    if (baseQid === baseType || baseQid.endsWith('.' + baseType)) return true
+  }
+
+  // rule entrypoint 的 *gin.Context 形参有时丢失声明 rtype，但 qid 仍保留形参名路径。
+  const qid = typeof fclos?.qid === 'string' ? fclos.qid : ''
+  const sid = typeof fclos?.sid === 'string' ? fclos.sid : ''
+  if (expectedType === '*gin.Context' && sid && qid.endsWith('.c.' + sid)) return true
+
+  return false
 }
 
 /**
@@ -102,17 +159,18 @@ function introduceTaintAtFuncCallReturnValue(
       const marray = tspec.fsig.split('.')
       if (call.callee?.type === 'MemberAccess') {
         // 要考虑call.callee?.property 也会有memberaccess和identifier的情况
+        const fieldMatch = matchField(call.callee?.property, marray, marray.length - 1) ||
+            matchField(call.callee, marray, marray.length - 1)
         if (
-          (matchField(call.callee?.property, marray, marray.length - 1) ||
-            matchField(call.callee, marray, marray.length - 1)) &&
-          (AstUtil.prettyPrint(scope?.rtype?.definiteType) === tspec.calleeType || tspec.calleeType === '*')
+          fieldMatch &&
+          matchReturnSourceCalleeType(scope, scope, tspec.calleeType)
         ) {
-          markTaintSource(res, { path: node, kind: tspec.kind })
+          markTaintSource(res, { path: node, kind: tspec.kind, replaceInheritedSource: true })
           break
         }
       } else if (call.callee?.type === 'Identifier') {
         if (call.callee.name === tspec.fsig) {
-          markTaintSource(res, { path: node, kind: tspec.kind })
+          markTaintSource(res, { path: node, kind: tspec.kind, replaceInheritedSource: true })
           break
         }
       }
@@ -128,7 +186,13 @@ function matchSourceCalleeType(scope: any, fclos: any, expectedType: string): bo
   if (!expectedType || expectedType === '*') return true
 
   // 直接匹配（现有逻辑）
-  if (AstUtil.prettyPrint(scope?.rtype) === expectedType) return true
+  const printed = AstUtil.prettyPrint(scope?.rtype)
+  if (printed === expectedType) return true
+
+  // wrapper rtype fallback：rtype 可能是 { type: undefined, definiteType: <AST node> } 形态
+  if (scope?.rtype?.definiteType) {
+    if (AstUtil.prettyPrint(scope.rtype.definiteType) === expectedType) return true
+  }
 
   // 嵌入类型 fallback：方法继承自基类时，检查基类 logicalQid
   if (fclos?._base) {
@@ -452,7 +516,9 @@ module.exports = {
   introduceTaintAtIdentifierDirect,
   introduceFuncArgTaintBySelfCollection,
   introduceFuncArgTaintByRuleConfig,
+  matchReturnSourceCalleeType,
   setTaint,
   getMarkedSourceCount,
   resetMarkedSourceCount,
+  addMarkedSourceCount,
 }

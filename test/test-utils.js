@@ -4,8 +4,6 @@ const simpleGit = require('simple-git')
 const logger = require('../src/util/logger')(__filename)
 const { handleException } = require('../src/engine/analyzer/common/exception-handler')
 const git = simpleGit()
-const CHAIR_BENCHMARK = 'chairbenchmark'
-const NODEJS_BENCHMARK = 'yasaNodeJsBenchmark'
 const BENCHMARKS_DIR = './benchmarks'
 const XAST_JS_BENCHMARK = 'jsbenchmark'
 
@@ -163,14 +161,6 @@ function resolveFindingResult(resTxt) {
   return resMap
 }
 
-function getExpectResultPath(dir) {
-  return dir.includes(CHAIR_BENCHMARK)
-    ? path.join(dir, '..', '..', 'expect', 'chairbenchmark-expect.result')
-    : dir.includes(NODEJS_BENCHMARK)
-      ? path.join(dir, '..', '..', 'expect', 'yasaNodeJsBenchmark-expect.result')
-      : ''
-}
-
 function resolveTestFindingResult(resTxt) {
   let resMap = new Map()
 
@@ -226,11 +216,8 @@ module.exports = {
   recordFindingStr,
   readExpectRes,
   resolveFindingResult,
-  getExpectResultPath,
   BENCHMARKS_DIR,
   XAST_JS_BENCHMARK,
-  CHAIR_BENCHMARK,
-  NODEJS_BENCHMARK,
   resolveTestFindingResult,
   checkBenchmarkReady,
 }

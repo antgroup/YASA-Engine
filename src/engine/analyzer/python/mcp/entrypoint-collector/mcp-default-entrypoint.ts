@@ -1,5 +1,5 @@
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const { entryPointAndSourceAtSameTime } = require('../../../../../config')
 const { findSourceOfFuncParam } = require('../../common/entrypoint-collector/python-entrypoint-source')

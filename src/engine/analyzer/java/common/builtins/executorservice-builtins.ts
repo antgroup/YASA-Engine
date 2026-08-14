@@ -5,11 +5,20 @@ const {
 } = require('../../../../util/value-util')
 const AstUtil = require('../../../../../util/ast-util')
 const { getAllElementFromBuffer } = require('./buffer')
+const logger = require('../../../../../util/logger')
 
 /**
  * java.util.concurrent.ExecutorService
  */
 class ExecutorService extends Executor {
+  /**
+   * Executor.execute — 显式继承，使 class-hierarchy 注册的子类型（ThreadPoolExecutor 等）
+   * 也能匹配 execute 方法，避免因独立注册 Executor 导致类型重复。
+   */
+  static execute(fclos: any, argvalues: any[], state: any, node: any, scope: any) {
+    return Executor.execute.call(this, fclos, argvalues, state, node, scope)
+  }
+
   /**
    * submit
    * @param fclos
@@ -22,14 +31,27 @@ class ExecutorService extends Executor {
     if (argvalues.length < 1) {
       return new UndefinedValue()
     }
-    if (argvalues[0]?.members?.get('run') && _.isFunction((this as any).executeCall)) {
-      ;(this as any).executeCall(node, argvalues[0].members.get('run')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], argvalues[0].members.get('run')!) })
-    } else if (argvalues[0]?.members?.get('call') && _.isFunction((this as any).executeCall)) {
-      ;(this as any).executeCall(node, argvalues[0].members.get('call')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], argvalues[0].members.get('call')!) })
-    } else if (argvalues[0]?.members?.get('doCall') && _.isFunction((this as any).executeCall)) {
-      ;(this as any).executeCall(node, argvalues[0].members.get('doCall')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], argvalues[0].members.get('doCall')!) })
-    } else if (argvalues[0].vtype === 'fclos') {
-      ;(this as any).executeCall(node, argvalues[0], state, scope, { callArgs: (this as any).buildCallArgs(node, [], argvalues[0]) })
+    const runnable = argvalues[0]
+    // 闭包变量 taint 传播（与 Executor.execute 对称）
+    Executor.propagateClosureTaint(runnable, scope)
+    // 外部类方法传播（与 Executor.execute 对称）
+    Executor.propagateEnclosingMembers(runnable, scope)
+    const runMethod = runnable?.members?.get('run')
+    const doRunMethod = runnable?.members?.get('doRun')
+    const runInnerMethod = runnable?.members?.get('runInner')
+    const resolvedRunMethod = runMethod?.ast?.fdef ? runMethod
+      : doRunMethod?.ast?.fdef ? doRunMethod
+      : runInnerMethod?.ast?.fdef ? runInnerMethod
+      : runMethod
+
+    if (resolvedRunMethod && _.isFunction((this as any).executeCall)) {
+      ;(this as any).executeCall(node, resolvedRunMethod, state, scope, { callArgs: (this as any).buildCallArgs(node, [], resolvedRunMethod) })
+    } else if (runnable?.members?.get('call') && _.isFunction((this as any).executeCall)) {
+      ;(this as any).executeCall(node, runnable.members.get('call')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], runnable.members.get('call')!) })
+    } else if (runnable?.members?.get('doCall') && _.isFunction((this as any).executeCall)) {
+      ;(this as any).executeCall(node, runnable.members.get('doCall')!, state, scope, { callArgs: (this as any).buildCallArgs(node, [], runnable.members.get('doCall')!) })
+    } else if (runnable.vtype === 'fclos') {
+      ;(this as any).executeCall(node, runnable, state, scope, { callArgs: (this as any).buildCallArgs(node, [], runnable) })
     }
     return new UndefinedValue()
   }

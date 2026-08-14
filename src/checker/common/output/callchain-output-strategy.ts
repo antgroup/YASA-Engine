@@ -8,6 +8,17 @@ const Config = require('../../../config')
 const FileUtil = require('../../../util/file-util')
 const logger = require('../../../util/logger')(__filename)
 const { handleException } = require('../../../engine/analyzer/common/exception-handler')
+const {
+  registerDedupFunction,
+} = require('../../../engine/analyzer/common/entrypoint/merge-coordinator') as typeof import('../../../engine/analyzer/common/entrypoint/merge-coordinator')
+
+function isNodeEqual(a: any, b: any): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.loc?.start?.line === b.loc?.start?.line
+    && a.loc?.sourcefile === b.loc?.sourcefile
+    && a._meta?.nodehash === b._meta?.nodehash
+}
 
 /**
  * Output strategy for callchain checker
@@ -42,7 +53,7 @@ class CallchainOutputStrategy extends OutputStrategy {
         // }
         const results = this.buildCallchainJSON(callchainFindings)
         reportFilePath = path.join(Config.reportDir, outputFilePath)
-        FileUtil.writeJSONfile(reportFilePath, results)
+        FileUtil.writeJSONfile(reportFilePath, results, true)
         logger.info(`callchain report is written to ${reportFilePath}`)
       }
     }
@@ -90,9 +101,9 @@ class CallchainOutputStrategy extends OutputStrategy {
       for (const issue of category) {
         if (
           issue.line === finding.line &&
-          issue.node === finding.node &&
+          isNodeEqual(issue.node, finding.node) &&
           issue.issuecause === finding.issuecause &&
-          issue.entry_fclos === finding.entry_fclos &&
+          issue.entry_fclos?.qid === finding.entry_fclos?.qid &&
           issue.entrypoint?.attribute === finding.entrypoint?.attribute &&
           issue.entrypoint?.filePath === finding.entrypoint?.filePath &&
           issue.entrypoint?.functionName === finding.entrypoint?.functionName &&
@@ -136,5 +147,7 @@ class CallchainOutputStrategy extends OutputStrategy {
     }
   }
 }
+
+registerDedupFunction(CallchainOutputStrategy.outputStrategyId, CallchainOutputStrategy.isNewFinding)
 
 module.exports = CallchainOutputStrategy

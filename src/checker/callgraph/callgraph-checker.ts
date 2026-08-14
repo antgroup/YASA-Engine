@@ -110,13 +110,17 @@ class CallgraphChecker extends CheckerCallgraph {
       funcSymbolUuid: fromFuncSymbolUuid,
     })
 
-    // 存储 callSite 的 nodehash
+    // 存储 callSite 的 nodehash 和 loc，loc 优先用于 edge key 人类可读性
     const callSiteNodehash = callSiteNode?._meta?.nodehash || null
+    const callSiteLoc = callSiteNode?.loc || null
     const toNode = callgraph.addNode(this.prettyPrint(to, toAST, callSiteNode), {
       funcDefNodehash: toASTNodehash,
       funcSymbolUuid: toFuncSymbolUuid,
     })
-    callgraph.addEdge(fromNode, toNode, { callSiteNodehash })
+    callgraph.addEdge(fromNode, toNode, {
+      callSiteNodehash,
+      callSite: callSiteLoc ? { loc: callSiteLoc } : undefined,
+    })
   }
 
   /**
@@ -217,6 +221,13 @@ class CallgraphChecker extends CheckerCallgraph {
     if (!ret) {
       ret = 'undefined'
     }
+    // 解构/箭头函数临时标识符 __tmpN__ 不应进入 CG node 名，改用调用点源码片段替代
+    if (ret.includes('__tmp')) {
+      const code = this.getSourceLineByLoc(callSiteNode?.loc)
+      if (code) {
+        ret = code
+      }
+    }
     ret = ret.split('\n')[0]
     ret = ret.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
     if (ret.length > 500) {
@@ -227,6 +238,31 @@ class CallgraphChecker extends CheckerCallgraph {
       ret += this.printLoc(fdef)
     }
     return ret
+  }
+
+  /**
+   * 按 loc 取源码片段，用于替代含 __tmpN__ 临时标识符的 node 名
+   * 取调用点源码首行非空并截断，保证 CG node 名单行可读
+   * @param loc
+   */
+  getSourceLineByLoc(loc: any): string {
+    if (!loc) {
+      return ''
+    }
+    const sourceLine = require('../../engine/analyzer/common/source-line')
+    const code = sourceLine.getCodeByLocation(loc)
+    if (typeof code !== 'string' || code.length === 0) {
+      return ''
+    }
+    // 单行化：取首行非空，避免多行源码破坏 CG node 名
+    const firstLine = code
+      .split('\n')
+      .map((l: string) => l.trim())
+      .filter((l: string) => l.length > 0)[0]
+    if (!firstLine) {
+      return ''
+    }
+    return firstLine.length > 120 ? `${firstLine.slice(0, 120)}...` : firstLine
   }
 
   /**

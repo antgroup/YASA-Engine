@@ -1,4 +1,4 @@
-import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
+import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint/entrypoint'
 
 const Constant = require('../../../util/constant')
 

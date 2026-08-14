@@ -22,7 +22,7 @@ export abstract class EntityValue extends ValueBase {
     }
     const finalOpts: any = typeof upperQidOrOpts === 'string' ? (opts || {}) : (upperQidOrOpts || {})
 
-    const members = new ValueRefMap(() => this.getSymbolTable())
+    const members = new ValueRefMap(() => this.getSymbolTable(), () => this)
 
     // 从 Unit 构造函数设置的 _field 迁移数据到 _members
     const unitField = this._field

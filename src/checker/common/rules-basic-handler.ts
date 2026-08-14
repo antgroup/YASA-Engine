@@ -20,7 +20,40 @@ interface Rule {
   paramNames?: string[]
   keywordNames?: string[]
   includeReceiver?: boolean
-  [key: string]: any
+  fsig?: string
+  argTypes?: unknown[]
+  outputAtTaint?: { traceStrategy?: unknown }
+  preconditions?: Array<{ id?: unknown }>
+}
+
+type RuleValue = {
+  rtype?: {
+    definiteType?: { name?: unknown }
+    vagueType?: unknown
+  }
+  taint?: { isTaintedRec?: boolean }
+}
+
+function asRuleValue(value: unknown): RuleValue {
+  return value && typeof value === 'object' ? value as RuleValue : {}
+}
+
+function getDefiniteTypeName(value: unknown): string | undefined {
+  const typeName = asRuleValue(value).rtype?.definiteType?.name
+  return typeof typeName === 'string' ? typeName : undefined
+}
+
+function matchesArgType(typeName: string, argType: unknown): boolean {
+  return typeof argType === 'string' && (typeName === argType || typeName.endsWith(`.${argType}`))
+}
+
+function isSafeVagueTypeForArgTypeMatch(value: unknown, _rule: Rule): boolean {
+  const ruleValue = asRuleValue(value)
+  const vagueType = ruleValue.rtype?.vagueType
+  if (!vagueType) return true
+  if (typeof vagueType !== 'string') return false
+  const normalized = vagueType.toLowerCase()
+  return (normalized.startsWith('set') || normalized.startsWith('add') || normalized.startsWith('put')) && ruleValue.taint?.isTaintedRec === true
 }
 
 /**
@@ -183,11 +216,12 @@ function prepareArgsByType(callInfo: CallInfo | undefined, fclos: any, rule: Rul
   }
   const { argTypes } = rule
   for (const argvalue of argvalues) {
-    if (!argvalue.rtype || !argvalue.rtype.definiteType || argvalue.rtype.vagueType) {
+    const definiteTypeName = getDefiniteTypeName(argvalue)
+    if (!definiteTypeName || !isSafeVagueTypeForArgTypeMatch(argvalue, rule)) {
       continue
     }
     for (const argType of argTypes) {
-      if (argvalue.rtype.definiteType.name === argType || argvalue.rtype.definiteType.name.endsWith(`.${argType}`)) {
+      if (matchesArgType(definiteTypeName, argType)) {
         resultArray.push(argvalue)
         break
       }

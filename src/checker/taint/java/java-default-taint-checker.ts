@@ -3,7 +3,7 @@ const JavaTaintAbstractChecker = require('./java-taint-abstract-checker')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
 const CommonUtil = require('../../../util/common-util')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const Loader = require('../../../util/loader')
 const {

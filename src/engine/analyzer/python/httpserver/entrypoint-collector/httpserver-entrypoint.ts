@@ -1,5 +1,5 @@
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 
 // Python http.server / socketserver 框架的 HTTP handler 基类名
@@ -235,17 +235,33 @@ export function findHttpServerEntryPointAndSource(
     const shortFileName = extractRelativePath(filename, dir)
     const topClasses = collectTopLevelClassDefinitions(ast)
 
-    for (const { className, superNames, node } of topClasses) {
-      // 跳过直接就是 HTTPServer 基类的
-      if (HTTP_SERVER_BASE_NAMES.includes(className)) continue
-      if (!isHttpServerSubclass(className, inheritanceMap)) continue
+    for (const { className, node } of topClasses) {
+      if (!HTTP_SERVER_BASE_NAMES.includes(className) && isHttpServerSubclass(className, inheritanceMap)) {
+        // 注册 __init__ 为入口点（如 PolicyServerInput.__init__）
+        const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+        entryPoint.filePath = shortFileName
+        entryPoint.functionName = '__init__'
+        entryPoint.attribute = 'HTTP'
+        httpServerEntryPointArray.push(entryPoint)
+      }
 
-      // 注册 __init__ 为入口点（如 PolicyServerInput.__init__）
-      const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
-      entryPoint.filePath = shortFileName
-      entryPoint.functionName = '__init__'
-      entryPoint.attribute = 'HTTP'
-      httpServerEntryPointArray.push(entryPoint)
+      if (!isHttpHandlerSubclass(className, inheritanceMap)) continue
+      const classBody = Array.isArray(node.body) ? node.body : []
+      for (const member of classBody) {
+        if (member.type !== 'FunctionDefinition' || !member.id?.name) continue
+        const methodName: string = member.id.name
+        if (!HTTP_HANDLER_METHODS.includes(methodName)) continue
+
+        const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
+        entryPoint.filePath = shortFileName
+        entryPoint.functionName = methodName
+        entryPoint.attribute = 'HTTP'
+        entryPoint.funcReceiverType = className
+        entryPoint.funcLocStart = member.loc?.start?.line as number | undefined
+        entryPoint.funcLocEnd = member.loc?.end?.line as number | undefined
+        httpServerEntryPointArray.push(entryPoint)
+
+      }
     }
   }
 

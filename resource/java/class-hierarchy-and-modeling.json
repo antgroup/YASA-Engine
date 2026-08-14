@@ -96,6 +96,10 @@
       "java.util.LinkedHashSet"
     ]
   },
+  "java.util.Iterator": {
+    "modelingFilePath": "./builtins/iterator-builtins",
+    "subTypeList": []
+  },
   "java.util.Map": {
     "modelingFilePath": "./builtins/map-builtins",
     "subTypeList": [
@@ -209,5 +213,11 @@
   "java.util.Arrays": {
     "modelingFilePath": "./builtins/arrays-builtins",
     "subTypeList": []
+  },
+  "com.baomidou.mybatisplus.extension.service.IService": {
+    "modelingFilePath": "./builtins/iservice-builtins",
+    "subTypeList": [
+      "com.baomidou.mybatisplus.extension.service.impl.ServiceImpl"
+    ]
   }
 }

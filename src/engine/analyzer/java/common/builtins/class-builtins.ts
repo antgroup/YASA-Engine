@@ -4,14 +4,62 @@ const {
 } = require('../../../../util/value-util')
 const MemSpace = require('../../../common/memSpace')
 const { getValueFromPackageByQid } = require('../../../../util/value-util')
+const { buildNewCopiedWithTag } = require('../../../../../util/clone-util')
 const { newInstance } = require('./object')
 
 const memSpaceUtil = new MemSpace()
+
+type RuntimeValue = {
+  qid?: string
+  logicalQid?: string
+  _this?: RuntimeValue
+  rtype?: { type?: unknown; definiteType?: unknown; vagueType?: unknown }
+  cloneAlias?: () => RuntimeValue
+  getThisObj?: () => RuntimeValue | undefined
+}
+
+function asRuntimeValue(value: unknown): RuntimeValue | undefined {
+  return value && typeof value === 'object' ? (value as RuntimeValue) : undefined
+}
+
+function getClassLiteralTarget(value: unknown): string | undefined {
+  const classValue = asRuntimeValue(value)
+  if (!classValue || classValue.logicalQid !== 'java.lang.Class') return undefined
+  const thisObj = classValue.getThisObj?.() ?? classValue._this
+  if (!thisObj?.logicalQid || thisObj.logicalQid === 'java.lang.Class') return undefined
+  return thisObj.logicalQid
+}
+
+function copyCastResult(analyzer: unknown, value: unknown): RuntimeValue | undefined {
+  const runtimeValue = asRuntimeValue(value)
+  if (!runtimeValue) return undefined
+  const copied = runtimeValue.qid ? buildNewCopiedWithTag(analyzer, runtimeValue, 'class-cast') : (runtimeValue.cloneAlias?.() ?? runtimeValue)
+  const copiedValue = asRuntimeValue(copied)
+  if (copiedValue?.rtype) copiedValue.rtype = { ...copiedValue.rtype }
+  return copiedValue
+}
 
 /**
  * java.lang.Class
  */
 class Class {
+  /**
+   * Class.cast 只做运行期类型校验，返回值仍是原对象。
+   */
+  static cast(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+    if (argvalues.length === 0 || !argvalues[0]) {
+      return new UndefinedValue()
+    }
+
+    const targetType = getClassLiteralTarget(fclos.getThisObj?.())
+    if (!targetType) return argvalues[0]
+
+    const result = copyCastResult(this, argvalues[0])
+    if (!result) return new UndefinedValue()
+    result.rtype = { type: result.rtype?.type, definiteType: UastSpec.identifier(targetType) }
+    return result
+  }
+
   /**
    * getMethod
    * @param fclos

@@ -1,5 +1,6 @@
 import Unit = require('./unit')
 import { TaintRecord } from './taint-record'
+import { auditCloneEvent } from './unit-audit'
 
 /**
  * AstBinding - AST 绑定属性组（EntityValue 特有）
@@ -232,6 +233,7 @@ export class ValueBase extends Unit {
     }
 
     copy._skipRegister = true
+    auditCloneEvent('clone', this, copy)
     return copy as this
   }
 

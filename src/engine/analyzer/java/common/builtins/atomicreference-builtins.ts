@@ -54,6 +54,22 @@ class AtomicReference {
 
     return new UndefinedValue()
   }
+
+  /**
+   * AtomicReference.get
+   * 返回 _value 字段，保留 taint 传播
+   */
+  static get(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
+    const _this = fclos.getThisObj?.() ?? fclos._this ?? fclos
+    if (!_this) {
+      return new UndefinedValue()
+    }
+    const value = _this.value?._value
+    if (value !== undefined && value !== null) {
+      return value
+    }
+    return new UndefinedValue()
+  }
 }
 
 module.exports = AtomicReference

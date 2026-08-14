@@ -1,4 +1,4 @@
-import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint'
+import type { EntryPoint } from '../../../engine/analyzer/common/entrypoint/entrypoint'
 import { getLegacyArgValues } from '../../../engine/analyzer/common/call-args'
 
 const completeEntryPoint = require('../common-kit/entry-points-util')

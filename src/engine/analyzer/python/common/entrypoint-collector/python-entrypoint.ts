@@ -6,6 +6,9 @@ const {
 } = require('../../inference/entrypoint-collector/inference-default-entrypoint')
 const { findMcpEntryPointAndSource } = require('../../mcp/entrypoint-collector/mcp-default-entrypoint')
 const { findHttpServerEntryPointAndSource } = require('../../httpserver/entrypoint-collector/httpserver-entrypoint')
+const { findTornadoEntryPointAndSource } = require('../../tornado/entrypoint-collector/tornado-entrypoint')
+const { findGradioEntryPointAndSource } = require('../../gradio/entrypoint-collector/gradio-default-entrypoint')
+const { findAgentUniverseEntryPointAndSource } = require('../../agentuniverse/entrypoint-collector/agentuniverse-entrypoint')
 const BasicRuleHandler = require('../../../../../checker/common/rules-basic-handler')
 const { loadPythonDefaultRule } = require('../../../../../checker/taint/python/python-taint-abstract-checker')
 const AstUtil = require('../../../../../util/ast-util')
@@ -15,6 +18,7 @@ type FileManager = Record<string, any>
 interface FindEntryPointResult {
   pyFcEntryPointArray: any[]
   pyFcEntryPointSourceArray: any[]
+  lifespanGlobalAssignments: any[]
 }
 
 /**
@@ -26,6 +30,7 @@ interface FindEntryPointResult {
 function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, analyzer: any): FindEntryPointResult {
   const pyFcEntryPointArray: any[] = []
   const pyFcEntryPointSourceArray: any[] = []
+  const lifespanGlobalAssignments: any[] = []
   const filenameAstObj: Record<string, any> = {}
   for (const filename in fileManager) {
     const fileEntry = fileManager[filename]
@@ -35,20 +40,28 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, 
   }
 
 
-  const { flaskEntryPointArray, flaskEntryPointSourceArray } = findFlaskEntryPointAndSource(filenameAstObj, dir)
+  const { flaskEntryPointArray, flaskEntryPointSourceArray, flaskLifespanGlobalAssignments } = findFlaskEntryPointAndSource(filenameAstObj, dir)
   if (flaskEntryPointArray) {
     pyFcEntryPointArray.push(...flaskEntryPointArray)
   }
   if (flaskEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...flaskEntryPointSourceArray)
   }
+  // Flask 应用级生命周期钩子（@app.before_request 等）函数 body 内对全局对象 g 的属性赋值，
+  // 复用 lifespan 通道在模块作用域预执行，使跨文件路由内 g.cu/g.db 解析到 sqlite3 类型链
+  if (Array.isArray(flaskLifespanGlobalAssignments) && flaskLifespanGlobalAssignments.length > 0) {
+    lifespanGlobalAssignments.push(...flaskLifespanGlobalAssignments)
+  }
 
-  const { fastApiEntryPointArray, fastApiEntryPointSourceArray } = findFastApiEntryPointAndSource(filenameAstObj, dir)
+  const { fastApiEntryPointArray, fastApiEntryPointSourceArray, lifespanGlobalAssignments: fastApiLifespanAssignments } = findFastApiEntryPointAndSource(filenameAstObj, dir)
   if (fastApiEntryPointArray) {
     pyFcEntryPointArray.push(...fastApiEntryPointArray)
   }
   if (fastApiEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...fastApiEntryPointSourceArray)
+  }
+  if (fastApiLifespanAssignments) {
+    lifespanGlobalAssignments.push(...fastApiLifespanAssignments)
   }
 
   const { inferenceAiStudioTplEntryPointArray, inferenceAiStudioTplEntryPointSourceArray } =
@@ -88,7 +101,31 @@ function findPythonFcEntryPointAndSource(dir: string, fileManager: FileManager, 
     pyFcEntryPointSourceArray.push(...httpServerEntryPointSourceArray)
   }
 
-  return { pyFcEntryPointArray, pyFcEntryPointSourceArray }
+const { tornadoEntryPointArray, tornadoEntryPointSourceArray } = findTornadoEntryPointAndSource(filenameAstObj, dir)
+  if (tornadoEntryPointArray) {
+    pyFcEntryPointArray.push(...tornadoEntryPointArray)
+  }
+  if (tornadoEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...tornadoEntryPointSourceArray)
+  }
+
+  const { gradioEntryPointArray, gradioEntryPointSourceArray } = findGradioEntryPointAndSource(filenameAstObj, dir)
+  if (gradioEntryPointArray) {
+    pyFcEntryPointArray.push(...gradioEntryPointArray)
+  }
+  if (gradioEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...gradioEntryPointSourceArray)
+  }
+
+  const { agentUniverseEntryPointArray, agentUniverseEntryPointSourceArray } = findAgentUniverseEntryPointAndSource(filenameAstObj, dir)
+  if (agentUniverseEntryPointArray) {
+    pyFcEntryPointArray.push(...agentUniverseEntryPointArray)
+  }
+  if (agentUniverseEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...agentUniverseEntryPointSourceArray)
+  }
+
+  return { pyFcEntryPointArray, pyFcEntryPointSourceArray, lifespanGlobalAssignments }
 }
 
 /**

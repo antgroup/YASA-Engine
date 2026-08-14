@@ -11,6 +11,43 @@ const Unit: typeof import('../engine/analyzer/common/value/unit') = require('../
 
 let getCodeByLocation: ((loc: any) => string) | null = null
 
+interface FunctionDisplayNameNode {
+  id?: { name?: string } | null
+  loc?: {
+    start?: { line?: number; column?: number }
+    end?: { line?: number; column?: number }
+  }
+  parent?: VariableDeclarationLike | null
+}
+
+interface VariableDeclarationLike {
+  type?: string
+  id?: { type?: string; name?: string } | null
+  init?: FunctionDisplayNameNode | null
+}
+
+/**
+ * 生成函数在调用图中的显示名称。
+ */
+function getFunctionDisplayName(
+  node: FunctionDisplayNameNode,
+  parent?: VariableDeclarationLike
+): string {
+  if (node.id?.name) return node.id.name
+
+  const owner = parent ?? node.parent
+  if (
+    owner?.type === 'VariableDeclaration' &&
+    owner.init === node &&
+    owner.id?.type === 'Identifier' &&
+    owner.id.name
+  ) {
+    return owner.id.name
+  }
+
+  return `<anonymousFunc_${node.loc?.start?.line}_${node.loc?.start?.column}_${node.loc?.end?.line}_${node.loc?.end?.column}>`
+}
+
 /**
  * 获取 getCodeByLocation 函数
  * @returns {Function} getCodeByLocation 函数
@@ -108,18 +145,15 @@ function adjustASTNode(sourceunit: any): void {
 
       if (subNode.type) {
         const nodeType = subNode.type
-        if (nodeType === 'FunctionDefinition') {
-          subNode.name =
-            subNode.id?.name ??
-            `<anonymousFunc_${subNode?.loc?.start?.line}_${subNode?.loc?.start?.column}_${subNode?.loc?.end?.line}_${subNode?.loc?.end?.column}>`
-        } else if (nodeType === 'ClassDefinition') {
-          subNode.name =
-            subNode.id?.name ??
-            `<anonymousFunc_${subNode?.loc?.start?.line}_${subNode?.loc?.start?.column}_${subNode?.loc?.end?.line}_${subNode?.loc?.end?.column}>`
-        }
-
         // 使用 visited Set 避免重复处理已访问的节点
         if (!visited.has(subNode)) {
+          if (nodeType === 'FunctionDefinition') {
+            subNode.name = getFunctionDisplayName(subNode, node)
+          } else if (nodeType === 'ClassDefinition') {
+            subNode.name =
+              subNode.id?.name ??
+              `<anonymousFunc_${subNode?.loc?.start?.line}_${subNode?.loc?.start?.column}_${subNode?.loc?.end?.line}_${subNode?.loc?.end?.column}>`
+          }
           subNode.parent = node
           if (!subNode.loc) {
             subNode.loc = {}
@@ -136,6 +170,13 @@ function adjustASTNode(sourceunit: any): void {
         for (let i = 0; i < arrLen; i++) {
           const sn = subNode[i]
           if (sn?.type && !visited.has(sn)) {
+            if (sn.type === 'FunctionDefinition') {
+              sn.name = getFunctionDisplayName(sn, node)
+            } else if (sn.type === 'ClassDefinition') {
+              sn.name =
+                sn.id?.name ??
+                `<anonymousFunc_${sn?.loc?.start?.line}_${sn?.loc?.start?.column}_${sn?.loc?.end?.line}_${sn?.loc?.end?.column}>`
+            }
             sn.parent = node
             if (!sn.loc) {
               sn.loc = {}
@@ -553,6 +594,9 @@ function hasTag(symVal: any, targetAttribute?: any): boolean {
   function hasTagRec(symVal: any, targetAttribute: any, stack: number, visited: Set<any>): boolean {
     if (!symVal) {
       return false
+    }
+    if (symVal instanceof Unit && symVal._taint?.isTainted) {
+      return true
     }
     if (symVal.vtype === 'fclos') {
       return false
@@ -1134,6 +1178,7 @@ module.exports = {
   prettyPrint,
   prettyPrintAST,
   annotateAST,
+  getFunctionDisplayName,
   addNodeHash,
   setGlobalASTManager,
   getGlobalASTManager,

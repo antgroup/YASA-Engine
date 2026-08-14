@@ -1,0 +1,42 @@
+[
+  {
+    "checkerIds": [
+      "taint_flow_nodejs_cli_input"
+    ],
+    "sources": {},
+    "sinks": {
+      "FuncCallTaintSink": [
+        {
+          "args": [
+            "0",
+            "1"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "child_process.spawnSync"
+        },
+        {
+          "args": [
+            "0",
+            "1"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "spawnSync"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "child_process.exec"
+        },
+        {
+          "args": [
+            "0"
+          ],
+          "attribute": "NodejsExec",
+          "fsig": "execSync"
+        }
+      ]
+    }
+  }
+]

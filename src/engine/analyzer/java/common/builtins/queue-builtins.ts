@@ -1,10 +1,92 @@
-const {
-  addElementToBuffer: addElementToBufferQueue,
-  moveExistElementsToBuffer: moveExistElementsToBufferQueue,
-} = require('./buffer')
+const { moveExistElementsToBuffer: moveExistElementsToBufferQueue, addElementToBuffer, promoteDeepTaintToCarrier } = require('./buffer')
 const MemSpaceQueue = require('../../../common/memSpace')
 const Collection = require('./collection-builtins')
+const List = require('./list-builtins')
 import { UndefinedValue } from '../../../common/value/undefine'
+
+type MethodCarrier = {
+  taint?: { clear?: () => void }
+  setMisc?: (key: string, value: unknown) => void
+}
+
+type MethodOwner = {
+  vtype?: string
+  value?: unknown[]
+  taint?: { clear?: () => void }
+  getMisc?: (key: string) => unknown
+  setMisc?: (key: string, value: unknown) => void
+  getFieldValue?: (fieldName: string) => MethodCarrier | undefined
+  members?: { get?: (key: string) => MethodCarrier | undefined }
+}
+
+type ReceiverAliasValue = MethodOwner & {
+  qid?: string
+  getSymbolTable?: () => { getMap?: () => Map<string, ReceiverAliasValue> }
+}
+
+function getReceiverAliases(receiver: ReceiverAliasValue): ReceiverAliasValue[] {
+  const aliases: ReceiverAliasValue[] = []
+  const addAlias = (alias: unknown): void => {
+    if (alias && typeof alias === 'object' && alias !== receiver && !aliases.includes(alias as ReceiverAliasValue)) {
+      aliases.push(alias as ReceiverAliasValue)
+    }
+  }
+  addAlias(typeof receiver?.getMisc === 'function' ? receiver.getMisc('unionReceiverAlias') : undefined)
+  const qid = typeof receiver?.qid === 'string' ? receiver.qid : ''
+  const marker = '.<union@mem:'
+  const markerIndex = qid.indexOf(marker)
+  if (markerIndex > 0) {
+    const aliasQid = qid.slice(0, markerIndex)
+    const symbolTable = typeof receiver?.getSymbolTable === 'function' ? receiver.getSymbolTable() : undefined
+    const values = typeof symbolTable?.getMap === 'function' ? symbolTable.getMap().values() : []
+    for (const value of values) {
+      if (value?.qid === aliasQid) addAlias(value)
+    }
+  }
+  return aliases
+}
+
+function clearQueueMethodCarrierTaint(receiver: MethodOwner | undefined): void {
+  if (!receiver) return
+  const visited = new Set<MethodOwner>()
+  const clearOne = (target: MethodOwner | undefined): void => {
+    if (!target || visited.has(target)) return
+    visited.add(target)
+    for (const methodName of ['add', 'remove']) {
+      const methodCarrier = target.getFieldValue?.(methodName) ?? target.members?.get?.(methodName)
+      methodCarrier?.taint?.clear?.()
+      methodCarrier?.setMisc?.('buffer', [])
+    }
+    if (target.vtype === 'union' && Array.isArray(target.value)) {
+      for (const branch of target.value) clearOne(branch as MethodOwner)
+    }
+  }
+  clearOne(receiver)
+  for (const alias of getReceiverAliases(receiver as ReceiverAliasValue)) clearOne(alias)
+}
+
+function clearQueueCarrierTaint(receiver: ReceiverAliasValue): void {
+  for (const target of [receiver, ...getReceiverAliases(receiver)]) {
+    target.taint?.clear?.()
+    target.setMisc?.('buffer', [])
+  }
+}
+
+function refreshQueueCarrierFromElements(receiver: ReceiverAliasValue): void {
+  clearQueueCarrierTaint(receiver)
+  if (receiver.getMisc?.('precise') && receiver.value && typeof receiver.value === 'object') {
+    for (const key of Object.keys(receiver.value)) {
+      if (!Number.isFinite(Number(key))) continue
+      const value = receiver.value[Number(key)] as ReceiverAliasValue | undefined
+      if (!value) continue
+      addElementToBuffer(receiver, value)
+      promoteDeepTaintToCarrier(receiver, value)
+    }
+  }
+  for (const alias of getReceiverAliases(receiver)) {
+    promoteDeepTaintToCarrier(alias, receiver)
+  }
+}
 
 const memSpaceUtil = new MemSpaceQueue()
 
@@ -37,26 +119,7 @@ class Queue extends Collection {
    * @param scope
    */
   static add(fclos: any, argvalues: any[], state: any, node: any, scope: any): any {
-    const _this = fclos.getThisObj()
-    if (!_this || !argvalues || argvalues.length === 0) {
-      return new UndefinedValue()
-    }
-    if (!_this.getMisc('precise')) {
-      addElementToBufferQueue(_this, argvalues[0])
-    } else {
-      _this.length = _this.length ?? 0
-      if (argvalues.length === 1) {
-        _this.value[_this.length] = argvalues[0]
-        _this.length++
-      } else {
-        _this.setMisc('precise', false)
-        moveExistElementsToBufferQueue(_this)
-        addElementToBufferQueue(_this, argvalues[0])
-        _this.length = 0
-      }
-    }
-
-    return new UndefinedValue()
+    return List.add.call(this, fclos, argvalues, state, node, scope) ?? new UndefinedValue()
   }
 
   /**
@@ -140,6 +203,8 @@ class Queue extends Collection {
     if (_this.length > 0) {
       _this.length--
     }
+    refreshQueueCarrierFromElements(_this)
+    clearQueueMethodCarrierTaint(_this)
 
     return firstElement
   }

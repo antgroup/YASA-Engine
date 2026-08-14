@@ -3,6 +3,7 @@
     "checkerPackId": "taint-flow-golang-default",
     "checkerIds": [
       "taint_flow_gin_input",
+      "taint_flow_go_http_input",
       "taint_flow_go_input",
       "cobra.Command-builtIn",
       "go-restful-entryPoints-collect-checker",
@@ -21,6 +22,7 @@
     "checkerPackId": "taint-flow-golang-inner",
     "checkerIds": [
       "taint_flow_gin_input_inner",
+      "taint_flow_go_http_input",
       "cobra.Command-builtIn",
       "go-restful-entryPoints-collect-checker",
       "beego-entrypoint-collect-checker",
@@ -34,6 +36,19 @@
     ],
     "description": "golang污点追踪-蚂蚁内部使用的规则包"
 
+  },
+  {
+    "checkerPackId": "taint-flow-golang-cli",
+    "checkerIds": [
+      "taint_flow_go_cli_input",
+      "cobra.Command-builtIn",
+      "go-main-entryPoints-collection",
+      "sync.Once.Do-builtIn",
+      "urfave-cli-builtIn",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "golang CLI/script 污点追踪规则包"
   },
   {
     "checkerPackId": "taint-flow-java-default",
@@ -83,12 +98,22 @@
     "description": "Express 污点追踪"
   },
   {
+    "checkerPackId": "taint-flow-nodejs-cli",
+    "checkerIds": [
+      "taint_flow_nodejs_cli_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "Node.js CLI/script 污点追踪规则包"
+  },
+  {
     "checkerPackId": "taint-flow-python-default",
     "checkerIds": [
       "taint_flow_python_input",
       "taint_flow_python_django_input",
       "taint_flow_python_tornado_input",
       "taint_flow_python_httpserver_input",
+      "taint_flow_python_agentuniverse_input",
       "callgraph",
       "sanitizer"
     ],
@@ -101,10 +126,20 @@
       "taint_flow_python_django_input",
       "taint_flow_python_tornado_input",
       "taint_flow_python_httpserver_input",
+      "taint_flow_python_agentuniverse_input",
       "callgraph",
       "sanitizer"
     ],
     "description": "python污点追踪-蚂蚁内部使用的规则包"
+  },
+  {
+    "checkerPackId": "taint-flow-python-skill-script",
+    "checkerIds": [
+      "taint_flow_python_skill_script_input",
+      "callgraph",
+      "sanitizer"
+    ],
+    "description": "Python Skill Script 污点追踪规则包"
   },
   {
     "checkerPackId": "antql-dataflow-inner",

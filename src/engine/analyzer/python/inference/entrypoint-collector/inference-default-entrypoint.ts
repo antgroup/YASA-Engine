@@ -1,5 +1,5 @@
 const { extractRelativePath } = require('../../../../../util/file-util')
-const EntryPoint = require('../../../common/entrypoint')
+const EntryPoint = require('../../../common/entrypoint/entrypoint')
 const Constant = require('../../../../../util/constant')
 const { entryPointAndSourceAtSameTime } = require('../../../../../config')
 const { findSourceOfFuncParam } = require('../../common/entrypoint-collector/python-entrypoint-source')
@@ -51,7 +51,7 @@ function findInferenceAiStudioTplEntryPointAndSource(filenameAstObj: Record<stri
           const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
           entryPoint.filePath = shortFileName
           entryPoint.functionName = 'predict_np'
-          entryPoint.attribute = 'HTTP'
+          entryPoint.attribute = 'inference'
           // 携带函数定义行号，用于精确匹配 overloaded 同名函数
           entryPoint.funcLocStart = bodyObj.loc?.start?.line as number | undefined
           entryPoint.funcLocEnd = bodyObj.loc?.end?.line as number | undefined
@@ -110,7 +110,7 @@ function findInferenceTritonEntryPointAndSource(filenameAstObj: Record<string, a
           const entryPoint = new EntryPoint(Constant.ENGIN_START_FUNCALL)
           entryPoint.filePath = shortFileName
           entryPoint.functionName = 'execute'
-          entryPoint.attribute = 'HTTP'
+          entryPoint.attribute = 'inference'
           // 携带函数定义行号，用于精确匹配 overloaded 同名函数
           entryPoint.funcLocStart = bodyObj.loc?.start?.line as number | undefined
           entryPoint.funcLocEnd = bodyObj.loc?.end?.line as number | undefined

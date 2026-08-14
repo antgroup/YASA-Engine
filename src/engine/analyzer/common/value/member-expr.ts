@@ -70,4 +70,25 @@ export class MemberExprValue extends ExprValue {
     if (this._propertyRef) ops.push(this.property)
     return ops
   }
+
+  // union receiver fallback：
+  // for 循环体内 chat_ids = set() 经 phi 合并为 UnionValue，processMemberAccess 把 _this 设为该 union；
+  // 基类 getThisObj 沿 _this 链遍历返回 union（或找不到返回 this 自身），processLibArgToThis 的 vtype
+  // 检查只接受 symbol/object 容器，导致 set.add 元素无法写入容器值树，satisfy BFS 断链。
+  // 此时若 this.object 是具体非 union 容器（如 set() 实例），用 this.object 兜底。
+  override getThisObj(): Unit {
+    const base = super.getThisObj()
+    const baseVtype = base?.vtype
+    if (this.object) {
+      const objVtype = this.object.vtype
+      if (
+        objVtype !== 'union' &&
+        ['symbol', 'object'].includes(objVtype) &&
+        (base === (this as unknown as Unit) || baseVtype === 'union')
+      ) {
+        return this.object
+      }
+    }
+    return base
+  }
 }

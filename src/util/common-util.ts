@@ -274,59 +274,74 @@ function getAnonymousFunctionName(fclos: any) {
  * @param {string} func - 要查找的函数名称
  * @returns {Object|null} 找到的函数闭包对象，未找到返回 null
  */
-function getFclosFromScope(valExport: any, func: any): any {
-  let valFunc
-  const fdef = valExport?.ast.fdef || valExport?.ast?.node
-  if (fdef && fdef?.type === 'FunctionDefinition') {
-    // 具名函数匹配
-    if (fdef.id?.name === func) {
-      valFunc = valExport
-    }
-    // 匿名函数匹配
-    else if (func.startsWith('<anonymous')) {
-      // 生成当前函数的匿名标识符
-      const anonymousID = getAnonymousFunctionName(fdef)
-      // 标识符匹配则返回
-      if (anonymousID == func) valFunc = valExport
-    } else {
-      return null
-    }
-  } else {
-    // 从作用域的字段中直接查找
-    valFunc = valExport?.members?.get(func)
+const MAX_FCLOS_SCOPE_SEARCH_DEPTH = 256
 
-    // 如果直接查找失败
-    if (!valFunc) {
-      // 尝试在默认导出中查找
-      const defaultVal = valExport?.members?.get('default')
-      if (defaultVal) {
-        valFunc = getFclosFromScope(defaultVal, func)
-      } else if (!func.includes('.')) {
-        // 遍历作用域字段，查找类中的方法
-        if (valExport?.members) {
-          for (const i of valExport.members.keys()) {
-            const fieldVal = valExport.members.get(i)
-            if (fieldVal && fieldVal.vtype === 'class') {
-              valFunc = getFclosFromScope(fieldVal, func)
-              if (valFunc) break
+function getFclosFromScope(valExport: any, func: any, visited: WeakSet<object> = new WeakSet(), depth = 0): any {
+  if (!valExport || typeof valExport !== 'object' || depth > MAX_FCLOS_SCOPE_SEARCH_DEPTH) {
+    return null
+  }
+  if (visited.has(valExport)) {
+    return null
+  }
+  visited.add(valExport)
+
+  try {
+    let valFunc
+    const fdef = valExport?.ast?.fdef || valExport?.ast?.node
+    if (fdef && fdef?.type === 'FunctionDefinition') {
+      // 具名函数匹配
+      if (fdef.id?.name === func) {
+        valFunc = valExport
+      }
+      // 匿名函数匹配
+      else if (func.startsWith('<anonymous')) {
+        // 生成当前函数的匿名标识符
+        const anonymousID = getAnonymousFunctionName(fdef)
+        // 标识符匹配则返回
+        if (anonymousID == func) valFunc = valExport
+      } else {
+        return null
+      }
+    } else {
+      // 从作用域的字段中直接查找
+      valFunc = valExport?.members?.get(func)
+
+      // 如果直接查找失败
+      if (!valFunc) {
+        // 默认导出与类成员可能形成回环，当前递归栈保证递归可收敛。
+        const defaultVal = valExport?.members?.get('default')
+        if (defaultVal) {
+          valFunc = getFclosFromScope(defaultVal, func, visited, depth + 1)
+        }
+        if (!valFunc && !func.includes('.')) {
+          // 遍历作用域字段，查找类中的方法
+          if (valExport?.members) {
+            for (const i of valExport.members.keys()) {
+              const fieldVal = valExport.members.get(i)
+              if (fieldVal && fieldVal.vtype === 'class') {
+                valFunc = getFclosFromScope(fieldVal, func, visited, depth + 1)
+                if (valFunc) break
+              }
             }
           }
-        }
-      } else {
-        // 处理点分名称（如 "module.submodule.function"）
-        const arr = func.split('.')
-        let fieldT = valExport
-        // 沿着路径逐级查找
-        arr.forEach((path: any) => {
-          fieldT = fieldT?.members?.get(path)
-        })
-        if (fieldT) {
-          valFunc = fieldT
+        } else if (!valFunc) {
+          // 处理点分名称（如 "module.submodule.function"）
+          const arr = func.split('.')
+          let fieldT = valExport
+          // 沿着路径逐级查找
+          arr.forEach((path: any) => {
+            fieldT = fieldT?.members?.get(path)
+          })
+          if (fieldT) {
+            valFunc = fieldT
+          }
         }
       }
     }
+    return valFunc
+  } finally {
+    visited.delete(valExport)
   }
-  return valFunc
 }
 
 /**
@@ -393,13 +408,13 @@ function fillSourceScope(fclos: any, sourceScope: any): void {
     if (item.scopeFile === relativePath && item.scopeFunc === scpFunc) {
       // 仅填充未完善的规则
       if (item.locStart !== undefined && item.locEnd !== undefined) {
-        if (sourceScope.fillLineValues.includes(item)) {
+        if (sourceScope.fillLineValues.includes(item) && (item.locStart !== locStart || item.locEnd !== locEnd)) {
           const copiedItem = _.clone(item)
           copiedItem.locStart = locStart
           copiedItem.locEnd = locEnd
           sourceScope.value.push(copiedItem)
         }
-        return
+        continue
       }
       item.locStart = locStart
       item.locEnd = locEnd

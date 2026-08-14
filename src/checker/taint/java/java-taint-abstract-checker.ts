@@ -1,4 +1,5 @@
 import type { CallInfo } from '../../../engine/analyzer/common/call-args'
+import type { AstSourceLocation, EntryPointRuleConfig } from '../../../engine/analyzer/common/entrypoint/entrypoint'
 import type { Invocation } from '../../../resolver/common/value/invocation'
 
 const QidUnifyUtil = require('../../../util/qid-unify-util')
@@ -17,13 +18,171 @@ const TaintOutputStrategyJava = require('../../common/output/taint-output-strate
 const { satisfy, defaultFilter } = require('../../../util/ast-util')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
+const { lodashCloneWithTag } = require('../../../util/clone-util')
 
 const TAINT_TAG_NAME_JAVA = 'JAVA_INPUT'
+
+type JavaEntrypointConfig = EntryPointRuleConfig & {
+  packageName?: string
+  paramTypes?: string[]
+  signature?: string
+}
+
+type JavaTypeParamNode = {
+  varType?: { id?: { name?: string } }
+}
+
+type FunctionLikeNode<TParam = unknown> = {
+  id?: { name?: string }
+  name?: string
+  loc?: AstSourceLocation
+  parameters?: TParam[]
+}
+
+type JavaEntrypointFunctionNode = FunctionLikeNode<JavaTypeParamNode>
+
+type CallableAstLike = JavaEntrypointFunctionNode & {
+  fdef?: JavaEntrypointFunctionNode
+  node?: JavaEntrypointFunctionNode
+}
+
+type FunctionClosureLike = {
+  vtype?: string
+  ast?: CallableAstLike
+  overloaded?: JavaEntrypointFunctionNode[]
+}
+
+type JavaTypeResolverLike = {
+  classHierarchyMap?: Map<string, unknown>
+  findBaseTypes: (classHierarchy: unknown) => string[]
+}
+
+type JavaAnalyzerWithTypeResolver = {
+  typeResolver?: JavaTypeResolverLike
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined
+}
+
+/**
+ *
+ * @param node
+ */
+function getSourceLineLoc(node: FunctionLikeNode): { start?: number; end?: number } {
+  return {
+    start: toOptionalNumber(node.loc?.start?.line),
+    end: toOptionalNumber(node.loc?.end?.line),
+  }
+}
+
+/**
+ *
+ * @param typeName
+ */
+function normalizeJavaType(typeName: string | undefined): string | undefined {
+  if (!typeName) return undefined
+  const withoutArray = typeName.endsWith('[]') ? typeName.slice(0, -2) : typeName
+  const parts = withoutArray.split('.')
+  return parts[parts.length - 1]
+}
+
+/**
+ *
+ * @param node
+ */
+function getParamTypeNames(node: JavaEntrypointFunctionNode): string[] {
+  if (!Array.isArray(node.parameters)) return []
+  return node.parameters.map((param) => normalizeJavaType(param.varType?.id?.name) ?? '')
+}
+
+/**
+ *
+ * @param node
+ * @param expectedTypes
+ */
+function matchParamTypes(node: JavaEntrypointFunctionNode, expectedTypes: string[] | undefined): boolean {
+  if (!Array.isArray(expectedTypes) || expectedTypes.length === 0) return false
+  const actualTypes = getParamTypeNames(node)
+  if (actualTypes.length !== expectedTypes.length) return false
+  return expectedTypes.every((expectedType, index) => {
+    const expected = normalizeJavaType(expectedType)
+    const actual = actualTypes[index]
+    return expected !== undefined && expected !== '' && (actual === expected || expectedType.endsWith(`.${actual}`))
+  })
+}
+
+/**
+ *
+ * @param node
+ * @param signature
+ */
+function matchSignature(node: JavaEntrypointFunctionNode, signature: string | undefined): boolean {
+  if (!signature) return false
+  const methodName = node.id?.name ?? node.name
+  const paramTypes = getParamTypeNames(node).join(',')
+  const compactSignature = signature.replace(/\s+/g, '')
+  return compactSignature.includes(`${methodName}(${paramTypes})`)
+}
+
+/**
+ *
+ * @param value
+ */
+function isFunctionClosureLike(value: unknown): value is FunctionClosureLike {
+  return Boolean(value && typeof value === 'object' && (value as { vtype?: unknown }).vtype === 'fclos')
+}
 
 /**
  * java taint base checker
  */
 class JavaTaintAbstractChecker extends TaintCheckerJava {
+  /**
+   *
+   * @param node
+   * @param entrypoint
+   */
+  matchEntrypointFunction(node: JavaEntrypointFunctionNode, entrypoint: JavaEntrypointConfig): boolean {
+    if (entrypoint.funcLocStart != null || entrypoint.funcLocEnd != null) {
+      const loc = getSourceLineLoc(node)
+      const startMatches = entrypoint.funcLocStart == null || loc.start === entrypoint.funcLocStart
+      const endMatches = entrypoint.funcLocEnd == null || loc.end === entrypoint.funcLocEnd
+      if (startMatches && endMatches) return true
+    }
+    return matchParamTypes(node, entrypoint.paramTypes) || matchSignature(node, entrypoint.signature)
+  }
+
+  /**
+   *
+   * @param entryPointSymVal
+   * @param entrypoint
+   */
+  resolveOverloadedEntryPoint(entryPointSymVal: unknown, entrypoint: JavaEntrypointConfig): unknown {
+    const hasDisambiguator =
+      entrypoint.funcLocStart != null ||
+      entrypoint.funcLocEnd != null ||
+      (Array.isArray(entrypoint.paramTypes) && entrypoint.paramTypes.length > 0) ||
+      typeof entrypoint.signature === 'string'
+    if (!hasDisambiguator || !isFunctionClosureLike(entryPointSymVal)) {
+      return entryPointSymVal
+    }
+
+    const candidates = [entryPointSymVal.ast?.node, ...(entryPointSymVal.overloaded ?? [])].filter(
+      (node): node is JavaEntrypointFunctionNode => Boolean(node)
+    )
+    const matchedNode = candidates.find((node) => this.matchEntrypointFunction(node, entrypoint))
+    if (!matchedNode) {
+      return entryPointSymVal
+    }
+
+    const cloned = lodashCloneWithTag(entryPointSymVal) as FunctionClosureLike
+    cloned.ast = matchedNode
+    cloned.ast.fdef = matchedNode
+    cloned.ast.node = matchedNode
+    cloned.overloaded = [matchedNode]
+    return cloned
+  }
+
   /**
    * When the entrypoint resolves to an interface/abstract method with no body,
    * find implementation classes and return their overriding methods instead.
@@ -127,17 +286,45 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
       // locStart: use the first parameter's start line when available so that the
       // source scope covers the parameter list rather than the method keyword itself.
       // This matches how initSourceScopeByTaintSourceWithLoc computes effective ranges.
-      const locStart = implAstNode?.parameters?.length > 0
-        ? implAstNode.parameters[0].loc?.start?.line
-        : implAstNode?.loc?.start?.line
+      const locStart =
+        implAstNode?.parameters?.length > 0 ? implAstNode.parameters[0].loc?.start?.line : implAstNode?.loc?.start?.line
       const locEnd = implAstNode?.loc?.end?.line
+
+      const getParamName = (paramNode: unknown): string | undefined => {
+        if (!paramNode || typeof paramNode !== 'object') return undefined
+        const paramRecord = paramNode as Record<string, unknown>
+        const idRecord =
+          paramRecord.id && typeof paramRecord.id === 'object' ? (paramRecord.id as Record<string, unknown>) : undefined
+        return typeof paramRecord.name === 'string'
+          ? paramRecord.name
+          : typeof idRecord?.name === 'string'
+            ? idRecord.name
+            : undefined
+      }
+
+      const interfaceParams = interfaceSymVal?.ast?.node?.parameters
+      const implParams = implAstNode?.parameters
+      const interfaceParamToImplParam = new Map<string, string>()
+      if (Array.isArray(interfaceParams) && Array.isArray(implParams)) {
+        const length = Math.min(interfaceParams.length, implParams.length)
+        for (let i = 0; i < length; i++) {
+          const interfaceParamName = getParamName(interfaceParams[i])
+          const implParamName = getParamName(implParams[i])
+          if (interfaceParamName && implParamName) {
+            interfaceParamToImplParam.set(interfaceParamName, implParamName)
+          }
+        }
+      }
 
       const newSources: any[] = []
       for (const source of taintSources) {
         if (source.scopeFile === interfacePath && source.scopeFunc === funcName) {
-          const key = buildSourceKey({ ...source, scopeFile: implPath })
+          const mappedPath =
+            typeof source.path === 'string' ? (interfaceParamToImplParam.get(source.path) ?? source.path) : source.path
+          const mappedSource = { ...source, scopeFile: implPath, path: mappedPath }
+          const key = buildSourceKey(mappedSource)
           if (!existingKeys.has(key)) {
-            newSources.push({ ...source, scopeFile: implPath })
+            newSources.push(mappedSource)
             existingKeys.add(key)
           }
         }
@@ -174,11 +361,27 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
    * 将接口/抽象类 entrypoint 解析为实现类，并推入 this.entryPoints。
    * 两个子类（JavaTaintChecker / JavaDefaultTaintChecker）的 prepareEntryPoints
    * 共用此方法，避免重复代码。
+   * @param entryPointSymVal
+   * @param entrypoint
+   * @param func
+   * @param analyzer
+   * @param Scoped
+   * @param EntryPoint
+   * @param Constant
    */
-  resolveAndPushEntryPoint(entryPointSymVal: any, entrypoint: any, func: string, analyzer: any, Scoped: any, EntryPoint: any, Constant: any): void {
-    const resolvedSymVals = this.resolveInterfaceEntryPoint(entryPointSymVal, func, analyzer)
-    if (resolvedSymVals.length > 0 && resolvedSymVals[0] !== entryPointSymVal) {
-      this.augmentSourcesForInterfaceResolution(entryPointSymVal, resolvedSymVals, func)
+  resolveAndPushEntryPoint(
+    entryPointSymVal: any,
+    entrypoint: JavaEntrypointConfig,
+    func: string,
+    analyzer: any,
+    Scoped: any,
+    EntryPoint: any,
+    Constant: any
+  ): void {
+    const exactEntryPointSymVal = this.resolveOverloadedEntryPoint(entryPointSymVal, entrypoint)
+    const resolvedSymVals = this.resolveInterfaceEntryPoint(exactEntryPointSymVal, func, analyzer)
+    if (resolvedSymVals.length > 0 && resolvedSymVals[0] !== exactEntryPointSymVal) {
+      this.augmentSourcesForInterfaceResolution(exactEntryPointSymVal, resolvedSymVals, func)
     }
     for (const resolvedSymVal of resolvedSymVals) {
       const scopeVal = new Scoped('', {
@@ -195,6 +398,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
       entryPoint.filePath = entrypoint.filePath
       entryPoint.attribute = entrypoint.attribute
       entryPoint.packageName = entrypoint.packageName
+      entryPoint.funcLocStart = entrypoint.funcLocStart
+      entryPoint.funcLocEnd = entrypoint.funcLocEnd
       entryPoint.entryPointSymVal = resolvedSymVal
       this.entryPoints.push(entryPoint)
     }
@@ -273,7 +478,6 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     const funcCallArgTaintSource = this.checkerRuleConfigContent.sources?.FuncCallArgTaintSource
     IntroduceTaintJava.introduceFuncArgTaintByRuleConfig(fclos?.object, node, callInfo, funcCallArgTaintSource)
     this.checkByNameAndClassMatch(node, fclos, callInfo, scope, state, info, analyzer)
-    // this.checkByFieldMatch(node, fclos, callInfo, scope, state, info)
   }
 
   /**
@@ -311,12 +515,21 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
    * @param node
    * @param fclos
    * @param argvalues
+   * @param callInfo
    * @param scope
    * @param state
    * @param info
    * @param analyzer
    */
-  checkByNameAndClassMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any, info: any, analyzer: any) {
+  checkByNameAndClassMatch(
+    node: any,
+    fclos: any,
+    callInfo: CallInfo | undefined,
+    scope: any,
+    state: any,
+    info: any,
+    analyzer: any
+  ) {
     let sinkRules
     if (RulesJava.getPreprocessReady()) {
       if (!this.sinkRuleArray) {
@@ -334,16 +547,16 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
         if (this.matchSinkRuleResultMap.has(node._meta.nodehash)) {
           rules = this.matchSinkRuleResultMap.get(node._meta.nodehash)
         } else {
-          rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope)
+          rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope, callInfo)
           this.appendCgRules(rules, node, scope, sinkRules, analyzer)
           this.matchSinkRuleResultMap.set(node._meta.nodehash, rules)
         }
       } else {
-        rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope)
+        rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope, callInfo)
         this.appendCgRules(rules, node, scope, sinkRules, analyzer)
       }
     } else {
-      rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope)
+      rules = matchSinkAtFuncCallWithCalleeTypeJava(node, fclos, sinkRules, scope, callInfo)
       this.appendCgRules(rules, node, scope, sinkRules, analyzer)
     }
 
@@ -374,35 +587,55 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
       )
       if (ndResultWithMatchedSanitizerTagsArray) {
         // precondition 检查：sink rule 声明了 preconditionIds 时，taint 上命中任一 precondition tag（OR 语义）即保留 finding
-        const preconditionIds: string[] | undefined = rule.preconditionIds
+        const { preconditionIds } = rule
         if (preconditionIds && preconditionIds.length > 0) {
           // 从 args 的 taint flow 中收集所有 tags，用于 precondition 匹配
           const allTaintTags: unknown[] = []
+          // 先收集 args 自身的 tags：args 起点可能不被 fCollectTags 过滤捕获，
+          // 例如 receiver 被 checkAndTagPreconditions.addSanitizerInSymbolValue 直接打了
+          // SanitizerTag 但本身没 JAVA_INPUT 时，satisfy BFS 会跳过起点进子节点找含
+          // JAVA_INPUT 的 buffer 项，导致 args 自身 SanitizerTag 被漏
+          const argsArrForTags = Array.isArray(args) ? args : [args]
+          for (const a of argsArrForTags) {
+            // SanitizerTag 独立存放在 sanitizerTags 中，需通过专用接口读取。
+            const sanitizerTags = a?.taint?.getSanitizerTags?.()
+            if (sanitizerTags && sanitizerTags.length > 0) {
+              allTaintTags.push(...sanitizerTags)
+            }
+          }
           const fCollectTags = (nd: { taint?: { tags?: unknown[]; tagTraces?: Map<string, unknown> } }): boolean => {
             const tagTraceMap = nd?.taint?.tagTraces
             if (!(tagTraceMap instanceof Map)) return false
             return tagTraceMap.has(TAINT_TAG_NAME_JAVA)
           }
-          const collectCallback = (nd: { taint?: { getTags?: () => unknown[] } }, _from: unknown, parentMap: WeakMap<object, object>): void => {
-            // 收集当前 nd 及其 parent 链上所有节点的 taint tags
-            const parentNdList: Array<{ taint?: { getTags?: () => unknown[] } }> = []
-            let currentNd: { taint?: { getTags?: () => unknown[] } } | undefined = nd
+          const collectCallback = (
+            nd: { taint?: { getSanitizerTags?: () => unknown[] } },
+            _from: unknown,
+            parentMap: WeakMap<object, object>
+          ): void => {
+            // 收集当前 nd 及其 parent 链上所有节点的 SanitizerTag 对象
+            const parentNdList: Array<{ taint?: { getSanitizerTags?: () => unknown[] } }> = []
+            let currentNd: { taint?: { getSanitizerTags?: () => unknown[] } } | undefined = nd
             while (currentNd) {
               if (parentNdList.includes(currentNd)) break
               parentNdList.push(currentNd)
-              currentNd = parentMap.get(currentNd as object) as { taint?: { getTags?: () => unknown[] } } | undefined
+              currentNd = parentMap.get(currentNd as object) as
+                { taint?: { getSanitizerTags?: () => unknown[] } } | undefined
             }
             for (const parentNd of parentNdList) {
-              // getTags() 返回 tagTraces 的 key 列表（含 SanitizerTag 对象）
-              const tags = parentNd.taint?.getTags?.()
-              if (tags && tags.length > 0) {
-                allTaintTags.push(...tags)
+              // getSanitizerTags() 返回旁路的 SanitizerTagValue 对象集合
+              const sanitizerTags = parentNd.taint?.getSanitizerTags?.()
+              if (sanitizerTags && sanitizerTags.length > 0) {
+                allTaintTags.push(...sanitizerTags)
               }
             }
           }
           satisfy(args, fCollectTags, defaultFilter, undefined, true, 30, collectCallback)
 
-          const matchedPreconditionTags = SanitizerCheckerJava.findMatchedPreconditionTags(preconditionIds, allTaintTags)
+          const matchedPreconditionTags = SanitizerCheckerJava.findMatchedPreconditionTags(
+            preconditionIds,
+            allTaintTags
+          )
           // 多个 preconditionIds 采用 OR 语义：任一命中即保留 finding
           const matchedIds = new Set(matchedPreconditionTags.map((t: { id?: string }) => t.id))
           if (matchedIds.size === 0) {
@@ -489,132 +722,26 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
   }
 
   /**
-   * check if sink or not by obj value
-   * @param node
-   * @param fclos
-   * @param argvalues
-   * @param scope
-   * @param state
-   * @param info
+   * 检查 subTypeName 是否是 superTypeName 的子类或实现类
+   * 通过 typeResolver 的 classHierarchyMap 沿继承链向上查找
+   * @param subTypeName 子类全限定名
+   * @param superTypeName 父类/接口全限定名
+   * @param analyzer 分析器实例
    */
-  checkByFieldMatch(node: any, fclos: any, callInfo: CallInfo | undefined, scope: any, state: any, info: any) {
-    let rules
-    if (RulesJava.getPreprocessReady()) {
-      if (!this.sinkRuleArray) {
-        this.sinkRuleArray = this.assembleFunctionCallSinkRule()
-      }
-      rules = this.sinkRuleArray
-    } else {
-      rules = this.assembleFunctionCallSinkRule()
+  isSubTypeOf(subTypeName: string, superTypeName: string, analyzer?: JavaAnalyzerWithTypeResolver): boolean {
+    if (!subTypeName || !superTypeName || subTypeName === superTypeName) {
+      return subTypeName === superTypeName
     }
-    if (!rules) return
-
-    let matched = false
-    rules.some((rule: any) => {
-      if (typeof rule.fsig !== 'string') {
-        return false
-      }
-      if (!rule.fsig.includes('.') && rule.calleeType === undefined) {
-        return false // 不包含.的使用checkByNameMatch
-      }
-      const paths = rule.fsig.split('.')
-      const lastIndex = rule.fsig.lastIndexOf('.')
-      let RuleObj
-      if (rule.calleeType) {
-        RuleObj = rule.calleeType
-      } else {
-        RuleObj = rule.fsig.substring(0, lastIndex)
-      }
-
-      if (RuleObj === undefined && lastIndex === -1) {
-        RuleObj = rule.fsig
-      }
-      const ruleCallName = paths[paths.length - 1]
-      let callName
-      const { callee } = node
-      if (!callee) return false
-      if (callee.type === 'MemberAccess') {
-        callName = callee.property.name
-      } else {
-        // Identifier
-        callName = callee.name
-      }
-      const CallFull = this.getObj(fclos)
-      if (typeof CallFull === 'undefined') {
-        return false
-      }
-      const lastIndexofCall = CallFull.lastIndexOf('.')
-      if (ruleCallName !== '*' && ruleCallName !== callName) {
-        if (lastIndexofCall >= 0) {
-          // 补偿获取一次callName
-          callName = CallFull.substring(lastIndexofCall + 1)
-          if (ruleCallName !== callName && rule.fsig.includes('.')) {
-            return false
-          }
-        }
-      }
-
-      let CallObj = CallFull
-      if (lastIndexofCall >= 0) {
-        CallObj = CallFull.substring(0, lastIndexofCall)
-      }
-      if (CallObj !== RuleObj && RuleObj !== '*') {
-        return false
-      }
-
-      const create = false
-
-      IntroduceTaintJava.matchAndMark(
-        paths,
-        scope,
-        rule,
-        () => {
-          matched = true
-        },
-        create
-      )
-      if (matched) {
-        const args = RulesJava.prepareArgs(callInfo, fclos, rule)
-        const sanitizers = SanitizerCheckerJava.findSanitizerByIds(rule.sanitizerIds)
-        const ndResultWithMatchedSanitizerTagsArray = SanitizerCheckerJava.findTagAndMatchedSanitizer(
-          node,
-          fclos,
-          args,
-          scope,
-          TAINT_TAG_NAME_JAVA,
-          true,
-          sanitizers
-        )
-        if (ndResultWithMatchedSanitizerTagsArray) {
-          for (const ndResultWithMatchedSanitizerTags of ndResultWithMatchedSanitizerTagsArray) {
-            const { nd } = ndResultWithMatchedSanitizerTags
-            const { matchedSanitizerTags } = ndResultWithMatchedSanitizerTags
-            let ruleName = rule.fsig
-            if (typeof rule.attribute !== 'undefined') {
-              const attrStr = Array.isArray(rule.attribute) ? rule.attribute.join(',') : rule.attribute
-              ruleName += `\nSINK Attribute: ${attrStr}`
-            }
-            const taintFlowFinding = this.buildTaintFinding(
-              this.getCheckerId(),
-              this.desc,
-              node,
-              nd,
-              fclos,
-              TAINT_TAG_NAME_JAVA,
-              ruleName,
-              matchedSanitizerTags,
-              state.callstack,
-              state.callsites
-            )
-
-            if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue
-            this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyJava.outputStrategyId)
-          }
-          return true
-        }
-      }
-      matched = false
-    })
+    const typeResolver = analyzer?.typeResolver
+    if (!typeResolver?.classHierarchyMap) {
+      return false
+    }
+    const classHierarchy = typeResolver.classHierarchyMap.get(subTypeName)
+    if (!classHierarchy) {
+      return false
+    }
+    const baseTypes: string[] = typeResolver.findBaseTypes(classHierarchy)
+    return baseTypes.includes(superTypeName)
   }
 
   /**

@@ -5,7 +5,7 @@ const _ = require('lodash')
 const Rules = require('../../common/rules-basic-handler')
 const IntroduceTaint = require('../common-kit/source-util')
 const IntroduceTaintForJs = require('./source-util-for-egg')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const constValue = require('../../../util/constant')
 const commonUtil = require('../../../util/common-util')
 const loader = require('../../../util/loader')
@@ -28,8 +28,8 @@ class JsTaintChecker extends TaintChecker {
    *
    * @param resultManager
    */
-  constructor(resultManager: any) {
-    super(resultManager, 'taint_flow_js_input')
+  constructor(resultManager: any, checkerId = 'taint_flow_js_input') {
+    super(resultManager, checkerId)
     this.entryPoints = []
   }
 

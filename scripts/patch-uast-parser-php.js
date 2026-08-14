@@ -12,7 +12,7 @@
  * 条目，wasm 走 asset 路径原始字节嵌入。
  *
  * 幂等：已 patch 时检测 marker 跳过。
- * 自检：找不到原始 pattern 或 uast-parser-php 版本不匹配 → exit 1。
+ * 自检：找不到原始 pattern 且未检测到已 patch marker → exit 1。
  */
 
 const fs = require('fs')
@@ -35,8 +35,6 @@ const PKG_JSON = path.join(
   'uast-parser-php',
   'package.json'
 )
-
-const SUPPORTED_VERSIONS = ['0.2.12', '0.2.13']
 
 // ─── 原始 pattern ───
 // require.resolve('tree-sitter-php/tree-sitter-php.wasm')
@@ -71,17 +69,8 @@ function main() {
     fail(`uast-parser-php package.json not found: ${PKG_JSON}`)
   }
 
-  // 版本断言
   const pkg = JSON.parse(fs.readFileSync(PKG_JSON, 'utf-8'))
   const version = pkg.version
-  if (!SUPPORTED_VERSIONS.includes(version)) {
-    fail(
-      `uast-parser-php version ${version} not in supported list [${SUPPORTED_VERSIONS.join(
-        ', '
-      )}]. 升级了 uast-parser-php 请同步更新 scripts/patch-uast-parser-php.js 的 SUPPORTED_VERSIONS 和 pattern。`
-    )
-  }
-
   const content = fs.readFileSync(TARGET_FILE, 'utf-8')
 
   // 幂等：已被 patch 直接返回

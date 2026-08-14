@@ -12,6 +12,10 @@ const { execute } = require('../../src/interface/starter')
 const logger = require('../../src/util/logger')(__filename)
 
 const taint_flow_name = ['taint_flow_test', 'taintflow']
+const phpBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-php/')
+// 默认严格校验；显式启用时只生成候选预期，绝不覆盖基线。
+const updateExpectMode = ['YASA_UPDATE_PHP_BENCHMARK_EXPECT', 'UPDATE_PHP_BENCHMARK_EXPECT']
+  .some((name) => /^(1|true)$/i.test(process.env[name] || ''))
 
 /** 测试单元：单文件或跨文件目录 */
 interface TestUnit {
@@ -65,7 +69,7 @@ function getAllTestUnits(rootDir: string): TestUnit[] {
   }
 
   scan(rootDir)
-  return units
+  return units.sort((left, right) => left.label.localeCompare(right.label))
 }
 
 /** 判断目录内是否包含 .php 文件 */
@@ -96,8 +100,8 @@ function statisticImpactArea(findingResMap: Map<string, any>): string {
   let loginfo: string[] = []
 
   const total = TP.size + TN.size + FP.size + FN.size
-  const precision = TP.size + TN.size > 0 ? (TP.size / (TP.size + TN.size) * 100).toFixed(2) : '0.00'
-  const recall = TP.size + FP.size > 0 ? (TP.size / (TP.size + FP.size) * 100).toFixed(2) : '0.00'
+  const precision = TP.size + TN.size > 0 ? ((TP.size / (TP.size + TN.size)) * 100).toFixed(2) : '0.00'
+  const recall = TP.size + FP.size > 0 ? ((TP.size / (TP.size + FP.size)) * 100).toFixed(2) : '0.00'
 
   loginfo.push('='.repeat(50))
   loginfo.push(`回归case总数:${findingResMap.size}`)
@@ -181,7 +185,11 @@ function getTFPN(findingResMap: Map<string, any>): {
   return { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown }
 }
 
-async function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): Promise<Record<string, string>> {
+async function runSingleTest(
+  casePath: string,
+  actualResMap: Map<string, any>,
+  outputStrategyAutoRegister: any
+): Promise<Record<string, string>> {
   config.ruleConfigFile = __dirname + '/rule_config.json'
   config.checkerIds = ['taint_flow_test', 'sanitizer']
   config.language = 'php'
@@ -231,7 +239,8 @@ async function runDirectoryTest(
   dirPath: string,
   label: string,
   actualResMap: Map<string, any>,
-  _outputStrategyAutoRegister: any
+  _outputStrategyAutoRegister: any,
+  analysisFailure: { failed: boolean }
 ): Promise<Record<string, string>> {
   const ruleConfigFile = __dirname + '/rule_config.json'
   const reportDir = path.join(__dirname, 'report')
@@ -239,11 +248,17 @@ async function runDirectoryTest(
 
   const args: string[] = [
     dirPath,
-    '--ruleConfigFile', ruleConfigFile,
-    '--analyzer', 'PhpAnalyzer',
-    '--checkerIds', 'taint_flow_test,sanitizer',
-    '--report', reportDir,
+    '--ruleConfigFile',
+    ruleConfigFile,
+    '--analyzer',
+    'PhpAnalyzer',
+    '--checkerIds',
+    'taint_flow_test,sanitizer',
+    '--report',
+    reportDir,
   ]
+  const caseConfigPath = path.join(dirPath, 'config.json')
+  if (fs.existsSync(caseConfigPath)) args.push('--config', caseConfigPath)
 
   try {
     const allFindings = await execute(null, args, recorder.printAndAppend)
@@ -257,54 +272,63 @@ async function runDirectoryTest(
         }
       }
     } else {
+      analysisFailure.failed = true
+      handleException(
+        new Error(`目录分析未返回有效结果: ${label}`),
+        `[PHP Benchmark] 目录分析失败: ${label}`,
+        `[PHP Benchmark] 目录分析失败: ${label}`
+      )
       findingRecord['taint_flow_test'] = 0
     }
     actualResMap.set(label, findingRecord)
   } catch (e) {
-    handleException(
-      e,
-      `[PHP Benchmark] 目录分析失败: ${label}`,
-      `[PHP Benchmark] 目录分析失败: ${label}`
-    )
+    analysisFailure.failed = true
+    handleException(e, `[PHP Benchmark] 目录分析失败: ${label}`, `[PHP Benchmark] 目录分析失败: ${label}`)
     actualResMap.set(label, { taint_flow_test: 0 })
   }
 
   return { [label]: recorder.getFormatResult() }
 }
 
-async function update(dir: string): Promise<void> {
+interface CollectionResult {
+  actualRes: Record<string, string>
+  actualResMap: Map<string, any>
+}
+
+async function collect(dir: string): Promise<CollectionResult> {
   const casePath = path.join(dir, 'case')
   const allUnits = getAllTestUnits(casePath)
   const actualRes: Record<string, string> = {}
   const actualResMap = new Map<string, any>()
   const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+  const analysisFailure = { failed: false }
   outputStrategyAutoRegister.autoRegisterAllStrategies()
 
   for (const unit of allUnits) {
     try {
-      if (unit.type === 'file') {
-        const singleRes = await runSingleTest(unit.path, actualResMap, outputStrategyAutoRegister)
-        Object.assign(actualRes, singleRes)
-      } else {
-        const dirRes = await runDirectoryTest(unit.path, unit.label, actualResMap, outputStrategyAutoRegister)
-        Object.assign(actualRes, dirRes)
-      }
+      const result = unit.type === 'file'
+        ? await runSingleTest(unit.path, actualResMap, outputStrategyAutoRegister)
+        : await runDirectoryTest(unit.path, unit.label, actualResMap, outputStrategyAutoRegister, analysisFailure)
+      Object.assign(actualRes, result)
     } catch (e) {
-      handleException(
-        e,
-        `[PHP Benchmark] update 用例执行失败: ${unit.label}`,
-        `[PHP Benchmark] update 用例执行失败: ${unit.label}`
-      )
+      analysisFailure.failed = true
+      handleException(e, `[PHP Benchmark] 用例执行失败: ${unit.label}`, `[PHP Benchmark] 用例执行失败: ${unit.label}`)
     }
   }
 
-  const expectDir = path.join(__dirname, 'expect')
-  if (!fs.existsSync(expectDir)) {
-    fs.mkdirSync(expectDir, { recursive: true })
+  if (analysisFailure.failed) {
+    throw new Error('[PHP Benchmark] 分析失败，拒绝生成预期结果')
   }
+  return { actualRes, actualResMap }
+}
+
+function writeCandidateExpect(actualRes: Record<string, string>): void {
+  const expectDir = path.join(__dirname, 'expect')
+  if (!fs.existsSync(expectDir)) fs.mkdirSync(expectDir, { recursive: true })
+  const sortedKeys = Object.keys(actualRes).sort()
   fs.writeFileSync(
-    path.join(expectDir, 'phpbenchmark-expect.json'),
-    JSON.stringify(actualRes),
+    path.join(expectDir, 'phpbenchmark-expect.json.candidate'),
+    JSON.stringify(actualRes, sortedKeys, 2) + '\n',
     { encoding: 'utf8' }
   )
 }
@@ -312,7 +336,6 @@ async function update(dir: string): Promise<void> {
 describe('YASA test All PhpBenchmarks', function () {
   this.timeout(600000)
 
-  const phpBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-php/')
   if (!fs.existsSync(phpBenchmarkPath)) return
 
   const expectPath = path.join(__dirname, 'expect', 'phpbenchmark-expect.json')
@@ -325,28 +348,10 @@ describe('YASA test All PhpBenchmarks', function () {
       throw new Error(`PHP benchmark case 路径不存在: ${casePath}，请先运行 prepare-php-benchmark`)
     }
 
-    const allUnits = getAllTestUnits(casePath)
-    const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
-    outputStrategyAutoRegister.autoRegisterAllStrategies()
-
-    for (const unit of allUnits) {
-      try {
-        if (unit.type === 'file') {
-          const singleRes = await runSingleTest(unit.path, actualResMap, outputStrategyAutoRegister)
-          Object.assign(actualRes, singleRes)
-        } else {
-          const dirRes = await runDirectoryTest(unit.path, unit.label, actualResMap, outputStrategyAutoRegister)
-          Object.assign(actualRes, dirRes)
-        }
-      } catch (e) {
-        handleException(
-          e,
-          `[PHP Benchmark] 用例执行失败: ${unit.label}`,
-          `[PHP Benchmark] 用例执行失败: ${unit.label}`
-        )
-        actualResMap.set(unit.label, { taint_flow_test: 0 })
-      }
-    }
+    const collected = await collect(phpBenchmarkPath)
+    Object.assign(actualRes, collected.actualRes)
+    for (const [key, value] of collected.actualResMap) actualResMap.set(key, value)
+    if (updateExpectMode) writeCandidateExpect(actualRes)
   })
 
   it('准召率统计', function () {
@@ -355,10 +360,10 @@ describe('YASA test All PhpBenchmarks', function () {
     console.log(testReport)
   })
 
-  if (fs.existsSync(expectPath)) {
-    const expectedRes = JSON.parse(fs.readFileSync(expectPath).toString())
+  if (!updateExpectMode && fs.existsSync(expectPath)) {
+    const expectedRes: Record<string, string> = JSON.parse(fs.readFileSync(expectPath).toString())
     let i = 1
-    for (const caseKey of Object.keys(expectedRes)) {
+    for (const caseKey of Object.keys(expectedRes).sort()) {
       it(`${i++}-case:${caseKey}`, function () {
         logger.info('expected:\n' + expectedRes[caseKey])
         logger.info('actual:\n' + actualRes[caseKey])
@@ -373,7 +378,11 @@ describe('YASA test All PhpBenchmarks', function () {
         }
       })
     }
+
+    for (const caseKey of Object.keys(actualRes).sort()) {
+      it(`新增case:${caseKey}`, function () {
+        assert.ok(_.has(expectedRes, caseKey), `链路:${caseKey}未记录在预期结果中`)
+      })
+    }
   }
 })
-
-// update(path.resolve(__dirname, 'benchmarks/sast-php/'))

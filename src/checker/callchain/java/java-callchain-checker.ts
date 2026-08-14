@@ -44,7 +44,7 @@ class JavaCallchainChecker extends CallchainChecker {
     const { topScope } = analyzer
     const AstUtil = require('../../../util/ast-util')
     const Config = require('../../../config')
-    const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+    const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
     const logger = require('../../../util/logger')(__filename)
 
     // 直接从 analyzer.checkerManager.Rules 获取规则配置

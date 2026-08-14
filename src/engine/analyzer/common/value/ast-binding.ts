@@ -104,4 +104,25 @@ export class AstBinding {
     c._declsMap = this._declsMap ? new Map(this._declsMap) : undefined
     return c
   }
+
+  /** 从反序列化的 nodehash 字符串恢复引用（缓存恢复专用） */
+  static fromSerializedRefs(
+    owner: { getASTManager(): AstNodeManager | null },
+    nodeRefHash?: string | null,
+    fdefRefHash?: string | null,
+    cdefRefHash?: string | null,
+    declsMap?: Map<string, string> | null
+  ): AstBinding {
+    const binding = new AstBinding(owner)
+    if (nodeRefHash) binding._nodeRef = new AstRef(nodeRefHash)
+    if (fdefRefHash) binding._fdefRef = new AstRef(fdefRefHash)
+    if (cdefRefHash) binding._cdefRef = new AstRef(cdefRefHash)
+    if (declsMap && declsMap.size > 0) {
+      binding._declsMap = new Map()
+      for (const [key, hash] of declsMap.entries()) {
+        binding._declsMap.set(key, new AstRef(hash))
+      }
+    }
+    return binding
+  }
 }

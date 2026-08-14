@@ -5,8 +5,45 @@ interface TraceItem {
   file?: string
   line?: number | number[]
   tag?: string
-  node?: any
+  source_owner_ep?: string
+  node?: {
+    loc?: { sourcefile?: string; start?: { line?: number; column?: number }; end?: { line?: number; column?: number } }
+    _meta?: { nodehash?: unknown }
+    id?: { name?: string; loc?: { start?: { line?: number } } }
+    body?: { loc?: { start?: { line?: number } } }
+  }
   affectedNodeName?: string
+  _synthetic?: boolean
+  _orphanCall?: boolean
+  /** trace 生成阶段标记的回调边及其闭包归属。 */
+  _callbackEdge?: boolean
+  _callbackClosureOwnerHash?: string
+  str?: string
+}
+
+export interface TraceWriteOptions {
+  callbackEdge?: boolean
+  callbackClosureOwnerHash?: string
+}
+
+export type { TraceItem }
+
+
+interface TraceTaintCarrier {
+  type?: 'MemberAccess' | 'BinaryExpression' | 'UnaryOperation' | 'FunctionCall' | string
+  taint?: {
+    isTaintedRec?: boolean
+    getFirstTrace?: () => TraceItem[] | null
+    getTrace?: (tag: string) => TraceItem[] | null
+    containsTag?: (tag: string) => boolean
+  }
+  object?: TraceTaintCarrier
+  property?: TraceTaintCarrier
+  left?: TraceTaintCarrier
+  right?: TraceTaintCarrier
+  subExpression?: TraceTaintCarrier
+  expression?: TraceTaintCarrier
+  arguments?: TraceTaintCarrier[]
 }
 
 interface RangePosition {
@@ -20,16 +57,29 @@ interface RangePosition {
  * @param lines
  * @param tagName
  */
-function getBwdTrace(root: any, lines: TraceItem[], tagName?: string): void {
+function getBwdTrace(root: TraceTaintCarrier | TraceTaintCarrier[] | undefined | null, lines: TraceItem[], tagName?: string): void {
   if (!root) return
 
-  const worklist = [root]
+  const worklist: Array<{ node: any; depth: number }> = [{ node: root, depth: 0 }]
   const visited = new Set()
+  const maxDepth = tagName ? 8 : Number.POSITIVE_INFINITY
   while (worklist.length > 0) {
-    const node = worklist.shift()
-    if (!node || visited.has(node)) continue
+    const current = worklist.shift()
+    if (!current) break
+    const { node, depth } = current
+    if (!node || visited.has(node) || depth > maxDepth) continue
     visited.add(node)
-    const trace = node.taint.getFirstTrace()
+
+    const enqueue = (child: any): void => {
+      if (child && typeof child === 'object' && !visited.has(child)) worklist.push({ node: child, depth: depth + 1 })
+    }
+
+    if (Array.isArray(node)) {
+      for (const child of node) enqueue(child)
+      continue
+    }
+    if (!node.taint) continue
+    const trace = tagName ? node.taint.getTrace?.(tagName) : node.taint.getFirstTrace?.()
     if (trace && trace.length > 0) {
       for (let i = trace.length - 1; i >= 0; i--) {
         const item = trace[i]
@@ -37,46 +87,55 @@ function getBwdTrace(root: any, lines: TraceItem[], tagName?: string): void {
         if (!prev_item || prev_item.file !== item.file || prev_item.line !== item.line || prev_item.tag !== item.tag)
           lines.push(item)
       }
-      if (tagName && node?.taint.containsTag(tagName)) {
+      if (tagName && (node?.taint.containsTag?.(tagName) || trace.some((item: TraceItem) => item?.tag === 'SOURCE: '))) {
         return
       }
     }
 
-    // now go through the sub nodes
-    if (Array.isArray(node)) {
-      for (const child of node) {
-        worklist.push(child)
+    if (!node.taint?.isTaintedRec) continue
+
+    const buffer = typeof node.getMisc === 'function' ? node.getMisc('buffer') : node.misc_?.buffer
+    if (Array.isArray(buffer)) for (const child of buffer) enqueue(child)
+    if (node.vtype === 'union' && Array.isArray(node.value)) {
+      for (const child of node.value) enqueue(child)
+    } else if (node.value && typeof node.value === 'object') {
+      for (const child of Object.values(node.value)) enqueue(child)
+    }
+    const members = node._members
+    if (members && typeof members.forEach === 'function') {
+      try {
+        members.forEach((child: any) => enqueue(child))
+      } catch (_error) {
+        // 代理成员可能抛出迭代异常，忽略后继续其它路径。
       }
-      continue
     }
 
+    // 子节点遍历（数组分支已在出队前处理）
     if (!node.type) continue
-    if (!node.taint?.isTaintedRec) continue
 
     switch (node.type) {
       case 'MemberAccess': {
-        worklist.push(node.object)
-        worklist.push(node.property)
+        enqueue(node.object)
+        enqueue(node.property)
         break
       }
       case 'BinaryExpression': {
-        worklist.push(node.left)
-        worklist.push(node.right)
+        enqueue(node.left)
+        enqueue(node.right)
         break
       }
       case 'UnaryOperation': {
-        worklist.push(node.subExpression)
+        enqueue(node.subExpression)
         break
       }
       case 'FunctionCall': {
-        worklist.push(node.expression)
-        worklist.push(node.arguments)
+        enqueue(node.expression)
+        enqueue(node.arguments)
         break
       }
     } // end switch
   } // end for
 }
-
 /**
  * remove the shared prefix of the file paths
  * @param original
@@ -135,7 +194,9 @@ function convertNode2Range(node: any): RangePosition[] {
  * @param node
  * @param tagName
  */
-function getTrace(node: any, tagName?: string): TraceItem[] {
+function getTrace(node: TraceTaintCarrier | undefined | null, tagName?: string): TraceItem[] {
+  const direct = tagName && node?.taint?.getTrace?.(tagName)
+  if (Array.isArray(direct) && direct.length > 0) return [...direct]
   const res: TraceItem[] = []
   getBwdTrace(node, res, tagName)
   return res.reverse()

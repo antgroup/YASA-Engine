@@ -4,20 +4,38 @@
  * 覆盖 rule_config 中 fsig 字段（用 . 拼接的方法路径）与 AST 节点的匹配规则：
  * - Identifier 终止：fsig 最末段匹配 Identifier 名
  * - MemberAccess 链：a.b.c 形态的成员访问
- * - CallExpression 中段：a.b().c 形态的链式调用（本任务新增）
+ * - CallExpression 中段：a.b().c 形态的链式调用
  * - 混合：MemberAccess + CallExpression 交替
  * - 通配：`**` 任意前缀、末尾 `*` 前缀匹配
  * - 边界：i === 0 约束，阻止多余前缀被忽略
  */
 import { describe, it } from 'mocha'
 import * as assert from 'assert'
-import { matchField } from '../../src/checker/common/rules-basic-handler'
+import { matchField, prepareArgsByType } from '../../src/checker/common/rules-basic-handler'
+const Analyzer = require('../../src/engine/analyzer/common/analyzer')
+import { ObjectValue } from '../../src/engine/analyzer/common/value/object'
+import { PrimitiveValue } from '../../src/engine/analyzer/common/value/primitive'
 
 // ========================= AST fixture 构造器 =========================
 
 interface AstNode {
   type: string
-  [key: string]: any
+  [key: string]: unknown
+}
+
+type AnalyzerTestAccess = {
+  shouldApplyLibPropagationForCallableWithBody: (node: unknown, fclos: unknown, callInfo: unknown, scope: unknown) => boolean
+}
+
+type TestFunctionClosure = {
+  ast: { fdef: { type: 'FunctionDefinition'; body: unknown[] } }
+  runtime?: { execute?: unknown }
+  vtype: 'fclos'
+  object: ObjectValue
+  property: string
+  rtype: { definiteType: { name: string }; vagueType: string }
+  sid: string
+  qid: string
 }
 
 function id(name: string): AstNode {
@@ -93,7 +111,7 @@ describe('matchField', () => {
     })
   })
 
-  describe('CallExpression 中段（本任务新增）', () => {
+  describe('CallExpression 中段', () => {
     it('fsig "b.c" 匹配 a.b().c（callee.object=CallExpression，再递归到 Identifier a 的 i===0）', () => {
       // AST: MemberAccess(object=CallExpression(callee=MemberAccess(a, b)), property=c)
       const node = member(call(member(id('a'), 'b')), 'c')
@@ -120,7 +138,7 @@ describe('matchField', () => {
       assert.strictEqual(matches(node, 'a.c'), true)
     })
 
-    it('fsig "b.c" 匹配 a.b.c（原 MemberAccess 行为保留，不受新分支影响）', () => {
+    it('fsig "b.c" 匹配 a.b.c（MemberAccess 链路保持匹配）', () => {
       assert.strictEqual(matches(member(member(id('a'), 'b'), 'c'), 'a.b.c'), true)
     })
   })
@@ -177,7 +195,7 @@ describe('matchField', () => {
     })
   })
 
-  describe('NewExpression（本任务新增）', () => {
+  describe('NewExpression', () => {
     it('N1: fsig "Foo" 匹配 new Foo(x)', () => {
       // AST: NewExpression(callee=Identifier('Foo'))
       const node = newExpr(id('Foo'))
@@ -205,7 +223,7 @@ describe('matchField', () => {
       assert.strictEqual(matches(node, 'java.io.File'), false)
     })
 
-    it('N6: fsig "A.B" 匹配 new A().B(x)（D20 中段 + NewExpression 递归到 Identifier A）', () => {
+    it('N6: fsig "A.B" 匹配 new A().B(x)（NewExpression 递归到 Identifier A）', () => {
       // AST: CallExpression(callee=MemberAccess(object=NewExpression(callee=Identifier('A')), property='B'))
       const node = call(member(newExpr(id('A')), 'B'))
       assert.strictEqual(matches(node, 'A.B'), true)
@@ -236,5 +254,81 @@ describe('matchField', () => {
       const node = { type: 'UnknownType' } as AstNode
       assert.strictEqual(matches(node, 'a'), false)
     })
+  })
+})
+
+describe('lib schema with-body guard', () => {
+  it('真实源码同名方法不会进入 with-body schema opt-in', () => {
+    const analyzer = new Analyzer(undefined) as AnalyzerTestAccess
+    const receiver = new ObjectValue('<test>', {
+      sid: 'receiver',
+      _meta: { type: { definiteType: { name: 'com.example.SourceQueryClause' }, vagueType: 'receiver' } },
+    })
+    const arg = new PrimitiveValue('<test>', 'arg', 'tainted', 'string')
+    arg.taint.markSource()
+    arg.taint.addTag('JAVA_INPUT')
+    const fclos: TestFunctionClosure = {
+      ast: { fdef: { type: 'FunctionDefinition', body: [{ type: 'ExpressionStatement' }] } },
+      vtype: 'fclos',
+      object: receiver,
+      property: 'addQuery',
+      rtype: { definiteType: { name: 'com.example.SourceQueryClause' }, vagueType: 'addQuery' },
+      sid: 'com.example.SourceQueryClause.addQuery',
+      qid: '<global>.packageManager.com.example.SourceQueryClause.addQuery',
+    }
+    const node = {
+      type: 'CallExpression',
+      callee: { type: 'MemberAccess', object: { type: 'Identifier', name: 'receiver' }, property: { name: 'addQuery' } },
+      loc: { sourcefile: '/tmp/SourceQueryClause.java', start: { line: 1 }, end: { line: 1 } },
+    }
+    const callInfo = { callArgs: { receiver, args: [{ index: 0, value: arg, kind: 'positional' }] } }
+
+    const shouldApply = analyzer.shouldApplyLibPropagationForCallableWithBody(node, fclos, callInfo, {})
+
+    assert.strictEqual(shouldApply, false)
+    assert.strictEqual(receiver.taint.containsTag('JAVA_INPUT'), false)
+  })
+})
+
+describe('prepareArgsByType', () => {
+  function value(typeName: string, vagueType?: string): { rtype: { definiteType: { name: string }; vagueType?: string }; taint?: { isTaintedRec: boolean } } {
+    return {
+      rtype: {
+        definiteType: { name: typeName },
+        vagueType,
+      },
+    }
+  }
+
+  it('允许 builder 写入产生的 tainted 明确类型参数', () => {
+    const arg = value('com.example.Request', 'setSearchClause')
+    arg.taint = { isTaintedRec: true }
+    const args = prepareArgsByType(
+      { callArgs: { args: [{ index: 0, value: arg, kind: 'positional' }] } },
+      undefined,
+      { fsig: 'search', argTypes: ['Request'] }
+    )
+    assert.deepStrictEqual(args, [arg])
+  })
+
+  it('拒绝非 builder vagueType 的明确类型参数', () => {
+    const arg = value('com.example.Request', 'search')
+    arg.taint = { isTaintedRec: true }
+    const args = prepareArgsByType(
+      { callArgs: { args: [{ index: 0, value: arg, kind: 'positional' }] } },
+      undefined,
+      { fsig: 'search', argTypes: ['Request'] }
+    )
+    assert.deepStrictEqual(args, [])
+  })
+
+  it('拒绝未 tainted 的 builder vagueType 明确类型参数', () => {
+    const arg = value('com.example.Request', 'setSearchClause')
+    const args = prepareArgsByType(
+      { callArgs: { args: [{ index: 0, value: arg, kind: 'positional' }] } },
+      undefined,
+      { fsig: 'search', argTypes: ['Request'] }
+    )
+    assert.deepStrictEqual(args, [])
   })
 })

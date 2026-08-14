@@ -7,38 +7,90 @@ const ResultManager = require('./result-manager')
 const { getAbsolutePath, loadJSONfile, isPkgEnv } = require('../../../util/file-util')
 const { handleException } = require('./exception-handler')
 const { yasaLog } = require('../../../util/format-util')
+const Config = require('../../../config')
+const {
+  getCurrentExecutorResultBuffer,
+} = require('./entrypoint/entrypoint-executor') as typeof import('./entrypoint/entrypoint-executor')
+import type { LocalResultBuffer } from './local-result-buffer'
+import { ResultManagerProxy } from './result-manager-proxy'
+
+interface DataflowCallHooksModule {
+  onFunctionCallBefore: (analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown) => void
+  onFunctionCallAfter: (analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown) => void
+  onNewExprAfter: (analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown) => void
+}
+
+let dataflowCallHooks: DataflowCallHooksModule | null = null
+
+function loadDataflowCallHooks(): DataflowCallHooksModule {
+  if (!dataflowCallHooks) {
+    dataflowCallHooks = require('./dataflow-call-hooks') as DataflowCallHooksModule
+  }
+  return dataflowCallHooks
+}
 
 /**
- * Smart checker path resolution: prioritize src/.ts, then dist/.js
+ * checker 路径解析：按入口环境分流，避免 src/dist 双重加载导致 module-scope 状态分裂
+ *
+ * 分流策略：
+ * - pkg 打包模式（/snapshot/...）：dist/ 是唯一可执行产物，优先 dist/.js
+ * - 非 pkg 开发模式（tsx / ts-node / node dist/main.js）：从主入口反推项目根，并与主入口加载路径保持一致
+ *   - 主入口在 dist/ 下（node dist/main.js）→ 优先 dist/.js
+ *   - 主入口在 src/ 下（tsx src/main.ts）→ 优先 src/.ts
+ *
+ * 不一致会导致同一逻辑 module 出现两份实例（src .ts 与 dist .js），module-scope
+ * 变量（如 rules-basic-handler 的 preprocessReady）分裂，taint source mark 失效。
  * @param checkerPath
  */
+function resolveProjectRootFromMainFile(mainFile: string | undefined, isPkg: boolean): string {
+  if (typeof mainFile !== 'string') {
+    return process.cwd()
+  }
+  const srcIdx = mainFile.indexOf(`${path.sep}src${path.sep}`)
+  if (srcIdx > 0) {
+    return mainFile.slice(0, srcIdx)
+  }
+  const distIdx = mainFile.indexOf(`${path.sep}dist${path.sep}`)
+  if (distIdx > 0) {
+    return mainFile.slice(0, distIdx)
+  }
+  if (isPkg) {
+    // pkg 二进制路径没有 src/dist 标记时，只能从主文件目录兜底回退。
+    return path.resolve(path.dirname(mainFile), '..')
+  }
+  const moduleRoot = path.resolve(__dirname, '../../../..')
+  if (fs.existsSync(path.join(moduleRoot, 'resource/checker/checker-config.json'))) {
+    return moduleRoot
+  }
+  return process.cwd()
+}
+
 function resolveCheckerPath(checkerPath: string): string {
   if (path.isAbsolute(checkerPath)) {
     return checkerPath
   }
   const mainFile = require.main?.filename || process.execPath
   const isPkg = isPkgEnv(mainFile)
-  let projectRoot = process.cwd()
-  if (isPkg) {
-    const distIdx = mainFile.indexOf('/dist/')
-    if (distIdx > 0) {
-      projectRoot = mainFile.slice(0, distIdx) // /snapshot/<project>
-    } else {
-      // 兜底：取主文件目录再回退一级
-      projectRoot = path.resolve(path.dirname(mainFile), '..')
-    }
-  }
+  const projectRoot = resolveProjectRootFromMainFile(mainFile, isPkg)
 
-  // 优先加载dist/.js
   const distJsPath = path.join(projectRoot, 'dist', checkerPath.replace(/\.ts$/, '.js'))
-  if (fs.existsSync(distJsPath)) {
-    return distJsPath
-  }
-
-  // 开发环境：优先 src/.ts
   const srcTsPath = path.join(projectRoot, 'src', checkerPath)
-  if (fs.existsSync(srcTsPath)) {
-    return srcTsPath
+
+  if (isPkg) {
+    // 打包分发：dist 唯一产物
+    if (fs.existsSync(distJsPath)) return distJsPath
+    if (fs.existsSync(srcTsPath)) return srcTsPath
+  } else {
+    // 开发模式：跟随主入口加载方式，避免 src/dist 双重实例
+    const mainFromDist = typeof mainFile === 'string' && mainFile.includes(`${path.sep}dist${path.sep}`)
+    if (mainFromDist) {
+      if (fs.existsSync(distJsPath)) return distJsPath
+      if (fs.existsSync(srcTsPath)) return srcTsPath
+    } else {
+      // tsx / ts-node：主入口走 src/.ts，checker 也走 src/.ts 保持单实例
+      if (fs.existsSync(srcTsPath)) return srcTsPath
+      if (fs.existsSync(distJsPath)) return distJsPath
+    }
   }
 
   // 兜底：直接返回项目根目录下的路径
@@ -49,6 +101,10 @@ function resolveCheckerPath(checkerPath: string): string {
  * Security checking rules
  */
 class CheckerManager {
+  static resolveCheckerPath: (checkerPath: string) => string
+
+  static resolveProjectRootFromMainFile: (mainFile: string | undefined, isPkg: boolean) => string
+
   options: any
 
   checkerIds: any
@@ -60,6 +116,9 @@ class CheckerManager {
   kit: any
 
   resultManager: any
+
+  // executor 路由代理：在 executor ALS scope 内将 findings 路由到 LocalResultBuffer
+  resultManagerProxy: ResultManagerProxy | undefined
 
   checkpoints: any
 
@@ -113,6 +172,9 @@ class CheckerManager {
     try {
       this.kit = checkerKit
       this.resultManager = resultManager || new ResultManager()
+      // 路由代理：checker 持有 proxy，在 executor scope 内写入 LocalResultBuffer
+      this.resultManagerProxy = new ResultManagerProxy(this.resultManager)
+      const resultManagerProxy = this.resultManagerProxy
 
       const targetCheckerIds: any[] = []
       const targetCheckerPaths: any[] = []
@@ -148,7 +210,7 @@ class CheckerManager {
         targetCheckerPath = resolveCheckerPath(targetCheckerPath)
         yasaLog(`Loading checker: ${checkerId} from ${targetCheckerPath}`, 'init')
         const targetCheckerDesc = targetCheckerDescs[i]
-        const checkerNames = this.registerAllCheckers(this, targetCheckerPath, targetCheckerDesc, this.resultManager)
+        const checkerNames = this.registerAllCheckers(this, targetCheckerPath, targetCheckerDesc, resultManagerProxy)
         if (checkerNames) {
           if (Array.isArray(checkerNames)) {
             loadCheckerNames.push(...checkerNames)
@@ -173,6 +235,15 @@ class CheckerManager {
    */
   getResultManager() {
     return this.resultManager
+  }
+
+  /**
+   * 返回当前 executor ALS scope 的 LocalResultBuffer。
+   * 未走 EntryPointExecutor 时 scope 不命中返回 undefined，
+   * caller 须 fallback 到 getResultManager() 原路径。
+   */
+  getResultBufferForCurrentExecutor(): LocalResultBuffer | undefined {
+    return getCurrentExecutorResultBuffer()
   }
 
   /**
@@ -408,6 +479,8 @@ class CheckerManager {
 
     const start_time: number = new Date().getTime()
 
+    this.observeFunctionCallBefore(analyzer, scope, node, state, info)
+
     const { check_at_function_call_before } = this.checkpoints
     for (const i in check_at_function_call_before) {
       if (this.isCheckOn(check_at_function_call_before[i].getCheckerId())) {
@@ -439,6 +512,8 @@ class CheckerManager {
    */
   checkAtFunctionCallAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
     const start_time: number = new Date().getTime()
+
+    this.observeFunctionCallAfter(analyzer, scope, node, state, info)
 
     const { check_at_function_call_after } = this.checkpoints
     for (const i in check_at_function_call_after) {
@@ -531,6 +606,8 @@ class CheckerManager {
   checkAtNewExprAfter(analyzer: any, scope: any, node: any, state: any, info: any) {
     const start_time: number = new Date().getTime()
 
+    this.observeNewExprAfter(analyzer, scope, node, state, info)
+
     const check_new_expr_after = this.checkpoints.check_at_new_expr_after
     for (const i in check_new_expr_after) {
       if (this.isCheckOn(check_new_expr_after[i].getCheckerId())) {
@@ -549,6 +626,24 @@ class CheckerManager {
 
     const end_time = new Date().getTime()
     statistics.checkFiringTime += end_time - start_time
+  }
+
+  /** 分析生命周期观察点；仅 dataflow 显式模式加载采集逻辑。 */
+  observeFunctionCallBefore(analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown): void {
+    if (!Config.dataflowDb) return
+    loadDataflowCallHooks().onFunctionCallBefore(analyzer, scope, node, state, info)
+  }
+
+  /** 分析生命周期观察点；仅 dataflow 显式模式加载采集逻辑。 */
+  observeFunctionCallAfter(analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown): void {
+    if (!Config.dataflowDb) return
+    loadDataflowCallHooks().onFunctionCallAfter(analyzer, scope, node, state, info)
+  }
+
+  /** 分析生命周期观察点；仅 dataflow 显式模式加载采集逻辑。 */
+  observeNewExprAfter(analyzer: unknown, scope: unknown, node: unknown, state: unknown, info: unknown): void {
+    if (!Config.dataflowDb) return
+    loadDataflowCallHooks().onNewExprAfter(analyzer, scope, node, state, info)
   }
 
   /**
@@ -1063,5 +1158,8 @@ class CheckerManager {
     return result
   }
 }
+
+CheckerManager.resolveCheckerPath = resolveCheckerPath
+CheckerManager.resolveProjectRootFromMainFile = resolveProjectRootFromMainFile
 
 module.exports = CheckerManager

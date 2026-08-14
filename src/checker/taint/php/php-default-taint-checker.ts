@@ -5,7 +5,7 @@ const Config = require('../../../config')
 const BasicRuleHandler = require('../../common/rules-basic-handler')
 const AstUtil = require('../../../util/ast-util')
 const FileUtil = require('../../../util/file-util')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Constant = require('../../../util/constant')
 const IntroduceTaint = require('../common-kit/source-util')
 const { matchSinkAtFuncCallWithCalleeType } = require('../common-kit/sink-util')
@@ -27,7 +27,11 @@ const {
   findCustomDataBucketEntryPoints,
 } = require('../../../engine/analyzer/php/custom/entrypoint-collector/custom-databucket-entrypoint')
 const TaintOutputStrategy = require('../../common/output/taint-output-strategy')
-const entryPointConfig = require('../../../engine/analyzer/common/current-entrypoint')
+const entryPointConfig = require('../../../engine/analyzer/common/entrypoint/current-entrypoint')
+const {
+  getPhpDefaultSourceList,
+} = require('../../../engine/analyzer/php/common/entrypoint-collector/php-default-source')
+const logger = require('../../../util/logger')(__filename)
 
 const TAINT_TAG_NAME = 'PHP_INPUT'
 
@@ -56,10 +60,59 @@ class PhpDefaultTaintChecker extends TaintChecker {
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
     this.prepareEntryPoints(analyzer)
     analyzer.mainEntryPoints = this.entryPoints
+    // 存量 ruleconfig.sources 仍合并生效，但一次性提示可精简为仅 sinks + sanitizers
+    this.warnIfRuleConfigSourcesPresent()
+    // 默认自采集仅在 BOTH / SELF_COLLECT 开启，ONLY_CUSTOM 完全遵循 ruleconfig
+    if (Config.entryPointMode !== 'ONLY_CUSTOM') {
+      this.pushPhpDefaultSelfCollectSources()
+    }
     this.addSourceTagForSourceScope(TAINT_TAG_NAME, this.sourceScope.value)
     this.addSourceTagForcheckerRuleConfigContent(TAINT_TAG_NAME, this.checkerRuleConfigContent)
     // PHP 超全局变量 source 需要带 loc 信息初始化
     CommonUtil.initSourceScopeByTaintSourceWithLoc(this.sourceScope, this.checkerRuleConfigContent.sources?.TaintSource)
+  }
+
+  /**
+   * 把 PHP 默认 source 自采集结果 push 进 checkerRuleConfigContent.sources，
+   * 与用户 ruleconfig.sources 合并（重复 mark 幂等，不去重）
+   */
+  pushPhpDefaultSelfCollectSources(): void {
+    const { selfCollectTaintSource, selfCollectFuncCallReturnValueTaintSource } = getPhpDefaultSourceList()
+    this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+    const sources = this.checkerRuleConfigContent.sources
+
+    const existingTaintSource = sources.TaintSource
+    sources.TaintSource = Array.isArray(existingTaintSource)
+      ? existingTaintSource
+      : existingTaintSource
+      ? [existingTaintSource]
+      : []
+    sources.TaintSource.push(...selfCollectTaintSource)
+
+    const existingFuncCallReturnValueTaintSource = sources.FuncCallReturnValueTaintSource
+    sources.FuncCallReturnValueTaintSource = Array.isArray(existingFuncCallReturnValueTaintSource)
+      ? existingFuncCallReturnValueTaintSource
+      : existingFuncCallReturnValueTaintSource
+      ? [existingFuncCallReturnValueTaintSource]
+      : []
+    sources.FuncCallReturnValueTaintSource.push(...selfCollectFuncCallReturnValueTaintSource)
+  }
+
+  /**
+   * 仅当 ruleconfig.sources 非空时打一次 deprecate warning
+   */
+  warnIfRuleConfigSourcesPresent(): void {
+    const sources = this.checkerRuleConfigContent?.sources
+    if (!sources) return
+    const hasTaintSource = Array.isArray(sources.TaintSource) ? sources.TaintSource.length > 0 : !!sources.TaintSource
+    const hasFuncCallReturnValueTaintSource = Array.isArray(sources.FuncCallReturnValueTaintSource)
+      ? sources.FuncCallReturnValueTaintSource.length > 0
+      : !!sources.FuncCallReturnValueTaintSource
+    if (hasTaintSource || hasFuncCallReturnValueTaintSource) {
+      logger.warn(
+        '[PHP] ruleconfig.sources 字段已废弃：PHP source 由 checker 层自采集（超全局 + 框架 getter + entrypoint 入参）；用户传入的 sources 仍生效（合并），后续版本可精简为仅 sinks + sanitizers'
+      )
+    }
   }
 
   /**
@@ -312,8 +365,9 @@ class PhpDefaultTaintChecker extends TaintChecker {
   }
 
   /**
-   * Entrypoint 参数 taint 注入：所有 PHP entrypoint 的入参统一全部标 source
-   * - SOAService / CustomDataBucket / CustomMvcController：所有参数都视为外部输入
+   * Entrypoint 参数 taint 注入：BOTH / SELF_COLLECT 模式下，实际进入分析的 PHP entrypoint 入参统一标 source
+   * 覆盖 SpartaHTTP / SOAService / CustomDataBucket / CustomMvcController / ruleconfig 自定义 5 类 attr。
+   * ONLY_CUSTOM 完全遵循 ruleconfig，不自动标 EP 入参。
    * @param analyzer
    * @param scope
    * @param node
@@ -321,10 +375,9 @@ class PhpDefaultTaintChecker extends TaintChecker {
    * @param info
    */
   triggerAtSymbolInterpretOfEntryPointBefore(analyzer: any, scope: any, node: any, state: any, info: any): void {
+    if (Config.entryPointMode === 'ONLY_CUSTOM') return
     const currentEntryPoint = entryPointConfig.getCurrentEntryPoint()
-    const attr = currentEntryPoint?.attribute
-    const TAINT_ATTRS = new Set(['SOAService', 'CustomDataBucket', 'CustomMvcController'])
-    if (!TAINT_ATTRS.has(attr)) return
+    if (!currentEntryPoint) return
     const epSym = currentEntryPoint.entryPointSymVal
     const parameters = epSym?.ast?.fdef?.parameters
     if (!parameters) return

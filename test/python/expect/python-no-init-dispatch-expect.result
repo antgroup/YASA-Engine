@@ -1,0 +1,205 @@
+======================== Findings ========================
+
+------------- 1: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/explicit_init_T.py
+Line 18: os.system(value)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/explicit_init_T.py","functionName":"explicit_init_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /explicit_init_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def explicit_init_T(taint_src):
+ /explicit_init_T.py
+  AffectedNodeName: __init__
+  13:  CALL:      runner = Runner(taint_src)
+ /explicit_init_T.py
+  AffectedNodeName: value
+  7:   ARG PASS:          def __init__(self, value):
+ /explicit_init_T.py
+  AffectedNodeName: self.value
+  8:   Var Pass:              self.value = value
+ /explicit_init_T.py
+  AffectedNodeName: runner
+  13:  Var Pass:      runner = Runner(taint_src)
+ /explicit_init_T.py
+  AffectedNodeName: run
+  14:  CALL:      runner.run()
+ /explicit_init_T.py
+  AffectedNodeName: run
+  10:  ARG PASS:          def run(self):
+ /explicit_init_T.py
+  AffectedNodeName: taint_sink
+  11:  CALL:              taint_sink(self.value)
+ /explicit_init_T.py
+  AffectedNodeName: value
+  17:  ARG PASS:  def taint_sink(value):
+ /explicit_init_T.py
+  AffectedNodeName: os.system
+  18:  SINK:      os.system(value)
+
+------------- 2: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/no_init_class_attr_T.py
+Line 17: os.system(value)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_class_attr_T.py","functionName":"no_init_class_attr_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_class_attr_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def no_init_class_attr_T(taint_src):
+ /no_init_class_attr_T.py
+  AffectedNodeName: value
+  7:   Var Pass:          value = taint_src
+ /no_init_class_attr_T.py
+  AffectedNodeName: runner
+  12:  Var Pass:      runner = Runner()
+ /no_init_class_attr_T.py
+  AffectedNodeName: run
+  13:  CALL:      runner.run()
+ /no_init_class_attr_T.py
+  AffectedNodeName: runner
+  13:  ARG PASS:      runner.run()
+ /no_init_class_attr_T.py
+  AffectedNodeName: run
+  13:  CALL:      runner.run()
+ /no_init_class_attr_T.py
+  AffectedNodeName: run
+  9:   ARG PASS:          def run(self):
+ /no_init_class_attr_T.py
+  AffectedNodeName: taint_sink
+  10:  CALL:              taint_sink(self.value)
+ /no_init_class_attr_T.py
+  AffectedNodeName: value
+  16:  ARG PASS:  def taint_sink(value):
+ /no_init_class_attr_T.py
+  AffectedNodeName: os.system
+  17:  SINK:      os.system(value)
+
+------------- 3: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/no_init_direct_T.py
+Line 15: os.system(value)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_direct_T.py","functionName":"no_init_direct_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_direct_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def no_init_direct_T(taint_src):
+ /no_init_direct_T.py
+  AffectedNodeName: run
+  11:  CALL:      runner.run(taint_src)
+ /no_init_direct_T.py
+  AffectedNodeName: value
+  7:   ARG PASS:          def run(self, value):
+ /no_init_direct_T.py
+  AffectedNodeName: taint_sink
+  8:   CALL:              taint_sink(value)
+ /no_init_direct_T.py
+  AffectedNodeName: value
+  14:  ARG PASS:  def taint_sink(value):
+ /no_init_direct_T.py
+  AffectedNodeName: os.system
+  15:  SINK:      os.system(value)
+
+------------- 4: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/imported_child_T.py
+Line 8: os.system(params.command)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_imported_override_T.py","functionName":"no_init_imported_override_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_imported_override_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def no_init_imported_override_T(taint_src):
+ /no_init_imported_override_T.py
+  AffectedNodeName: execute
+  7:   CALL:      tool.execute({'command': taint_src}, {})
+ /imported_child_T.py
+  AffectedNodeName: params
+  7:   ARG PASS:      def execute(self, params, context):
+ /imported_child_T.py
+  AffectedNodeName: os.system
+  8:   SINK:          os.system(params['command'])
+
+------------- 5: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/no_init_inherited_override_T.py
+Line 12: os.system(params.command)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_inherited_override_T.py","functionName":"no_init_inherited_override_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_inherited_override_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def no_init_inherited_override_T(taint_src):
+ /no_init_inherited_override_T.py
+  AffectedNodeName: execute
+  15:  CALL:      tool.execute({'command': taint_src}, {})
+ /no_init_inherited_override_T.py
+  AffectedNodeName: params
+  11:  ARG PASS:          def execute(self, params, context):
+ /no_init_inherited_override_T.py
+  AffectedNodeName: os.system
+  12:  SINK:              os.system(params['command'])
+
+------------- 6: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/no_init_local_hop_T.py
+Line 18: os.system(value)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_local_hop_T.py","functionName":"no_init_local_hop_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_local_hop_T.py
+  AffectedNodeName: taint_src
+  5:   SOURCE:  def no_init_local_hop_T(taint_src):
+ /no_init_local_hop_T.py
+  AffectedNodeName: run
+  14:  CALL:      runner.run(taint_src)
+ /no_init_local_hop_T.py
+  AffectedNodeName: value
+  7:   ARG PASS:          def run(self, value):
+ /no_init_local_hop_T.py
+  AffectedNodeName: forward
+  8:   CALL:              self.forward(value)
+ /no_init_local_hop_T.py
+  AffectedNodeName: value
+  10:  ARG PASS:          def forward(self, value):
+ /no_init_local_hop_T.py
+  AffectedNodeName: taint_sink
+  11:  CALL:              taint_sink(value)
+ /no_init_local_hop_T.py
+  AffectedNodeName: value
+  17:  ARG PASS:  def taint_sink(value):
+ /no_init_local_hop_T.py
+  AffectedNodeName: os.system
+  18:  SINK:      os.system(value)
+
+------------- 7: taint_flow_test-------------
+Description:taint_flow_test，回归测试使用，不推荐外部使用
+File:/no_init_top_level_override_T.py
+Line 12: os.system(params.command)
+SINK RULE:os.system
+entrypoint:
+{"filePath":"/no_init_top_level_override_T.py","functionName":"no_init_top_level_override_T","attribute":"fullCallGraphMade","type":"functionCall","funcReceiverType":""}
+Trace:
+ /no_init_top_level_override_T.py
+  AffectedNodeName: taint_src
+  15:  SOURCE:  def no_init_top_level_override_T(taint_src):
+ /no_init_top_level_override_T.py
+  AffectedNodeName: execute
+  17:  CALL:      tool.execute({'command': taint_src}, {})
+ /no_init_top_level_override_T.py
+  AffectedNodeName: params
+  11:  ARG PASS:      def execute(self, params, context):
+ /no_init_top_level_override_T.py
+  AffectedNodeName: os.system
+  12:  SINK:          os.system(params['command'])
+==========================================================
+  #Total-findings:7
+==========================================================

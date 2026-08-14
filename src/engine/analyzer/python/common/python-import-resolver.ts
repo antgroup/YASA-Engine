@@ -9,6 +9,7 @@
  */
 
 const path = require('path')
+const fs = require('fs')
 const Config = require('../../../../config')
 const handleException = require('../../common/exception-handler')
 
@@ -220,21 +221,62 @@ function buildSearchPaths(sourceFile: string, fileList: string[], projectRoot: s
     }
     const seenPaths = new Set<string>(searchPaths)
 
-    // 2. 从当前文件向上查找所有包含 __init__.py 的包目录
+    // 2. 从当前文件向上查找所有包含 __init__.py 的包目录，
+    //    并记录最顶层的包目录用于补齐「包根父目录」搜索路径。
+    //    不以 projectRoot 短路：sourcePath 截断在包内部时需上探到顶层包根才能解析绝对包名导入。
+    //    fileList 优先，fs.existsSync 兜底推进 topPkgDir（不加入 searchPaths，避免伪候选）。
+    //    修复：不连续包层级下，单变量 topPkgDir 会被上层无关包覆盖，
+    //    导致正确的包根父目录从未加入搜索路径。
+    //    例：ameta/ameta/__init__.py → ameta/(no init) → frameworks/__init__.py
+    //    原逻辑 topPkgDir 最终为 frameworks，pkgRootParent=mermaid，丢失 frameworks/ameta/。
+    //    现在跟踪 prevHadInit，在每个「从有 __init__.py 到无 __init__.py」过渡点
+    //    立即将当前目录（即包根的父目录）加入搜索路径。
     let dir = currentDir
     let loopCount = 0
     const maxLoops = 10 // 防止无限循环
+    let topPkgDir: string | null = null
+    let prevHadInit = true // 当前文件所在目录在包内，初始为 true
 
-    while (dir && dir !== normalizedProjectRoot && dir !== path.dirname(dir) && loopCount < maxLoops) {
+    while (dir && dir !== path.dirname(dir) && loopCount < maxLoops) {
       const initFile = path.normalize(path.join(dir, '__init__.py'))
-      if (fileExists(fileList, initFile) && !seenPaths.has(dir)) {
-        searchPaths.push(dir)
-        seenPaths.add(dir)
+      const inFileList = fileExists(fileList, initFile)
+      // 磁盘兜底：fileList 之外的 __init__.py 用 fs.existsSync 探测，只推进 topPkgDir 不加入 searchPaths
+      const onDiskOnly = !inFileList && (fs.existsSync && fs.existsSync(initFile))
+      const hasInit = inFileList || onDiskOnly
+
+      // 从包内（有 __init__.py）跨到包外（无 __init__.py），
+      // 当前 dir 的子目录是顶层包根，当前 dir 就是该包根的父目录 → 加入搜索路径
+      if (prevHadInit && !hasInit) {
+        if (!seenPaths.has(dir)) {
+          searchPaths.push(dir)
+          seenPaths.add(dir)
+        }
       }
+
+      if (inFileList) {
+        if (!seenPaths.has(dir)) {
+          searchPaths.push(dir)
+          seenPaths.add(dir)
+        }
+        topPkgDir = dir
+      } else if (onDiskOnly) {
+        topPkgDir = dir
+      }
+      prevHadInit = !!hasInit
       const parentDir = path.dirname(dir)
       if (parentDir === dir) break
       dir = parentDir
       loopCount++
+    }
+
+    // 2.b 包根父目录：Python sys.path 语义下，从含 __init__.py 的最顶层包目录再上一级，
+    //     才是「顶层包名」可被 `from <pkg>.x.y import z` 解析的搜索锚点。
+    if (topPkgDir) {
+      const pkgRootParent = path.dirname(topPkgDir)
+      if (pkgRootParent && pkgRootParent !== topPkgDir && !seenPaths.has(pkgRootParent)) {
+        searchPaths.push(pkgRootParent)
+        seenPaths.add(pkgRootParent)
+      }
     }
 
     // 3. 项目根目录

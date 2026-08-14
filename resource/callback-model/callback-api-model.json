@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "python.fastapi.background-tasks.add-task",
+      "language": "python",
+      "matcher": {
+        "method": "add_task",
+        "receiverIdentities": [
+          "fastapi.BackgroundTasks",
+          "starlette.background.BackgroundTasks"
+        ],
+        "minArgs": 1
+      },
+      "callback": {
+        "index": 0
+      },
+      "argumentMapping": "tail",
+      "receiverPolicy": "preserve-callback-receiver",
+      "resultPolicy": "ignore",
+      "dispatchPolicy": "short-circuit-generic-fallback"
+    }
+  ]
+}

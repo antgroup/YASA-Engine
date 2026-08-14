@@ -1,0 +1,18 @@
+{
+  "database/sql.Open": {
+    "packageAliases": ["sql"],
+    "importPaths": ["database/sql"],
+    "calleeNames": ["Open"],
+    "returnTypes": [
+      {
+        "type": "PointerType",
+        "element": {
+          "type": "MemberAccess",
+          "object": { "type": "Identifier", "name": "sql" },
+          "property": { "type": "Identifier", "name": "DB" }
+        }
+      },
+      { "type": "Identifier", "name": "error" }
+    ]
+  }
+}

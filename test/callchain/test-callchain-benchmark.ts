@@ -124,22 +124,26 @@ describe('Callchain Checker Regression Tests', function () {
       let benchmarkReady = false
 
       before(function () {
-        // 在子进程中运行各语言测试脚本，避免 Config 单例污染
-        // 每个 test-callchain-<lang>.ts 会写入 report/callchain-report.json
+        // 子进程失败时必须暴露真实失败，避免读取上一语言残留 report。
+        if (fs.existsSync(REPORT_FILE)) {
+          fs.unlinkSync(REPORT_FILE)
+        }
+        let runnerSucceeded = false
         try {
           execFileSync('npx', ['tsx', config.runner], {
             cwd: WORKSPACE_ROOT,
             stdio: 'pipe',
             timeout: 120000,
           })
+          runnerSucceeded = true
         } catch (e: any) {
           logger.info(`[${config.name}] 子进程执行出错: ${e.message || e}`)
           if (e.stdout) logger.info(`stdout: ${e.stdout.toString().slice(-500)}`)
           if (e.stderr) logger.info(`stderr: ${e.stderr.toString().slice(-500)}`)
         }
 
-        // 读取子进程生成的 report 并标准化
-        if (fs.existsSync(REPORT_FILE)) {
+        // 只读取当前子进程成功生成的 report，避免跨语言残留污染。
+        if (runnerSucceeded && fs.existsSync(REPORT_FILE)) {
           const rawJson = JSON.parse(fs.readFileSync(REPORT_FILE, 'utf-8'))
           actualJson = normalizeJson(rawJson)
           benchmarkReady = true

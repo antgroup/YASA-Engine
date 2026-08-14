@@ -1,5 +1,5 @@
 const _ = require('lodash')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const constValue = require('../../../util/constant')
 const Rules = require('../../common/rules-basic-handler')
 const config = require('../../../config')

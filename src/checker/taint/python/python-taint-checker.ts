@@ -8,7 +8,7 @@ const {
   lookupFclos,
 } = require('../../../engine/analyzer/python/common/entrypoint-collector/python-entrypoint')
 const Constant = require('../../../util/constant')
-const EntryPoint = require('../../../engine/analyzer/common/entrypoint')
+const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Config = require('../../../config')
 const { extractRelativePath } = require('../../../util/file-util')
 const logger = require('../../../util/logger')(__filename)
@@ -70,7 +70,7 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
           : [this.checkerRuleConfigContent.sources.TaintSource]
         this.checkerRuleConfigContent.sources.TaintSource.push(...pythonDefaultRule[0].sources.TaintSource)
       }
-      const { pyFcEntryPointArray, pyFcEntryPointSourceArray } = findPythonFcEntryPointAndSource(
+      const { pyFcEntryPointArray, pyFcEntryPointSourceArray, lifespanGlobalAssignments } = findPythonFcEntryPointAndSource(
         dir,
         fileManager,
         analyzer
@@ -87,6 +87,26 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
           ? this.checkerRuleConfigContent.sources.TaintSource
           : [this.checkerRuleConfigContent.sources.TaintSource]
         this.checkerRuleConfigContent.sources.TaintSource.push(...pyFcEntryPointSourceArray)
+      }
+      // 在模块作用域执行 lifespan 回调中的全局变量赋值，使类型正确解析
+      if (Array.isArray(lifespanGlobalAssignments) && lifespanGlobalAssignments.length > 0) {
+        for (const { filename, assignmentNode } of lifespanGlobalAssignments) {
+          const modClos = moduleManager.members?.get(filename)
+          if (!modClos) continue
+          const savedEntryFclos = analyzer.entry_fclos
+          const savedThisFClos = analyzer.thisFClos
+          analyzer.entry_fclos = modClos
+          analyzer.thisFClos = modClos
+          try {
+            const state = analyzer.initState(modClos)
+            analyzer.processInstruction(modClos, assignmentNode, state)
+          } catch (e) {
+            // 赋值执行失败不阻塞分析
+            logger.info(`lifespan global assignment failed for ${filename}`)
+          }
+          analyzer.entry_fclos = savedEntryFclos
+          analyzer.thisFClos = savedThisFClos
+        }
       }
     }
     if (Config.entryPointMode !== 'SELF_COLLECT' && !_.isEmpty(ruleConfigEntryPoints)) {
@@ -112,12 +132,14 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
     // 构建 fclos 索引，一次遍历替代多次查找
     const fclosIndex = buildFclosIndex(moduleManager, dir, extractRelativePath)
 
+    // 累加未匹配 EP 数，循环后聚合输出一行，避免逐条刷日志
+    let unmatchedEntryPointCount = 0
     for (const funCallEntryPoint of funCallEntryPoints) {
       // 使用索引查找，O(1) 操作
       let valFuncs = lookupFclos(fclosIndex, funCallEntryPoint.filePath, funCallEntryPoint.functionName)
 
       if (_.isEmpty(valFuncs)) {
-        logger.info('match entryPoint fail')
+        unmatchedEntryPointCount++
         continue
       }
 
@@ -142,6 +164,7 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
             entryPoint.filePath = funCallEntryPoint.filePath
             entryPoint.functionName = funCallEntryPoint.functionName
             entryPoint.attribute = funCallEntryPoint.attribute
+            entryPoint.skipDecorators = funCallEntryPoint.skipDecorators
             // 使用与 python-analyzer.ts symbolInterpret 相同的克隆模式
             const cloned = lodashCloneWithTag(valFunc)
             const clonedDef = _.clone(matchedOverload)
@@ -156,6 +179,7 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
             entryPoint.filePath = funCallEntryPoint.filePath
             entryPoint.functionName = funCallEntryPoint.functionName
             entryPoint.attribute = funCallEntryPoint.attribute
+            entryPoint.skipDecorators = funCallEntryPoint.skipDecorators
             const cloned = lodashCloneWithTag(valFunc)
             cloned.overloaded = []
             entryPoint.entryPointSymVal = cloned
@@ -166,6 +190,7 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
             entryPoint.filePath = funCallEntryPoint.filePath
             entryPoint.functionName = funCallEntryPoint.functionName
             entryPoint.attribute = funCallEntryPoint.attribute
+            entryPoint.skipDecorators = funCallEntryPoint.skipDecorators
             entryPoint.entryPointSymVal = valFunc
             this.entryPoints.push(entryPoint)
           }
@@ -175,10 +200,14 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
           entryPoint.filePath = funCallEntryPoint.filePath
           entryPoint.functionName = funCallEntryPoint.functionName
           entryPoint.attribute = funCallEntryPoint.attribute
+          entryPoint.skipDecorators = funCallEntryPoint.skipDecorators
           entryPoint.entryPointSymVal = valFunc
           this.entryPoints.push(entryPoint)
         }
       }
+    }
+    if (unmatchedEntryPointCount > 0) {
+      logger.info(`${unmatchedEntryPointCount} entrypoints unmatched`)
     }
 
     for (const fileEntryPoint of fileEntryPoints) {

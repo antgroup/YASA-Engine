@@ -3,7 +3,7 @@ const completeEntryPoint = require('../../../../../checker/taint/common-kit/entr
 
 export {}
 
-const RouteRegistryProperty = ['POST', 'GET', 'DELETE', 'PUT', 'Handle']
+const RouteRegistryProperty = ['POST', 'GET', 'DELETE', 'PUT', 'Handle', 'Use']
 
 const RouteRegistryObject = [
   '<global>.packageManager.github.com/gin-gonic/gin.Default()',
