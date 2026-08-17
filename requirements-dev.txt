@@ -1,0 +1,4 @@
+# YASA-Engine [OSS26] MCP 脚手架 —— 开发 / 测试依赖
+# 安装：pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8.0.0

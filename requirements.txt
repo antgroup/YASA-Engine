@@ -1,0 +1,8 @@
+# YASA-Engine [OSS26] MCP 统一运行底座脚手架 —— 运行依赖
+# 安装：pip install -r requirements.txt
+# fastmcp 3.x 起使用 http_app / custom_route 新 API
+fastmcp>=3.0.0,<4.0.0
+click>=8.1.0
+pydantic>=2.5.0
+uvicorn>=0.27.0
+starlette>=0.37.0
