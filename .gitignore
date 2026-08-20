@@ -30,8 +30,13 @@ test.js
 *.zip
 *.svg
 *.pyc
+*.pyo
 *.sarif
 __pycache__
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
 symintrpr.js
 symintrpr1.js
 testUast4go
