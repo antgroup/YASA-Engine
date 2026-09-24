@@ -1,0 +1,200 @@
+name: Release YASA-MCP
+
+on:
+  push:
+    tags:
+      - 'yasamcp-v*'
+
+concurrency:
+  group: yasamcp-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x86-64
+            runner: ubuntu-22.04
+            bundle_dir: yasa-linux-x86-64
+            spec_arch: none
+          - platform: darwin-x86-64
+            runner: macos-13
+            bundle_dir: yasa-darwin-x86-64
+            spec_arch: x86_64
+          - platform: darwin-aarch64
+            runner: macos-14
+            bundle_dir: yasa-darwin-aarch64
+            spec_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: yasamcp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: yasamcp/uv.lock
+
+      - name: Verify runner architecture
+        run: |
+          python --version
+          python -c "import platform; print('machine:', platform.machine()); print('system:', platform.system())"
+
+      - name: Install runtime and packaging dependencies
+        run: |
+          # The checked-in lockfile predates the packaging extra, so resolve the
+          # declared project dependencies and packaging tool together here.
+          uv sync --extra test --extra packaging
+
+      - name: Run unit tests
+        run: uv run --no-sync pytest tests/unit -q
+
+      - name: Build PyInstaller onedir bundle
+        env:
+          SPEC_ARCH: ${{ matrix.spec_arch }}
+        run: |
+          set -euo pipefail
+
+          target_file="src/yasa_mcp/bin/yasa_client.py"
+          build_spec="build/yasamcp-release.spec"
+          mkdir -p build release
+
+          # Embed release provenance without leaving generated values in the source tree.
+          source_backup="$(mktemp)"
+          cp "$target_file" "$source_backup"
+          restore_source() {
+            cp "$source_backup" "$target_file"
+            rm -f "$source_backup"
+          }
+          trap restore_source EXIT
+
+          build_date="$(date -u +%Y%m%d)"
+          git_commit="$(git rev-parse --short HEAD)"
+          python - "$target_file" "$build_date" "$git_commit" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          text = path.read_text(encoding="utf-8")
+          text = re.sub(r'_BUILD_DATE = "[^"]*"', f'_BUILD_DATE = "{sys.argv[2]}"', text)
+          text = re.sub(r'_GIT_COMMIT = "[^"]*"', f'_GIT_COMMIT = "{sys.argv[3]}"', text)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          # The checked-in spec targets arm64 for the sample macOS build. Create
+          # a temporary platform-specific copy so the source spec stays unchanged.
+          python - "script/yasa-mcp.spec" "$build_spec" "$SPEC_ARCH" <<'PY'
+          import pathlib
+          import sys
+
+          source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          arch = sys.argv[3]
+          target_arch = "None" if arch == "none" else repr(arch)
+          source = source.replace("target_arch='arm64'", f"target_arch={target_arch}")
+          pathlib.Path(sys.argv[2]).write_text(source, encoding="utf-8")
+          PY
+
+          uv run --no-sync python -m PyInstaller "$build_spec" \
+            --distpath dist \
+            --workpath build \
+            --clean \
+            --noconfirm
+
+          bundle="dist/yasamcp"
+          test -x "$bundle/yasamcp"
+          test -d "$bundle/lib"
+          "$bundle/yasamcp" --version
+          "$bundle/yasamcp" --help >/dev/null
+
+          bundle_dir="${{ matrix.bundle_dir }}"
+          rm -rf "release/$bundle_dir"
+          cp -a "$bundle" "release/$bundle_dir"
+          chmod +x "release/$bundle_dir/yasamcp"
+
+          archive="release/${bundle_dir}.tar.gz"
+          tar -czf "$archive" -C release "$bundle_dir"
+          tar -tzf "$archive" | grep -q "^${bundle_dir}/yasamcp$"
+          tar -tzf "$archive" | grep -q "^${bundle_dir}/lib/"
+          ls -lh "$archive"
+
+      - name: Upload platform artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yasamcp-${{ matrix.platform }}
+          path: yasamcp/release/${{ matrix.bundle_dir }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  create_release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: yasamcp-*
+          path: releases
+          merge-multiple: true
+
+      - name: Verify release archives and create checksums
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(releases/*.tar.gz)
+          test "${#archives[@]}" -eq 3
+          for archive in "${archives[@]}"; do
+            echo "Checking $archive"
+            tar -tzf "$archive" >/dev/null
+          done
+          sha256sum "${archives[@]}" > releases/sha256sum.txt
+          cat releases/sha256sum.txt
+
+      - name: Write release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cat > RELEASE_BODY.md <<'EOF'
+          This release contains the YASA-MCP PyInstaller onedir bundles.
+
+          Archives:
+          - `yasa-linux-x86-64.tar.gz`
+          - `yasa-darwin-x86-64.tar.gz`
+          - `yasa-darwin-aarch64.tar.gz`
+
+          Each archive contains the `yasamcp` executable and its complete `lib/` directory.
+          Native analysis binaries are supplied separately through the `-b/--bin` option.
+
+          Source tag: __RELEASE_TAG__
+          EOF
+          sed -i "s/__RELEASE_TAG__/${RELEASE_TAG}/" RELEASE_BODY.md
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: YASA-MCP ${{ github.ref_name }}
+          bodyFile: RELEASE_BODY.md
+          artifacts: releases/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          replacesArtifacts: true
+          allowUpdates: true
+          prerelease: ${{ contains(github.ref_name, '-alpha.') || contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
