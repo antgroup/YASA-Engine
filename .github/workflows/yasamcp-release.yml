@@ -21,17 +21,17 @@ jobs:
         include:
           - platform: linux-x86-64
             runner: ubuntu-latest
-            bundle_dir: yasa-linux-x86-64
+            bundle_dir: yasamcp-linux-x86-64
             spec_arch: none
             expected_arch: x86_64
           - platform: darwin-x86-64
             runner: macos-15-intel
-            bundle_dir: yasa-darwin-x86-64
+            bundle_dir: yasamcp-darwin-x86-64
             spec_arch: x86_64
             expected_arch: x86_64
           - platform: darwin-aarch64
             runner: macos-15
-            bundle_dir: yasa-darwin-aarch64
+            bundle_dir: yasamcp-darwin-aarch64
             spec_arch: arm64
             expected_arch: arm64
     runs-on: ${{ matrix.runner }}
@@ -191,9 +191,9 @@ jobs:
           This release contains the YASA-MCP PyInstaller onedir bundles.
 
           Archives:
-          - `yasa-linux-x86-64.tar.gz`
-          - `yasa-darwin-x86-64.tar.gz`
-          - `yasa-darwin-aarch64.tar.gz`
+          - `yasamcp-linux-x86-64.tar.gz`
+          - `yasamcp-darwin-x86-64.tar.gz`
+          - `yasamcp-darwin-aarch64.tar.gz`
 
           Each archive contains the `yasamcp` executable and its complete `lib/` directory.
           Native analysis binaries are supplied separately through the `-b/--bin` option.
