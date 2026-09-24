@@ -23,37 +23,49 @@ jobs:
             runner: ubuntu-latest
             bundle_dir: yasa-linux-x86-64
             spec_arch: none
+            expected_arch: x86_64
           - platform: darwin-x86-64
             runner: macos-15-intel
             bundle_dir: yasa-darwin-x86-64
             spec_arch: x86_64
+            expected_arch: x86_64
           - platform: darwin-aarch64
             runner: macos-15
             bundle_dir: yasa-darwin-aarch64
             spec_arch: arm64
+            expected_arch: arm64
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
         working-directory: yasamcp
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: yasamcp/uv.lock
 
       - name: Verify runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.expected_arch }}
         run: |
           python --version
-          python -c "import platform; print('machine:', platform.machine()); print('system:', platform.system())"
+          actual_arch="$(uname -m)"
+          echo "system: $(uname -s)"
+          echo "machine: $actual_arch"
+          echo "expected: $EXPECTED_ARCH"
+          if [ "$actual_arch" != "$EXPECTED_ARCH" ]; then
+            echo "Runner architecture mismatch"
+            exit 1
+          fi
 
       - name: Install runtime and packaging dependencies
         run: |
@@ -126,12 +138,18 @@ jobs:
 
           archive="release/${bundle_dir}.tar.gz"
           tar -czf "$archive" -C release "$bundle_dir"
-          tar -tzf "$archive" | grep -q "^${bundle_dir}/yasamcp$"
-          tar -tzf "$archive" | grep -q "^${bundle_dir}/lib/"
+          # Materialize the listing before grepping. Using grep -q directly in
+          # the tar pipeline can close stdout early and make tar fail with
+          # SIGPIPE ("tar: stdout: write error") on GNU tar.
+          archive_list="${archive}.list"
+          tar -tzf "$archive" > "$archive_list"
+          grep -Fqx "${bundle_dir}/yasamcp" "$archive_list"
+          grep -Fq "${bundle_dir}/lib/" "$archive_list"
+          rm -f "$archive_list"
           ls -lh "$archive"
 
       - name: Upload platform artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: yasamcp-${{ matrix.platform }}
           path: yasamcp/release/${{ matrix.bundle_dir }}.tar.gz
@@ -146,7 +164,7 @@ jobs:
       contents: write
     steps:
       - name: Download platform artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: yasamcp-*
           path: releases
