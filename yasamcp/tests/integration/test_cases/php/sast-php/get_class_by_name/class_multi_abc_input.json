@@ -1,0 +1,14 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "C001",
+      "B001",
+      "A001"
+    ],
+    "class_fqn": "",
+    "use_regex": false,
+    "include_methods": false,
+    "max_results": 10
+  }
+}

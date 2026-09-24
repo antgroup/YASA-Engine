@@ -1,0 +1,140 @@
+{
+  "results": [
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous::Async_Multithread_003_T::testcase::<Runnable$anon@26>::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_003_T.java",
+        "start_line": 27,
+        "start_column": 12,
+        "end_line": 36,
+        "end_column": 13
+      },
+      "content": "@Override\n            public void run() {\n                try {\n                    Runtime.getRuntime().exec(cmd);\n                    modelMap.put(\"status\", \"success\");\n                } catch (IOException e) {\n                    System.out.println(e.getMessage());\n                    modelMap.put(\"status\", \"success\");\n                }\n            }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous::Async_Multithread_004_F::testcase::<Runnable$anon@27>::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_004_F.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_004_F.java",
+        "start_line": 28,
+        "start_column": 12,
+        "end_line": 37,
+        "end_column": 13
+      },
+      "content": "@Override\n            public void run() {\n                try {\n                    Runtime.getRuntime().exec(a);\n                    modelMap.put(\"status\", \"success\");\n                } catch (IOException e) {\n                    System.out.println(e.getMessage());\n                    modelMap.put(\"status\", \"success\");\n                }\n            }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread::Async_Multithreading_003_T::testcase::<Runnable$anon@26>::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_003_T.java",
+        "start_line": 27,
+        "start_column": 12,
+        "end_line": 36,
+        "end_column": 13
+      },
+      "content": "@Override\n            public void run() {\n                try {\n                    Runtime.getRuntime().exec(cmd);\n                    modelMap.put(\"status\", \"success\");\n                } catch (IOException e) {\n                    System.out.println(e.getMessage());\n                    modelMap.put(\"status\", \"success\");\n                }\n            }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread::Async_Multithreading_004_F::testcase::<Runnable$anon@27>::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_004_F.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_004_F.java",
+        "start_line": 28,
+        "start_column": 12,
+        "end_line": 37,
+        "end_column": 13
+      },
+      "content": "@Override\n            public void run() {\n                try {\n                    Runtime.getRuntime().exec(a);\n                    modelMap.put(\"status\", \"success\");\n                } catch (IOException e) {\n                    System.out.println(e.getMessage());\n                    modelMap.put(\"status\", \"success\");\n                }\n            }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::CmdUtil::run",
+      "function_signature": "void run(String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+        "start_line": 5,
+        "start_column": 4,
+        "end_line": 11,
+        "end_column": 5
+      },
+      "content": "public static void run(String cmd) {\n        try {\n            Runtime.getRuntime().exec(cmd);\n        }catch (Exception e) {\n            return;\n        }\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.model.custom::R::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/model/custom/R.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/custom/R.java",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "@Override\n    public void run() {\n        try {\n            Runtime.getRuntime().exec(this.cmd);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            System.out.println(e.getMessage());\n            modelMap.put(\"status\", \"error\");\n        }\n    }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.model.custom::T::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/model/custom/T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/custom/T.java",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "@Override\n    public void run() {\n        try {\n            Runtime.getRuntime().exec(this.cmd);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n    }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.model.custom::TT::run",
+      "function_signature": "void run()",
+      "file_path": "src/main/java/com/sast/astbenchmark/model/custom/TT.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/custom/TT.java",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 5
+      },
+      "content": "@Override\n    public void run() {\n        try {\n            Runtime.getRuntime().exec(this.cmd);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n    }",
+      "function_annotations": [
+        "@Override"
+      ],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

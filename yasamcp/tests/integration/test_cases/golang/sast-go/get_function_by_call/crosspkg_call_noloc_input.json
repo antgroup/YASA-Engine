@@ -1,0 +1,7 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "cross_directory_001_T_b.Cross_directory_001_T_b(__taint_src)",
+    "max_results": 10
+  }
+}

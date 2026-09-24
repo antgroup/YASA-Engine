@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_api_by_name",
+  "arguments": {
+    "api_name": [
+      "Sub1.call"
+    ],
+    "max_results": 0
+  }
+}

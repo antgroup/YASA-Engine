@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "function_fqn": "interface_class_002_T",
+      "function_signature": "interface_class_002_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 39,
+        "start_column": 0,
+        "end_line": 43,
+        "end_column": 1
+      },
+      "content": "func interface_class_002_T(__taint_src string) {\n\tvar iTestService ITestService = TestService{}\n\tres := iTestService.process(__taint_src)\n\t__taint_sink(res)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "interface_class_004_T",
+      "function_signature": "interface_class_004_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 45,
+        "start_column": 0,
+        "end_line": 49,
+        "end_column": 1
+      },
+      "content": "func interface_class_004_T(__taint_src string) {\n\tvar iTestService ITestService = TestService{}\n\tres := iTestService.process(__taint_src)\n\t__taint_sink(res)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "interface_class_006_T",
+      "function_signature": "interface_class_006_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+        "start_line": 37,
+        "start_column": 0,
+        "end_line": 41,
+        "end_column": 1
+      },
+      "content": "func interface_class_006_T(__taint_src string) {\n\tvar iTestService ITestService = TestService2{}\n\tres := iTestService.process(__taint_src)\n\t__taint_sink(res)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "interface_class_008_T",
+      "function_signature": "interface_class_008_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_008_T/interface_class_008_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_008_T/interface_class_008_T.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 36,
+        "end_column": 1
+      },
+      "content": "func interface_class_008_T(__taint_src string) {\n\tvar iTestService ITestService2 = TestService{}\n\tres := iTestService.process(__taint_src)\n\t__taint_sink(res)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "interface_class_010_T",
+      "function_signature": "interface_class_010_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_010_T/interface_class_010_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_010_T/interface_class_010_T.go",
+        "start_line": 37,
+        "start_column": 0,
+        "end_line": 41,
+        "end_column": 1
+      },
+      "content": "func interface_class_010_T(__taint_src string) {\n\tvar iTestService ITestService = TestService2{}\n\tres := iTestService.process(__taint_src)\n\t__taint_sink(res)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 5
+}

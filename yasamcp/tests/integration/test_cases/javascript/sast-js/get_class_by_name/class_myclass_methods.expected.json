@@ -1,0 +1,80 @@
+{
+  "results": [
+    {
+      "class_fqn": "MyClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "class MyClass {\n  static process(arg) {\n    __taint_sink(arg);\n  }\n}",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process(arg)",
+          "line": 12
+        },
+        {
+          "name": "process",
+          "function_signature": "process(arg)",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "class_fqn": "MyClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "class MyClass {\n  static process(arg) {\n    arg = \"_\";\n    __taint_sink(arg);\n  }\n}",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process(arg)",
+          "line": 12
+        },
+        {
+          "name": "process",
+          "function_signature": "process(arg)",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "class_fqn": "class_decorator_001_F::MyClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_001_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_001_F.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 20,
+        "end_column": 19
+      },
+      "content": "@addVersion\n  class MyClass { }",
+      "methods": []
+    },
+    {
+      "class_fqn": "class_decorator_002_T::MyClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_002_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_002_T.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 20,
+        "end_column": 19
+      },
+      "content": "@addVersion\n  class MyClass { }",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

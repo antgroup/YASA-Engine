@@ -1,0 +1,118 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_001_T::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "DerivedClass",
+      "qualified_name": "constructor_extends_001_T::DerivedClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 25,
+        "start_column": 2,
+        "end_line": 33,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_002_F::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "DerivedClass",
+      "qualified_name": "constructor_extends_002_F::DerivedClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 25,
+        "start_column": 2,
+        "end_line": 33,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_003_T::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "DerivedClass",
+      "qualified_name": "constructor_extends_003_T::DerivedClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+        "start_line": 23,
+        "start_column": 2,
+        "end_line": 31,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_004_F::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "DerivedClass",
+      "qualified_name": "constructor_extends_004_F::DerivedClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+        "start_line": 23,
+        "start_column": 2,
+        "end_line": 31,
+        "end_column": 3
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

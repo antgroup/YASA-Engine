@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "main",
+    "file_path": "src/main/java/com/sast/astbenchmark/AstbenchmarkApplication.java",
+    "line": 10,
+    "depth": 2,
+    "max_callees_per_node": 3,
+    "exclude_undefined_function_call": false
+  }
+}

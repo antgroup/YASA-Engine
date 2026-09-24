@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_001_T::BaseClass1::getData",
+      "signature": "getData()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "getData() {\n      return this.data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_002_F::BaseClass1::getData",
+      "signature": "getData()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "getData() {\n      return this.data;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "class_fqn": "Pipeline",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call_002_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_002_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 25,
+        "end_column": 1
+      },
+      "content": "class Pipeline {\n    private $value = \"\";\n\n    public function input($val) {\n        $this->value = $val;\n        return $this;\n    }\n\n    public function process() {\n        return $this;\n    }\n\n    public function output() {\n        return $this->value;\n    }\n}",
+      "methods": [
+        {
+          "name": "input",
+          "function_signature": "input()",
+          "line": 13
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 18
+        },
+        {
+          "name": "output",
+          "function_signature": "output()",
+          "line": 22
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

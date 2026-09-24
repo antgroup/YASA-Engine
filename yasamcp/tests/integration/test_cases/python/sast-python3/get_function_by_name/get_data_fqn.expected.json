@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "function_fqn": "BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

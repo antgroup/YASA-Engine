@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "run",
+    "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+    "line": 5,
+    "depth": 2,
+    "max_callees_per_node": 3,
+    "exclude_undefined_function_call": true
+  }
+}

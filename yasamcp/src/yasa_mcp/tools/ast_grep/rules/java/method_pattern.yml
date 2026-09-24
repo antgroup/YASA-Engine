@@ -1,0 +1,9 @@
+name: method_pattern
+rule:
+  all:
+    - any:
+        - kind: method_declaration
+        - kind: constructor_declaration
+    - has:
+        kind: identifier
+        regex: "^{method_name}$"

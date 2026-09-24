@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(arg)\n    \n    process(taint_src)\n\ndef taint_sink(o):\n    os.system(o)\n\n# 示例调用\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\" \n    argument_passing_value_001_T(taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.py",
+      "matches": [
+        {
+          "line": 19,
+          "content": "def process(arg):\n    arg = '_'\n    taint_sink(arg)\n\ndef taint_sink(o):\n    os.system(o)\n\n# 示例调用\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\" \n    argument_passing_value_002_F(taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(arg1)\n    \n    process(taint_src, '_')\n\ndef taint_sink(o):\n    os.system(o)\n\n# 示例调用\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_003_T(taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "\ndef process(arg1, arg2):\n    taint_sink(arg2)\n\ndef taint_sink(o):\n    os.system(o)\n\n# 示例调用\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_004_F(taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_005_T.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(arg)  # 显式参数应覆盖默认值\n    \n    process(taint_src)\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_005_T(taint_src)  # 输出: taint_src_value\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_006_F.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(arg)  \n    \n    process()\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_006_F(taint_src)  \n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_007_T.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(tainted_arg)  #  正确识别关键字参数污染\n    \n    process(safe_arg=\"_\", tainted_arg=taint_src)\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_007_T(taint_src)  # 输出: taint_src_value\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_008_F.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(safe_arg)  \n    \n    process(safe_arg=\"_\", tainted_arg=taint_src)\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_008_F(taint_src)  # 输出: _\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_009_T.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(args[0])  # 可变参数首元素识别\n    \n    wrapper(taint_src, \"safe_value\")\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_009_T(taint_src)\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_010_F.py",
+      "matches": [
+        {
+          "line": 18,
+          "content": "        taint_sink(args[1])  \n    \n    wrapper(taint_src, \"safe_value\")  # 污染源在第一个位置但未被使用\n\ndef taint_sink(o):\n    os.system(o)\n\nif __name__ == \"__main__\":\n    taint_src = \"taint_src_value\"\n    argument_passing_value_010_F(taint_src)  # 输出: safe_value\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

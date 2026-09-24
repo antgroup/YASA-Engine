@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->普通\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction argument_passing_value_001_T(__taint_src) {\n  process(__taint_src);\n\n  function process(arg) {\n    __taint_sink(arg);\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nargument_passing_value_001_T(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->普通\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\n\nfunction argument_passing_value_002_F(__taint_src) {\n  process(__taint_src);\n}\n\nfunction process(arg) {\n  arg = \"_\";\n  __taint_sink(arg);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nargument_passing_value_002_F(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->参数位置\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\n\nfunction argument_passing_value_003_T(__taint_src) {\n  process(__taint_src, \"_\");\n\n  function process(arg1, arg2) {\n    __taint_sink(arg1);\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nargument_passing_value_003_T(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->参数位置\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\n\nfunction argument_passing_value_004_F(__taint_src) {\n  process(__taint_src, \"_\");\n}\n\nfunction process(arg1, arg2) {\n  __taint_sink(arg2);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nargument_passing_value_004_F(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 返回值传递\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction return_value_passing_001_T(__taint_src) {\n  let data = process();\n  __taint_sink(data);\n\n  function process() {\n    return __taint_src;\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nreturn_value_passing_001_T(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 返回值传递\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction return_value_passing_002_F(__taint_src) {\n  let data = process();\n  __taint_sink(data);\n\n  function process() {\n    return \"_\";\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nreturn_value_passing_002_F(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_001_T.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感->多次调用\n// scene introduction = 链式调用\n// level = 2\n// bind_url = accuracy/context_sensitive/multi_invoke/chain_invoke_001_T\n// date = 2025-12-19 06:13:00\n// evaluation information end\nconst { execSync } = require(\"child_process\");\n\nfunction chain_invoke_001_T(__taint_src) {\n  let obj = {\n    data: \"\",\n    process(arg) {\n      this.data = arg;\n      return this;\n    },\n  };\n  // 场景特点：函数结果作为下次调用参数，形成链式调用传递污染源\n  obj.process(\"safe_value\").process(__taint_src);\n  __taint_sink(obj.data);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nchain_invoke_001_T(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_002_F.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感->多次调用\n// scene introduction = 链式调用\n// level = 2\n// bind_url = accuracy/context_sensitive/multi_invoke/chain_invoke_002_F\n// date = 2025-12-19 06:13:05\n// evaluation information end\nconst { execSync } = require(\"child_process\");\n\nfunction chain_invoke_002_F(__taint_src) {\n  let obj = {\n    data: \"\",\n    process(arg) {\n      this.data = arg;\n      return this;\n    },\n  };\n  // 场景特点：链式调用中污染源未到达最终sink点\n  obj.process(__taint_src).process(\"safe_value\");\n  __taint_sink(obj.data);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nchain_invoke_002_F(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感->多次调用\n// scene introduction = 普通\n// level = 2\n// bind_url = accuracy/context_sensitive/multi_invoke/multi_invoke_001_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction multi_invoke_001_T(__taint_src) {\n  let a = process(__taint_src);\n  let b = process(\"_\");\n  __taint_sink(a);\n\n  function process(arg) {\n    return arg;\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nmulti_invoke_001_T(taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.js",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感->多次调用\n// scene introduction = 普通\n// level = 2\n// bind_url = accuracy/context_sensitive/multi_invoke/multi_invoke_002_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction multi_invoke_002_F(__taint_src) {\n  let a = process(__taint_src);\n  let b = process(\"_\");\n  __taint_sink(b);\n\n  function process(arg) {\n    return arg;\n  }\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nmulti_invoke_002_F(taint_src);\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

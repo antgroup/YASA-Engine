@@ -1,0 +1,6 @@
+name: method_call_name
+rule:
+  kind: identifier
+  inside:
+    kind: method_invocation
+    field: name

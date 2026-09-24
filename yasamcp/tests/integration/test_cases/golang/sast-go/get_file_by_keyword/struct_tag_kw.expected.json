@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/config.json",
+      "matches": [
+        {
+          "line": null,
+          "content": "{\n  \"complex_object\": [\n    {\n      \"evaluation_item\": \"完整度->单应用跟踪完整度->接口与类->复杂对象\",\n      \"scene_levels\": [\n        {\n          \"level\": \"2\",\n          \"scene_list\": [\n            {\n              \"compose\": \"nested_struct_create_001_T/nested_struct_create_001_T.go && !nested_struct_create_002_F/nested_struct_create_002_F.go\",\n              \"scene\": \"嵌套结构体创建\"\n            },\n            {\n              \"compose\": \"struct_pointer_field_001_T/struct_pointer_field_001_T.go && !struct_pointer_field_002_F/struct_pointer_field_002_F.go\",\n              \"scene\": \"结构体指针字段访问\"\n            },\n            {\n              \"compose\": \"interface_field_access_001_T/interface_field_access_001_T.go && !interface_field_access_002_F/interface_field_access_002_F.go\",\n              \"scene\": \"接口类型字段访问\"\n            },\n            {\n              \"compose\": \"nested_pointer_field_001_T/nested_pointer_field_001_T.go && !nested_pointer_field_002_F/nested_pointer_field_002_F.go\",\n              \"scene\": \"结构体嵌套指针字段\"\n            },\n            {\n              \"compose\": \"anonymous_struct_field_001_T/anonymous_struct_field_001_T.go && !anonymous_struct_field_002_F/anonymous_struct_field_002_F.go\",\n              \"scene\": \"匿名结构体字段访问\"\n            },\n            {\n              \"compose\": \"struct_tag_field_001_T/struct_tag_field_001_T.go && !struct_tag_field_002_F/struct_tag_field_002_F.go\",\n              \"scene\": \"结构体标签字段处理\"\n            },\n            {\n              \"compose\": \"deep_nested_field_read_001_T/deep_nested_field_read_001_T.go && !deep_nested_field_read_002_F/deep_nested_field_read_002_F.go\",\n              \"scene\": \"多层嵌套字段读取\"\n            },\n            {\n              \"compose\": \"deep_nested_field_write_001_T/deep_nested_field_write_001_T.go && !deep_nested_field_write_002_F/deep_nested_field_write_002_F.go\",\n              \"scene\": \"多层嵌套字段写入\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/struct_tag_field_001_T/struct_tag_field_001_T.go",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用跟踪完整度->接口与类->复杂对象\n// scene introduction = 结构体标签字段处理\n// level = 2\n// date = 2025-11-17 14:39:00\n// bind_url = completeness/single_app_tracing/interface_class/complex_object/struct_tag_field_001_T/struct_tag_field_001_T\n// evaluation information end\n\npackage main\n\nimport (\n\t\"fmt\"\n\t\"os/exec\"\n\t\"reflect\"\n)\n\ntype Person struct {\n\tName string `json:\"name\"` // 带标签的字段\n\tAge  int    `json:\"age\"`\n}\n\nfunc struct_tag_field_001_T(__taint_src string) {\n\t// 场景特点：通过反射访问带标签的结构体字段\n\tperson := Person{\n\t\tName: __taint_src,\n\t\tAge:  25,\n\t}\n\n\t// 使用反射获取字段值\n\tv := reflect.ValueOf(person)\n\tfield := v.FieldByName(\"Name\")\n\tif field.IsValid() {\n\t\ttaint_sink(field.String())\n\t}\n}\n\nfunc taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", fmt.Sprintf(\"%v\", o)).Run()\n}\n\nfunc main() {\n\t__taint_src := \"taint_src_value\"\n\tstruct_tag_field_001_T(__taint_src)\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/struct_tag_field_002_F/struct_tag_field_002_F.go",
+      "matches": [
+        {
+          "line": null,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用跟踪完整度->接口与类->复杂对象\n// scene introduction = 结构体标签字段处理\n// level = 2\n// date = 2025-11-17 14:39:00\n// bind_url = completeness/single_app_tracing/interface_class/complex_object/struct_tag_field_002_F/struct_tag_field_002_F\n// evaluation information end\n\npackage main\n\nimport (\n\t\"fmt\"\n\t\"os/exec\"\n\t\"reflect\"\n)\n\ntype Person struct {\n\tName string `json:\"name\"` // 带标签的字段\n\tAge  int    `json:\"age\"`\n}\n\nfunc struct_tag_field_002_F(__taint_src string) {\n\t// 场景特点：通过反射访问带标签的结构体字段但使用安全值\n\tperson := Person{\n\t\tName: \"safe_value\",\n\t\tAge:  25,\n\t}\n\n\t// 使用反射获取字段值\n\tv := reflect.ValueOf(person)\n\tfield := v.FieldByName(\"Name\")\n\tif field.IsValid() {\n\t\ttaint_sink(field.String())\n\t}\n}\n\nfunc taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", fmt.Sprintf(\"%v\", o)).Run()\n}\n\nfunc main() {\n\t__taint_src := \"taint_src_value\"\n\tstruct_tag_field_002_F(__taint_src)\n}\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

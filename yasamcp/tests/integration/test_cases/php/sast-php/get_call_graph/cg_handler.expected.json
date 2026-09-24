@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.accuracy.context_sensitive.polymorphism.polymorphism_001_T.BaseHandler.handle",
+        "function_signature": "",
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+        "line": 15
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

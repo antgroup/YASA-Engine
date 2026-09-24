@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": [
+      "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js"
+    ],
+    "detail_level": "full",
+    "max_results": 0
+  }
+}

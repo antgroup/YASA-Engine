@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.AstbenchmarkApplication.main",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/AstbenchmarkApplication.java",
+        "line": 10
+      },
+      "callees": [
+        {
+          "call_site": {
+            "file_path": "src/main/java/com/sast/astbenchmark/AstbenchmarkApplication.java",
+            "line": 11,
+            "content": "        SpringApplication.run(AstbenchmarkApplication.class, args);\n"
+          },
+          "function_fqn": "org.springframework.boot.SpringApplication.run",
+          "function_signature": "",
+          "location": {
+            "file_path": "default",
+            "start_line": 0,
+            "start_column": 0,
+            "end_line": 0,
+            "end_column": 0
+          },
+          "content": "",
+          "has_cycle": false,
+          "callees": []
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

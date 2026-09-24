@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_001_F/argument_passing_reference_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_001_F/argument_passing_reference_001_F.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_002_T/argument_passing_reference_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_002_T/argument_passing_reference_002_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_005_F/argument_passing_reference_005_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_005_F/argument_passing_reference_005_F.go",
+        "start_line": 27,
+        "start_column": 0,
+        "end_line": 29,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_006_T/argument_passing_reference_006_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_006_T/argument_passing_reference_006_T.go",
+        "start_line": 27,
+        "start_column": 0,
+        "end_line": 29,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_001_F/argument_passing_value_return_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_001_F/argument_passing_value_return_001_F.go",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_002_T/argument_passing_value_return_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_002_T/argument_passing_value_return_002_T.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_003_F/argument_passing_value_return_003_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_003_F/argument_passing_value_return_003_F.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_004_T/argument_passing_value_return_004_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_004_T/argument_passing_value_return_004_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 2
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

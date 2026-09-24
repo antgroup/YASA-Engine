@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.other_preference.MayTaintKind_001_T.testcase",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+        "line": 22
+      },
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+        "line": 31,
+        "content": "        JDBCUtil.execSql(sql);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.common.utils.JDBCUtil.execSql",
+      "function_signature": "",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/JDBCUtil.java",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "public static void execSql(String sql) {\n        try {\n            Class.forName(\"com.mysql.cj.jdbc.Driver\"); // 1. 加载驱动程序\n            Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD); // 2. 建立数据库连接\n            Statement statement = connection.createStatement();  // 3. 创建Statement对象\n            statement.executeQuery(sql);\n        } catch (SQLException | ClassNotFoundException e) {\n            throw new RuntimeException(e);\n        }\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

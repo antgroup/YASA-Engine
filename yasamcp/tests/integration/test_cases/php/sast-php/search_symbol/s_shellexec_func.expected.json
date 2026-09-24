@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "kind": "function",
+      "name": "eval_001_T",
+      "qualified_name": "eval_001_T",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/eval/eval_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 13,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

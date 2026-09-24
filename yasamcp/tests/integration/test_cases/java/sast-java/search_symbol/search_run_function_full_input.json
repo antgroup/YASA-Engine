@@ -1,0 +1,11 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "run"
+    ],
+    "kind": "function",
+    "detail_level": "full",
+    "max_results": 10
+  }
+}

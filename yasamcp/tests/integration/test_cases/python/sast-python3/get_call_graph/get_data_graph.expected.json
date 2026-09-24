@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.class.complex_object.cross_class_001_T.cross_class_001_T.A.get_data",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+        "line": 17
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

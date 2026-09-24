@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

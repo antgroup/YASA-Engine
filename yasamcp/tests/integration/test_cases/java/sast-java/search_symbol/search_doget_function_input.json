@@ -1,0 +1,10 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "doGet"
+    ],
+    "kind": "function",
+    "max_results": 10
+  }
+}

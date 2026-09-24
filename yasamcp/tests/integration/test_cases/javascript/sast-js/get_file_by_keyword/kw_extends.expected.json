@@ -1,0 +1,148 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "matches": [
+        {
+          "line": 31,
+          "content": "    getData() {\n      return this.data;\n    }\n  }\n\n  class SubClass extends (1 + 1 === 2 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "matches": [
+        {
+          "line": 31,
+          "content": "    getData() {\n      return this.data;\n    }\n  }\n\n  class SubClass extends (1 + 1 === 3 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "matches": [
+        {
+          "line": 13,
+          "content": "const { execSync } = require(\"child_process\");\n\nfunction polymorphism_003_T(__taint_src) {\n  class Base {}\n\n  class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }\n"
+        },
+        {
+          "line": 19,
+          "content": "    call() {\n      return __taint_src;\n    }\n  }\n\n  class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "matches": [
+        {
+          "line": 13,
+          "content": "const { execSync } = require(\"child_process\");\n\nfunction polymorphism_004_F(__taint_src) {\n  class Base {}\n\n  class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }\n"
+        },
+        {
+          "line": 19,
+          "content": "    call() {\n      return __taint_src;\n    }\n  }\n\n  class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_003_F.js",
+      "matches": [
+        {
+          "line": 19,
+          "content": "  const instance = new DecoratedClass();\n  instance.method(\"_\");\n}\n\nfunction classDecorator(target) {\n  return class extends target {\n    method(input) {\n      __taint_sink(input);\n      super.method(input);\n    }\n  };"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_004_T.js",
+      "matches": [
+        {
+          "line": 19,
+          "content": "  const instance = new DecoratedClass();\n  instance.method(__taint_src);\n}\n\nfunction classDecorator(target) {\n  return class extends target {\n    method(input) {\n      __taint_sink(input);\n      super.method(input);\n    }\n  };"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/config.json",
+      "matches": [
+        {
+          "line": 10,
+          "content": "      \"scene_levels\": [\n        {\n          \"level\": \"2\",\n          \"scene_list\": [\n            {\n              \"compose\": \"constructor_extends_001_T.js && !constructor_extends_002_F.js\",\n              \"scene\": \"构造函数\"\n            },\n            {\n              \"compose\": \"constructor_extends_003_T.js && !constructor_extends_004_F.js\",\n              \"scene\": \"构造函数2\""
+        },
+        {
+          "line": 14,
+          "content": "            {\n              \"compose\": \"constructor_extends_001_T.js && !constructor_extends_002_F.js\",\n              \"scene\": \"构造函数\"\n            },\n            {\n              \"compose\": \"constructor_extends_003_T.js && !constructor_extends_004_F.js\",\n              \"scene\": \"构造函数2\"\n            },\n            {\n              \"compose\": \"polymorphism_override_001_T.js && !polymorphism_override_002_F.js\",\n              \"scene\": \"多态\""
+        },
+        {
+          "line": 22,
+          "content": "            {\n              \"compose\": \"polymorphism_override_001_T.js && !polymorphism_override_002_F.js\",\n              \"scene\": \"多态\"\n            },\n            {\n              \"compose\": \"prototype_extends_001_T.js && !prototype_extends_002_F.js\",\n              \"scene\": \"构造函数->原型链\"\n            }\n          ]\n        }\n      ]"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+      "matches": [
+        {
+          "line": 6,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用跟踪完整度->函数和方法调用->方法重写\n// scene introduction = 构造函数\n// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_001_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_001_T(__taint_src) {\n  class BaseClass {"
+        },
+        {
+          "line": 10,
+          "content": "// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_001_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_001_T(__taint_src) {\n  class BaseClass {\n    data = \"_\";\n\n    constructor(data) {\n      this.data = data;"
+        },
+        {
+          "line": 25,
+          "content": "    }\n\n    process() { }\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {"
+        },
+        {
+          "line": 45,
+          "content": "  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nconstructor_extends_001_T(taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+      "matches": [
+        {
+          "line": 6,
+          "content": "// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用跟踪完整度->函数和方法调用->方法重写\n// scene introduction = 构造函数\n// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_002_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_002_F(__taint_src) {\n  class BaseClass {"
+        },
+        {
+          "line": 10,
+          "content": "// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_002_F\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_002_F(__taint_src) {\n  class BaseClass {\n    data = \"_\";\n\n    constructor(data) {\n      this.data = data;"
+        },
+        {
+          "line": 25,
+          "content": "    }\n\n    process() {}\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {"
+        },
+        {
+          "line": 45,
+          "content": "  execSync(o);\n}\n\nconst taint_src = \"taint_src_value\";\n\nconstructor_extends_002_F(taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+      "matches": [
+        {
+          "line": 6,
+          "content": "// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用跟踪完整度->函数和方法调用->方法重写\n// scene introduction = 构造函数\n// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_003_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_003_T(__taint_src) {\n  class BaseClass {"
+        },
+        {
+          "line": 10,
+          "content": "// level = 2\n// bind_url = completeness/single_app_tracing/function_call/override/constructor_extends_003_T\n// evaluation information end\nconst { execSync } = require('child_process');\n\nfunction constructor_extends_003_T(__taint_src) {\n  class BaseClass {\n    constructor() {\n      this.data = __taint_src;\n    }\n"
+        },
+        {
+          "line": 23,
+          "content": "    }\n\n    process() {}\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor() {\n      super();\n    }\n\n    process() {"
+        },
+        {
+          "line": 43,
+          "content": "    execSync(data);\n}\n\nconst taint_src = \"taint_src_value\";\n\nconstructor_extends_003_T(taint_src);"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

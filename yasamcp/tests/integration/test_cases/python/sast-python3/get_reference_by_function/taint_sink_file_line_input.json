@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "taint_sink",
+    "function_fqn": "",
+    "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+    "line": 17,
+    "use_regex": false,
+    "max_results": 20
+  }
+}

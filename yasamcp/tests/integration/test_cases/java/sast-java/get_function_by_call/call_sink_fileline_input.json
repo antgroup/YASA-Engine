@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "sink",
+    "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.java",
+    "line": 24,
+    "max_results": 10
+  }
+}

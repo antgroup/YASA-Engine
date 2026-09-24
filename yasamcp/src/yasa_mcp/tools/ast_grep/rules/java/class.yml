@@ -1,0 +1,7 @@
+name: class
+rule:
+  all:
+    - any:
+        - kind: enum_declaration
+        - kind: class_declaration
+        - kind: interface_declaration

@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_parent_property_001_T::Parent::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      // 场景特点：父类定义属性\n      this.parentData = data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_parent_property_002_F::Parent::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      // 场景特点：父类定义属性\n      this.parentData = data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_super_call_001_T::Parent::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      this.data = data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_super_call_002_F::Parent::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      this.data = data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_parent_property_001_T::Child::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      super(data);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_parent_property_002_F::Child::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      super(data);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_super_call_001_T::Child::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+        "start_line": 23,
+        "start_column": 0,
+        "end_line": 25,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      super(data);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "inheritance_super_call_002_F::Child::constructor",
+      "signature": "constructor(data)",
+      "filepath": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+        "start_line": 23,
+        "start_column": 0,
+        "end_line": 25,
+        "end_column": 0
+      },
+      "content": "constructor(data) {\n      super(data);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_001_T::BaseClass1::getData",
+      "signature": "getData()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "getData() {\n      return this.data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_002_F::BaseClass1::getData",
+      "signature": "getData()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "getData() {\n      return this.data;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

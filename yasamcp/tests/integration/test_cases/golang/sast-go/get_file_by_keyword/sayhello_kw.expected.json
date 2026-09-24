@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_011_T/cross/cross_01/cross_directory_011_T_b.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage cross_directory_011_T_b\nimport \"os/exec\"\n\nfunc SayHello(taint_src string) {\n\t__taint_sink(taint_src)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_011_T/cross_directory_011_T_a/cross_directory_011_T_a.go",
+      "matches": [
+        {
+          "line": 17,
+          "content": "// 再执行go run cross_directory_011_T_a/cross_directory_011_T_a.go\npackage main\nimport \"cross/cross_01\"\n\nfunc cross_directory_011_T_a(__taint_src string) {\n\tcross_directory_011_T_b.SayHello(__taint_src)\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\"\n    cross_directory_011_T_a(__taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_012_F/cross/cross_01/cross_directory_012_F_b.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage cross_directory_012_F_b\nimport \"os/exec\"\n\nfunc SayHello(taint_src string) {\n\t__taint_sink(\"_\")\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_012_F/cross_directory_012_F_a/cross_directory_012_F_a.go",
+      "matches": [
+        {
+          "line": 17,
+          "content": "// 再执行go run cross_directory_012_F_a/cross_directory_012_F_a.go\npackage main\nimport \"cross/cross_01\"\n\nfunc cross_directory_012_F_a(__taint_src string) {\n\tcross_directory_012_F_b.SayHello(__taint_src)\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\"\n    cross_directory_012_F_a(__taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_013_T/cross/other/cross_01/cross_directory_013_T_b.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage cross_directory_013_T_b\nimport \"os/exec\"\n\nfunc SayHello(taint_src string) {\n\t__taint_sink(taint_src)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_013_T/cross_directory_013_T_a/cross_directory_013_T_a.go",
+      "matches": [
+        {
+          "line": 17,
+          "content": "// 再执行go run cross_directory_013_T_a/cross_directory_013_T_a.go\npackage main\nimport \"cross/other/cross_01\"\n\nfunc cross_directory_013_T_a(__taint_src string) {\n\tcross_directory_013_T_b.SayHello(__taint_src)\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\"\n    cross_directory_013_T_a(__taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_014_F/cross/other/cross_01/cross_directory_014_F_b.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage cross_directory_014_F_b\nimport \"os/exec\"\n\nfunc SayHello(taint_src string) {\n\t__taint_sink(\"_\")\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_014_F/cross_directory_014_F_a/cross_directory_014_F_a.go",
+      "matches": [
+        {
+          "line": 17,
+          "content": "// 再执行go run cross_directory_014_F_a/cross_directory_014_F_a.go\npackage main\nimport \"cross/other/cross_01\"\n\nfunc cross_directory_014_F_a(__taint_src string) {\n\tcross_directory_014_F_b.SayHello(__taint_src)\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\"\n    cross_directory_014_F_a(__taint_src)"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_021_T/cross/cross_same_name_021_T.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage cross_same_name_021_T\nimport \"os/exec\"\n\nfunc SayHello(taint_src string) {\n\t__taint_sink(taint_src)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_021_T/main_dir/cross_directory_021_T_a.go",
+      "matches": [
+        {
+          "line": 19,
+          "content": "import \"cross_directory_021_T/cross\"\n\nvar __taint_src = \"taint_src_value\"\n\nfunc init() {\n\tcross_same_name_021_T.SayHello(__taint_src)\n}\n\nfunc main() {\n\treturn\n}"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

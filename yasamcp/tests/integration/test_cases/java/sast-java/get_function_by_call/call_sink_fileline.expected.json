@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.return_value_passing_001_T.returnValuePassing001T",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.java",
+        "line": 20
+      },
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.java",
+        "line": 24,
+        "content": "        __taint_sink(data);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.return_value_passing_001_T.__taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.java",
+        "start_line": 32,
+        "start_column": 5,
+        "end_line": 38,
+        "end_column": 5
+      },
+      "content": "private static void __taint_sink(String o) {\n        try {\n            Runtime.getRuntime().exec(o);\n        } catch (IOException e) {\n            throw new RuntimeException(e);\n        }\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

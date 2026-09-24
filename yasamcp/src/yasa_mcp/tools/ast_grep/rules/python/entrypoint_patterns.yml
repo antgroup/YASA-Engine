@@ -1,0 +1,12 @@
+name: entrypoint_patterns
+rule:
+  any:
+    - kind: decorated_definition
+      has:
+        kind: decorator
+    - kind: if_statement
+      has:
+        kind: comparison_operator
+        has:
+          kind: identifier
+          regex: "^__name__$"

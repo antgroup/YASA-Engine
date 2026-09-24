@@ -1,0 +1,132 @@
+{
+  "results": [
+    {
+      "kind": "interface",
+      "name": "DataProcessor",
+      "qualified_name": "DataProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "DataProcessor",
+      "qualified_name": "DataProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "DataProcessor",
+      "qualified_name": "DataProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseProcessor",
+      "qualified_name": "BaseProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "PassthroughProcessor",
+      "qualified_name": "PassthroughProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "SanitizeProcessor",
+      "qualified_name": "SanitizeProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 24,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "PassthroughProcessor",
+      "qualified_name": "PassthroughProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "SanitizeProcessor",
+      "qualified_name": "SanitizeProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 24,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "TaintProcessor",
+      "qualified_name": "TaintProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 9
+}

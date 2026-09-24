@@ -1,0 +1,7 @@
+name: file_package_name
+rule:
+  any:
+    - kind: scoped_identifier
+      inside:
+        any:
+          - kind: package_declaration

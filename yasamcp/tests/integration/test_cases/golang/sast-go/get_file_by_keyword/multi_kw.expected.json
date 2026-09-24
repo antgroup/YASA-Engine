@@ -1,0 +1,378 @@
+{
+  "results": [
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_001_F/argument_passing_reference_001_F.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_001_F(__taint_src interface{}) {\n\tobj := map[string]interface{}{\n\t\t\"data\": __taint_src,\n\t}\n\tprocess(obj)\n\t__taint_sink(obj[\"data\"])"
+        },
+        {
+          "line": 14,
+          "content": "\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_001_F(__taint_src interface{}) {\n\tobj := map[string]interface{}{\n\t\t\"data\": __taint_src,\n\t}\n\tprocess(obj)\n\t__taint_sink(obj[\"data\"])\n}"
+        },
+        {
+          "line": 21,
+          "content": "\t}\n\tprocess(obj)\n\t__taint_sink(obj[\"data\"])\n}\n\nfunc process(obj map[string]interface{}) {\n\tobj[\"data\"] = \"_\"\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc process(obj map[string]interface{}) {\n\tobj[\"data\"] = \"_\"\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\n\nfunc main() {"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_002_T/argument_passing_reference_002_T.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_002_T(__taint_src interface{}) {\n\tobj := map[string]interface{}{\n\t\t\"data\": \"_\",\n\t}\n\tprocess(obj, __taint_src)\n\t__taint_sink(obj[\"data\"])"
+        },
+        {
+          "line": 14,
+          "content": "\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_002_T(__taint_src interface{}) {\n\tobj := map[string]interface{}{\n\t\t\"data\": \"_\",\n\t}\n\tprocess(obj, __taint_src)\n\t__taint_sink(obj[\"data\"])\n}"
+        },
+        {
+          "line": 21,
+          "content": "\t}\n\tprocess(obj, __taint_src)\n\t__taint_sink(obj[\"data\"])\n}\n\nfunc process(obj map[string]interface{}, src interface{}) {\n\tobj[\"data\"] = src\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc process(obj map[string]interface{}, src interface{}) {\n\tobj[\"data\"] = src\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_003_F/argument_passing_reference_003_F.go",
+      "matches": [
+        {
+          "line": 16,
+          "content": "import (\n\t\t\t\"fmt\"\n\t\t\t\"os/exec\"\n\t)\n\nfunc argument_passing_reference_003_F(__taint_src interface{}) {\n\tarr := []interface{}{__taint_src}\n\tprocess(arr)\n\t__taint_sink(arr)\n}\n"
+        },
+        {
+          "line": 17,
+          "content": "\t\t\t\"fmt\"\n\t\t\t\"os/exec\"\n\t)\n\nfunc argument_passing_reference_003_F(__taint_src interface{}) {\n\tarr := []interface{}{__taint_src}\n\tprocess(arr)\n\t__taint_sink(arr)\n}\n\nfunc process(inputArr []interface{}) {"
+        },
+        {
+          "line": 22,
+          "content": "\tarr := []interface{}{__taint_src}\n\tprocess(arr)\n\t__taint_sink(arr)\n}\n\nfunc process(inputArr []interface{}) {\n\tinputArr[0] = \"changed\"\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\",fmt.Sprintf(\"%v\", o)).Run()"
+        },
+        {
+          "line": 26,
+          "content": "\nfunc process(inputArr []interface{}) {\n\tinputArr[0] = \"changed\"\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\",fmt.Sprintf(\"%v\", o)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_004_T/argument_passing_reference_004_T.go",
+      "matches": [
+        {
+          "line": 16,
+          "content": "import(\n\t\"fmt\"\n\t\"os/exec\"\n)\n\nfunc argument_passing_reference_004_T(__taint_src interface{}) {\n\tarr := []interface{}{\"_\"}\n\tprocess(arr, __taint_src)\n\t__taint_sink(arr)\n}\n"
+        },
+        {
+          "line": 17,
+          "content": "\t\"fmt\"\n\t\"os/exec\"\n)\n\nfunc argument_passing_reference_004_T(__taint_src interface{}) {\n\tarr := []interface{}{\"_\"}\n\tprocess(arr, __taint_src)\n\t__taint_sink(arr)\n}\n\nfunc process(inputArr []interface{}, src interface{}) {"
+        },
+        {
+          "line": 22,
+          "content": "\tarr := []interface{}{\"_\"}\n\tprocess(arr, __taint_src)\n\t__taint_sink(arr)\n}\n\nfunc process(inputArr []interface{}, src interface{}) {\n\tinputArr[0] = src\n}\n\nfunc __taint_sink(o []interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", fmt.Sprintf(\"%v\", o)).Run()"
+        },
+        {
+          "line": 26,
+          "content": "\nfunc process(inputArr []interface{}, src interface{}) {\n\tinputArr[0] = src\n}\n\nfunc __taint_sink(o []interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", fmt.Sprintf(\"%v\", o)).Run()\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_005_F/argument_passing_reference_005_F.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_005_F(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objA[\"name\"])"
+        },
+        {
+          "line": 14,
+          "content": "\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_005_F(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objA[\"name\"])\n}"
+        },
+        {
+          "line": 15,
+          "content": "package main\nimport \"os/exec\"\n\nfunc argument_passing_reference_005_F(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objA[\"name\"])\n}\n"
+        },
+        {
+          "line": 21,
+          "content": "\n\tswap(objA, objB)\n\t__taint_sink(objA[\"name\"])\n}\n\nfunc swap(obj1, obj2 map[string]interface{}) {\n\ttemp := obj1[\"name\"]\n\tobj1[\"name\"] = obj2[\"name\"]\n\tobj2[\"name\"] = temp\n}\n"
+        },
+        {
+          "line": 27,
+          "content": "\ttemp := obj1[\"name\"]\n\tobj1[\"name\"] = obj2[\"name\"]\n\tobj2[\"name\"] = temp\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_006_T/argument_passing_reference_006_T.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_006_T(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objB[\"name\"])"
+        },
+        {
+          "line": 14,
+          "content": "\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_reference_006_T(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objB[\"name\"])\n}"
+        },
+        {
+          "line": 15,
+          "content": "package main\nimport \"os/exec\"\n\nfunc argument_passing_reference_006_T(__taint_src interface{}) {\n\tobjA := map[string]interface{}{\"name\": __taint_src}\n\tobjB := map[string]interface{}{\"name\": \"Bob\"}\n\n\tswap(objA, objB)\n\t__taint_sink(objB[\"name\"])\n}\n"
+        },
+        {
+          "line": 21,
+          "content": "\n\tswap(objA, objB)\n\t__taint_sink(objB[\"name\"])\n}\n\nfunc swap(obj1, obj2 map[string]interface{}) {\n\ttemp := obj1[\"name\"]\n\tobj1[\"name\"] = obj2[\"name\"]\n\tobj2[\"name\"] = temp\n}\n"
+        },
+        {
+          "line": 27,
+          "content": "\ttemp := obj1[\"name\"]\n\tobj1[\"name\"] = obj2[\"name\"]\n\tobj2[\"name\"] = temp\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\ntype Person struct {\n\tName string\n}\n\nfunc argument_passing_reference_007_T(__taint_src string) {\n\tperson := Person{Name: \"safe\"}"
+        },
+        {
+          "line": 18,
+          "content": "type Person struct {\n\tName string\n}\n\nfunc argument_passing_reference_007_T(__taint_src string) {\n\tperson := Person{Name: \"safe\"}\n\n\t(&person).UpdateNamePointer(__taint_src)\n\t__taint_sink((&person).GetNamePointer())\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "\n\t(&person).UpdateNamePointer(__taint_src)\n\t__taint_sink((&person).GetNamePointer())\n}\n\nfunc (p *Person) UpdateNamePointer(newName string) {\n\tp.Name = newName\n}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name"
+        },
+        {
+          "line": 28,
+          "content": "\nfunc (p *Person) UpdateNamePointer(newName string) {\n\tp.Name = newName\n}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name\n}\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}"
+        },
+        {
+          "line": 31,
+          "content": "}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name\n}\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\ntype Person struct {\n\tName string\n}\n\nfunc argument_passing_reference_008_F(__taint_src string) {\n\tperson := Person{Name: __taint_src}"
+        },
+        {
+          "line": 18,
+          "content": "type Person struct {\n\tName string\n}\n\nfunc argument_passing_reference_008_F(__taint_src string) {\n\tperson := Person{Name: __taint_src}\n\n\t(&person).UpdateNamePointer(\"safe\")\n\t__taint_sink((&person).GetNamePointer())\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "\n\t(&person).UpdateNamePointer(\"safe\")\n\t__taint_sink((&person).GetNamePointer())\n}\n\nfunc (p *Person) UpdateNamePointer(newName string) {\n\tp.Name = newName\n}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name"
+        },
+        {
+          "line": 28,
+          "content": "\nfunc (p *Person) UpdateNamePointer(newName string) {\n\tp.Name = newName\n}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name\n}\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}"
+        },
+        {
+          "line": 31,
+          "content": "}\n\nfunc (p *Person) GetNamePointer() string {\n\treturn p.Name\n}\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_001_F/argument_passing_value_return_001_F.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_value_return_001_F(__taint_src interface{}) {\n\tprocess(__taint_src)\n}\n\nfunc process(arg interface{}) {\n\targ = \"safe\""
+        },
+        {
+          "line": 16,
+          "content": "\nfunc argument_passing_value_return_001_F(__taint_src interface{}) {\n\tprocess(__taint_src)\n}\n\nfunc process(arg interface{}) {\n\targ = \"safe\"\n\t__taint_sink(arg)\n}\n\nfunc __taint_sink(o interface{}) {"
+        },
+        {
+          "line": 21,
+          "content": "func process(arg interface{}) {\n\targ = \"safe\"\n\t__taint_sink(arg)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_002_T/argument_passing_value_return_002_T.go",
+      "matches": [
+        {
+          "line": 20,
+          "content": "\nfunc process(arg string) {\n\t__taint_sink(arg)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_003_F/argument_passing_value_return_003_F.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_value_return_003_F(__taint_src interface{}) {\n\tvar clean string = \"_\"\n\tprocess1(clean)\n\tprocess2(__taint_src)\n}\n"
+        },
+        {
+          "line": 18,
+          "content": "\tvar clean string = \"_\"\n\tprocess1(clean)\n\tprocess2(__taint_src)\n}\n\nfunc process1(arg interface{}) {\n\t__taint_sink(arg)\n}\n\nfunc process2(arg interface{}) {\n}"
+        },
+        {
+          "line": 22,
+          "content": "\nfunc process1(arg interface{}) {\n\t__taint_sink(arg)\n}\n\nfunc process2(arg interface{}) {\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}"
+        },
+        {
+          "line": 25,
+          "content": "}\n\nfunc process2(arg interface{}) {\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_004_T/argument_passing_value_return_004_T.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc argument_passing_value_return_004_T(__taint_src interface{}) {\n\tvar clean string = \"_\"\n\tprocess2(clean)\n\tprocess1(__taint_src)\n}\n"
+        },
+        {
+          "line": 18,
+          "content": "\tvar clean string = \"_\"\n\tprocess2(clean)\n\tprocess1(__taint_src)\n}\n\nfunc process1(arg interface{}) {\n\t__taint_sink(arg)\n}\n\nfunc process2(arg interface{}) {\n}"
+        },
+        {
+          "line": 22,
+          "content": "\nfunc process1(arg interface{}) {\n\t__taint_sink(arg)\n}\n\nfunc process2(arg interface{}) {\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}"
+        },
+        {
+          "line": 25,
+          "content": "}\n\nfunc process2(arg interface{}) {\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_005_F/argument_passing_value_return_005_F.go",
+      "matches": [
+        {
+          "line": 20,
+          "content": "\nfunc process(arg1 string, arg2 string) {\n\t__taint_sink(arg2)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_006_T/argument_passing_value_return_006_T.go",
+      "matches": [
+        {
+          "line": 20,
+          "content": "\nfunc process(arg1 string, arg2 string) {\n\t__taint_sink(arg1)\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc multiple_return_value_passing_001_F(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret1\n\t__taint_sink(ret2)"
+        },
+        {
+          "line": 21,
+          "content": "\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret1\n\t__taint_sink(ret2)\n}\n\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn s, i\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn s, i\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_002_T/multiple_return_value_passing_002_T.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc multiple_return_value_passing_002_T(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret2\n\t__taint_sink(ret1)"
+        },
+        {
+          "line": 21,
+          "content": "\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret2\n\t__taint_sink(ret1)\n}\n\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn s, i\n}\n\nfunc __taint_sink(o interface{}) {  \n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn s, i\n}\n\nfunc __taint_sink(o interface{}) {  \n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_003_F/multiple_return_value_passing_003_F.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc multiple_return_value_passing_003_F(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret2\n\t__taint_sink(ret1)"
+        },
+        {
+          "line": 21,
+          "content": "\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret2\n\t__taint_sink(ret1)\n}\n\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn i, s\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn i, s\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_004_T/multiple_return_value_passing_004_T.go",
+      "matches": [
+        {
+          "line": 13,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc multiple_return_value_passing_004_T(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret1\n\t__taint_sink(ret2)"
+        },
+        {
+          "line": 21,
+          "content": "\tret1, ret2 := processData(__taint_src, a)\n\t_ = ret1\n\t__taint_sink(ret2)\n}\n\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn i, s\n}\n\nfunc __taint_sink(o interface{}) { _ = exec.Command(\"sh\", \"-c\", o.(string)).Run()  }\n"
+        },
+        {
+          "line": 25,
+          "content": "\nfunc processData(s interface{}, i interface{}) (interface{}, interface{}) {\n\treturn i, s\n}\n\nfunc __taint_sink(o interface{}) { _ = exec.Command(\"sh\", \"-c\", o.(string)).Run()  }\n\nfunc main() {\n    __taint_src := \"taint_src_value\"\n    multiple_return_value_passing_004_T(__taint_src)\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/named_return_value_passing_001_F/named_return_value_passing_001_F.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc named_return_value_passing_001_F(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret := processData(__taint_src, a)\n\t__taint_sink(ret)\n}"
+        },
+        {
+          "line": 19,
+          "content": "\n\tret := processData(__taint_src, a)\n\t__taint_sink(ret)\n}\n\nfunc processData(s interface{}, i interface{}) (ret interface{}) {\n\tret = i\n\treturn\n}\n\nfunc __taint_sink(o interface{}) {"
+        },
+        {
+          "line": 24,
+          "content": "func processData(s interface{}, i interface{}) (ret interface{}) {\n\tret = i\n\treturn\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    },
+    {
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/named_return_value_passing_002_T/named_return_value_passing_002_T.go",
+      "matches": [
+        {
+          "line": 12,
+          "content": "// evaluation information end\n\npackage main\nimport \"os/exec\"\n\nfunc named_return_value_passing_002_T(__taint_src interface{}) {\n\ta := \"_\"\n\n\tret := processData(__taint_src, a)\n\t__taint_sink(ret)\n}"
+        },
+        {
+          "line": 19,
+          "content": "\n\tret := processData(__taint_src, a)\n\t__taint_sink(ret)\n}\n\nfunc processData(s interface{}, i interface{}) (ret interface{}) {\n\tret = s\n\treturn\n}\n\nfunc __taint_sink(o interface{}) {"
+        },
+        {
+          "line": 24,
+          "content": "func processData(s interface{}, i interface{}) (ret interface{}) {\n\tret = s\n\treturn\n}\n\nfunc __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}\n\nfunc main() {\n    __taint_src := \"taint_src_value\""
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 20
+}

@@ -1,0 +1,11 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "ITestService",
+      "NewIctestAPI"
+    ],
+    "kind": "interface",
+    "max_results": 20
+  }
+}

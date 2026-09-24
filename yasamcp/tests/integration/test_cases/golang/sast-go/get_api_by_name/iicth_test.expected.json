@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_001_T/direct_assignment_002_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_001_T/direct_assignment_002_T.go",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_002_F/direct_assignment_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_002_F/direct_assignment_002_F.go",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_001_T/field_assignment_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_001_T/field_assignment_001_T.go",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_002_F/field_assignment_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_002_F/field_assignment_002_F.go",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 31,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "IIctest::test",
+      "signature": "test(taint_src string) (interface{}, error)",
+      "filepath": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 31,
+        "end_column": 0
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n"
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

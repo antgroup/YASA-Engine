@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "class_fqn": "constructor_extends_001_T::DerivedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 25,
+        "start_column": 2,
+        "end_line": 33,
+        "end_column": 3
+      },
+      "content": "class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_002_F::DerivedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 25,
+        "start_column": 2,
+        "end_line": 33,
+        "end_column": 3
+      },
+      "content": "class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_003_T::DerivedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+        "start_line": 23,
+        "start_column": 2,
+        "end_line": 31,
+        "end_column": 3
+      },
+      "content": "class DerivedClass extends BaseClass {\n    constructor() {\n      super();\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_004_F::DerivedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+        "start_line": 23,
+        "start_column": 2,
+        "end_line": 31,
+        "end_column": 3
+      },
+      "content": "class DerivedClass extends BaseClass {\n    constructor() {\n      super();\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }\n  }",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

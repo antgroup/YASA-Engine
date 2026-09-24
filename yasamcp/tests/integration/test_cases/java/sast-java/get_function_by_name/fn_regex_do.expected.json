@@ -1,0 +1,164 @@
+{
+  "results": [
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.loop_stmt::Statement_Do_While_001_T::statement_do_while_001_t",
+      "function_signature": "Map<String, Object> statement_do_while_001_t(@PathVariable String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/Statement_Do_While_001_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/Statement_Do_While_001_T.java",
+        "start_line": 22,
+        "start_column": 2,
+        "end_line": 37,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"Statement_Do_While_001_T/{cmd}\")\n  public Map<String, Object> statement_do_while_001_t(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      int i = 0;\n      // 场景特点：污点变量在do-while循环体中使用\n      do {\n        Runtime.getRuntime().exec(cmd);\n        i++;\n      } while (i < 1);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }",
+      "function_annotations": [
+        "@GetMapping(\"Statement_Do_While_001_T/{cmd}\")"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.loop_stmt::Statement_Do_While_002_F::statement_do_while_002_f",
+      "function_signature": "Map<String, Object> statement_do_while_002_f(@PathVariable String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/Statement_Do_While_002_F.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/loop_stmt/Statement_Do_While_002_F.java",
+        "start_line": 22,
+        "start_column": 2,
+        "end_line": 37,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"Statement_Do_While_002_F/{cmd}\")\n  public Map<String, Object> statement_do_while_002_f(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      int i = 0;\n      // 场景特点：非污点变量在do-while循环体中使用\n      do {\n        Runtime.getRuntime().exec(\"safe_value\");\n        i++;\n      } while (i < 1);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }",
+      "function_annotations": [
+        "@GetMapping(\"Statement_Do_While_002_F/{cmd}\")"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.path_sensitive.loop_conditional_stmt.no_solver::Do_While_001_T::do_while_001_t",
+      "function_signature": "Map<String, Object> do_while_001_t(@PathVariable String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/Do_While_001_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/Do_While_001_T.java",
+        "start_line": 22,
+        "start_column": 2,
+        "end_line": 38,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"Do_While_001_T/{cmd}\")\n  public Map<String, Object> do_while_001_t(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      String result;\n      // 场景特点：do-while循环条件为常量true，循环体至少执行一次\n      do {\n        result = cmd;\n        break;\n      } while (true);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }",
+      "function_annotations": [
+        "@GetMapping(\"Do_While_001_T/{cmd}\")"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.path_sensitive.loop_conditional_stmt.no_solver::Do_While_002_F::do_while_002_f",
+      "function_signature": "Map<String, Object> do_while_002_f(@PathVariable String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/Do_While_002_F.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/path_sensitive/loop_conditional_stmt/no_solver/Do_While_002_F.java",
+        "start_line": 22,
+        "start_column": 2,
+        "end_line": 38,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"Do_While_002_F/{cmd}\")\n  public Map<String, Object> do_while_002_f(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      String result = \"safe_value\";\n      // 场景特点：do-while循环条件为常量false，循环体仅执行一次\n      do {\n        result = \"safe_value\";\n        break;\n      } while (false);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }",
+      "function_annotations": [
+        "@GetMapping(\"Do_While_002_F/{cmd}\")"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doGet",
+      "function_signature": "String doGet(String url, Map<String, String> param)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 22,
+        "start_column": 4,
+        "end_line": 62,
+        "end_column": 5
+      },
+      "content": "public static String doGet(String url, Map<String, String> param) throws Exception {\n\n        // 创建Httpclient对象\n        CloseableHttpClient httpclient = HttpClients.createDefault();\n\n        String resultString = \"\";\n        CloseableHttpResponse response = null;\n        try {\n            // 创建uri\n            URIBuilder builder = new URIBuilder(url);\n            if (param != null) {\n                for (String key : param.keySet()) {\n                    builder.addParameter(key, param.get(key));\n                }\n            }\n            URI uri = builder.build();\n\n            // 创建http GET请求\n            HttpGet httpGet = new HttpGet(uri);\n            RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000).setConnectionRequestTimeout(10000).setSocketTimeout(10000).build();\n            httpGet.setConfig(requestConfig);\n            // 执行请求\n            response = httpclient.execute(httpGet);\n            // 判断返回状态是否为200\n            if (response.getStatusLine().getStatusCode() == 200) {\n                resultString = EntityUtils.toString(response.getEntity(), \"UTF-8\");\n            }\n        } catch (Exception e) {\n            throw e;\n        } finally {\n            try {\n                if (response != null) {\n                    response.close();\n                }\n                httpclient.close();\n            } catch (Exception e) {\n                throw e;\n            }\n        }\n        return resultString;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doGet",
+      "function_signature": "String doGet(String url)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 64,
+        "start_column": 4,
+        "end_line": 66,
+        "end_column": 5
+      },
+      "content": "public static String doGet(String url) throws Exception {\n        return doGet(url, null);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doPost",
+      "function_signature": "String doPost(String url, Map<String, String> param)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 68,
+        "start_column": 4,
+        "end_line": 102,
+        "end_column": 5
+      },
+      "content": "public static String doPost(String url, Map<String, String> param) throws Exception {\n        // 创建Httpclient对象\n        CloseableHttpClient httpClient = HttpClients.createDefault();\n        CloseableHttpResponse response = null;\n        String resultString = \"\";\n        try {\n            // 创建Http Post请求\n            HttpPost httpPost = new HttpPost(url);\n            RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000).setConnectionRequestTimeout(10000).setSocketTimeout(10000).build();\n            httpPost.setConfig(requestConfig);\n            // 创建参数列表\n            if (param != null) {\n                List<NameValuePair> paramList = new ArrayList<>();\n                for (String key : param.keySet()) {\n                    paramList.add(new BasicNameValuePair(key, param.get(key)));\n                }\n                // 模拟表单\n                UrlEncodedFormEntity entity = new UrlEncodedFormEntity(paramList, \"utf-8\");\n                httpPost.setEntity(entity);\n            }\n            // 执行http请求\n            response = httpClient.execute(httpPost);\n            resultString = EntityUtils.toString(response.getEntity(), \"utf-8\");\n        } catch (Exception e) {\n            throw e;\n        } finally {\n            try {\n                response.close();\n            } catch (Exception e) {\n                throw e;\n            }\n        }\n\n        return resultString;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doPost",
+      "function_signature": "String doPost(String url)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 104,
+        "start_column": 4,
+        "end_line": 106,
+        "end_column": 5
+      },
+      "content": "public static String doPost(String url) throws Exception {\n        return doPost(url, null);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.model.alias::Invoke::doUnalias",
+      "function_signature": "void doUnalias(B b)",
+      "file_path": "src/main/java/com/sast/astbenchmark/model/alias/Invoke.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/alias/Invoke.java",
+        "start_line": 50,
+        "start_column": 4,
+        "end_line": 52,
+        "end_column": 5
+      },
+      "content": "public static void doUnalias(B b) {\n        b.setAttr(new A());\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.service::BaseSSRFShowManagerImpl::doConnect",
+      "function_signature": "void doConnect(String url, SsrfClient ssrfClient)",
+      "file_path": "src/main/java/com/sast/astbenchmark/service/BaseSSRFShowManagerImpl.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/service/BaseSSRFShowManagerImpl.java",
+        "start_line": 5,
+        "start_column": 4,
+        "end_line": 7,
+        "end_column": 5
+      },
+      "content": "public void doConnect(String url, SsrfClient ssrfClient) {\n        ssrfClient.doConnect(url);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

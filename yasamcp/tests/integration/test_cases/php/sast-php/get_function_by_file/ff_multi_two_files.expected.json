@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 11,
+        "end_column": 43
+      },
+      "content": "    abstract public function handle($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function process($arg) {\n    __taint_sink($arg);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_return_value_passing_001_T",
+      "function_signature": "argument_return_value_passing_001_T()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function argument_return_value_passing_001_T($__taint_src) {\n    process($__taint_src);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "abstract_class_001_T",
+      "function_signature": "abstract_class_001_T()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 24,
+        "end_column": 1
+      },
+      "content": "function abstract_class_001_T($__taint_src) {\n    $handler = new ConcreteHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 26,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 7
+}

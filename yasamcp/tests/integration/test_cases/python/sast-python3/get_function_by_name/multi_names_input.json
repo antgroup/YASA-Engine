@@ -1,0 +1,13 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": [
+      "process",
+      "get_data",
+      "source"
+    ],
+    "function_fqn": "",
+    "use_regex": false,
+    "max_results": 20
+  }
+}

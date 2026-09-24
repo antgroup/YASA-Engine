@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": [
+      "extends",
+      "super"
+    ],
+    "max_results": 10
+  }
+}

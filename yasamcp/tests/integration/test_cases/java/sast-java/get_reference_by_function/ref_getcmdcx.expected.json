@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "line": 28,
+        "content": "        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke.DifferentParamsForFunction_need_solve_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 38,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"DifferentParamsForFunction_need_solve_001_T\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = -1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = 1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "line": 30,
+        "content": "        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke.DifferentParamsForFunction_need_solve_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 38,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"DifferentParamsForFunction_need_solve_001_T\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = -1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = 1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_002_F.java",
+        "line": 29,
+        "content": "        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke.DifferentParamsForFunction_need_solve_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_002_F.java",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 39,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"DifferentParamsForFunction_need_solve_002_F\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = 1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = -1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_002_F.java",
+        "line": 31,
+        "content": "        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke.DifferentParamsForFunction_need_solve_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_002_F.java",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 39,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"DifferentParamsForFunction_need_solve_002_F\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = 1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = -1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

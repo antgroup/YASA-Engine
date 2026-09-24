@@ -1,0 +1,30 @@
+{
+  "results": [
+    {
+      "class_fqn": "com.sast.astbenchmark.common.utils::CmdUtil",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+        "start_line": 3,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "public class CmdUtil {\n\n    public static void run(String cmd) {\n        try {\n            Runtime.getRuntime().exec(cmd);\n        }catch (Exception e) {\n            return;\n        }\n    }\n\n    public static String getCmdWithContextSensitive(int x, String cmd) {\n        String res;\n        if (x > 0) {\n            res = cmd;\n        }\n        else {\n            res = \"ls\";\n        }\n        return res;\n    }\n}",
+      "methods": [
+        {
+          "name": "run",
+          "function_signature": "void run(String cmd)",
+          "line": 5
+        },
+        {
+          "name": "getCmdWithContextSensitive",
+          "function_signature": "String getCmdWithContextSensitive(int x, String cmd)",
+          "line": 13
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

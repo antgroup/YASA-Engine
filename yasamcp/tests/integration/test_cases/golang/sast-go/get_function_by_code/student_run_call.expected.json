@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "function_fqn": "polymorphism_003_T",
+      "function_signature": "polymorphism_003_T(__taint_src string)",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "func polymorphism_003_T(__taint_src string) {\n\tvar student Person = &Student{Name: __taint_src, Age: 20, GPA: 3.8}\n\tvar teacher Person = &Teacher{Name: \"Bob\", Age: 35, major: \"Math\"}\n\t_ = teacher\n\t__taint_sink(student.Run())\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_004_F",
+      "function_signature": "polymorphism_004_F(__taint_src string)",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "func polymorphism_004_F(__taint_src string) {\n\tvar student Person = &Student{Name: \"Alice\", Age: 20, GPA: 3.8}\n\tvar teacher Person = &Teacher{Name: __taint_src, Age: 35, major: \"Math\"}\n\t_ = teacher\n\t__taint_sink(student.Run())\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_003_T",
+      "function_signature": "polymorphism_override_003_T(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "func polymorphism_override_003_T(__taint_src string) {\n\tvar student Person = &Student{Name: __taint_src, Age: 20, GPA: 3.8}\n\tvar teacher Person = &Teacher{Name: \"Bob\", Age: 35, major: \"Math\"}\n\t_ = teacher\n\t__taint_sink(student.Run())\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_004_F",
+      "function_signature": "polymorphism_override_004_F(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "func polymorphism_override_004_F(__taint_src string) {\n\tvar student Person = &Student{Name: \"Alice\", Age: 20, GPA: 3.8}\n\tvar teacher Person = &Teacher{Name: \"Bob\", Age: 35, major: \"Math\"}\n\t_ = teacher\n\t__taint_sink(student.Run())\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

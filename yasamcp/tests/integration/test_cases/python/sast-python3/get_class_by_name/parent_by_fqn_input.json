@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "Parent",
+    "class_fqn": "constructor_object_sensitive_003_T::Parent",
+    "use_regex": false,
+    "include_methods": false,
+    "max_results": 10
+  }
+}

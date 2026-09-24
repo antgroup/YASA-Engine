@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "process",
+    "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.py",
+    "line": 13,
+    "max_results": 10
+  }
+}

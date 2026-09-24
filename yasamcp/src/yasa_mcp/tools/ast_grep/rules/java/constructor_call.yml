@@ -1,0 +1,3 @@
+name: constructor_call
+rule:
+  kind: object_creation_expression

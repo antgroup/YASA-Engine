@@ -1,0 +1,90 @@
+{
+  "results": [
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_001_T/direct_assignment_002_T.go",
+        "start_line": 29,
+        "start_column": 5,
+        "end_line": 31,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_002_F/direct_assignment_002_F.go",
+        "start_line": 29,
+        "start_column": 5,
+        "end_line": 31,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_001_T/field_assignment_001_T.go",
+        "start_line": 29,
+        "start_column": 5,
+        "end_line": 31,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_002_F/field_assignment_002_F.go",
+        "start_line": 29,
+        "start_column": 5,
+        "end_line": 31,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 30,
+        "start_column": 5,
+        "end_line": 32,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "IIctest",
+      "qualified_name": "IIctest",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+        "start_line": 30,
+        "start_column": 5,
+        "end_line": 32,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

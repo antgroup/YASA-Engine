@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "function_fqn": "Processor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_001_T",
+      "function_signature": "static_method_001_T()",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

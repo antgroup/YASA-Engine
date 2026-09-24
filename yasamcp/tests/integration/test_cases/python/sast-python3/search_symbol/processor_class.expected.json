@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "Processor",
+      "qualified_name": "Processor",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Processor",
+      "qualified_name": "Processor",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

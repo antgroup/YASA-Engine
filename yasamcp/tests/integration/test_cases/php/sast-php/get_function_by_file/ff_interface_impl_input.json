@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 0
+  }
+}

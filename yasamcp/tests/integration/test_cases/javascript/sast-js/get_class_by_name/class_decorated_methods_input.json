@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "DecoratedClass"
+    ],
+    "include_methods": true,
+    "max_results": 10
+  }
+}

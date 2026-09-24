@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.library_function.math_001_T.taint_sink",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+        "line": 22
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "AbstractHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 11,
+        "end_column": 43
+      },
+      "content": "    abstract public function handle($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "App\\Services::Processor::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_T/Processor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_T/Processor.php",
+        "start_line": 5,
+        "start_column": 4,
+        "end_line": 7,
+        "end_column": 5
+      },
+      "content": "public static function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 43
+      },
+      "content": "    abstract public function handle($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 43
+      },
+      "content": "    abstract public function handle($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_F/BaseHandler.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_F/BaseHandler.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return \"safe_value\";\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/BaseHandler.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/BaseHandler.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Processor::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_F/Processor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_F/Processor.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return \"safe_value\";\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Processor::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/Processor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/Processor.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

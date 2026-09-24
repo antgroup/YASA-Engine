@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "Config",
+    "class_fqn": "",
+    "use_regex": false,
+    "include_methods": false,
+    "max_results": 10
+  }
+}

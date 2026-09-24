@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": [
+      "__taint_sink"
+    ],
+    "max_results": 10
+  }
+}

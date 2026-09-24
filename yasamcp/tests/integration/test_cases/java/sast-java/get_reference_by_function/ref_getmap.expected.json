@@ -1,0 +1,166 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java",
+        "line": 26,
+        "content": "        return t.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 27,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_001_T/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        T t = new T(cmd);\n        t.start();\n        return t.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_002_F.java",
+        "line": 27,
+        "content": "        return t.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_002_F.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_002_F/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        String a = \"ls\";\n        T t = new T(a);\n        t.start();\n        return t.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java",
+        "line": 27,
+        "content": "        return r.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_005_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_005_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_005_T/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        R r = new R(cmd);\n        Executors.newCachedThreadPool().execute(r);\n        return r.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_006_F.java",
+        "line": 28,
+        "content": "        return r.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_006_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_006_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 29,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_006_F/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        String a = \"ls\";\n        R r = new R(a);\n        Executors.newCachedThreadPool().execute(r);\n        return r.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java",
+        "line": 28,
+        "content": "        return tt.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_007_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_007_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 29,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_007_T/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Timer timer = new Timer();\n        TT tt = new TT(cmd);\n        timer.schedule(tt, 2000);\n        return tt.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_008_F.java",
+        "line": 29,
+        "content": "        return tt.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.flow_sensitive.asynchronous.Async_Multithread_008_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/flow_sensitive/asynchronous/Async_Multithread_008_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 30,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithread_008_F/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        String a = \"ls\";\n        Timer timer = new Timer();\n        TT tt = new TT(a);\n        timer.schedule(tt, 2000);\n        return tt.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java",
+        "line": 26,
+        "content": "        return t.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 27,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithreading_001_T/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        T t = new T(cmd);\n        t.start();\n        return t.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_002_F.java",
+        "line": 27,
+        "content": "        return t.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_002_F.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithreading_002_F/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        String a = \"ls\";\n        T t = new T(a);\n        t.start();\n        return t.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java",
+        "line": 27,
+        "content": "        return r.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_005_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_005_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithreading_005_T/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        R r = new R(cmd);\n        Executors.newCachedThreadPool().execute(r);\n        return r.getMap();\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_006_F.java",
+        "line": 28,
+        "content": "        return r.getMap();\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.asynchronous_tracing.multi_thread.Async_Multithreading_006_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/asynchronous_tracing/multi_thread/Async_Multithreading_006_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 29,
+        "end_column": 5
+      },
+      "content": "@PostMapping(\"Async_Multithreading_006_F/{cmd}\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        String a = \"ls\";\n        R r = new R(a);\n        Executors.newCachedThreadPool().execute(r);\n        return r.getMap();\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

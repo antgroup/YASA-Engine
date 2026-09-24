@@ -1,0 +1,10 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "extends"
+    ],
+    "kind": "class",
+    "max_results": 10
+  }
+}

@@ -1,0 +1,3 @@
+name: method_call
+rule:
+  kind: method_invocation

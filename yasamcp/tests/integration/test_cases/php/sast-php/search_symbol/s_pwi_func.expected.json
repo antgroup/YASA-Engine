@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "kind": "function",
+      "name": "processWithInterface",
+      "qualified_name": "processWithInterface",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_T.php",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

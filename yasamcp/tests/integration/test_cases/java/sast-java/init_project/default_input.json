@@ -1,0 +1,6 @@
+{
+  "tool_name": "init_project",
+  "arguments": {
+    "project_path": "${TEST_DATA_DIR}/java/sast-java"
+  }
+}

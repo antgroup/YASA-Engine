@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "CmdUtil"
+    ],
+    "include_methods": true,
+    "max_results": 10
+  }
+}

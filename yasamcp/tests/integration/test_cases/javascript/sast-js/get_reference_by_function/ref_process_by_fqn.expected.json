@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "line": 11,
+        "content": "  process(__taint_src);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.argument_passing_value_001_T",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 10,
+        "start_column": 1,
+        "end_line": 16,
+        "end_column": 2
+      },
+      "content": "function argument_passing_value_001_T(__taint_src) {\n  process(__taint_src);\n\n  function process(arg) {\n    __taint_sink(arg);\n  }\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

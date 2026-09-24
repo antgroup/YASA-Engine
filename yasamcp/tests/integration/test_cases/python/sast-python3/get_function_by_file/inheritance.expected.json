@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "function_fqn": "inheritance_001_T",
+      "function_signature": "inheritance_001_T(taint_src)",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 14,
+        "end_column": 42
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Parent::__init__",
+      "function_signature": "__init__(self, taint_src)",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+        "start_line": 18,
+        "start_column": 4,
+        "end_line": 19,
+        "end_column": 42
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Child::__init__",
+      "function_signature": "__init__(self)",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+        "start_line": 23,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 27
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+        "start_line": 27,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

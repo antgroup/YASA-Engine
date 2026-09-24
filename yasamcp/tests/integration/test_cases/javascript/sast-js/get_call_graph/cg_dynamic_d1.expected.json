@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.dynamic_tracing.dynamic_call.dynamic_call_reflect_001_F.dynamic_call_reflect_001_F",
+        "function_signature": "",
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+        "line": 11
+      },
+      "callees": [
+        {
+          "call_site": {
+            "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+            "line": 16,
+            "content": "  __taint_sink(Reflect.get(obj, \"name\"));\n"
+          },
+          "function_fqn": "case.completeness.dynamic_tracing.dynamic_call.dynamic_call_reflect_001_F.__taint_sink",
+          "function_signature": "",
+          "location": {
+            "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+            "start_line": 19,
+            "start_column": 1,
+            "end_line": 21,
+            "end_column": 2
+          },
+          "content": "",
+          "has_cycle": false,
+          "callees": []
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

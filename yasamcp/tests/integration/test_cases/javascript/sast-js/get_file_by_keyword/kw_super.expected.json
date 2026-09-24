@@ -1,0 +1,100 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "matches": [
+        {
+          "line": 33,
+          "content": "    }\n  }\n\n  class SubClass extends (1 + 1 === 2 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {\n      return this.getData();\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "matches": [
+        {
+          "line": 33,
+          "content": "    }\n  }\n\n  class SubClass extends (1 + 1 === 3 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {\n      return this.getData();\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_003_F.js",
+      "matches": [
+        {
+          "line": 22,
+          "content": "\nfunction classDecorator(target) {\n  return class extends target {\n    method(input) {\n      __taint_sink(input);\n      super.method(input);\n    }\n  };\n}\n\n@classDecorator"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_004_T.js",
+      "matches": [
+        {
+          "line": 22,
+          "content": "\nfunction classDecorator(target) {\n  return class extends target {\n    method(input) {\n      __taint_sink(input);\n      super.method(input);\n    }\n  };\n}\n\n@classDecorator"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+      "matches": [
+        {
+          "line": 27,
+          "content": "    process() { }\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+      "matches": [
+        {
+          "line": 27,
+          "content": "    process() {}\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor(data) {\n      super(data);\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+      "matches": [
+        {
+          "line": 25,
+          "content": "    process() {}\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor() {\n      super();\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+      "matches": [
+        {
+          "line": 25,
+          "content": "    process() {}\n  }\n\n  class DerivedClass extends BaseClass {\n    constructor() {\n      super();\n    }\n\n    process() {\n      __taint_sink(this.getData());\n    }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/config.json",
+      "matches": [
+        {
+          "line": 14,
+          "content": "            {\n              \"compose\": \"inheritance_parent_property_001_T.js && !inheritance_parent_property_002_F.js\",\n              \"scene\": \"父类属性\"\n            },\n            {\n              \"compose\": \"inheritance_super_call_001_T.js && !inheritance_super_call_002_F.js\",\n              \"scene\": \"super调用\"\n            },\n            {\n              \"compose\": \"method_override_001_T.js && !method_override_002_F.js\",\n              \"scene\": \"子类覆盖\""
+        },
+        {
+          "line": 15,
+          "content": "              \"compose\": \"inheritance_parent_property_001_T.js && !inheritance_parent_property_002_F.js\",\n              \"scene\": \"父类属性\"\n            },\n            {\n              \"compose\": \"inheritance_super_call_001_T.js && !inheritance_super_call_002_F.js\",\n              \"scene\": \"super调用\"\n            },\n            {\n              \"compose\": \"method_override_001_T.js && !method_override_002_F.js\",\n              \"scene\": \"子类覆盖\"\n            }"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+      "matches": [
+        {
+          "line": 21,
+          "content": "    }\n  }\n\n  class Child extends Parent {\n    constructor(data) {\n      super(data);\n    }\n\n    getParentData() {\n      // 场景特点：子类访问父类属性\n      return this.parentData;"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

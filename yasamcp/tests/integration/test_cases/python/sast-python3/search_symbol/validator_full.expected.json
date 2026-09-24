@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "Validator",
+      "qualified_name": "Validator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 19
+      },
+      "content": "class Validator:\n    # 使用 @classmethod 装饰器，将下面的方法标记为 类方法。 那么类方法就可以访问类属性，也可以通过类名直接调用。\n    # cls为类本身 而不是代表实例self，所以不能访问实例属性，data为传递的参数\n    @classmethod\n    def validate(cls, data):\n        return data"
+    },
+    {
+      "kind": "class",
+      "name": "Validator",
+      "qualified_name": "Validator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 18
+      },
+      "content": "class Validator:\n    @classmethod\n    def validate(cls, data):\n        return \"_\""
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

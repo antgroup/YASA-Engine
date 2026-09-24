@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "function_fqn": "argument_passing_value_001_T::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 15,
+        "end_column": 3
+      },
+      "content": "function process(arg) {\n    __taint_sink(arg);\n  }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "process",
+      "function_signature": "process(arg)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.js",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function process(arg) {\n  arg = \"_\";\n  __taint_sink(arg);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_normal_value_001_F::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_001_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_001_F.js",
+        "start_line": 14,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": "function process(arg) {\n    __taint_sink(arg);\n  }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_normal_value_002_T::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_002_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_002_T.js",
+        "start_line": 14,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": "function process(arg) {\n    __taint_sink(arg);\n  }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "MyClass::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+        "start_line": 12,
+        "start_column": 2,
+        "end_line": 14,
+        "end_column": 3
+      },
+      "content": "static process(arg) {\n    __taint_sink(arg);\n  }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "MyClass::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+        "start_line": 12,
+        "start_column": 2,
+        "end_line": 15,
+        "end_column": 3
+      },
+      "content": "static process(arg) {\n    arg = \"_\";\n    __taint_sink(arg);\n  }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

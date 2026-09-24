@@ -1,0 +1,166 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T.java",
+        "line": 26,
+        "content": "      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.CallExpression_Package_001_T.aTaintCase0157",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T.java",
+        "start_line": 21,
+        "start_column": 3,
+        "end_line": 33,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"CallExpression_Package_001_T/{url}\")\n  public Map<String, Object> aTaintCase0157(@PathVariable String url) {\n\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_002_F.java",
+        "line": 27,
+        "content": "      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.CallExpression_Package_002_F.aTaintCase0157",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_002_F.java",
+        "start_line": 21,
+        "start_column": 3,
+        "end_line": 34,
+        "end_column": 3
+      },
+      "content": "@GetMapping(\"CallExpression_Package_002_F/{url}\")\n  public Map<String, Object> aTaintCase0157(@PathVariable String url) {\n\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      url = \"safe\";\n      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_001_T.java",
+        "line": 29,
+        "content": "            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_InfixExpression_001_T.aTaintCase014",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_001_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 35,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_InfixExpression_001_T/{cmd}\")\n    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_002_F.java",
+        "line": 29,
+        "content": "            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_InfixExpression_002_F.aTaintCase014",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_002_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 35,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_InfixExpression_002_F/{cmd}\")\n    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        cmd = \"safe\";\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java",
+        "line": 35,
+        "content": "            HttpUtil.doGet(xCmdObject.getModelMap().get(\"url1\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_muilt_collection.MapPutGet_muilt_collection_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_001_T.java",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 41,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"MapPutGet_muilt_collection_001_T\")\n    public Map<String, Object> testcase(@RequestParam String url) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            Map<String, String> paramMap = new HashMap<>();\n            XCmdObject xCmdObject = new XCmdObject();\n            paramMap.put(\"url1\", url);\n            paramMap.put(\"url2\", \"http://localhost\");\n            paramMap.put(\"method\", \"GET\");\n            xCmdObject.setModelMap(paramMap);\n            HttpUtil.doGet(xCmdObject.getModelMap().get(\"url1\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_002_F.java",
+        "line": 34,
+        "content": "            HttpUtil.doGet(xCmdObject.getModelMap().get(\"url2\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_muilt_collection.MapPutGet_muilt_collection_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_muilt_collection/MapPutGet_muilt_collection_002_F.java",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 40,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"MapPutGet_muilt_collection_002_F\")\n    public Map<String, Object> testcase(@RequestParam String url) {\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            Map<String, String> paramMap = new HashMap<>();\n            XCmdObject xCmdObject = new XCmdObject();\n            paramMap.put(\"url1\", url);\n            paramMap.put(\"url2\", \"http://localhost\");\n            paramMap.put(\"method\", \"GET\");\n            xCmdObject.setModelMap(paramMap);\n            HttpUtil.doGet(xCmdObject.getModelMap().get(\"url2\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapPutGet_001_T.java",
+        "line": 30,
+        "content": "            HttpUtil.doGet(paramMap.get(\"url\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.MapPutGet_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapPutGet_001_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 36,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"MapPutGet_001_T\")\n    public Map<String, Object> testcase(@RequestParam String url) {\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            Map<String, String> paramMap = new HashMap<>();\n            paramMap.put(\"url\", url);\n            paramMap.put(\"method\", \"GET\");\n            HttpUtil.doGet(paramMap.get(\"url\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapPutGet_002_F.java",
+        "line": 30,
+        "content": "            HttpUtil.doGet(paramMap.get(\"method\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver.MapPutGet_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapPutGet_002_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 36,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"MapPutGet_002_F\")\n    public Map<String, Object> testcase(@RequestParam String url) {\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            Map<String, String> paramMap = new HashMap<>();\n            paramMap.put(\"url\", url);\n            paramMap.put(\"method\", \"GET\");\n            HttpUtil.doGet(paramMap.get(\"method\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/FieldUnAlias_001_F.java",
+        "line": 30,
+        "content": "        Invoke.doUnalias(b2);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.alias.FieldUnAlias_001_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/FieldUnAlias_001_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 40,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"FieldUnAlias_001_F\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        B b1 = new B();\n        B b2 = new B();\n\n        b2.attr = b1.attr;\n        Invoke.doUnalias(b2);\n        b1.attr.b = cmd;\n\n        try {\n            Runtime.getRuntime().exec(b2.attr.b);\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/FieldUnAlias_002_T.java",
+        "line": 31,
+        "content": "        Invoke.doUnalias(b1);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.alias.FieldUnAlias_002_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/alias/FieldUnAlias_002_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 40,
+        "end_column": 5
+      },
+      "content": "@PostMapping(value = \"FieldUnAlias_002_T\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        B b1 = new B();\n        B b2 = new B();\n\n        b2.attr = b1.attr;\n        b1.attr.b = cmd;\n        Invoke.doUnalias(b1);\n\n        try {\n            Runtime.getRuntime().exec(b2.attr.b);\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

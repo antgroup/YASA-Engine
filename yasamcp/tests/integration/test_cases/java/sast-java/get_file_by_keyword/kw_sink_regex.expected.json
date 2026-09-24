@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "README.md",
+      "matches": [
+        {
+          "line": 30,
+          "content": "Runtime.getRuntime().exec() -- 参数位置0\norg.apache.http.impl.client.CloseableHttpClient#execute -- 参数位置0\ncn.hutool.http.HttpRequest#post -- 参数位置0\njava.net.URL#openConnection -- URL对象为污点被调用\njava.sql.Statement#executeQuery -- 参数位置0\nSinkUtil#sink (本评价体系靶场自定义) -- 参数位置0\n```\n#### 自主分析靶场测试结果\n自主分析测试产品/引擎的输出，结合case路由对应相应的评价项，分析该款产品当前可以检出的场景、不可检出的场景以及存在误报的场景有哪些。从而分析出测试产品/引擎的能力。\n\n#### 自动化获取评价体系测试结果"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/StreamAPI_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.Arrays;\nimport java.util.HashMap;\nimport java.util.List;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/StreamAPI_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.Arrays;\nimport java.util.HashMap;\nimport java.util.List;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_003_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_004_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_005_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_006_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_007_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/field_sensitive_one_collection/numeric_index_state_no_solver/MapField_008_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.field_sensitive_one_collection.numeric_index_state_no_solver;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/List_obj_sensitive_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.object_sensitive;\n\nimport com.sast.astbenchmark.common.utils.SinkUtil;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

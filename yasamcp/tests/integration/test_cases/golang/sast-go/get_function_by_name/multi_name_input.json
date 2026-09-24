@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": [
+      "GetName",
+      "SetName",
+      "Swimming"
+    ],
+    "use_regex": false,
+    "max_results": 20
+  }
+}

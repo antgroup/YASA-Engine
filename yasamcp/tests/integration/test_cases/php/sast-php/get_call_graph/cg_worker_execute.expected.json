@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file_interface_002_T.Processable.Processable.execute",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/Processable.php",
+        "line": 4
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

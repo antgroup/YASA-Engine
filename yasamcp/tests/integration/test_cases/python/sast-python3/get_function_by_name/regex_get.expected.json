@@ -1,0 +1,306 @@
+{
+  "results": [
+    {
+      "function_fqn": "BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Box::get_content",
+      "function_signature": "get_content(self) -> T",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 27
+      },
+      "content": "def get_content(self) -> T:\n        return self.content",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Box::get_content",
+      "function_signature": "get_content(self) -> T",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 27
+      },
+      "content": "def get_content(self) -> T:\n        return self.content",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": "def get_data(self):\n        return \"A\"",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::B::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_B\"",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::C::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 23,
+        "end_column": 60
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_C\" + taint_src  # 污点扩展",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": "def get_data(self):\n        return \"A\"",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::B::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_B\"",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::C::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 23,
+        "end_column": 55
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_C\" + \"_D\"  # 污点扩展",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "cross_class_001_T::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": "def get_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "cross_class_002_F::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_002_F.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": "def get_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_class_001_T::Base::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": "def get_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_class_001_T::Child::get_child_data",
+      "function_signature": "get_child_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+        "start_line": 24,
+        "start_column": 8,
+        "end_line": 25,
+        "end_column": 28
+      },
+      "content": "def get_child_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_class_002_F::Base::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "start_line": 16,
+        "start_column": 8,
+        "end_line": 17,
+        "end_column": 28
+      },
+      "content": "def get_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_class_002_F::Child::get_child_data",
+      "function_signature": "get_child_data(self)",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "start_line": 23,
+        "start_column": 8,
+        "end_line": 24,
+        "end_column": 28
+      },
+      "content": "def get_child_data(self):\n            return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "multi_target_assignment_001_T",
+      "function_signature": "multi_target_assignment_001_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 17
+      },
+      "content": "def multi_target_assignment_001_T(taint_src):\n    # 将taint_src的值同时赋给多个变量\n    a = b = c = d = taint_src\n    e = f = \"_\"\n    \n    # 使用其中一个变量作为sink点\n    taint_sink(c)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "multi_target_assignment_002_F",
+      "function_signature": "multi_target_assignment_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/expression/special_expression/multi_target_assignment_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 17
+      },
+      "content": "def multi_target_assignment_002_F(taint_src):\n    # 将taint_src的值同时赋给多个变量\n    a = b = c = d = taint_src\n    e = f = \"_\"\n\n    # 使用其中一个变量作为sink点\n    taint_sink(e)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "private_variable_001_T::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 30
+      },
+      "content": "def get_data(self):\n            return self.__data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 20
+}

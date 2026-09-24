@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_001_T::SubClass::describe",
+      "signature": "describe()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 38,
+        "end_column": 0
+      },
+      "content": "describe() {\n      return this.getData();\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_002_F::SubClass::describe",
+      "signature": "describe()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 38,
+        "end_column": 0
+      },
+      "content": "describe() {\n      return this.getData();\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

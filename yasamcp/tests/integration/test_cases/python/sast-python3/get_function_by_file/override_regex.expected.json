@@ -1,0 +1,854 @@
+{
+  "results": [
+    {
+      "function_fqn": "chained_override_001_T",
+      "function_signature": "chained_override_001_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 61
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F",
+      "function_signature": "chained_override_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_001_T",
+      "function_signature": "constructor_extends_001_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 13,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_001_T",
+      "function_signature": "polymorphism_override_001_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 26
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T",
+      "function_signature": "constructor_extends_003_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 32,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F",
+      "function_signature": "constructor_extends_004_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 32,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_002_F",
+      "function_signature": "polymorphism_override_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 29,
+        "end_column": 26
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_001_T",
+      "function_signature": "static_method_override_001_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 25,
+        "end_column": 33
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_002_F",
+      "function_signature": "static_method_override_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 55
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::A::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::BaseClass::__init__",
+      "function_signature": "__init__(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 29
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::BaseClass::__init__",
+      "function_signature": "__init__(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 23
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_001_T::Base::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 74
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_002_F::Base::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+        "start_line": 15,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 74
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::getData",
+      "function_signature": "getData(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_001_T::Parent::get_value",
+      "function_signature": "get_value()",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+        "start_line": 16,
+        "start_column": 6,
+        "end_line": 17,
+        "end_column": 23
+      },
+      "content": "",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_002_F::Parent::get_value",
+      "function_signature": "get_value()",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+        "start_line": 16,
+        "start_column": 6,
+        "end_line": 17,
+        "end_column": 23
+      },
+      "content": "",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::B::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::B::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 12
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_001_T::Sub1::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 20,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 12
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 20,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 12
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_002_F::Sub1::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+        "start_line": 20,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_001_T::C::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 23,
+        "end_column": 60
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chained_override_002_F::C::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 23,
+        "end_column": 55
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 22,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 12
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_001_T::Child::get_value",
+      "function_signature": "get_value()",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+        "start_line": 22,
+        "start_column": 6,
+        "end_line": 23,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "static_method_override_002_F::Child::get_value",
+      "function_signature": "get_value()",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+        "start_line": 22,
+        "start_column": 6,
+        "end_line": 23,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 24,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::DerivedClass::__init__",
+      "function_signature": "__init__(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 26
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::DerivedClass::__init__",
+      "function_signature": "__init__(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 26
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_001_T::Sub2::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 18
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_override_002_F::Sub2::call",
+      "function_signature": "call(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+        "start_line": 25,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 18
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 27,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 27,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 34
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_003_T::DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 27,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 35
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_004_F::DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 27,
+        "start_column": 5,
+        "end_line": 28,
+        "end_column": 35
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 29,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+        "start_line": 29,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 31,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 30,
+        "start_column": 0,
+        "end_line": 31,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 30,
+        "start_column": 4,
+        "end_line": 31,
+        "end_column": 35
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_002_F",
+      "function_signature": "constructor_extends_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.py",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 32,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.py",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 34,
+        "start_column": 0,
+        "end_line": 35,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 37,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 37,
+        "end_column": 19
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 37,
+        "end_column": 19
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 56
+}

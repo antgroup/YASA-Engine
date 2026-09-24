@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": ".*dynamic_call_reflect.*",
+    "use_regex": true,
+    "detail_level": "full",
+    "max_results": 10
+  }
+}

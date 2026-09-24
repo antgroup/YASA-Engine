@@ -1,0 +1,946 @@
+{
+  "results": [
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_029_T/cross/cross_01/cross_directory_029_T_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_029_T/cross/cross_01/cross_directory_029_T_a.go",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n\tAge  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_030_F/cross/cross_01/cross_directory_030_F_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_030_F/cross/cross_01/cross_directory_030_F_a.go",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n\tAge  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_009_T/argument_passing_value_009_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_009_T/argument_passing_value_009_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_010_F/argument_passing_value_010_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_010_F/argument_passing_value_010_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_025_T/cross/cross_01/cross_directory_025_T_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_025_T/cross/cross_01/cross_directory_025_T_a.go",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n\tAge  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_026_F/cross/cross_01/cross_directory_026_F_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_026_F/cross/cross_01/cross_directory_026_F_a.go",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tName string\n\tAge  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/simple_object/create_object_001_T/create_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/simple_object/create_object_001_T/create_object_001_T.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tname string\n\tage  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "class_fqn": "Person",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/simple_object/create_object_002_F/create_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/simple_object/create_object_002_F/create_object_002_F.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "type Person struct {\n\tname string\n\tage  int\n}",
+      "methods": [
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Skiing",
+          "function_signature": "string Skiing(__taint_src string) string",
+          "line": 16
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Swimming",
+          "function_signature": "string Swimming(taint_src string) string",
+          "line": 19
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "Run",
+          "function_signature": "Run() string",
+          "line": 20
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "UpdateNamePointer",
+          "function_signature": "UpdateNamePointer(newName string)",
+          "line": 24
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        },
+        {
+          "name": "GetNamePointer",
+          "function_signature": "string GetNamePointer() string",
+          "line": 28
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

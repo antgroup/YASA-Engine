@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "Base",
+    "use_regex": true,
+    "max_results": 20
+  }
+}

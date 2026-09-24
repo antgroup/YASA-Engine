@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.decorator_function.classmethod_decorator_001_T.Validator.validate",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+        "line": 16
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

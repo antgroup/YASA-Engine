@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke.DifferentParamsForFunction_need_solve_001_T.testcase",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "line": 23
+      },
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+        "line": 28,
+        "content": "        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.common.utils.CmdUtil.getCmdWithContextSensitive",
+      "function_signature": "",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "public static String getCmdWithContextSensitive(int x, String cmd) {\n        String res;\n        if (x > 0) {\n            res = cmd;\n        }\n        else {\n            res = \"ls\";\n        }\n        return res;\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

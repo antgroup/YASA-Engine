@@ -1,0 +1,112 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+      "matches": [
+        {
+          "line": 18,
+          "content": "\nabstract class BaseHandler {\n    abstract public function handle($data);\n}\n\nclass TaintHandler extends BaseHandler {\n    public function handle($data) {\n        return $data;\n    }\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "    public function handle($data) {\n        return $data;\n    }\n}\n\nclass SafeHandler extends BaseHandler {\n    public function handle($data) {\n        return \"safe\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+      "matches": [
+        {
+          "line": 18,
+          "content": "\nabstract class BaseHandler {\n    abstract public function handle($data);\n}\n\nclass TaintHandler extends BaseHandler {\n    public function handle($data) {\n        return $data;\n    }\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "    public function handle($data) {\n        return $data;\n    }\n}\n\nclass SafeHandler extends BaseHandler {\n    public function handle($data) {\n        return \"safe\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "matches": [
+        {
+          "line": 18,
+          "content": "\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass PassthroughProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "    public function process($data) {\n        return $data;\n    }\n}\n\nclass SanitizeProcessor implements DataProcessor {\n    public function process($data) {\n        return \"sanitized\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "matches": [
+        {
+          "line": 18,
+          "content": "\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass PassthroughProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n"
+        },
+        {
+          "line": 24,
+          "content": "    public function process($data) {\n        return $data;\n    }\n}\n\nclass SanitizeProcessor implements DataProcessor {\n    public function process($data) {\n        return \"sanitized\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_F.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\nabstract class AbstractFilter {\n    abstract public function filter($data);\n}\n\nclass SafeConcreteFilter extends AbstractFilter {\n    public function filter($data) {\n        return \"safe_filtered\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\nabstract class AbstractHandler {\n    abstract public function handle($data);\n}\n\nclass ConcreteHandler extends AbstractHandler {\n    public function handle($data) {\n        return $data;\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_F.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\ninterface Filter {\n    public function filter($data);\n}\n\nclass SafeFilter implements Filter {\n    public function filter($data) {\n        return \"filtered_safe\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass TaintProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_F.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\ninterface Encoder {\n    public function encode($data);\n}\n\nclass ConstEncoder implements Encoder {\n    public function encode($data) {\n        return \"encoded_constant\";\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_T.php",
+      "matches": [
+        {
+          "line": 14,
+          "content": "\ninterface Transformer {\n    public function transform($input);\n}\n\nclass IdentityTransformer implements Transformer {\n    public function transform($input) {\n        return $input;\n    }\n}\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

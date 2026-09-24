@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "matches": [
+        {
+          "line": 18,
+          "content": "func struct_injection_interface_001_T(__taint_src string) {\n\t// 创建 IctestImpl 实例\n\ttestSvc := &IctestImpl{}\n\n\t// 将业务实现注入到 IctestAPI 中\n\ttestAPI := NewIctestAPI(testSvc)\n\n\t// 调用接口方法，返回的数据即为污点源，直接传入 sink\n\tresult, _ := testAPI.GetTest(__taint_src)\n\t__taint_sink(result)\n}"
+        },
+        {
+          "line": 39,
+          "content": "// IctestAPI 是业务门面，对外暴露统一 API，内部依赖 IIctest 实现\ntype IctestAPI struct {\n\t_test_svc IIctest\n}\n\n// NewIctestAPI 构造器，注入 IIctest 实现\nfunc NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}"
+        },
+        {
+          "line": 40,
+          "content": "type IctestAPI struct {\n\t_test_svc IIctest\n}\n\n// NewIctestAPI 构造器，注入 IIctest 实现\nfunc NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+      "matches": [
+        {
+          "line": 18,
+          "content": "func struct_injection_interface_002_F(__taint_src string) {\n\t//创建 IctestImpl 实例\n\ttestSvc := &IctestImpl{}\n\n\t//将业务实现注入到 IctestAPI 中\n\ttestAPI := NewIctestAPI(testSvc)\n\n\t//调用接口方法，返回的数据和污点源没关系\n\tresult, _ := testAPI.GetTest(\"aa\")\n\t__taint_sink(result)\n}"
+        },
+        {
+          "line": 39,
+          "content": "// IctestAPI 是业务门面，对外暴露统一 API，内部依赖 IIctest 实现\ntype IctestAPI struct {\n\t_test_svc IIctest\n}\n\n// NewIctestAPI 构造器，注入 IIctest 实现\nfunc NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}"
+        },
+        {
+          "line": 40,
+          "content": "type IctestAPI struct {\n\t_test_svc IIctest\n}\n\n// NewIctestAPI 构造器，注入 IIctest 实现\nfunc NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

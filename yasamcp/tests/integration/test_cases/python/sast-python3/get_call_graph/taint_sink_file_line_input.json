@@ -1,0 +1,14 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "taint_sink",
+    "function_fqn": "",
+    "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+    "line": 23,
+    "depth": 2,
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_callees_per_node": 3,
+    "exclude_undefined_function_call": true
+  }
+}

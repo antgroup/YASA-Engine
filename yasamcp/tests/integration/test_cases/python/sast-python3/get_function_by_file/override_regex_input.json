@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": ".*override.*",
+    "use_regex": true,
+    "detail_level": "summary",
+    "max_results": 0
+  }
+}

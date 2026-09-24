@@ -1,0 +1,3 @@
+name: call_expression
+rule:
+  kind: call

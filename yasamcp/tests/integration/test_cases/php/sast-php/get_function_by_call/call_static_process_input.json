@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "Processor::process($__taint_src)",
+    "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+    "line": 17,
+    "max_results": 10
+  }
+}

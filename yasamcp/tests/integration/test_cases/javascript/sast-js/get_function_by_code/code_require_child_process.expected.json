@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "chain_invoke_001_T",
+      "function_signature": "chain_invoke_001_T(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_001_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function chain_invoke_001_T(__taint_src) {\n  let obj = {\n    data: \"\",\n    process(arg) {\n      this.data = arg;\n      return this;\n    },\n  };\n  // 场景特点：函数结果作为下次调用参数，形成链式调用传递污染源\n  obj.process(\"safe_value\").process(__taint_src);\n  __taint_sink(obj.data);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "chain_invoke_002_F",
+      "function_signature": "chain_invoke_002_F(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_002_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function chain_invoke_002_F(__taint_src) {\n  let obj = {\n    data: \"\",\n    process(arg) {\n      this.data = arg;\n      return this;\n    },\n  };\n  // 场景特点：链式调用中污染源未到达最终sink点\n  obj.process(__taint_src).process(\"safe_value\");\n  __taint_sink(obj.data);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_001_T",
+      "function_signature": "polymorphism_001_T(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 44,
+        "end_column": 1
+      },
+      "content": "function polymorphism_001_T(__taint_src) {\n  class BaseClass1 {\n    constructor() {\n      this.data = __taint_src;\n    }\n\n    getData() {\n      return this.data;\n    }\n  }\n\n  class BaseClass2 {\n    constructor() {\n      this.data = \"_\";\n    }\n\n    getData() {\n      return this.data;\n    }\n  }\n\n  class SubClass extends (1 + 1 === 2 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {\n      return this.getData();\n    }\n  }\n\n  const subClass = new SubClass();\n\n  __taint_sink(subClass.describe());\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_002_F",
+      "function_signature": "polymorphism_002_F(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 44,
+        "end_column": 1
+      },
+      "content": "function polymorphism_002_F(__taint_src) {\n  class BaseClass1 {\n    constructor() {\n      this.data = __taint_src;\n    }\n\n    getData() {\n      return this.data;\n    }\n  }\n\n  class BaseClass2 {\n    constructor() {\n      this.data = \"safe_value\";\n    }\n\n    getData() {\n      return this.data;\n    }\n  }\n\n  class SubClass extends (1 + 1 === 3 ? BaseClass1 : BaseClass2) {\n    constructor() {\n      super();\n    }\n\n    describe() {\n      return this.getData();\n    }\n  }\n\n  const subClass = new SubClass();\n\n  __taint_sink(subClass.describe());\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_003_T",
+      "function_signature": "polymorphism_003_T(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "function polymorphism_003_T(__taint_src) {\n  class Base {}\n\n  class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }\n\n  class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }\n\n  const sub = new Sub1();\n  __taint_sink(sub.call());\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_004_F",
+      "function_signature": "polymorphism_004_F(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "function polymorphism_004_F(__taint_src) {\n  class Base {}\n\n  class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }\n\n  class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }\n\n  const sub = new Sub2();\n  __taint_sink(sub.call());\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "promise_defer_001_T",
+      "function_signature": "promise_defer_001_T(__taint_src)",
+      "file_path": "case/accuracy/flow_sensitive/asynchronous/promise_defer_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/flow_sensitive/asynchronous/promise_defer_001_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function promise_defer_001_T(__taint_src) {\n  let result = \"\";\n  // 场景特点：使用Promise异步执行传递污染源\n  Promise.resolve().then(() => {\n    result = __taint_src;\n    __taint_sink(result);\n  });\n\n  result = \"safe_value\";\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "promise_defer_002_F",
+      "function_signature": "promise_defer_002_F(__taint_src)",
+      "file_path": "case/accuracy/flow_sensitive/asynchronous/promise_defer_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/flow_sensitive/asynchronous/promise_defer_002_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function promise_defer_002_F(__taint_src) {\n  let result = \"\";\n  // 场景特点：Promise异步执行但污染源未到达sink\n  Promise.resolve().then(() => {\n    result = \"safe_value\";\n    __taint_sink(result);\n  });\n\n  result = __taint_src\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "queuemicrotask_delay_001_T",
+      "function_signature": "queuemicrotask_delay_001_T(__taint_src)",
+      "file_path": "case/accuracy/flow_sensitive/defer_exectution/queuemicrotask_delay_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/flow_sensitive/defer_exectution/queuemicrotask_delay_001_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "function queuemicrotask_delay_001_T(__taint_src) {\n  let result = \"\";\n  // 场景特点：使用queueMicrotask实现微任务队列延迟执行\n  queueMicrotask(() => {\n    result = \"safe_value\";\n  });\n  result = __taint_src;\n  __taint_sink(result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "queuemicrotask_delay_002_F",
+      "function_signature": "queuemicrotask_delay_002_F(__taint_src)",
+      "file_path": "case/accuracy/flow_sensitive/defer_exectution/queuemicrotask_delay_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/flow_sensitive/defer_exectution/queuemicrotask_delay_002_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "function queuemicrotask_delay_002_F(__taint_src) {\n  let result = \"\";\n  // 场景特点：queueMicrotask延迟执行但污染源未到达sink\n  queueMicrotask(() => {\n    result = __taint_src;\n  });\n  result = \"safe_value\";\n  __taint_sink(result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

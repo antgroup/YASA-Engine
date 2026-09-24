@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "BaseProcessor",
+    "class_fqn": "BaseProcessor",
+    "use_regex": false,
+    "include_methods": false,
+    "max_results": 10
+  }
+}

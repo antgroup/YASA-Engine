@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_001_F/interface_class_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_001_F/interface_class_001_F.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_009_F/interface_class_009_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_009_F/interface_class_009_F.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_010_T/interface_class_010_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_010_T/interface_class_010_T.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_011_F/interface_class_011_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_011_F/interface_class_011_F.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ITestService::process2",
+      "signature": "process2(data string) string",
+      "filepath": "cases/accuracy/object_sensitive/interface_class/interface_class_012_T/interface_class_012_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_012_T/interface_class_012_T.go",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "\tprocess2(data string) string\n"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

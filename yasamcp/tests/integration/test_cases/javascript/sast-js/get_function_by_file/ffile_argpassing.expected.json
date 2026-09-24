@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "function_fqn": "argument_passing_value_001_T",
+      "function_signature": "argument_passing_value_001_T(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_value_001_T::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 15,
+        "end_column": 3
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

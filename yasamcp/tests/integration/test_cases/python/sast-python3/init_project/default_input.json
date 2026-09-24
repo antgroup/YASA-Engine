@@ -1,0 +1,7 @@
+{
+  "tool_name": "init_project",
+  "arguments": {
+    "project_path": "${TEST_DATA_DIR}/python/sast-python3",
+    "use_cache": true
+  }
+}

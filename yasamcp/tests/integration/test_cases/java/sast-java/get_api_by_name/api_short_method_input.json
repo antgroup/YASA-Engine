@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_api_by_name",
+  "arguments": {
+    "api_name": [
+      "MayTaintKind_001_T.testcase"
+    ],
+    "max_results": 0
+  }
+}

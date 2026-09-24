@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_F.php",
+        "line": 22,
+        "content": "    $result = $filter->filter($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.abstract_class_001_F.abstract_class_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_F.php",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 24,
+        "end_column": 2
+      },
+      "content": "function abstract_class_001_F($__taint_src) {\n    $filter = new SafeConcreteFilter();\n    $result = $filter->filter($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_F.php",
+        "line": 22,
+        "content": "    $result = $f->filter($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.interface_impl_001_F.interface_impl_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_F.php",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 24,
+        "end_column": 2
+      },
+      "content": "function interface_impl_001_F($__taint_src) {\n    $f = new SafeFilter();\n    $result = $f->filter($__taint_src);\n    __taint_sink($result);\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

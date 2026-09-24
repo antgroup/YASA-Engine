@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "dynamic_call_reflect_001_F",
+      "function_signature": "dynamic_call_reflect_001_F(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_001_F(__taint_src) {\n  let obj = {\n    name: \"_\",\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "dynamic_call_reflect_002_T",
+      "function_signature": "dynamic_call_reflect_002_T(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_002_T(__taint_src) {\n  let obj = {\n    name: __taint_src,\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

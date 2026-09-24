@@ -1,0 +1,270 @@
+{
+  "results": [
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_001_T/direct_assignment_002_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_001_T/direct_assignment_002_T.go",
+        "start_line": 34,
+        "start_column": 5,
+        "end_line": 34,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_002_F/direct_assignment_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/direct_assignment_002_F/direct_assignment_002_F.go",
+        "start_line": 34,
+        "start_column": 5,
+        "end_line": 34,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_001_T/field_assignment_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_001_T/field_assignment_001_T.go",
+        "start_line": 34,
+        "start_column": 5,
+        "end_line": 34,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_002_F/field_assignment_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/field_assignment_002_F/field_assignment_002_F.go",
+        "start_line": 34,
+        "start_column": 5,
+        "end_line": 34,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 52,
+        "start_column": 5,
+        "end_line": 52,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "class_fqn": "IctestImpl",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+        "start_line": 52,
+        "start_column": 5,
+        "end_line": 52,
+        "end_column": 24
+      },
+      "content": "type IctestImpl struct{}\n",
+      "methods": [
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 37
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        },
+        {
+          "name": "test",
+          "function_signature": "test(taint_src string) (interface{}, error)",
+          "line": 55
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

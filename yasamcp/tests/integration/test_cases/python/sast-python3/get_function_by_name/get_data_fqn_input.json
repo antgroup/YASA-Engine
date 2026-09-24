@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": "get_data",
+    "function_fqn": "BaseClass::get_data",
+    "use_regex": false,
+    "max_results": 10
+  }
+}

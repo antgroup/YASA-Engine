@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "PassthroughProcessor::process",
+      "signature": "process()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 0
+      },
+      "content": "public function process($data) {\n        return $data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "PassthroughProcessor::process",
+      "signature": "process()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 0
+      },
+      "content": "public function process($data) {\n        return $data;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "SanitizeProcessor::process",
+      "signature": "process()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 0
+      },
+      "content": "public function process($data) {\n        return \"sanitized\";\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "SanitizeProcessor::process",
+      "signature": "process()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 0
+      },
+      "content": "public function process($data) {\n        return \"sanitized\";\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "TaintProcessor::process",
+      "signature": "process()",
+      "filepath": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 0
+      },
+      "content": "public function process($data) {\n        return $data;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 5
+}

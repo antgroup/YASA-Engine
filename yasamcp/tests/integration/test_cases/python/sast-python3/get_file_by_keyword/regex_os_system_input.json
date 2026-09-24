@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": "os\\.system",
+    "use_regex": true,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

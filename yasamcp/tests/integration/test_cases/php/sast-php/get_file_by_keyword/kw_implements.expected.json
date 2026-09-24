@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感->多态\n// scene introduction = 接口多态，实现类传递污点数据\n// level = 3\n// bind_url = accuracy/context_sensitive/polymorphism/polymorphism_003_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass PassthroughProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n\nclass SanitizeProcessor implements DataProcessor {\n    public function process($data) {\n        return \"sanitized\";\n    }\n}\n\nfunction polymorphism_003_T($__taint_src) {\n    $processor = new PassthroughProcessor();\n    $result = $processor->process($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\npolymorphism_003_T($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感->多态\n// scene introduction = 接口多态，实现类返回安全数据\n// level = 3\n// bind_url = accuracy/context_sensitive/polymorphism/polymorphism_004_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass PassthroughProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n\nclass SanitizeProcessor implements DataProcessor {\n    public function process($data) {\n        return \"sanitized\";\n    }\n}\n\nfunction polymorphism_004_F($__taint_src) {\n    $processor = new SanitizeProcessor();\n    $result = $processor->process($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\npolymorphism_004_F($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_F.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用追踪->类与对象\n// scene introduction = 接口实现类净化了数据\n// level = 2\n// bind_url = completeness/single_app_tracing/class/interface_impl_001_F\n// evaluation information end\n\ninterface Filter {\n    public function filter($data);\n}\n\nclass SafeFilter implements Filter {\n    public function filter($data) {\n        return \"filtered_safe\";\n    }\n}\n\nfunction interface_impl_001_F($__taint_src) {\n    $f = new SafeFilter();\n    $result = $f->filter($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ninterface_impl_001_F($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用追踪->类与对象\n// scene introduction = 接口实现类方法传递污点\n// level = 2\n// bind_url = completeness/single_app_tracing/class/interface_impl_001_T\n// evaluation information end\n\ninterface DataProcessor {\n    public function process($data);\n}\n\nclass TaintProcessor implements DataProcessor {\n    public function process($data) {\n        return $data;\n    }\n}\n\nfunction interface_impl_001_T($__taint_src) {\n    $processor = new TaintProcessor();\n    $result = $processor->process($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ninterface_impl_001_T($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_F.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用追踪->类与对象\n// scene introduction = 接口实现返回常量\n// level = 2\n// bind_url = completeness/single_app_tracing/class/interface_impl_002_F\n// evaluation information end\n\ninterface Encoder {\n    public function encode($data);\n}\n\nclass ConstEncoder implements Encoder {\n    public function encode($data) {\n        return \"encoded_constant\";\n    }\n}\n\nfunction interface_impl_002_F($__taint_src) {\n    $enc = new ConstEncoder();\n    $result = $enc->encode($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ninterface_impl_002_F($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_T.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用追踪->类与对象\n// scene introduction = 接口类型声明参数传递污点\n// level = 2\n// bind_url = completeness/single_app_tracing/class/interface_impl_002_T\n// evaluation information end\n\ninterface Transformer {\n    public function transform($input);\n}\n\nclass IdentityTransformer implements Transformer {\n    public function transform($input) {\n        return $input;\n    }\n}\n\nfunction processWithInterface(Transformer $t, $data) {\n    return $t->transform($data);\n}\n\nfunction interface_impl_002_T($__taint_src) {\n    $t = new IdentityTransformer();\n    $result = processWithInterface($t, $__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ninterface_impl_002_T($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_F/main.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用追踪->跨文件\n// scene introduction = 跨文件 interface 实现类方法返回安全值\n// level = 2\n// bind_url = completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_F\n// evaluation information end\n\nrequire_once __DIR__ . '/DataInterface.php';\n\nclass DataImpl implements DataInterface {\n    public function transform($input) {\n        return \"safe_value\";\n    }\n}\n\nfunction cross_file_interface_001_F($__taint_src) {\n    $obj = new DataImpl();\n    $result = $obj->transform($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncross_file_interface_001_F($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_T/main.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用追踪->跨文件\n// scene introduction = 跨文件 interface 实现类方法传递污点\n// level = 2\n// bind_url = completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_T\n// evaluation information end\n\nrequire_once __DIR__ . '/DataInterface.php';\n\nclass DataImpl implements DataInterface {\n    public function transform($input) {\n        return $input;\n    }\n}\n\nfunction cross_file_interface_001_T($__taint_src) {\n    $obj = new DataImpl();\n    $result = $obj->transform($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncross_file_interface_001_T($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_F/main.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = false\n// evaluation item = 完整度->单应用追踪->跨文件\n// scene introduction = 跨文件 Processable 接口实现类返回安全值\n// level = 2\n// bind_url = completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_F\n// evaluation information end\n\nrequire_once __DIR__ . '/Processable.php';\n\nclass Worker implements Processable {\n    public function execute($input) {\n        return \"safe_value\";\n    }\n}\n\nfunction cross_file_interface_002_F($__taint_src) {\n    $worker = new Worker();\n    $result = $worker->execute($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncross_file_interface_002_F($taint_src);\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/main.php",
+      "matches": [
+        {
+          "line": null,
+          "content": "<?php\n// evaluation information start\n// real case = true\n// evaluation item = 完整度->单应用追踪->跨文件\n// scene introduction = 跨文件 Processable 接口实现类传递污点\n// level = 2\n// bind_url = completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T\n// evaluation information end\n\nrequire_once __DIR__ . '/Processable.php';\n\nclass Worker implements Processable {\n    public function execute($input) {\n        return $input;\n    }\n}\n\nfunction cross_file_interface_002_T($__taint_src) {\n    $worker = new Worker();\n    $result = $worker->execute($__taint_src);\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncross_file_interface_002_T($taint_src);\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

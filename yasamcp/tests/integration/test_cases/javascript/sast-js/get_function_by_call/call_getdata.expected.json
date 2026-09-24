@@ -1,0 +1,106 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_001_T.constructor_extends_001_T.DerivedClass.process",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "line": 30
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "line": 31,
+        "content": "      __taint_sink(this.getData());\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_001_T.__taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 39,
+        "start_column": 1,
+        "end_line": 41,
+        "end_column": 2
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "callType": "local",
+      "extinfo": {}
+    },
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_001_T.constructor_extends_001_T.DerivedClass.process",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "line": 30
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "line": 31,
+        "content": "      __taint_sink(this.getData());\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_001_T.constructor_extends_001_T.BaseClass.getData",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 6
+      },
+      "content": "getData() {\n      return this.data;\n    }",
+      "callType": "local",
+      "extinfo": {}
+    },
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_002_F.constructor_extends_002_F.DerivedClass.process",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "line": 30
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "line": 31,
+        "content": "      __taint_sink(this.getData());\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_002_F.__taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 39,
+        "start_column": 1,
+        "end_line": 41,
+        "end_column": 2
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "callType": "local",
+      "extinfo": {}
+    },
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_002_F.constructor_extends_002_F.DerivedClass.process",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "line": 30
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "line": 31,
+        "content": "      __taint_sink(this.getData());\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_002_F.constructor_extends_002_F.BaseClass.getData",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 6
+      },
+      "content": "getData() {\n      return this.data;\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

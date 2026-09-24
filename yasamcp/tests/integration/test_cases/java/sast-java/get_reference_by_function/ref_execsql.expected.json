@@ -1,0 +1,134 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+        "line": 31,
+        "content": "        JDBCUtil.execSql(sql);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.MayTaintKind_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 32,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"MayTaintKind_001_T\")\n    public void testcase(@RequestParam String name, @RequestParam Integer condition) {\n        String sql;\n        if (condition > 0) {\n            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_003_F.java",
+        "line": 32,
+        "content": "        JDBCUtil.execSql(sql2);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.MayTaintKind_003_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_003_F.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 33,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"MayTaintKind_003_F\")\n    public void testcase(@RequestParam String name, @RequestParam Integer condition) {\n        String sql;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        if (condition > 0) {\n            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql2);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_001_T.java",
+        "line": 25,
+        "content": "        JDBCUtil.execSql(sql);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.MustTaintKind_001_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"MustTaintKind_001_T\")\n    public void testcase(@RequestParam String name) {\n        String sql = \"select * from user where username = \" + name;\n        JDBCUtil.execSql(sql);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_003_F.java",
+        "line": 26,
+        "content": "        JDBCUtil.execSql(sql2);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.MustTaintKind_003_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_003_F.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 27,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"MustTaintKind_003_F\")\n    public void testcase(@RequestParam String name) {\n        String sql = \"select * from user where username = \" + name;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_001_F.java",
+        "line": 18,
+        "content": "        JDBCUtil.execSql(sql);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.SafeKind_001_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_001_F.java",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public void testcase() {\n        String sql = \"select * from user where username = zhangsan\";\n        JDBCUtil.execSql(sql);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_003_F.java",
+        "line": 19,
+        "content": "        JDBCUtil.execSql(sql2);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.SafeKind_003_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_003_F.java",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 5
+      },
+      "content": "public void testcase() {\n        String sql = \"select * from user where username = zhangsan\";\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_001_F.java",
+        "line": 18,
+        "content": "        JDBCUtil.execSql(sql);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.UnknownTaintKind_001_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_001_F.java",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public void testcase(String name) {\n        String sql = \"select * from user where username = \" + name;\n        JDBCUtil.execSql(sql);\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_003_F.java",
+        "line": 19,
+        "content": "        JDBCUtil.execSql(sql2);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.other_preference.UnknownTaintKind_003_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_003_F.java",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 5
+      },
+      "content": "public void testcase(String name) {\n        String sql = \"select * from user where username = \" + name;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

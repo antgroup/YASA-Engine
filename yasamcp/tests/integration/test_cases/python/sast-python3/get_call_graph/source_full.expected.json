@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file.cross_file_009_T.cross_file_009_T_a.source",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file/cross_file_009_T/cross_file_009_T_a.py",
+        "line": 10
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

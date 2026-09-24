@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "Cross_directory_001_T_b",
+    "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.Cross_directory_001_T_b",
+    "max_results": 20
+  }
+}

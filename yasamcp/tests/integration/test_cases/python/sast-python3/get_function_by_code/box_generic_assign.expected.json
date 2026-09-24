@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "function_fqn": "simple_object_005_T",
+      "function_signature": "simple_object_005_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 23,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 37
+      },
+      "content": "def simple_object_005_T(taint_src):\n    # 使用泛型类\n    int_box = Box(taint_src)\n    taint_sink(int_box.get_content())",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

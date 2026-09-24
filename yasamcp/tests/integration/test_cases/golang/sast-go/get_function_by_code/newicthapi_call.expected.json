@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "struct_injection_interface_001_T",
+      "function_signature": "struct_injection_interface_001_T(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "func struct_injection_interface_001_T(__taint_src string) {\n\t// 创建 IctestImpl 实例\n\ttestSvc := &IctestImpl{}\n\n\t// 将业务实现注入到 IctestAPI 中\n\ttestAPI := NewIctestAPI(testSvc)\n\n\t// 调用接口方法，返回的数据即为污点源，直接传入 sink\n\tresult, _ := testAPI.GetTest(__taint_src)\n\t__taint_sink(result)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "struct_injection_interface_002_F",
+      "function_signature": "struct_injection_interface_002_F(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "func struct_injection_interface_002_F(__taint_src string) {\n\t//创建 IctestImpl 实例\n\ttestSvc := &IctestImpl{}\n\n\t//将业务实现注入到 IctestAPI 中\n\ttestAPI := NewIctestAPI(testSvc)\n\n\t//调用接口方法，返回的数据和污点源没关系\n\tresult, _ := testAPI.GetTest(\"aa\")\n\t__taint_sink(result)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

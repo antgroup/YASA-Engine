@@ -1,0 +1,10 @@
+name: function_definition
+rule:
+  any:
+    - kind: decorated_definition
+      has:
+        kind: function_definition
+    - kind: function_definition
+      not:
+        inside:
+          kind: decorated_definition

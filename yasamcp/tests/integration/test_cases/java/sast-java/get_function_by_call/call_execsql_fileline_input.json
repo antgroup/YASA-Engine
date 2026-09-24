@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "execSql",
+    "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+    "line": 31,
+    "max_results": 10
+  }
+}

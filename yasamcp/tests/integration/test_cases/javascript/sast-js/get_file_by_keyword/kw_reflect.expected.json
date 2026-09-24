@@ -1,0 +1,86 @@
+{
+  "results": [
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_001_F(__taint_src) {\n  let obj = {\n    name: \"_\",\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_002_T(__taint_src) {\n  let obj = {\n    name: __taint_src,\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}\n\nfunction __taint_sink(o) {\n  execSync(o);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_003_T.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_003_T(__taint_src) {\n  let obj = {\n    data: \"_\",\n  };\n\n  Reflect.set(obj, \"foo\", __taint_src);\n  __taint_sink(obj.foo);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_004_F(__taint_src) {\n  let obj = {\n    data: __taint_src,\n  };\n\n  Reflect.set(obj, \"foo\", \"_\");\n  __taint_sink(obj.foo);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_005_T.js",
+      "matches": [
+        {
+          "line": 17,
+          "content": "  let obj = {\n    data: __taint_src,\n    data1: \"aaa\",\n  };\n\n  Reflect.deleteProperty(obj, \"data1\");\n  __taint_sink(obj.data);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_006_F.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_006_F(__taint_src) {\n  let obj = {\n    data: __taint_src,\n  };\n\n  Reflect.deleteProperty(obj, \"data\");\n  __taint_sink(obj.data);\n}\n\nfunction __taint_sink(o) {\n  execSync(String(o));"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_007_T.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_007_T(__taint_src) {\n  function targetFunc(arg) {\n    return arg;\n  }\n  \n  // 场景特点：通过Reflect.apply动态调用函数并传递污染参数\n  let result = Reflect.apply(targetFunc, null, [__taint_src]);\n  __taint_sink(result);\n}\n\nfunction __taint_sink(o) {"
+        },
+        {
+          "line": 17,
+          "content": "  function targetFunc(arg) {\n    return arg;\n  }\n  \n  // 场景特点：通过Reflect.apply动态调用函数并传递污染参数\n  let result = Reflect.apply(targetFunc, null, [__taint_src]);\n  __taint_sink(result);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_008_F.js",
+      "matches": [
+        {
+          "line": 16,
+          "content": "function dynamic_call_reflect_008_F(__taint_src) {\n  function targetFunc(arg) {\n    return \"safe_value\";\n  }\n  \n  // 场景特点：通过Reflect.apply动态调用函数但返回安全值\n  let result = Reflect.apply(targetFunc, null, [__taint_src]);\n  __taint_sink(result);\n}\n\nfunction __taint_sink(o) {"
+        },
+        {
+          "line": 17,
+          "content": "  function targetFunc(arg) {\n    return \"safe_value\";\n  }\n  \n  // 场景特点：通过Reflect.apply动态调用函数但返回安全值\n  let result = Reflect.apply(targetFunc, null, [__taint_src]);\n  __taint_sink(result);\n}\n\nfunction __taint_sink(o) {\n  execSync(o);"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

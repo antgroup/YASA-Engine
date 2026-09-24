@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "cross_directory_001_T_a(__taint_src)",
+    "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_a/cross_directory_001_T_a.go",
+    "line": 28,
+    "max_results": 10
+  }
+}

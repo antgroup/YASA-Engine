@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.Cross_directory_001_T_b",
+        "function_signature": "",
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+        "line": 13
+      },
+      "callees": [
+        {
+          "call_site": {
+            "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+            "line": 14,
+            "content": "\t__taint_sink(o)\n"
+          },
+          "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.__taint_sink",
+          "function_signature": "",
+          "location": {
+            "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+            "start_line": 17,
+            "start_column": 1,
+            "end_line": 19,
+            "end_column": 3
+          },
+          "content": "",
+          "has_cycle": false,
+          "callees": []
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

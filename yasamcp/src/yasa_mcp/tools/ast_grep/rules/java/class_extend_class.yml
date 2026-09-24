@@ -1,0 +1,25 @@
+name: class_extend_class
+rule:
+  all:
+    - any:
+        - kind: class_declaration
+        - kind: interface_declaration
+    - any:
+        - has:
+            kind: superclass
+            has:
+              kind: type_identifier
+              regex: "^{class_name}$"
+              stopBy: end
+        - has:
+            kind: super_interfaces
+            has:
+              kind: type_identifier
+              regex: "^{class_name}$"
+              stopBy: end
+        - has:
+            kind: extends_interfaces
+            has:
+              kind: type_identifier
+              regex: "^{class_name}$"
+              stopBy: end

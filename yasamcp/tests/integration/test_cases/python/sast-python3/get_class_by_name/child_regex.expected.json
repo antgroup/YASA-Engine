@@ -1,0 +1,136 @@
+{
+  "results": [
+    {
+      "class_fqn": "Child",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_002_F.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_002_F.py",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 24,
+        "end_column": 27
+      },
+      "content": "class Child(Parent):\n    def __init__(self):\n        super().__init__(\"SAFE\")  # 子类覆盖父类字段为安全值\n        self.field = \"SAFE\"",
+      "methods": []
+    },
+    {
+      "class_fqn": "Child",
+      "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/inheritance_001_T.py",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 25,
+        "end_column": 27
+      },
+      "content": "class Child(Parent):\n    def __init__(self):\n        super().__init__(\"SAFE\")  # 子类覆盖父类字段为安全值\n        self.field = \"SAFE\"",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_object_sensitive_003_T::Child",
+      "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py",
+      "location": {
+        "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 18,
+        "end_column": 12
+      },
+      "content": "class Child(Parent):\n        pass",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_object_sensitive_004_F::Child",
+      "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_004_F.py",
+      "location": {
+        "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_004_F.py",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 18,
+        "end_column": 12
+      },
+      "content": "class Child(Parent):\n        pass",
+      "methods": []
+    },
+    {
+      "class_fqn": "inheritance_class_001_T::Child",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 28
+      },
+      "content": "class Child(Base):\n        def __init__(self, data):\n            super().__init__(data)\n\n        def get_child_data(self):\n            return self.data",
+      "methods": []
+    },
+    {
+      "class_fqn": "inheritance_class_002_F::Child",
+      "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 24,
+        "end_column": 28
+      },
+      "content": "class Child(Base):\n        def __init__(self, data):\n            super().__init__(data)\n\n        def get_child_data(self):\n            return self.data",
+      "methods": []
+    },
+    {
+      "class_fqn": "static_method_override_001_T::Child",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_001_T.py",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 24
+      },
+      "content": "class Child(Parent):\n      @staticmethod\n      def get_value():  \n        return taint_src",
+      "methods": []
+    },
+    {
+      "class_fqn": "static_method_override_002_F::Child",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/static_method_override_002_F.py",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 24
+      },
+      "content": "class Child(Parent):\n      @staticmethod\n      def get_value():  # 隐藏父类静态方法，而非重写\n        return taint_src",
+      "methods": []
+    },
+    {
+      "class_fqn": "static_variable_003_T::Child",
+      "file_path": "case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_003_T.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 45
+      },
+      "content": "class Child(Parent):\n        static_data = taint_src  # 子类覆盖父类静态变量",
+      "methods": []
+    },
+    {
+      "class_fqn": "static_variable_004_F::Child",
+      "file_path": "case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/static_variable/static_variable_004_F.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 39
+      },
+      "content": "class Child(Parent):\n        static_data = \"_\"  # 子类覆盖父类静态变量",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

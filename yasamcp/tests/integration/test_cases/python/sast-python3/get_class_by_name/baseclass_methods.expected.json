@@ -1,0 +1,152 @@
+{
+  "results": [
+    {
+      "class_fqn": "BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 12
+      },
+      "content": "class BaseClass:\n    def __init__(self, data):\n        self.data = data\n\n    def getData(self):\n        return self.data\n\n    def process(self):\n        pass",
+      "methods": [
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self, data)",
+          "line": 13
+        },
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self, data)",
+          "line": 16
+        },
+        {
+          "name": "getData",
+          "function_signature": "getData(self)",
+          "line": 16
+        },
+        {
+          "name": "get_data",
+          "function_signature": "get_data(self)",
+          "line": 19
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 19
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 22
+        }
+      ]
+    },
+    {
+      "class_fqn": "BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 12
+      },
+      "content": "class BaseClass:\n    def __init__(self, data):\n        self.data = data\n\n    def get_data(self):\n        return self.data\n\n    def process(self):\n        pass",
+      "methods": [
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self, data)",
+          "line": 13
+        },
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self, data)",
+          "line": 16
+        },
+        {
+          "name": "getData",
+          "function_signature": "getData(self)",
+          "line": 16
+        },
+        {
+          "name": "get_data",
+          "function_signature": "get_data(self)",
+          "line": 19
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 19
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 22
+        }
+      ]
+    },
+    {
+      "class_fqn": "constructor_extends_003_T::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 12
+      },
+      "content": "class BaseClass:\n     def __init__(self ):\n        self.data = taint_src\n\n     def get_data(self):\n        return self.data\n\n     def process(self):\n        pass",
+      "methods": [
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self)",
+          "line": 14
+        },
+        {
+          "name": "get_data",
+          "function_signature": "get_data(self)",
+          "line": 17
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 20
+        }
+      ]
+    },
+    {
+      "class_fqn": "constructor_extends_004_F::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 12
+      },
+      "content": "class BaseClass:\n     def __init__(self ):\n        self.data = \"_\"\n\n     def get_data(self):\n        return self.data\n\n     def process(self):\n        pass",
+      "methods": [
+        {
+          "name": "__init__",
+          "function_signature": "__init__(self)",
+          "line": 14
+        },
+        {
+          "name": "get_data",
+          "function_signature": "get_data(self)",
+          "line": 17
+        },
+        {
+          "name": "process",
+          "function_signature": "process(self)",
+          "line": 20
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

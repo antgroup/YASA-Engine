@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "JDBCUtil"
+    ],
+    "class_fqn": "com.sast.astbenchmark.common.utils::JDBCUtil",
+    "max_results": 10
+  }
+}

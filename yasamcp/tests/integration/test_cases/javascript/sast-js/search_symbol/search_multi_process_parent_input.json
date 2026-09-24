@@ -1,0 +1,11 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "process",
+      "Parent"
+    ],
+    "kind": "function",
+    "max_results": 10
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.CallExpression_Package_001_T.aTaintCase0157",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T.java",
+        "line": 21
+      },
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T.java",
+        "line": 26,
+        "content": "      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.common.utils.HttpUtil.doGet",
+      "function_signature": "",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 64,
+        "start_column": 5,
+        "end_line": 66,
+        "end_column": 5
+      },
+      "content": "public static String doGet(String url) throws Exception {\n        return doGet(url, null);\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

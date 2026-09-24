@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "alias_003_T",
+    "depth": 3,
+    "max_callees_per_node": 3,
+    "exclude_undefined_function_call": false
+  }
+}

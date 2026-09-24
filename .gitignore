@@ -23,7 +23,9 @@ TODO.md
 *.heapsnapshot
 *.LICENSE.txt
 gulpfile_sym.js
-yasa*
+# 顶层 yasa* 构建产物忽略，但 yasamcp 子项目纳入版本控制
+/yasa*
+!/yasamcp/
 e2e_chair.test.js
 package-lock.json
 test.js

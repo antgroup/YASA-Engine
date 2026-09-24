@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "HttpUtil",
+      "CmdObject",
+      "SinkUtil"
+    ],
+    "max_results": 10
+  }
+}

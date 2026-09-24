@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "function_fqn": "getData",
+      "function_signature": "getData()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function getData($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inner",
+      "function_signature": "inner()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function inner($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function process($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function process($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "step2",
+      "function_signature": "step2()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_003_T.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function step2($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "step2",
+      "function_signature": "step2()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_004_F.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function step2($arg) {\n    return $arg;\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

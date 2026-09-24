@@ -1,0 +1,60 @@
+{
+  "results": [
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+      "matches": [
+        {
+          "line": 15,
+          "content": "function __taint_sink($o) {\n    shell_exec($o);\n}\n\nabstract class BaseHandler {\n    abstract public function handle($data);\n}\n\nclass TaintHandler extends BaseHandler {\n    public function handle($data) {\n        return $data;"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+      "matches": [
+        {
+          "line": 15,
+          "content": "function __taint_sink($o) {\n    shell_exec($o);\n}\n\nabstract class BaseHandler {\n    abstract public function handle($data);\n}\n\nclass TaintHandler extends BaseHandler {\n    public function handle($data) {\n        return $data;"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_F.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 2\n// bind_url = completeness/single_app_tracing/class/abstract_class_001_F\n// evaluation information end\n\nabstract class AbstractFilter {\n    abstract public function filter($data);\n}\n\nclass SafeConcreteFilter extends AbstractFilter {\n    public function filter($data) {\n        return \"safe_filtered\";"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 2\n// bind_url = completeness/single_app_tracing/class/abstract_class_001_T\n// evaluation information end\n\nabstract class AbstractHandler {\n    abstract public function handle($data);\n}\n\nclass ConcreteHandler extends AbstractHandler {\n    public function handle($data) {\n        return $data;"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_F/AbstractProcessor.php",
+      "matches": [
+        {
+          "line": 4,
+          "content": "<?php\n\nabstract class AbstractProcessor {\n    abstract public function process($input);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/AbstractProcessor.php",
+      "matches": [
+        {
+          "line": 4,
+          "content": "<?php\n\nabstract class AbstractProcessor {\n    abstract public function process($input);\n}"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

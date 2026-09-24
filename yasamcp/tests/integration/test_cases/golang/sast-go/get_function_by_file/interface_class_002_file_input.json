@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

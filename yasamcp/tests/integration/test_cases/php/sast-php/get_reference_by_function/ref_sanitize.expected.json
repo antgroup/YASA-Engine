@@ -1,0 +1,86 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/include_require_001_F/main.php",
+        "line": 13,
+        "content": "    $result = sanitize($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.include_require_001_F.main.include_require_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/include_require_001_F/main.php",
+        "start_line": 12,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 2
+      },
+      "content": "function include_require_001_F($__taint_src) {\n    $result = sanitize($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_F/main.php",
+        "line": 15,
+        "content": "    $result = San::sanitize($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.namespace_use_002_F.main.namespace_use_002_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_F/main.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 17,
+        "end_column": 2
+      },
+      "content": "function namespace_use_002_F($__taint_src) {\n    $result = San::sanitize($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/require_once_001_F/main.php",
+        "line": 13,
+        "content": "    $result = sanitize($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.require_once_001_F.main.require_once_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/require_once_001_F/main.php",
+        "start_line": 12,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 2
+      },
+      "content": "function require_once_001_F($__taint_src) {\n    $result = sanitize($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing_001_F.php",
+        "line": 11,
+        "content": "    $safe = sanitize($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.argument_passing_001_F.argument_passing_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing_001_F.php",
+        "start_line": 10,
+        "start_column": 1,
+        "end_line": 13,
+        "end_column": 2
+      },
+      "content": "function argument_passing_001_F($__taint_src) {\n    $safe = sanitize($__taint_src);\n    __taint_sink($safe);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+        "line": 30,
+        "content": "    $result = $builder->setData($__taint_src)->sanitize()->build();\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.chained_call_001_F.chained_call_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+        "start_line": 28,
+        "start_column": 1,
+        "end_line": 32,
+        "end_column": 2
+      },
+      "content": "function chained_call_001_F($__taint_src) {\n    $builder = new SafeBuilder();\n    $result = $builder->setData($__taint_src)->sanitize()->build();\n    __taint_sink($result);\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 5
+}

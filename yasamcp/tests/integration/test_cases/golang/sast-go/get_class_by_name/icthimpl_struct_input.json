@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "IctestImpl",
+    "class_fqn": "IctestImpl",
+    "use_regex": false,
+    "include_methods": true,
+    "max_results": 10
+  }
+}
