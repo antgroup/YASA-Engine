@@ -1,10 +1,15 @@
-# yasamcp 详细文档
+# yasamcp
 
-本文覆盖 yasamcp 的安装与使用、CLI 工具、MCP 工具、CC/Codex 集成、以及参与贡献（运行集成测试 / 配置 xast 靶场）。
+**yasamcp** 是基于静态分析引擎 [yasa](https://github.com/antgroup/YASA-Engine) 的仓库结构化查询工具：先用 CLI `init` 把代码工程预处理为结构化缓存，再用 CLI 查询、或启动 MCP 进程供 Claude Code / Codex 调用，对类、函数、调用图、关键字等做毫秒级查询。
+
+支持 Java / Python / Go / JavaScript / PHP。
+
+> ⚠️ **`init` 只能通过 CLI 执行，MCP 不提供 `init`**：预处理耗时长（数十秒到数分钟），经 MCP 调用极易因超时断链。务必先在终端 `yasamcp init <项目>` 生成缓存，再让 MCP 进程消费。
 
 ## 目录
 
 - [安装](#安装)
+- [提供的工具](#提供的工具)
 - [快速使用](#快速使用)
 - [CLI 工具](#cli-工具)
 - [MCP 工具](#mcp-工具)
@@ -14,11 +19,7 @@
 
 ## 安装
 
-yasamcp 由 **打包好的 CLI 二进制** + **4 个 native 引擎**（`yasa` / `codegraph` / `ripgrep` / `scc`，按 OS+架构分平台）组成，引擎路径写入 `~/.yasamcp/config.json`，CLI 与 MCP 自动定位。
-
-> ⚠️ 仅支持 `mac-arm64` / `mac-x64` / `linux-x64`，其余平台会报错退出。
-
-安装目录布局：
+yasamcp 由一个 **CLI 二进制** + **4 个 native 引擎**（`yasa` / `codegraph` / `ripgrep` / `scc`，按 OS+架构分平台）组成。仅支持 `mac-arm64` / `mac-x64` / `linux-x64`，其余平台会报错退出。统一安装到 `~/.yasamcp/`：
 
 ```
 ~/.yasamcp/
@@ -27,15 +28,27 @@ yasamcp 由 **打包好的 CLI 二进制** + **4 个 native 引擎**（`yasa` / 
   └─ config.json                                  # {"binary_path":"~/.yasamcp/tools"}
 ```
 
-### 一键安装脚本（推荐）
+### 一键安装（无需 clone）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/out2github-linwei-yasamcp-20260924/yasamcp/script/install.sh | sh
+```
+
+也支持传参数（`--home`、`--skip-path`、`--tools`、`--yasamcp` 等同样可用）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/out2github-linwei-yasamcp-20260924/yasamcp/script/install.sh | sh -s -- --home /opt/yasamcp
+```
+
+### 已 clone 本仓库
 
 ```bash
 bash script/install.sh
 ```
 
-脚本流程：检测 OS+架构 → 从 OSS 下载 4 个 native 引擎（`https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip`）解压到 `~/.yasamcp/tools/<平台>/` → 从 [GitHub Releases](https://github.com/antgroup/YASA-Engine/releases) 解析最新 release tag 并下载 `yasamcp-<plat>.tar.gz` 解压到 `~/.yasamcp/yasamcp-cli/` → 写入 `config.json` → 把 `~/.yasamcp/yasamcp-cli` 加入 `PATH`、导出 `YASA_MCP_BIN_DIR=~/.yasamcp/tools` → 末尾自检 `yasamcp --version`。
+脚本依次做：检测 OS+架构 → 从 OSS 下载 4 个 native 引擎到 `~/.yasamcp/tools/<平台>/` → 从 [GitHub Releases](https://github.com/antgroup/YASA-Engine/releases) 解析最新 release tag 并下载 `yasamcp-<plat>.tar.gz` 到 `~/.yasamcp/yasamcp-cli/` → 写 `config.json` → 把 `~/.yasamcp/yasamcp-cli` 加入 `PATH`、导出 `YASA_MCP_BIN_DIR=~/.yasamcp/tools` → 末尾自检 `yasamcp --version`。
 
-**自动跳过已安装部分**：若 `tools/<平台>` 下 4 个引擎目录齐全则跳过引擎下载；若 `yasamcp-cli/yasamcp` 已存在且可执行则跳过 CLI 下载——已装好的部件不会被重复下载覆盖。重复运行只会补装缺失部分。要强制重装，可删除对应目录后再跑，或用 `--tools` / `--yasamcp` 指定本地包。
+**自动跳过已安装部件**：若 `tools/<平台>` 下 4 个引擎目录齐全，跳过引擎下载；若 `yasamcp-cli/yasamcp` 已存在且可执行，跳过 CLI 下载。重复运行只会补装缺失部分，不会覆盖已装好的。
 
 ### 可配置安装
 
@@ -50,33 +63,29 @@ bash script/install.sh
 | `YASAMCP_ASSET` | 资源文件名，默认 `yasamcp-<平台>.tar.gz` |
 
 ```bash
-bash script/install.sh --home /opt/yasamcp                       # 自定义安装目录
-bash script/install.sh --skip-path                               # 不改 shell rc
-# 指定版本(默认即取最新版):
-YASAMCP_VERSION=yasamcp-v1.0.3 bash script/install.sh            # 安装指定 tag
-YASAMCP_VERSION=latest bash script/install.sh                    # 显式取最新(默认行为)
+bash script/install.sh --home /opt/yasamcp             # 安装到自定义目录
+bash script/install.sh --skip-path                      # 不改 shell rc
 ```
 
-**GitHub 下载慢时挂代理**：`curl` 会自动识别 `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` 环境变量。直连 GitHub 慢（国内常见）时，把代理传给脚本即可秒下：
+**GitHub 下载慢时挂代理**：`curl` 会自动识别 `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` 环境变量。若直连 GitHub 很慢（国内常见），把代理传给脚本即可秒下：
 
 ```bash
 HTTPS_PROXY=http://127.0.0.1:7890 bash script/install.sh   # 换成你本地代理地址
 ```
 
+> `curl | sh` 方式同样支持代理：`HTTPS_PROXY=http://127.0.0.1:7890 curl -fsSL <url> | sh`。
+
 ### 脚本下载失败？手动下载再装（兜底）
 
-如果脚本联网下载卡住或失败（比如 GitHub 访问受限），自己用浏览器/代理把两个产物下到本地，再让脚本跳过联网、直接用本地包安装。按你的平台替换 `<plat>`：mac-ARM 用 `darwin-aarch64`、mac-Intel 用 `darwin-x86-64`、Linux-x64 用 `linux-x86-64`。
+如果脚本联网下载卡住或失败（比如 GitHub 访问受限），自己用浏览器/代理把两个产物下到本地，再让脚本跳过联网、直接用本地包安装即可。
 
-**要下载的两个产物**：
+**要下载的两个产物**（按你的平台替换 `<plat>`：mac-ARM 用 `darwin-aarch64`，mac-Intel 用 `darwin-x86-64`，Linux-x64 用 `linux-x86-64`）：
 
 1. **native 引擎压缩包**（OSS，国内快）：
-   ```
-   https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip
-   ```
-2. **yasamcp CLI 压缩包**（GitHub Releases）——`<version>` 取最新 tag，见 [Releases](https://github.com/antgroup/YASA-Engine/releases)，例如 `yasamcp-v1.0.3`：
-   ```
-   https://github.com/antgroup/YASA-Engine/releases/download/<version>/yasamcp-<plat>.tar.gz
-   ```
+   `https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip`
+2. **yasamcp CLI 压缩包**（GitHub Releases）：
+   `https://github.com/antgroup/YASA-Engine/releases/download/<version>/yasamcp-<plat>.tar.gz`
+   （`<version>` 取最新 tag，见 [Releases](https://github.com/antgroup/YASA-Engine/releases)，例如 `yasamcp-v1.0.3`）
 
 下载好之后，把两个文件路径传给脚本——脚本检测到本地包就跳过联网下载，只做解压、写 `config.json`、配置 `PATH`：
 
@@ -86,7 +95,7 @@ bash script/install.sh \
   --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
 ```
 
-也可以只传其中一个：脚本会联网下载缺失的另一部分。比如只本地备了 yasamcp CLI，引擎仍联网拉：
+> 也可以只传其中一个：脚本会联网下载缺失的另一部分。比如只本地备了 yasamcp CLI，引擎仍联网拉：
 
 ```bash
 bash script/install.sh --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
@@ -105,22 +114,27 @@ yasamcp -h               # 查看命令列表
 
 ### 日志
 
-CLI 与 MCP 进程的运行日志按天写入 `~/.yasamcp/logs/YYYY-MM-DD.log`（与安装目录同级，每行带时间戳与阶段耗时），排障时直接查看当天日志文件即可。
+CLI 与 MCP 进程的运行日志按天写入 `~/.yasamcp/logs/YYYY-MM-DD.log`（每行带时间戳与阶段耗时），排障时直接查看当天日志文件即可。
 
-### 开发者环境（贡献者）
+## 提供的工具
 
-本仓库用 `uv` 管理依赖，`pyproject.toml` 为依赖来源，`uv.lock` 为可复现锁定。
+| CLI 子命令 | MCP 工具 | 作用 |
+|------------|----------|------|
+| `init` | —— | 初始化项目分析缓存（仅 CLI） |
+| `status` | —— | 查询缓存状态（仅 CLI） |
+| `search` | `search_symbol` | 统一符号搜索 |
+| `class` | `get_class_by_name` | 按类名查类定义 |
+| `func` | `get_function` | 按名 / 文件 / 代码片段查函数定义 |
+| `keywords` | `get_file_by_keyword` | 按关键字搜文件内容 |
+| `api` | `get_api_by_name` | 按接口名反查实现函数 |
+| `callers` | `get_reference_by_function` | 查函数被调用的位置 |
+| `callees` | `get_function_by_call` | 根据调用点反查被调用函数 |
+| `callgraph` | `get_call_graph` | 获取函数调用图 |
+| —— | `get_import_by_file` | 查询指定文件的 import 语句（仅 MCP） |
+| `server` | —— | 启动 MCP 常驻进程（供 CC/Codex spawn） |
 
-```bash
-git clone <repo-url> && cd yasa_mcp
-# 方式 A：uv（推荐，复现锁定）
-uv sync --extra test --extra packaging
-# 方式 B：纯 pip
-python -m venv .venv && . .venv/bin/activate
-pip install -e ".[test,packaging]"
-```
+MCP 共 **9 个只读查询工具**，完整参数与输入输出示范见下方 [CLI 工具](#cli-工具) 与 [MCP 工具](#mcp-工具) 章节。
 
-打包 CLI：`bash script/build_macos_arm64.sh`（产物在 `dist/yasamcp/`）。
 
 ## 快速使用
 
@@ -362,4 +376,4 @@ python tests/integration/yasamcp_client_integration/prepare_dataset.py
 
 ## 许可证
 
-yasamcp 采用 Apache License 2.0；集成的第三方工具（`codegraph` MIT / `ripgrep` MIT / `scc` MIT·Unlicense / `duckdb` MIT）声明与版权见 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)。
+yasamcp 采用 Apache License 2.0；集成的第三方工具（`codegraph` MIT / `ripgrep` MIT / `scc` MIT·Unlicense / `duckdb` MIT）声明与版权见 [NOTICE.md](NOTICE.md)。
