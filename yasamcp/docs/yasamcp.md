@@ -140,7 +140,7 @@ MCP 共 **9 个只读查询工具**，完整参数与输入输出示范见下方
 
 ```bash
 # 1. 预处理生成缓存（init 只能用 CLI；耗时较长）
-yasamcp init /path/to/project -b /path/to/yasa_mcp_bin
+yasamcp init /path/to/project
 # 缓存落在 <project>/.yasa/yasamcp/，含 project_config.json / yasa.db / .codegraph/codegraph.db
 
 # 2. 检查缓存状态
@@ -158,8 +158,10 @@ yasamcp class HttpUtil -p /path/to/project -j
 
 ### `init` —— 初始化缓存
 
+> 默认安装后引擎路径已写入 `~/.yasamcp/config.json`，无需 `-b`；若未用安装脚本或想覆盖引擎目录，可加 `-b <引擎目录>`。
+
 ```bash
-yasamcp init /path/to/project -b /path/to/yasa_mcp_bin
+yasamcp init /path/to/project
 yasamcp init /path/to/project --no-progress      # CI 场景关进度条
 ```
 
@@ -229,8 +231,10 @@ yasamcp callgraph handle -p /path/to/project --maxcallees 5 -j
 
 ### `server` —— 启动 MCP 进程
 
+> 默认安装后无需 `-b`（引擎经 `~/.yasamcp/config.json` 自动定位）；完整客户端集成配置见 [CC / Codex 集成](#cc--codex-集成)。
+
 ```bash
-yasamcp server -b /path/to/yasa_mcp_bin
+yasamcp server
 yasamcp server -t streamable-http --port 8000
 ```
 
@@ -301,23 +305,28 @@ yasamcp 以 MCP 常驻进程（默认 stdio）对外提供 **9 个只读查询�
 
 ## CC / Codex 集成
 
-先确保目标项目已 `yasamcp init` 生成缓存，再启动 MCP 进程：
+> 前置：目标项目已 `yasamcp init <项目>` 生成缓存（仅 CLI 可初始化，MCP 不提供 `init`）。
+
+以 macOS arm64（默认安装到 `~/.yasamcp/`）为例。安装脚本已写入 `~/.yasamcp/config.json`（`{"binary_path":"~/.yasamcp/tools"}`），`yasamcp` 启动时会自动读取它定位 native 引擎（mac-arm64 对应 `~/.yasamcp/tools/darwin-aarch64/`），所以 `server` 无需 `-b`。
+
+> ⚠️ CC/Codex 是直接 spawn 进程、不经过 shell，配置里的路径必须是**绝对路径**——`~` 和 `$HOME` 都不会展开。把下面 `yourname` 换成你的 macOS 用户名（`echo $HOME` 查看，例如 `/Users/zhangsan`）。
+
+先确认二进制和配置就绪：
 
 ```bash
-yasamcp server -b /path/to/yasa_mcp_bin
+ls -l ~/.yasamcp/yasamcp-cli/yasamcp          # 默认安装的 CLI 二进制
+cat ~/.yasamcp/config.json                     # {"binary_path":"/Users/yourname/.yasamcp/tools"}
 ```
 
-执行过安装或首次 `init -b` 后引擎路径会持久化，`args` 可简化为 `["server"]`。
-
-**Claude Code**（`~/.claude.json`，`mcpServers`）：
+**Claude Code**（`~/.claude.json` 的 `mcpServers`）：
 
 ```json
 {
   "mcpServers": {
     "yasamcp": {
       "type": "stdio",
-      "command": "/path/to/yasamcp",
-      "args": ["server", "-b", "/path/to/yasa_mcp_bin"],
+      "command": "/Users/yourname/.yasamcp/yasamcp-cli/yasamcp",
+      "args": ["server"],
       "env": {}
     }
   }
@@ -328,12 +337,14 @@ yasamcp server -b /path/to/yasa_mcp_bin
 
 ```toml
 [mcp_servers.yasamcp]
-command = "/path/to/yasamcp"
-args = ["server", "-b", "/path/to/yasa_mcp_bin"]
+command = "/Users/yourname/.yasamcp/yasamcp-cli/yasamcp"
+args = ["server"]
 startup_timeout_sec = 60
 
 [mcp_servers.yasamcp.env]
 ```
+
+> 想让 MCP 进程不依赖 `config.json` 也能定位引擎，可在 `env` 里显式补 `"YASA_MCP_BIN_DIR": "/Users/yourname/.yasamcp/tools"`（Codex TOML 同理加 `YASA_MCP_BIN_DIR = "..."`）；二者配其一即可，默认 `config.json` 已自动覆盖。
 
 **验证**：重启会话 → `/mcp` 看到 `yasamcp` 及 9 个工具即成功（`Auth: Unsupported` 对本地 stdio 属正常，不阻断调用）→ 让模型带 `project_path` 调一个工具验证有结果。若返回「未找到已初始化的项目，请先通过 yasamcp init 生成分析结果」，说明该 `project_path` 缓存缺失/过期，回终端执行 `yasamcp init <项目路径>`。
 
