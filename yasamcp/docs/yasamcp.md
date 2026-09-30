@@ -14,37 +14,98 @@
 
 ## 安装
 
-yasamcp 由 **打包好的 CLI 二进制** + **4 个 native 引擎**（`yasa` / `codegraph` / `ripgrep` / `scc`，按 OS+架构分平台）组成，统一安装到 `~/.yasamcp/<os>-<arch>/`，路径写入 `~/.yasamcp/config.json`，CLI 与 MCP 自动定位。
+yasamcp 由 **打包好的 CLI 二进制** + **4 个 native 引擎**（`yasa` / `codegraph` / `ripgrep` / `scc`，按 OS+架构分平台）组成，引擎路径写入 `~/.yasamcp/config.json`，CLI 与 MCP 自动定位。
+
+> ⚠️ 仅支持 `mac-arm64` / `mac-x64` / `linux-x64`，其余平台会报错退出。
+
+安装目录布局：
+
+```
+~/.yasamcp/
+  ├─ tools/<平台>/{yasa,codegraph,ripgrep,scc}   # native 引擎(OSS 下载)
+  ├─ yasamcp-cli/yasamcp                          # CLI 二进制(GitHub 下载)
+  └─ config.json                                  # {"binary_path":"~/.yasamcp/tools"}
+```
 
 ### 一键安装脚本（推荐）
 
 ```bash
-bash install.sh
+bash script/install.sh
 ```
 
-脚本会检测 OS+CPU 架构（`darwin-arm64` / `darwin-x86_64` / `linux-x86_64`）→ 从 OSS 拉取对应平台制品 → 解压到 `~/.yasamcp/<os>-<arch>/` → 校验二进制 → 写入 `config.json` → 安装 `yasamcp` 到 `PATH` → 末尾自检 `yasamcp --version`。
+脚本流程：检测 OS+架构 → 从 OSS 下载 4 个 native 引擎（`https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip`）解压到 `~/.yasamcp/tools/<平台>/` → 从 [GitHub Releases](https://github.com/antgroup/YASA-Engine/releases) 解析最新 release tag 并下载 `yasamcp-<plat>.tar.gz` 解压到 `~/.yasamcp/yasamcp-cli/` → 写入 `config.json` → 把 `~/.yasamcp/yasamcp-cli` 加入 `PATH`、导出 `YASA_MCP_BIN_DIR=~/.yasamcp/tools` → 末尾自检 `yasamcp --version`。
 
-> OSS 下载地址（待补充）：`darwin-arm64` / `darwin-x86_64` / `linux-x86_64` 各一份。
+**自动跳过已安装部分**：若 `tools/<平台>` 下 4 个引擎目录齐全则跳过引擎下载；若 `yasamcp-cli/yasamcp` 已存在且可执行则跳过 CLI 下载——已装好的部件不会被重复下载覆盖。重复运行只会补装缺失部分。要强制重装，可删除对应目录后再跑，或用 `--tools` / `--yasamcp` 指定本地包。
 
-也支持指定本地压缩包安装（跳过联网下载）：
+### 可配置安装
+
+| 选项 / 环境变量 | 作用 |
+|----------------|------|
+| `--home <目录>` ／ `YASAMCP_HOME` | 自定义安装目录（默认 `~/.yasamcp`） |
+| `--skip-path` | 不改 shell rc（不写 `PATH`/`YASA_MCP_BIN_DIR`） |
+| `--tools <文件>` | 用本地 OSS 引擎压缩包，跳过联网下载引擎 |
+| `--yasamcp <文件>` | 用本地 yasamcp 压缩包，跳过联网下载 CLI |
+| `YASAMCP_VERSION` | 要安装的 release tag，默认 `latest`（解析最新版）；可设 `yasamcp-v1.0.3` 固定版本 |
+| `YASAMCP_REPO` | 发布仓库，默认 `antgroup/YASA-Engine` |
+| `YASAMCP_ASSET` | 资源文件名，默认 `yasamcp-<平台>.tar.gz` |
 
 ```bash
-bash install.sh --archive /path/to/yasamcp-darwin-arm64.tar.gz
+bash script/install.sh --home /opt/yasamcp                       # 自定义安装目录
+bash script/install.sh --skip-path                               # 不改 shell rc
+# 指定版本(默认即取最新版):
+YASAMCP_VERSION=yasamcp-v1.0.3 bash script/install.sh            # 安装指定 tag
+YASAMCP_VERSION=latest bash script/install.sh                    # 显式取最新(默认行为)
 ```
 
-### 手动安装
+**GitHub 下载慢时挂代理**：`curl` 会自动识别 `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` 环境变量。直连 GitHub 慢（国内常见）时，把代理传给脚本即可秒下：
 
-1. 下载并解压平台制品到 `~/.yasamcp/<os>-<arch>/`（含 `yasa`、`codegraph`、`ripgrep`、`scc`、`yasamcp`）。
-2. `chmod +x ~/.yasamcp/<os>-<arch>/*`。
-3. 首次任一 `yasamcp init <项目> -b <引擎目录>` 会校验并持久化引擎路径。
-4. 把 `yasamcp` 放入 `PATH` 或软链：`ln -s ~/.yasamcp/darwin-arm64/yasamcp /usr/local/bin/yasamcp`。
+```bash
+HTTPS_PROXY=http://127.0.0.1:7890 bash script/install.sh   # 换成你本地代理地址
+```
+
+### 脚本下载失败？手动下载再装（兜底）
+
+如果脚本联网下载卡住或失败（比如 GitHub 访问受限），自己用浏览器/代理把两个产物下到本地，再让脚本跳过联网、直接用本地包安装。按你的平台替换 `<plat>`：mac-ARM 用 `darwin-aarch64`、mac-Intel 用 `darwin-x86-64`、Linux-x64 用 `linux-x86-64`。
+
+**要下载的两个产物**：
+
+1. **native 引擎压缩包**（OSS，国内快）：
+   ```
+   https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip
+   ```
+2. **yasamcp CLI 压缩包**（GitHub Releases）——`<version>` 取最新 tag，见 [Releases](https://github.com/antgroup/YASA-Engine/releases)，例如 `yasamcp-v1.0.3`：
+   ```
+   https://github.com/antgroup/YASA-Engine/releases/download/<version>/yasamcp-<plat>.tar.gz
+   ```
+
+下载好之后，把两个文件路径传给脚本——脚本检测到本地包就跳过联网下载，只做解压、写 `config.json`、配置 `PATH`：
+
+```bash
+bash script/install.sh \
+  --tools   ~/Downloads/darwin-aarch64.zip \
+  --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
+```
+
+也可以只传其中一个：脚本会联网下载缺失的另一部分。比如只本地备了 yasamcp CLI，引擎仍联网拉：
+
+```bash
+bash script/install.sh --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
+```
+
+> 浏览器下载通常比脚本直连快很多是因为浏览器走了代理/VPN；把同样的代理用 `HTTPS_PROXY=...` 传给脚本，脚本下载就和浏览器一样快。
 
 ### 验证
 
 ```bash
-yasamcp --version
-yasamcp -h
+yasamcp --version        # 确认 CLI 可运行
+yasamcp -h               # 查看命令列表
 ```
+
+若 `yasamcp` 命令找不到：`source ~/.zshrc`（macOS）或 `source ~/.bashrc`（Linux）让 `PATH` 生效。
+
+### 日志
+
+CLI 与 MCP 进程的运行日志按天写入 `~/.yasamcp/logs/YYYY-MM-DD.log`（与安装目录同级，每行带时间戳与阶段耗时），排障时直接查看当天日志文件即可。
 
 ### 开发者环境（贡献者）
 
