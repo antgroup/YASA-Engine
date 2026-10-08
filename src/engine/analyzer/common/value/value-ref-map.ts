@@ -23,6 +23,14 @@ export interface ValueRegistry extends ValueStore {
  * 有 UUID → 优先从符号表 resolve（匹配旧 createFieldProxy 行为），_direct 做 fallback。
  * 无 UUID → 直返 _direct（非 Unit 值或注册失败时）。
  *
+ * _proxyTarget 永久为空 {}，仅作为 Proxy 构造所需的 target object。
+ * 所有数据读写均通过 _map，不往 _proxyTarget 写 string key，
+ * 避免 V8 NameDictionary::Add 扩容导致的 OOM（原 365k 实例 × bags = 3.73GiB）。
+ *
+ * COW：_clone 共享 _map 引用（避免 clone 时 new Map() 重复 Rehash 扩容的 Map backing OOM），
+ * 首次写时拆分为独立副本。注册成功的 Unit 同时存 WeakRef _direct，
+ * cloned ST 查不到 uuid 时 resolve 回退 _direct 而非退化为 UUID 字符串（避免子作用域被误当字符串）。
+ *
  * proxy[key]       → resolve ValueRef → 返回 Value
  * proxy[key] = val → 转 ValueRef 存储（uuid + direct）
  * delete proxy[key] → 删除
@@ -30,7 +38,10 @@ export interface ValueRegistry extends ValueStore {
  * for...in          → 遍历 keys
  */
 export class ValueRefMap {
+  /** 内部数据主体。COW 共享时写前须调 _ensureMapOwned，外部禁止直接写 */
   _map: Map<string, ValueRef> = new Map()
+  /** COW 标记：true 表示 _map 与其他实例共享，写前须拷贝 */
+  private _mapShared: boolean = false
   private _getSymbolTable: () => ValueRegistry | null
   private _getOwner: (() => Unit | null) | null
   private _proxy: any
@@ -71,6 +82,7 @@ export class ValueRefMap {
   }
 
   set(key: string, value: Unit | ValueRef | null | undefined): void {
+    this._ensureMapOwned()
     this._setInternal(key, value)
     // v5 hook #5：slot_bind 事件。每次成功 set 记一条边（value → ownerUnit）
     // delete 语义（value==null）不记边
@@ -91,29 +103,25 @@ export class ValueRefMap {
   private _setInternal(key: string, value: Unit | ValueRef | null | undefined): void {
     if (value == null) {
       this._map.delete(key)
-      delete this._proxyTarget[key]
       return
     }
     if (value instanceof ValueRef) {
       this._map.set(key, value)
-      this._proxyTarget[key] = value.uuid || value._direct
       return
     }
     // UUID string → pure reference (no direct object available)
     if (typeof value === 'string' && (value as any).startsWith('symuuid')) {
       this._map.set(key, new ValueRef(value as any))
-      this._proxyTarget[key] = value
       return
     }
-    // Register Unit values in ST, store UUID-only ref (no _direct).
-    // Matches old createFieldProxy: SET stores UUID string, GET resolves via ST.
+    // Register Unit values in ST, store UUID-only ref (no _direct)。
+    // Matches旧 createFieldProxy: SET stores UUID string, GET resolves via ST。
     if (value && typeof value === 'object' && (value as any).vtype && (value as any).qid) {
       const st = this._getSymbolTable()
       if (st) {
         const uuid = st.register(value as Unit)
         if (uuid) {
           this._map.set(key, new ValueRef(uuid))
-          this._proxyTarget[key] = uuid
           return
         }
       }
@@ -122,23 +130,19 @@ export class ValueRefMap {
     const uuid = value?.uuid || ''
     if (uuid) {
       this._map.set(key, new ValueRef(uuid))
-      this._proxyTarget[key] = uuid
     } else {
       this._map.set(key, new ValueRef('', value))
-      this._proxyTarget[key] = value
     }
   }
 
   delete(key: string): boolean {
-    delete this._proxyTarget[key]
+    this._ensureMapOwned()
     return this._map.delete(key)
   }
 
   clear(): void {
+    this._ensureMapOwned()
     this._map.clear()
-    for (const k of Object.keys(this._proxyTarget)) {
-      delete this._proxyTarget[k]
-    }
   }
 
   keys(): IterableIterator<string> {
@@ -163,13 +167,21 @@ export class ValueRefMap {
     return result
   }
 
+  /** COW 写时拷贝：共享 Map 在首次写前拆分为独立副本 */
+  private _ensureMapOwned(): void {
+    if (this._mapShared) {
+      this._map = new Map(this._map)
+      this._mapShared = false
+    }
+  }
+
   private _createProxy(): any {
     const self = this
     return new Proxy(this._proxyTarget, {
       get(_target, prop) {
         if (typeof prop === 'symbol') return (_target as any)[prop]
         if (typeof prop === 'string') {
-          if (prop === '_map') return self._map
+          if (prop === '_map') return self._map as ReadonlyMap<string, ValueRef>
           if (prop === '_owner') return self
           if (prop === 'hasOwnProperty') return (key: string) => self._map.has(key)
           const ref = self._map.get(prop)
@@ -193,8 +205,7 @@ export class ValueRefMap {
 
       deleteProperty(_target, prop) {
         if (typeof prop === 'string') {
-          self._map.delete(prop)
-          delete _target[prop]
+          self.delete(prop)
           return true
         }
         return false
@@ -217,8 +228,14 @@ export class ValueRefMap {
 
       getOwnPropertyDescriptor(_target, prop) {
         if (typeof prop === 'string' && self._map.has(prop)) {
+          const ref = self._map.get(prop)!
+          // uuid 非空返回 UUID string（保持旧 _target[prop] 语义）；
+          // uuid 为空时回退 resolve/direct，避免 desc.value 退化为 ''
+          const value = ref.uuid
+            ? ref.uuid
+            : ref.resolve(self._getSymbolTable()) ?? ref._direct ?? undefined
           return {
-            value: _target[prop],
+            value,
             writable: true,
             enumerable: true,
             configurable: true,
@@ -238,10 +255,8 @@ export class ValueRefMap {
     for (const [key, value] of entries) {
       if (value instanceof ValueRef) {
         map._map.set(key, value)
-        map._proxyTarget[key] = value.uuid || value._direct
       } else if (typeof value === 'string') {
         map._map.set(key, new ValueRef(value))
-        map._proxyTarget[key] = value
       }
     }
     return map
@@ -249,10 +264,12 @@ export class ValueRefMap {
 
   _clone(getSymbolTable: () => ValueRegistry | null): ValueRefMap {
     const copy = new ValueRefMap(getSymbolTable)
-    copy._map = new Map(this._map)
-    for (const [key, ref] of copy._map) {
-      copy._proxyTarget[key] = ref.uuid || ref._direct
-    }
+    // COW：共享 _map 引用不拷贝，写时由 _ensureMapOwned 拆分为独立副本。
+    // 不守 size>0：空 map 克隆时若不置 _mapShared，任一侧 set 直接写共享对象、
+    // 两侧互相污染,_map 异常增长 → satisfy BFS 触达 2^32-1 抛 RangeError。
+    copy._map = this._map
+    this._mapShared = true
+    copy._mapShared = true
     return copy
   }
 }

@@ -5,8 +5,14 @@ const FindingUtil = require('../../../util/finding-util')
  */
 export interface IResultManager {
   findings: Record<string, any[]>
+  /** 跨入口 dedop 用的轻量 finding 记录（已 snapshot，无 AST 重引用） */
+  dedupIndex: Record<string, any[]>
+  /** 累积的 SARIF results（按 strategyId 存储已序列化的 SARIF 报告） */
+  sarifResultsAccumulator: Record<string, any>
   getFindings(): Record<string, any[]>
   clearFindings(): void
+  /** 清空当前 findings，保留 dedupIndex 和 sarifResultsAccumulator */
+  clearFindingsKeepDedup(): void
   newFinding(finding: Record<string, any>, outputStrategyId?: string): void
 }
 
@@ -15,12 +21,16 @@ export interface IResultManager {
  */
 class ResultManager implements IResultManager {
   findings: Record<string, any[]>
+  dedupIndex: Record<string, any[]>
+  sarifResultsAccumulator: Record<string, any>
 
   /**
    * Constructor of ResultManager
    */
   constructor() {
     this.findings = {}
+    this.dedupIndex = {}
+    this.sarifResultsAccumulator = {}
   }
 
   /**
@@ -34,6 +44,13 @@ class ResultManager implements IResultManager {
    * clear all findings
    */
   clearFindings(): void {
+    this.findings = {}
+  }
+
+  /**
+   * 清空当前批次 findings（释放 AST 重引用），保留 dedupIndex 和 sarifResultsAccumulator
+   */
+  clearFindingsKeepDedup(): void {
     this.findings = {}
   }
 

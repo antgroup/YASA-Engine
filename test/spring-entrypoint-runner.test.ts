@@ -252,3 +252,21 @@ describe('Spring production entrypoint runner seam', () => {
     assert.strictEqual(budget?.allocationMs, 500_000)
   })
 })
+
+
+describe('Spring timeout lifecycle ordering', () => {
+  it('records timeout enqueue after execute returns', () => {
+    const events: string[] = []
+    const plan = createDeadlinePlan({ outerDeadline: 1000, finalizationReserveMs: 0, exitReserveMs: 0 }, () => 0)
+    type TimeoutState = { entryPointDeadline?: number; entryPointClock?: () => number; entryPointTimeoutLatch?: { timedOut: boolean; trip(): boolean; reset(): void } }
+    const state: TimeoutState = {}
+    runAllocatedAttempt({
+      plan, remainingAttempts: 1, configuredCapMs: 600, state, clock: () => 0,
+      execute: () => { events.push('execute'); state.entryPointTimeoutLatch.trip() },
+      after: () => events.push('after'),
+      enqueueTimeout: () => events.push('enqueue'),
+      overload: overload('timeout'), entryPoint: { id: 1 }, args: [],
+    })
+    assert.deepStrictEqual(events, ['execute', 'after', 'enqueue'])
+  })
+})

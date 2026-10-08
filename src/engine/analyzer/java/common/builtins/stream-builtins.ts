@@ -199,7 +199,7 @@ class Stream {
   }
 
   /**
-   * Stream.values — Java 标准 Stream API 无 values 方法，但 `Stream.collect(toMap)` 在当前引擎
+   * Stream.values — Java 标准 Stream API 无 values 方法，但 `Stream.collect(toMap)` 在 yasa2
    * 当前 modeling 下返回 Stream 本身（未真正构造 Map），下游对返回值再调 .values() 时落入未建模
    * 路径，元素链断。这里把 Stream.values 视作恒等：把 _this（携带 buffer 元素与 taint）原样
    * 返回，让 toMap/values/keySet 链上元素能继续传播到 `new ArrayList<>(...)` 构造器。

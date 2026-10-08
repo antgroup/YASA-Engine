@@ -19,12 +19,32 @@ export class ResultManagerProxy implements IResultManager {
     this.globalResultManager.findings = value
   }
 
+  get dedupIndex(): Record<string, any[]> {
+    return this.globalResultManager.dedupIndex
+  }
+
+  set dedupIndex(value: Record<string, any[]>) {
+    this.globalResultManager.dedupIndex = value
+  }
+
+  get sarifResultsAccumulator(): Record<string, any> {
+    return this.globalResultManager.sarifResultsAccumulator
+  }
+
+  set sarifResultsAccumulator(value: Record<string, any>) {
+    this.globalResultManager.sarifResultsAccumulator = value
+  }
+
   getFindings(): Record<string, any[]> {
     return this.globalResultManager.getFindings()
   }
 
   clearFindings(): void {
     this.globalResultManager.clearFindings()
+  }
+
+  clearFindingsKeepDedup(): void {
+    this.globalResultManager.clearFindingsKeepDedup()
   }
 
   newFinding(finding: Record<string, any>, outputStrategyId?: string): void {

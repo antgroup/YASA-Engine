@@ -123,8 +123,15 @@ const { moveExistElementsToBuffer, addElementToBuffer } = require('../java/commo
 const { performanceTracker } = require('../../../util/performance-tracker')
 const { checkInvocationMatchSink } = require('../../../checker/taint/common-kit/sink-util')
 const OutputStrategyAutoRegister = require('./output-strategy-auto-register')
-// 单入口内存护栏：基类 hook + Python override 写状态；状态由子类持有
-import type { MemoryGuardState } from './memory-guard/entrypoint-memory-guard'
+// 单入口内存护栏：基类默认 delta 模式实现，子类可 override
+import {
+  type MemoryGuardState,
+  createMemoryGuardState,
+  probeMemoryAndUpdate,
+  getEntryPointHeapDeltaMb,
+  resetForEntryPoint,
+  flushFindingsToReport,
+} from './memory-guard/entrypoint-memory-guard'
 const { logDiagnostics } = require('../../../util/diagnostics-log-util')
 type IncrementalManagerModule = typeof import('../../../incremental/incremental-manager')
 
@@ -3353,7 +3360,7 @@ class Analyzer extends BaseAnalyzer {
     // if (importedVal) {
     //     this.saveVarInCurrentScope(scope, local, importedVal, state);
     // }
-    return this.processImportDirect(this.topScope, node, state)
+    return this.processImportDirect(scope, node, state)
   }
 
   /**
@@ -3531,37 +3538,69 @@ class Analyzer extends BaseAnalyzer {
   }
 
   /**
-   * 单入口内存护栏 hook：子类 override 在 processInstruction/executeCall 边界检查 heapUsed，
-   * 超阈返回 true 提前退出当前入口。基类默认 false（护栏 disabled 或子类未实装）。
+   * 单入口内存护栏 hook：基类默认 delta 模式实现，子类可 override 定制行为。
+   * 在 processInstruction/executeCall 边界检查 heapUsed delta，超阈返回 true 提前退出当前入口。
+   * baselineHeapBytes === 0 时（入口未 reset，如 processModule 阶段）直接返回 false，避免误杀。
    */
   protected shouldAbortExecutionForMemory(_state: State): boolean {
-    return false
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) return false
+    return probeMemoryAndUpdate(state)
   }
 
   /**
-   * 内存护栏状态：子类（如 Python）override 时持有，基类默认 undefined。
+   * 内存护栏状态：基类默认 createMemoryGuardState()，子类可 override 持有自定义状态。
    * symbolInterpret 主循环每入口开始前通过 resetMemoryGuardForEntryPoint 重置。
    */
-  protected memoryGuardState: MemoryGuardState | undefined
+  protected memoryGuardState: MemoryGuardState | undefined = createMemoryGuardState()
 
   /**
-   * 入口开始前重置护栏状态。子类 override 写入具体 state（基类 noop）。
-   * 默认实现确保未实装护栏的语言不会崩溃。
+   * 入口开始前重置护栏状态：基类默认调共享 resetForEntryPoint（reset baseline + label）。
+   * 子类可 override 追加自定义清理逻辑（如 per-entrypoint cache clear）。
    */
-  protected resetMemoryGuardForEntryPoint(_entryPointLabel: string): void {
-    // 基类 noop，子类可 override
+  protected resetMemoryGuardForEntryPoint(entryPointLabel: string): void {
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) return
+    resetForEntryPoint(state, entryPointLabel)
   }
 
   /**
-   * 入口结束后处理护栏 diagnostics + flush。子类 override 写入具体行为。
-   * 返回是否触发了 abort（用于上层 recordEntryPointLoopMetric skipReason）。
+   * 入口结束后处理护栏：基类默认 delta 模式 diagnostics + flush + gc + log。
+   * 子类可 override 定制 flush 行为。返回是否触发了 abort（用于上层 recordEntryPointLoopMetric skipReason）。
    */
-  protected onEntryPointMemoryGuardFinalize(_entryPoint: unknown, _findingsBefore: number): {
+  protected onEntryPointMemoryGuardFinalize(
+    _entryPoint: unknown,
+    findingsBefore: number
+  ): {
     aborted: boolean
     peakHeapMb: number
     deltaHeapMb: number
   } {
-    return { aborted: false, peakHeapMb: 0, deltaHeapMb: 0 }
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) {
+      return { aborted: false, peakHeapMb: 0, deltaHeapMb: 0 }
+    }
+    const deltaInfo = getEntryPointHeapDeltaMb(state)
+    if (!state.exceeded) {
+      return { aborted: false, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
+    }
+    const resultManager = this.checkerManager?.getResultManager?.()
+    const findingsAtFlush = flushFindingsToReport(resultManager ?? null, Config)
+    state.cumulativeFlushedFindings = findingsAtFlush
+    const gcFn = (globalThis as { gc?: () => void }).gc
+    if (typeof gcFn === 'function') {
+      try {
+        gcFn()
+      } catch (_e) {
+        /* --expose-gc 未启时无 gc，忽略 */
+      }
+    }
+    logger.warn(
+      `[memory-guard] entrypoint aborted: ${state.entryPointLabel} peak=${deltaInfo.peakMb.toFixed(1)}MB ` +
+        `delta=${deltaInfo.deltaMb.toFixed(1)}MB limit=${state.deltaLimitMb}MB ` +
+        `flushedFindings=${findingsAtFlush} findingsBefore=${findingsBefore}`
+    )
+    return { aborted: true, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
   }
 
   /**
@@ -5695,19 +5734,10 @@ class Analyzer extends BaseAnalyzer {
       }
       return
     }
-    const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
-    outputStrategyAutoRegister.autoRegisterAllStrategies()
-    const allFindings = resultManager.getFindings()
-    for (const outputStrategyId in allFindings) {
-      const strategy = outputStrategyAutoRegister.getStrategy(outputStrategyId)
-      if (strategy && typeof strategy.outputFindings === 'function') {
-        const strategyStartedAt = Date.now()
-        const strategyFindings = allFindings[outputStrategyId]
-        const rawFindingCount = Array.isArray(strategyFindings) ? strategyFindings.length : 0
-        strategy.outputFindings(resultManager, strategy.getOutputFilePath(), Config, printf)
-        logger.info(`[outputFindings] strategy=${outputStrategyId} phase=total raw=${rawFindingCount} elapsed=${Date.now() - strategyStartedAt}ms`)
-      }
-    }
+    // 最终输出：flush 最后一批 findings 到 accumulator + 写 accumulator 到文件
+    // 如果扫描中 memory guard 未触发，accumulator 为空，此处将全部 findings 生成 SARIF 并写入
+    // 如果扫描中 memory guard 触发过，accumulator 已有历史批次，此处追加最后一批后写最终 SARIF
+    flushFindingsToReport(resultManager, Config, printf as ((...args: unknown[]) => void) | undefined)
   }
 }
 

@@ -297,7 +297,11 @@ function buildNewValueInstance(
       // 递归处理 _field 中的值
       if (newVal._field && typeof newVal._field === 'object') {
         const fieldHolder = newVal as CloneFieldHolder
-        const fieldTarget: WritableValueContainer | undefined = fieldHolder._field?.[RAW_TARGET] as WritableValueContainer | undefined || fieldHolder._field
+        const fieldRawTarget = fieldHolder._field?.[RAW_TARGET]
+        // ValueRefMap proxy 的 RAW_TARGET 为空 {}，需回退到 proxy 本身（走 ownKeys trap）
+        const fieldTarget: WritableValueContainer | undefined = fieldRawTarget && Object.keys(fieldRawTarget).length > 0
+          ? fieldRawTarget as WritableValueContainer
+          : fieldHolder._field
         if (fieldTarget !== newVal.value) {
           ensureWritableValueContainer(newVal, Array.isArray(fieldTarget) ? 0 : '')
         }

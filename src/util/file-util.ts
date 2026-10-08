@@ -286,8 +286,6 @@ function loadJsonFileAsts(filename: string): ASTFileUnit[] | ASTFileUnit {
 function writeJSONfile(filename: string, value: any, diagnosticTiming = false): void {
   // logger.info('writing JSON file: ' + filename);
   try {
-    const normalizeStartedAt = diagnosticTiming ? Date.now() : 0
-    const normalizeElapsed = diagnosticTiming ? Date.now() - normalizeStartedAt : 0
     // 检测循环引用的函数
     const detectCircularRefs = (
       obj: any,
@@ -414,7 +412,7 @@ function writeJSONfile(filename: string, value: any, diagnosticTiming = false): 
     const writeStartedAt = diagnosticTiming ? Date.now() : 0
     jsonfile.writeFileSync(filename, value, {})
     if (diagnosticTiming) {
-      logger.info(`[outputFindings] phase=serialize-write file=${path.basename(filename)} circularRefs=${circularPaths.length} normalizeElapsed=${normalizeElapsed}ms circularElapsed=${circularElapsed}ms writeElapsed=${Date.now() - writeStartedAt}ms`)
+      logger.info(`[outputFindings] phase=serialize-write file=${path.basename(filename)} circularRefs=${circularPaths.length} circularElapsed=${circularElapsed}ms writeElapsed=${Date.now() - writeStartedAt}ms`)
     }
   } catch (err: any) {
     // 如果错误是循环引用相关的，进行详细诊断
@@ -911,15 +909,9 @@ function resolveUastBinaryPath(options: {
     yasaWarning(`Failed to extract ${binaryName} from snapshot`, RESOLVE_UAST_BINARY_STAGE)
   }
 
-  // 优先级3: 开发环境路径
+  // 优先级3: 开发环境路径（__dirname 相对，即代码/安装目录）
   if (fs.existsSync(devPath)) {
     return devPath
-  }
-
-  // 优先级4: 当前工作目录
-  const cwdPath = resolveBinaryFromDir(path.join(process.cwd(), 'deps'), binaryName)
-  if (cwdPath && fs.existsSync(cwdPath)) {
-    return cwdPath
   }
 
   return null

@@ -58,6 +58,45 @@ export function isPreparedBodyRead(node: unknown): node is MemberAccessNode {
   return typeof node === 'object' && node !== null && tornadoPreparedBodyReads.has(node as MemberAccessNode)
 }
 
+const tornadoHandlerApplications = new Map<string, Set<unknown>>()
+
+type TornadoClassValue = {
+  qid?: unknown
+  ast?: {
+    cdef?: unknown
+    node?: unknown
+  }
+}
+
+function getTornadoHandlerClassKey(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined
+  const handler = value as TornadoClassValue
+  if (typeof handler.qid !== 'string') return undefined
+  const classDefinitions = [handler.ast?.node, handler.ast?.cdef]
+  if (!classDefinitions.some((node) => (node as { type?: unknown } | undefined)?.type === 'ClassDefinition')) return undefined
+  return handler.qid
+}
+
+export function registerTornadoHandlerApplication(handler: unknown, application: unknown): void {
+  const handlerClassKey = getTornadoHandlerClassKey(handler)
+  if (!handlerClassKey || typeof application !== 'object' || application === null) return
+  const applications = tornadoHandlerApplications.get(handlerClassKey) ?? new Set<unknown>()
+  applications.add(application)
+  tornadoHandlerApplications.set(handlerClassKey, applications)
+}
+
+export function getUniqueTornadoHandlerApplication(handler: unknown): unknown {
+  const handlerClassKey = getTornadoHandlerClassKey(handler)
+  if (!handlerClassKey) return undefined
+  const applications = tornadoHandlerApplications.get(handlerClassKey)
+  if (applications?.size !== 1) return undefined
+  return applications.values().next().value
+}
+
+export function resetTornadoHandlerApplications(): void {
+  tornadoHandlerApplications.clear()
+}
+
 /**
  * Check if node is a Tornado Application call
  * @param node
@@ -80,4 +119,42 @@ export function isTornadoCall(node: any, targetName: string): boolean {
     }
   }
   return false
+}
+
+type TornadoFrameworkCallable = {
+  node_module?: boolean
+  qid?: string
+  sid?: string
+  super?: unknown
+  ast?: {
+    cdef?: { type?: unknown }
+    node?: { type?: unknown }
+  }
+}
+
+function isTornadoApplicationBase(callable: unknown): boolean {
+  if (typeof callable !== 'object' || callable === null) return false
+  const value = callable as TornadoFrameworkCallable
+  return value.node_module === true && typeof value.qid === 'string' && /(?:^|\.)tornado\.web\.Application$/.test(value.qid)
+}
+
+function isLocalTornadoApplicationSubclass(callable: TornadoFrameworkCallable): boolean {
+  const classDefinitions = [callable.ast?.node, callable.ast?.cdef]
+  return (
+    callable.node_module !== true &&
+    classDefinitions.some((definition) => definition?.type === 'ClassDefinition') &&
+    isTornadoApplicationBase(callable.super)
+  )
+}
+
+export function isTornadoFrameworkCall(node: unknown, targetName: string, callable: unknown): boolean {
+  if (!isTornadoCall(node, targetName)) return false
+  if (typeof callable !== 'object' || callable === null) return false
+  const value = callable as TornadoFrameworkCallable
+  const qualifiedId = value.qid ?? value.sid
+  const isExternalTornadoCall =
+    value.node_module === true &&
+    typeof qualifiedId === 'string' &&
+    (targetName === 'Application' ? isTornadoApplicationBase(value) : qualifiedId.includes('tornado.web.'))
+  return isExternalTornadoCall || (targetName === 'Application' && isLocalTornadoApplicationSubclass(value))
 }

@@ -14,6 +14,7 @@ import type { Logger } from '../../../../util/logger'
 import type { CallArgs, CallArg, CallArgKind, CallInfo } from '../../common/call-args'
 import { dispatchPythonCallbackApiModel, handlePythonFrameworkCall } from '../framework-call-model'
 import { pythonCallSummaryPolicy } from '../../common/call-summary/language/python'
+import { tryExecuteFirstArgCallee } from './callgraph/first-arg-callee-resolver'
 import type { CallSummaryLanguagePolicy } from '../../common/call-summary/language/types'
 import { INTERNAL_CALL } from '../../common/call-args'
 import type {
@@ -29,14 +30,6 @@ import type {
   AssignmentExpression,
   SpreadElement,
 } from '../../../../types/uast'
-import {
-  createMemoryGuardState,
-  resetForEntryPoint,
-  probeMemoryAndUpdate,
-  flushFindingsToReport,
-  getEntryPointHeapDeltaMb,
-  type MemoryGuardState,
-} from '../../common/memory-guard/entrypoint-memory-guard'
 import { describeEntryPointForLog } from '../../../../util/entrypoint-metrics'
 
 const Uuid = require('node-uuid')
@@ -66,7 +59,8 @@ const AstUtil = require('../../../../util/ast-util')
 const Stat = require('../../../../util/statistics')
 const constValue = require('../../../../util/constant')
 const entryPointConfig = require('../../common/entrypoint/current-entrypoint')
-const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
+const { executeViaEntryPointExecutor } =
+  require('../../common/entrypoint/entrypoint-executor') as typeof import('../../common/entrypoint/entrypoint-executor')
 const FileUtil = require('../../../../util/file-util')
 const { getSourceNameList } = require('./entrypoint-collector/python-entrypoint')
 const { handleException } = require('../../common/exception-handler')
@@ -79,6 +73,7 @@ const {
   findProjectRoot,
   buildSearchPaths,
 } = require('./python-import-resolver')
+const { getUniqueTornadoHandlerApplication } = require('../../../../checker/taint/python/tornado-util')
 
 /**
  *
@@ -87,85 +82,60 @@ class PythonAnalyzer extends Analyzer {
   protected override readonly callSummaryLanguagePolicy: CallSummaryLanguagePolicy = pythonCallSummaryPolicy
 
   /**
-   * 单入口内存护栏状态。
-   *
-   * 防护机制：每入口开始前 reset（记录基线 heap），processInstruction/executeCall 边界
-   * 节流探测 heapUsed，超阈设 exceeded=true 让本入口内后续指令提前返回 UndefinedValue。
-   * 入口结束后若 exceeded=true，flush 已分析入口 finding 到 report.sarif 并记录 diagnostics。
-   * 不改 clone 逻辑，零污染风险。
-   */
-  protected override memoryGuardState: MemoryGuardState | undefined = createMemoryGuardState()
-
-  /**
    * 内存护栏 abort 计数与 flush 计数，输出到 stdout 用于 PoC 校验。
    */
   private memoryGuardAbortCount: number = 0
+
   private memoryGuardFlushCount: number = 0
 
   /**
-   * 单入口内存护栏 hook：节流探测 heapUsed，超阈置 exceeded 提前退出本入口。
-   */
-  protected override shouldAbortExecutionForMemory(_state: State): boolean {
-    const state = this.memoryGuardState
-    if (!state || !state.enabled) return false
-    return probeMemoryAndUpdate(state)
-  }
-
-  /**
-   * 入口开始前重置护栏状态。
+   * 入口开始前重置护栏状态：基类负责 delta baseline + label 重置，
+   * Python 追加跨调用 visited memo 清理，避免跨入口污染。
+   * @param entryPointLabel
    */
   protected override resetMemoryGuardForEntryPoint(entryPointLabel: string): void {
-    const state = this.memoryGuardState
-    if (!state || !state.enabled) return
-    resetForEntryPoint(state, entryPointLabel)
-    // Step A：每入口开始重置跨调用 visited memo，避免跨入口污染（卡点 A 完全失败）。
+    super.resetMemoryGuardForEntryPoint(entryPointLabel)
     resetCrossCallVisited()
   }
 
   /**
-   * 入口结束处理护栏：若 exceeded=true 则 flush 当前 resultManager finding 到 report.sarif，
-   * 记录 diagnostics（入口名/峰值/已 flush finding 数），返回 abort 信息供上层 metrics。
+   * 入口结束处理护栏：基类负责 delta diagnostics + flush + gc + log，
+   * Python 追加 tmpSymbolTable 清理释放本入口累积的 clone 副本，避免跨入口累积导致后续入口误杀。
+   * @param entryPoint
+   * @param findingsBefore
    */
-  protected override onEntryPointMemoryGuardFinalize(entryPoint: unknown, findingsBefore: number): {
+  protected override onEntryPointMemoryGuardFinalize(
+    entryPoint: unknown,
+    findingsBefore: number
+  ): {
     aborted: boolean
     peakHeapMb: number
     deltaHeapMb: number
   } {
-    const state = this.memoryGuardState
-    if (!state || !state.enabled) {
-      return { aborted: false, peakHeapMb: 0, deltaHeapMb: 0 }
-    }
-    const deltaInfo = getEntryPointHeapDeltaMb(state)
-    if (!state.exceeded) {
-      return { aborted: false, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
-    }
+    const result = super.onEntryPointMemoryGuardFinalize(entryPoint, findingsBefore)
+    if (!result.aborted) return result
     this.memoryGuardAbortCount++
-    // flush 当前已分析入口的 finding 到 report.sarif（全量覆盖写，不 clear resultManager）
-    const resultManager = this.checkerManager?.getResultManager?.()
-    const findingsAtFlush = flushFindingsToReport(resultManager ?? null, Config)
-    state.cumulativeFlushedFindings = findingsAtFlush
     this.memoryGuardFlushCount++
-    // abort 后释放本入口累积的 clone 副本：清 tmpSymbolTable 持有的临时注册项 + 强制 gc，
+    // 释放本入口累积的 clone 副本：清 tmpSymbolTable 持有的临时注册项，
     // 否则 7GB+ clone 副本留在 tmpSymbolMap 跨入口累积，后续入口一进来就超阈被立刻 abort
-    const tmpBefore = (this as any).tmpSymbolTable ? (this as any).tmpSymbolTable.size : -1
+    const tmpBefore = this.tmpSymbolTable ? this.tmpSymbolTable.size : -1
     try {
-      if ((this as any).tmpSymbolTable && typeof (this as any).tmpSymbolTable.clear === 'function') {
-        ;(this as any).tmpSymbolTable.clear()
+      if (this.tmpSymbolTable && typeof this.tmpSymbolTable.clear === 'function') {
+        this.tmpSymbolTable.clear()
       }
-    } catch (e) { /* 清理失败不影响下一入口 */ }
-    const gcFn = (globalThis as any).gc
-    if (typeof gcFn === 'function') {
-      try { gcFn() } catch (e) { /* --expose-gc 未启时无 gc，忽略 */ }
+    } catch (_e) {
+      /* 清理失败不影响下一入口 */
     }
     const heapAfterGc = process.memoryUsage().heapUsed
+    const state = this.memoryGuardState
     logger.warn(
-      `[memory-guard] entrypoint aborted: ${state.entryPointLabel} peak=${deltaInfo.peakMb.toFixed(1)}MB ` +
-      `delta=${deltaInfo.deltaMb.toFixed(1)}MB limit=${state.limitMb}MB ` +
-      `flushedFindings=${findingsAtFlush} cumulativeAborts=${this.memoryGuardAbortCount} ` +
-      `cumulativeFlushes=${this.memoryGuardFlushCount} findingsBefore=${findingsBefore} ` +
-      `tmpBefore=${tmpBefore} heapAfterGcMb=${(heapAfterGc / 1024 / 1024).toFixed(1)}`
+      `[memory-guard] entrypoint aborted: ${state?.entryPointLabel ?? ''} ` +
+        `peak=${result.peakHeapMb.toFixed(1)}MB delta=${result.deltaHeapMb.toFixed(1)}MB ` +
+        `cumulativeAborts=${this.memoryGuardAbortCount} ` +
+        `cumulativeFlushes=${this.memoryGuardFlushCount} findingsBefore=${findingsBefore} ` +
+        `tmpBefore=${tmpBefore} heapAfterGcMb=${(heapAfterGc / 1024 / 1024).toFixed(1)}`
     )
-    return { aborted: true, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
+    return result
   }
 
   /**
@@ -251,10 +221,10 @@ class PythonAnalyzer extends Analyzer {
       let overloadCount = 0
       // 单入口内存护栏 reset：每入口开始前记录基线 heap，清 exceeded
       const epLabel = describeEntryPointForLog(entryPoint).replace(/^\[|\]$/g, '')
-      this.resetMemoryGuardForEntryPoint(epLabel)
       let memoryAborted = false
       try {
         this.symbolTable.clear()
+        this.resetMemoryGuardForEntryPoint(epLabel)
         const entryPointRecord = entryPoint as Record<string, unknown>
         if (entryPointRecord.type === constValue.ENGIN_START_FUNCALL) {
           const entryPointSymVal = entryPointRecord.entryPointSymVal as
@@ -305,7 +275,7 @@ class PythonAnalyzer extends Analyzer {
                 }
               },
             },
-            this.checkerManager?.resultManagerProxy,
+            this.checkerManager?.resultManagerProxy
           )
           overloadCount += executedOverloads
         } else if (entryPointRecord.type === constValue.ENGIN_START_FILE_BEGIN) {
@@ -338,7 +308,8 @@ class PythonAnalyzer extends Analyzer {
           }
           overloadCount = 1
           try {
-            const astNode = (entryPointRecord.entryPointSymVal as { ast?: { node?: CompileUnit } } | undefined)?.ast?.node
+            const astNode = (entryPointRecord.entryPointSymVal as { ast?: { node?: CompileUnit } } | undefined)?.ast
+              ?.node
             if (!astNode) {
               skipped = true
               skipReason = 'missing-file-ast'
@@ -360,16 +331,26 @@ class PythonAnalyzer extends Analyzer {
                 classify: () => 'file',
                 execute: () => {
                   this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
-                  this.processCompileUnit(scope, astNode, state)
+                  // module-level 入口把 modClos（entry_fclos）当作最外 head frame push 到 callstack idx0，
+                  // 让 callstack-only filter 的 expected=1 预设（idx0=已在里面的 head）成立：
+                  // 入口函数自身成为 idx1，第一条 ARG PASS 进 idx1 与 expected=1 对齐，真 enter edge 不再被误判为 noise 丢弃。
+                  const headFrame = scope
+                  const headState = headFrame
+                    ? Object.assign({}, state, {
+                        callstack: ((state as any).callstack || []).concat([headFrame]),
+                        callsites: ((state as any).callsites || []).concat([{ code: '', nodeHash: undefined, loc: astNode?.loc }]),
+                      })
+                    : state
+                  this.processCompileUnit(scope, astNode, headState)
                   this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
                 },
               },
-              this.checkerManager?.resultManagerProxy,
+              this.checkerManager?.resultManagerProxy
             )
           } catch (e) {
-            const sourceFile = (entryPointRecord.entryPointSymVal as
-              | { ast?: { node?: { loc?: { sourcefile?: unknown } } } }
-              | undefined)?.ast?.node?.loc?.sourcefile
+            const sourceFile = (
+              entryPointRecord.entryPointSymVal as { ast?: { node?: { loc?: { sourcefile?: unknown } } } } | undefined
+            )?.ast?.node?.loc?.sourcefile
             handleException(
               e,
               `[${sourceFile} symbolInterpret failed. Exception message saved in error log file`,
@@ -401,6 +382,10 @@ class PythonAnalyzer extends Analyzer {
     return true
   }
 
+  /**
+   *
+   * @param entryPoint
+   */
   private getOverloadedEntryPoints(entryPoint: unknown): unknown[] {
     const entryPointRecord = entryPoint as { entryPointSymVal?: { overloaded?: unknown } }
     const overloaded = entryPointRecord.entryPointSymVal?.overloaded
@@ -574,10 +559,26 @@ class PythonAnalyzer extends Analyzer {
       })
     }
 
-    return this.processPythonCallExpressionDirect(scope, node, state, fclos, argvalues, callInfo) ?? new UndefinedValue()
+    return (
+      this.processPythonCallExpressionDirect(scope, node, state, fclos, argvalues, callInfo) ?? new UndefinedValue()
+    )
   }
 
-  executeCallbackModelCall(node: CallExpression, fclos: Value, state: State, scope: Scope, callInfo: CallInfo): boolean {
+  /**
+   *
+   * @param node
+   * @param fclos
+   * @param state
+   * @param scope
+   * @param callInfo
+   */
+  executeCallbackModelCall(
+    node: CallExpression,
+    fclos: Value,
+    state: State,
+    scope: Scope,
+    callInfo: CallInfo
+  ): boolean {
     const callbackState = { ...state, throwstack: undefined, throwstackScopeAndState: [] } as State
     try {
       this.executeCall(node, fclos, callbackState, scope, callInfo)
@@ -587,6 +588,15 @@ class PythonAnalyzer extends Analyzer {
     return callbackState.throwstackScopeAndState?.length === 0 && callbackState.throwstack === undefined
   }
 
+  /**
+   *
+   * @param scope
+   * @param node
+   * @param state
+   * @param fclos
+   * @param argvalues
+   * @param callInfo
+   */
   private processPythonCallExpressionDirect(
     scope: Scope,
     node: CallExpression,
@@ -599,7 +609,9 @@ class PythonAnalyzer extends Analyzer {
 
     // union callee 含 class 成员：拆出 class 走 propagateNewObject，其余交给 executeCall
     if (fclos.vtype === 'union' && Array.isArray(fclos.value)) {
-      const classMembers = fclos.value.filter((m: Value | undefined) => m && typeof m === 'object' && m.vtype === 'class')
+      const classMembers = fclos.value.filter(
+        (m: Value | undefined) => m && typeof m === 'object' && m.vtype === 'class'
+      )
       if (classMembers.length > 0) {
         const results: Value[] = []
         for (const member of classMembers) {
@@ -620,7 +632,9 @@ class PythonAnalyzer extends Analyzer {
           }
         }
         // 非 class 成员通过 executeCall 的 union 处理（已内置 checkAtFunctionCallAfter）
-        const nonClassMembers = fclos.value.filter((m: Value | undefined) => !m || typeof m !== 'object' || m.vtype !== 'class')
+        const nonClassMembers = fclos.value.filter(
+          (m: Value | undefined) => !m || typeof m !== 'object' || m.vtype !== 'class'
+        )
         if (nonClassMembers.length > 0) {
           for (const member of nonClassMembers) {
             if (!member || typeof member !== 'object') continue
@@ -665,7 +679,7 @@ class PythonAnalyzer extends Analyzer {
       if (signatureAst?.type === 'FunctionDefinition') {
         callInfo.boundCall = this.bindCallArgs(node, fclos, signatureAst, callInfo)
       }
-      const res = this.executeWithSummary(
+      return this.executeWithSummary(
         scope,
         fclos,
         callInfo,
@@ -673,7 +687,6 @@ class PythonAnalyzer extends Analyzer {
         () => this.propagateNewObject(scope, node, state, fclos, argvalues, callInfo),
         { getReplayValue: () => undefined }
       )
-      return res
     }
     // list.append(x)：将元素添加到列表，并传播污点
     if (
@@ -723,8 +736,14 @@ class PythonAnalyzer extends Analyzer {
       collectedArgs,
     })
 
+    // 通用 first-arg-is-callee callgraph 解析（asyncio.to_thread / run_in_executor / functools.partial）
+    // 在 executeFunctionInArguments 之前尝试，如果匹配则用正确参数调用 first-arg，跳过 executeFunctionInArguments 的空参数调用
+    let firstArgCalleeHandled = false
     if (fclos.vtype !== 'fclos' && Config.invokeCallbackOnUnknownFunction && !callbackModelHandled) {
-      this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
+      firstArgCalleeHandled = tryExecuteFirstArgCallee(this, scope, node, state, fclos, argvalues, callInfo)
+      if (!firstArgCalleeHandled) {
+        this.executeFunctionInArguments(scope, fclos, node, argvalues, state)
+      }
     }
 
     if (res && this.checkerManager?.checkAtFunctionCallAfter) {
@@ -760,8 +779,6 @@ class PythonAnalyzer extends Analyzer {
       collectedArgs,
     })
 
-
-
     return res
   }
 
@@ -784,6 +801,7 @@ class PythonAnalyzer extends Analyzer {
   ): Value {
     if (fclos.ast?.cdef) {
       const res = this.buildNewObject(fclos.ast.cdef, fclos, state, node, scope, callInfo)
+      this.injectTornadoApplication(res, fclos)
       if (res && this.checkerManager?.checkAtFunctionCallAfter) {
         this.checkerManager.checkAtFunctionCallAfter(this, scope, node, state, {
           callInfo,
@@ -810,7 +828,12 @@ class PythonAnalyzer extends Analyzer {
     return res
   }
 
-
+  private injectTornadoApplication(instance: Value, handler: Value): void {
+    const application = getUniqueTornadoHandlerApplication(handler)
+    if (!application || !instance || typeof instance !== 'object') return
+    const setFieldValue = (instance as { setFieldValue?: (name: string, value: Value) => void }).setFieldValue
+    if (typeof setFieldValue === 'function') setFieldValue.call(instance, 'application', application as Value)
+  }
   /**
    * 构建 Python 结构化 CallArgs，识别 keyword / spread / kwspread 参数类型
    *
@@ -896,6 +919,7 @@ class PythonAnalyzer extends Analyzer {
     const importCacheKey = `${sourceFileAbs}|${from?.value || ''}|${imported?.name || imported?.value || ''}`
     const cachedImportResult = this._importCache.get(importCacheKey)
     if (cachedImportResult !== undefined) {
+      this.bindImportToScope(scope, node, cachedImportResult)
       return cachedImportResult
     }
 
@@ -933,6 +957,7 @@ class PythonAnalyzer extends Analyzer {
     // 缓存结果并返回的辅助函数
     const cacheAndReturn = (result: Value): Value => {
       this._importCache.set(importCacheKey, result)
+      this.bindImportToScope(scope, node, result)
       return result
     }
 
@@ -1102,6 +1127,53 @@ class PythonAnalyzer extends Analyzer {
     return cacheAndReturn(new UndefinedValue())
   }
 
+  private bindImportToScope(scope: Scope, node: { from?: unknown; imported?: unknown; local?: unknown }, result: Value): void {
+    const localName = (node.local as { name?: unknown } | undefined)?.name
+    if (node.from) {
+      if (typeof localName === 'string') scope.setFieldValue(localName, result)
+      return
+    }
+    const importedName = (node.imported as { value?: unknown; name?: unknown } | undefined)?.value ??
+      (node.imported as { name?: unknown } | undefined)?.name
+    if (typeof importedName !== 'string') return
+    const nameParts = importedName.split('.')
+    if (!importedName.includes('.') || result.node_module !== true) {
+      if (typeof localName === 'string') scope.setFieldValue(localName, result)
+      return
+    }
+    if (typeof localName === 'string' && localName !== nameParts[0]) {
+      scope.setFieldValue(localName, result)
+      return
+    }
+
+    if (result.node_module !== true) return
+
+    const rootName = nameParts[0]
+    if (!rootName) return
+    let parentModule = new SymbolValue(scope.qid, {
+      sid: rootName,
+      qid: `${scope.qid}.${rootName}`,
+      parent: scope,
+      node_module: true,
+    })
+    scope.setFieldValue(rootName, parentModule)
+    for (let index = 1; index < nameParts.length; index++) {
+      const segment = nameParts[index]
+      const childModule = new SymbolValue(parentModule.qid, {
+        sid: segment,
+        qid: `${parentModule.qid}.${segment}`,
+        parent: parentModule,
+        node_module: true,
+      })
+      if (index === nameParts.length - 1) {
+        childModule.value = result.value
+        childModule.node_module = result.node_module
+      }
+      parentModule.setMemberValue(segment, childModule)
+      parentModule = childModule
+    }
+  }
+
   /**
    *
    * @param scope
@@ -1121,7 +1193,10 @@ class PythonAnalyzer extends Analyzer {
       resolved_prop.name = '_CTOR_'
     }
     if (!resolved_prop) return defscope
-    let res = this.getMemberValue(defscope, resolved_prop, state)
+    const res = this.getMemberValue(defscope, resolved_prop, state)
+    if (defscope?.node_module === true && res && typeof res === 'object') {
+      res.node_module = true
+    }
     if (node.object.type !== 'SuperExpression') {
       if (res.vtype !== 'union' || !Array.isArray(res.value)) {
         // 非 union 类型：直接绑定 _this
@@ -1233,6 +1308,7 @@ class PythonAnalyzer extends Analyzer {
     const obj = this.buildNewObject(fdef, fclos, state, node, scope, {
       callArgs: this.buildCallArgs(node, argvalues, fclos),
     })
+    this.injectTornadoApplication(obj, fclos)
     if (logger.isTraceEnabled()) logger.trace(`new expression: ${this.formatScope(obj)}`)
 
     if (obj && this.checkerManager?.checkAtNewExprAfter) {
@@ -1471,6 +1547,9 @@ class PythonAnalyzer extends Analyzer {
    * 避免无条件 unroll-2 在大项目 OOM，同时保留回边累积污点的传播能力。
    * ITER-CONCRETE 分支（具体可枚举迭代体）逐元素行为完全保留。
    * 仅 Python override，避免 Go/Java MemberExpr 链式访问在第二轮 body 重入触发栈爆。
+   * @param scope
+   * @param node
+   * @param state
    */
   override processRangeStatement(scope: Scope, node: any, state: State): any {
     const { key, value, right, body } = node
@@ -1555,6 +1634,7 @@ class PythonAnalyzer extends Analyzer {
    * 跳过子作用域条目（vtype=scope/class 或 key 以 <block_ 开头），
    * 因为 createSubScope 产生的 Scoped/ClassValue 是结构性产物不属于语义变量状态变化，
    * 误纳入 diff 会导致 iter2 被无条件触发（子作用域在 body 首次执行时必然创建）。
+   * @param scope
    */
   static snapshotScopeStates(scope: any): Map<string, { vtype: string; tags: string[]; tr: boolean }> {
     const m = new Map<string, { vtype: string; tags: string[]; tr: boolean }>()
@@ -1576,6 +1656,8 @@ class PythonAnalyzer extends Analyzer {
   /**
    * 比对前后两个 scope 状态快照，任意 (新增 / 删除 / vtype 变 / tags 集合变 / isTaintedRec 变)
    * 视为状态变化。tags 比较忽略顺序。
+   * @param a
+   * @param b
    */
   static diffSnapshots(
     a: Map<string, { vtype: string; tags: string[]; tr: boolean }>,
@@ -1945,7 +2027,7 @@ class PythonAnalyzer extends Analyzer {
      * @param superId
      */
     function _resolveClassInheritance(this: any, fclos: any, superId: any) {
-      if (fclos?.id === superId?.name) {
+      if (superId?.type === 'Identifier' && fclos?.sid === superId.name) {
         return
       }
       const superClos = this.processInstruction(scope, superId, state)
@@ -2010,12 +2092,19 @@ class PythonAnalyzer extends Analyzer {
    */
   async scanModules(dir: any) {
     const { options } = this
-    const modules = FileUtil.loadAllFileTextGlobby(
-      ['**/*.(py)', '.claude/skills/**/*.py', '.codex/skills/**/*.py', '.codefuse/skills/**/*.py', '.skills/**/*.py', '!**/.venv/**', '!**/vendor/**', '!**/node_modules/**', '!**/site-packages/**'],
-      dir
-    )
+    const patterns: string[] = [
+      '**/*.(py)',
+      '!**/.claude/**',
+      '!**/.codex/skills/**/*.py',
+      '!**/.codefuse/skills/**/*.py',
+      '!**/.venv/**',
+      '!**/vendor/**',
+      '!**/node_modules/**',
+      '!**/site-packages/**',
+    ]
+    const modules = FileUtil.loadAllFileTextGlobby(patterns, dir)
     this.fileList = globby
-      .sync(['**/*.(py)', '.claude/skills/**/*.py', '.codex/skills/**/*.py', '.codefuse/skills/**/*.py', '.skills/**/*.py', '!**/.venv/**', '!**/vendor/**', '!**/node_modules/**', '!**/site-packages/**'], {
+      .sync(patterns, {
         cwd: dir,
         caseSensitiveMatch: false,
         dot: true,
@@ -2024,12 +2113,6 @@ class PythonAnalyzer extends Analyzer {
     // 构建规范化文件路径集合，用于 O(1) 查找
     this._normalizedFileSet = new Set<string>(this.fileList.map((f: string) => path.normalize(f)))
     if (modules.length === 0) {
-      handleException(
-        null,
-        'find no target compileUnit of the project : no python file found in source path',
-        'find no target compileUnit of the project : no python file found in source path'
-      )
-      process.exitCode = ErrorCode.no_valid_source_file
       return
     }
 
@@ -2061,8 +2144,7 @@ class PythonAnalyzer extends Analyzer {
 
     // 开始 ProcessModule 阶段：处理所有模块（分析 AST）
     this.performanceTracker.start('preProcess.processModule')
-    this.callSummarySessions[0].beginForLanguage('Python'
-    )
+    this.callSummarySessions[0].beginForLanguage('Python')
     try {
       for (let i = 0; i < modules.length; i++) {
         const mod = modules[i]
@@ -2113,6 +2195,10 @@ class PythonAnalyzer extends Analyzer {
    * Python 装饰器路径下 params.forEach(processInstruction) 对 Parameter 类型无 handler，
    * 从不触发 SOURCE mark。此处对每个 param.id 显式触发 checkAtIdentifier，与 baseline
    * 直接 entrypoint 路径语义对齐；非 entrypoint 形参 sourceScope 无匹配 rule 不会误 mark。
+   * @param fscope
+   * @param params
+   * @param state
+   * @param node
    */
   protected override onParamsBound(fscope: any, params: any[], state: State, node: any): void {
     for (const param of params || []) {
@@ -2135,6 +2221,8 @@ class PythonAnalyzer extends Analyzer {
    * PFD 静态扫描不按求值顺序，后来居上直接盖掉 outer，装饰器反查错路径。
    * 修复：本地 def 走超类注册逻辑完成后，把 scope[name] 还原为 import 来源，本地 def 改挂 `<localDef_${name}>`，
    * 让 EP 索引（按 ast.node.id.name 收集）仍能找到本体。仅当 existing 是不同源文件的 fclos 时触发。
+   * @param node
+   * @param scope
    */
   createFuncScope(node: any, scope: any): any {
     const funcName: string | undefined = node?.id?.name

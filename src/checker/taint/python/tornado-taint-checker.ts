@@ -4,12 +4,47 @@ const { PythonTaintAbstractChecker } = require('./python-taint-abstract-checker'
 const Config = require('../../../config')
 const completeEntryPoint = require('../common-kit/entry-points-util')
 const { markTaintSource } = require('../common-kit/source-util')
-const { isTornadoCall, tornadoSourceAPIs, isPreparedBodyRead, isRequestAttributeAccess } = require('./tornado-util')
+const {
+  isTornadoCall,
+  isTornadoFrameworkCall,
+  tornadoSourceAPIs,
+  isPreparedBodyRead,
+  isRequestAttributeAccess,
+  registerTornadoHandlerApplication,
+  resetTornadoHandlerApplications,
+} = require('./tornado-util')
 const { extractRelativePath } = require('../../../util/file-util')
 
 // Metadata storage
 const tornadoRoutesMap = new WeakMap<any, any>()
 const tornadoRouteMap = new WeakMap<any, any>()
+
+type TornadoRouteValue = {
+  vtype?: string
+  value?: unknown
+  ast?: {
+    node?: { type?: string; value?: unknown }
+    cdef?: { type?: string }
+  }
+}
+
+type TornadoRouteCollection = {
+  [key: string]: unknown
+  [index: number]: unknown
+}
+
+function isTornadoRouteValue(value: unknown): value is TornadoRouteValue & object {
+  return typeof value === 'object' && value !== null
+}
+
+function isTornadoRouteCollection(value: unknown): value is TornadoRouteCollection {
+  return typeof value === 'object' && value !== null
+}
+
+function getTornadoRoutePath(value: unknown): unknown {
+  if (!isTornadoRouteValue(value)) return undefined
+  return value.value ?? value.ast?.node?.value
+}
 
 /**
  * Tornado Taint Checker - Simplified
@@ -32,6 +67,7 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
    * @param info
    */
   triggerAtStartOfAnalyze(analyzer: any, scope: any, node: any, state: any, info: any): void {
+    resetTornadoHandlerApplications()
     this.addSourceTagForcheckerRuleConfigContent('PYTHON_INPUT', this.checkerRuleConfigContent)
   }
 
@@ -256,7 +292,11 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
     const isApp = isTornadoCall(node, 'Application')
     const isRouter = isTornadoCall(node, 'RuleRouter')
     if (!isInit && (isApp || isRouter)) {
-      tornadoRoutesMap.set(ret, argvalues[0])
+      const routes = argvalues[0]
+      tornadoRoutesMap.set(ret, routes)
+      if (routes && isTornadoFrameworkCall(node, 'Application', fclos)) {
+        this.registerHandlerApplications(routes, ret)
+      }
     }
     if (tornadoSourceAPIs.has(name)) {
       markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
@@ -270,6 +310,44 @@ class TornadoTaintChecker extends PythonTaintAbstractChecker {
       if (argsHasInput) {
         markTaintSource(ret, { path: node, kind: 'PYTHON_INPUT' })
       }
+    }
+  }
+
+  private registerHandlerApplications(routes: unknown, application: unknown): void {
+    const handlers = new Set<object>()
+    this.collectRouteHandlers(routes, handlers)
+    for (const handler of handlers) {
+      registerTornadoHandlerApplication(handler, application)
+    }
+  }
+
+  private collectRouteHandlers(value: unknown, handlers: Set<object>, visited: Set<object> = new Set()): void {
+    if (!isTornadoRouteValue(value) || visited.has(value)) return
+    visited.add(value)
+    if (tornadoRouteMap.has(value)) {
+      this.collectRouteHandlers(tornadoRouteMap.get(value), handlers, visited)
+      return
+    }
+    if (value.vtype === 'union' && Array.isArray(value.value)) {
+      for (const item of value.value) this.collectRouteHandlers(item, handlers, visited)
+      return
+    }
+    if (isTornadoRouteCollection(value.value)) {
+      const tupleHandler = value.value[1]
+      const routePath = getTornadoRoutePath(value.value[0])
+      if (typeof routePath === 'string' && tupleHandler) {
+        this.collectRouteHandlers(tupleHandler, handlers, visited)
+        return
+      }
+      const items = Array.isArray(value.value) ? value.value : Object.values(value.value)
+      const isCollection = Array.isArray(value.value) || Object.keys(value.value).some((key) => /^\d+$/.test(key))
+      if (isCollection) {
+        for (const item of items) this.collectRouteHandlers(item, handlers, visited)
+        return
+      }
+    }
+    if (value.vtype === 'class' || value.ast?.node?.type === 'ClassDefinition' || value.ast?.cdef?.type === 'ClassDefinition') {
+      handlers.add(value)
     }
   }
 

@@ -27,7 +27,9 @@ export abstract class EntityValue extends ValueBase {
     // 从 Unit 构造函数设置的 _field 迁移数据到 _members
     const unitField = this._field
     if (unitField && typeof unitField === 'object') {
-      const raw = (unitField as any)[RAW_TARGET] || unitField
+      const rawTarget = (unitField as any)[RAW_TARGET]
+      // RAW_TARGET 为空 plain object 时（ValueRefMap proxy），回退遍历 proxy 本身（走 ownKeys trap）
+      const raw = rawTarget && Object.keys(rawTarget).length > 0 ? rawTarget : unitField
       if (raw && typeof raw === 'object') {
         for (const key of Object.keys(raw)) {
           const val = raw[key]
@@ -50,7 +52,8 @@ export abstract class EntityValue extends ValueBase {
     if ('field' in finalOpts) {
       const val = finalOpts.field
       if (val && typeof val === 'object') {
-        const raw = val[RAW_TARGET] || val
+        const rawTarget = val[RAW_TARGET]
+        const raw = rawTarget && Object.keys(rawTarget).length > 0 ? rawTarget : val
         for (const key of Object.keys(raw)) {
           if (raw[key] != null) members.set(key, raw[key])
         }
@@ -91,7 +94,8 @@ export abstract class EntityValue extends ValueBase {
     }
     if (val && typeof val === 'object') {
       members.clear()
-      const raw = val[RAW_TARGET] || val
+      const rawTarget = val[RAW_TARGET]
+      const raw = rawTarget && Object.keys(rawTarget).length > 0 ? rawTarget : val
       if (typeof raw === 'object') {
         for (const key of Object.keys(raw)) {
           if (raw[key] != null) members.set(key, raw[key])
