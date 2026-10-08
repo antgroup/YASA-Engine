@@ -53,7 +53,7 @@ function buildUASTPython(rootDir: string, options?: BuildOptions): string | null
 
   // 并行任务数：根据 CPU 核心数自动设置
   const numJobs = os.cpus().length
-  const command = `${uast4pyPath} ${isSingle} --rootDir="${rootDir}" --output="${outputPath}" -j${numJobs}`
+  const command = `${quoteShellArg(uast4pyPath)} ${isSingle} --rootDir=${quoteShellArg(rootDir)} --output=${quoteShellArg(outputPath)} -j${numJobs}`
 
   try {
     const optionForCommand = {
@@ -189,6 +189,16 @@ function extractFailedSourcePath(errorText: string): string | null {
 }
 
 /**
+ * 转义 shell 单参数：单引号包裹并把内部单引号转义，
+ * 防止被扫描仓库路径/文件名中的 shell 元字符在 execSync 时被解释执行
+ * @param value - 任意来自被扫描仓库的路径或文件名
+ * @returns 已用单引号安全包裹的 shell 字面量
+ */
+function quoteShellArg(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+/**
  * BOM 失败兜底：拷贝到 tmpdir 去 BOM，singleFileParse 重跑，路径反向映射回原 path
  * 严禁修改用户源码（rootDir 内任何路径都不写入）
  * @param originalPath - 原始源文件绝对路径（位于 rootDir 内）
@@ -204,8 +214,8 @@ function tryRecoverBomFile(
   if (!fileStartsWithUtf8Bom(originalPath)) {
     return null
   }
-  let tmpInputPath: string | null = null
-  let tmpOutputPath: string | null = null
+  let tmpInputPath: string = ''
+  let tmpOutputPath: string = ''
   try {
     // 在 tmpRoot 下保留原文件 basename，避免 sourcefile 字段歧义
     const base: string = path.basename(originalPath)
@@ -221,7 +231,7 @@ function tryRecoverBomFile(
     fs.writeFileSync(tmpInputPath, buf.subarray(3))
 
     // singleFileParse 直接调 binary，避免 buildUASTPython 修改模块级 uastFilePath
-    const cmd: string = `${uast4pyPath} --singleFileParse --rootDir="${tmpInputPath}" --output="${tmpOutputPath}" -j1`
+    const cmd: string = `${quoteShellArg(uast4pyPath)} --singleFileParse --rootDir=${quoteShellArg(tmpInputPath)} --output=${quoteShellArg(tmpOutputPath)} -j1`
     ChildProcess.execSync(cmd, { maxBuffer: 5 * 1024 * 1024 * 1024 })
 
     if (!fs.existsSync(tmpOutputPath)) {
