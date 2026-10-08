@@ -146,10 +146,17 @@ function serializeObject(
 
   // 检测是否是 Proxy，如果是则获取原始对象
   let targetObj = obj
+  // 标记：RAW_TARGET 为空 plain object 的 ValueRefMap proxy，序列化需走 proxy 的 ownKeys/getOwnPropertyDescriptor
+  let rawTargetEmptyProxy = false
   if (util.types.isProxy && util.types.isProxy(obj)) {
     // 尝试获取 Proxy 的原始对象
     if ((obj as any)[RAW_TARGET]) {
       targetObj = (obj as any)[RAW_TARGET]
+      // ValueRefMap proxy 的 _proxyTarget 永久为空 {}，Reflect.ownKeys 返回空数组
+      // 但实际数据在 _map 中，需通过 proxy 的 ownKeys trap 获取
+      if (Reflect.ownKeys(targetObj).every(k => typeof k === 'symbol')) {
+        rawTargetEmptyProxy = true
+      }
     } else if ((obj as any)[IS_UNION_ARRAY]) {
       targetObj = (obj as any)[IS_UNION_ARRAY]
     }
@@ -160,9 +167,10 @@ function serializeObject(
   // 使用 Reflect.ownKeys 获取所有属性（包括不可枚举的）
   // 对于 Unit 对象，我们需要同时检查 targetObj 和 obj，因为某些属性（如 astNodehash）可能在原对象上
   // 使用 targetObj 而不是 obj，避免触发 Proxy 的 get trap
-  const allKeys = Reflect.ownKeys(targetObj)
+  const allKeys = rawTargetEmptyProxy ? [] : Reflect.ownKeys(targetObj)
   // 对于 Unit 对象，也检查原对象上的属性（如果 targetObj 和 obj 不同）
-  const allKeysFromObj = targetObj !== obj ? Reflect.ownKeys(obj) : []
+  // ValueRefMap 空 proxy 场景：从 obj（proxy）的 ownKeys trap 获取全部 key
+  const allKeysFromObj = (targetObj !== obj || rawTargetEmptyProxy) ? Reflect.ownKeys(obj) : []
   // 合并两个键集合，确保所有属性都被序列化
   const allKeysSet = new Set([...allKeys, ...allKeysFromObj])
 
@@ -184,8 +192,11 @@ function serializeObject(
     try {
       // 直接访问 targetObj 的属性，避免触发 Proxy 的 get trap
       // 如果 targetObj 上没有该属性，尝试从原对象获取（对于某些属性如 astNodehash）
-      let value = Reflect.get(targetObj, keyStr)
-      if (value === undefined && targetObj !== obj) {
+      // ValueRefMap 空 proxy 场景：通过 getOwnPropertyDescriptor trap 获取 UUID string
+      let value = rawTargetEmptyProxy
+        ? Object.getOwnPropertyDescriptor(obj, keyStr)?.value
+        : Reflect.get(targetObj, keyStr)
+      if (value === undefined && targetObj !== obj && !rawTargetEmptyProxy) {
         // 如果 targetObj 上没有该属性，尝试从原对象获取
         const descriptor = Object.getOwnPropertyDescriptor(obj, keyStr)
         if (descriptor && 'value' in descriptor) {
@@ -1729,7 +1740,9 @@ export function loadAnalyzerCache(analyzer: any, cacheId?: string, sourcePath?: 
 
             let fieldTarget = unit.value
             if (fieldTarget && util.types.isProxy(fieldTarget)) {
-              fieldTarget = (fieldTarget as any)[RAW_TARGET] || fieldTarget
+              const rawTarget = (fieldTarget as any)[RAW_TARGET]
+              // ValueRefMap proxy 的 RAW_TARGET 为空 {}，需回退到 proxy 本身
+              fieldTarget = rawTarget && Object.keys(rawTarget).length > 0 ? rawTarget : fieldTarget
             }
             if (fieldTarget === undefined || fieldTarget === null || typeof fieldTarget !== 'object') {
               fieldTarget = {}

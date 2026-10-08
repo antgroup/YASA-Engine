@@ -1,4 +1,5 @@
 import { INTERNAL_CALL } from '../../common/call-args'
+import { describeEntryPointForLog } from '../../../../util/entrypoint-metrics'
 const path = require('path')
 const fs = require('fs-extra')
 const globby = require('fast-glob')
@@ -145,8 +146,12 @@ class JsAnalyzer extends Analyzer {
       const findingsBefore = this.countFindings()
       let skipped = false
       let skipReason: string | undefined
+      // 单入口内存护栏 reset：每入口开始前记录基线 heap，清 exceeded
+      const epLabel = describeEntryPointForLog(entryPoint).replace(/^\[|\]$/g, '')
+      let memoryAborted = false
       try {
         this.symbolTable.clear()
+        this.resetMemoryGuardForEntryPoint(epLabel)
         if (entryPoint.type === constValue.ENGIN_START_FUNCALL) {
           const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
           if (entryPointMark.skipped) {
@@ -271,7 +276,21 @@ class JsAnalyzer extends Analyzer {
           skipReason = 'unsupported'
         }
       } finally {
+        // 单入口内存护栏 finalize：若本入口 exceeded，flush 已分析 finding 并记 diagnostics
+        const guardResult = this.onEntryPointMemoryGuardFinalize(entryPoint, findingsBefore)
+        if (guardResult.aborted) {
+          memoryAborted = true
+          if (!skipped) {
+            skipped = true
+            skipReason = `memory-guard-heap-exceeded:peak=${guardResult.peakHeapMb.toFixed(1)}MB,delta=${guardResult.deltaHeapMb.toFixed(1)}MB`
+          }
+        }
         this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
+        if (memoryAborted) {
+          logger.warn(
+            `[memory-guard] entrypoint ${epIdx}/${entryPoints.length} skipped due to memory guard: ${epLabel}`
+          )
+        }
       }
     }
     return true

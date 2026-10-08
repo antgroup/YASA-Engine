@@ -30,7 +30,7 @@ Trace:
   AffectedNodeName: taint_sink
   24:  CALL:      taint_sink(x)
  /case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   26:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/datatype/new_type/type_annotation_new_type_001_T.py
   AffectedNodeName: os.system
@@ -63,7 +63,7 @@ Trace:
   AffectedNodeName: taint_sink
   17:  CALL:     taint_sink(sum)
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   19:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/datatype/primitives/type_annotation_complex_001_T.py
   AffectedNodeName: os.system
@@ -812,9 +812,6 @@ Trace:
  /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
   AffectedNodeName: taint_src
   12:  ARG PASS:  async def asyncio_await_001_T(taint_src):
- /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
-  AffectedNodeName: process
-  17:  CALL RETURN:     data = await process()
  /case/accuracy/flow_sensitive/asynchronous/asyncio_await_001_T.py
   AffectedNodeName: data
   17:  Var Pass:      data = await process()
@@ -2815,9 +2812,6 @@ Trace:
   AffectedNodeName: process
   20:  ARG PASS:      async def process():
  /case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
-  AffectedNodeName: async_generator
-  21:  CALL RETURN:         async for item in async_generator():  # 使用 AsyncFor 进行异步迭代
- /case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
   AffectedNodeName: taint_sink
   22:  CALL:              taint_sink(item)
  /case/completeness/single_app_tracing/asynchronous_tracing/async_for/async_for_001_T.py
@@ -2987,18 +2981,12 @@ Trace:
   27:  Var Pass:      obj = Child(taint_src)
  /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
   AffectedNodeName: get_child_data
-  28:  CALL:      taint_sink(obj.get_child_data())  # 通过子类方法访问父类属性
- /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
-  AffectedNodeName: obj
-  28:  ARG PASS:      taint_sink(obj.get_child_data())  # 通过子类方法访问父类属性
- /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
-  AffectedNodeName: get_child_data
   28:  CALL RETURN:     taint_sink(obj.get_child_data())  # 通过子类方法访问父类属性
  /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
   AffectedNodeName: taint_sink
   28:  CALL:      taint_sink(obj.get_child_data())  # 通过子类方法访问父类属性
  /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   30:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py
   AffectedNodeName: os.system
@@ -3140,18 +3128,12 @@ Trace:
   25:  Var Pass:      int_box = Box(taint_src)
  /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
   AffectedNodeName: get_content
-  26:  CALL:      taint_sink(int_box.get_content())
- /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
-  AffectedNodeName: int_box
-  26:  ARG PASS:      taint_sink(int_box.get_content())
- /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
-  AffectedNodeName: get_content
   26:  CALL RETURN:     taint_sink(int_box.get_content())
  /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
   AffectedNodeName: taint_sink
   26:  CALL:      taint_sink(int_box.get_content())
  /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   29:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py
   AffectedNodeName: os.system
@@ -7460,19 +7442,13 @@ Trace:
   AffectedNodeName: process
   13:  CALL:      A(taint_sink).set_name("_").clear_name().set_name(taint_src).process()
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
-  AffectedNodeName: A(taint_sink).set_name(_).clear_name().set_name(ta
-  13:  ARG PASS:      A(taint_sink).set_name("_").clear_name().set_name(taint_src).process()
- /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
-  AffectedNodeName: process
-  13:  CALL:      A(taint_sink).set_name("_").clear_name().set_name(taint_src).process()
- /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
   AffectedNodeName: process
   33:  ARG PASS:      def process(self):
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
   AffectedNodeName: taint_sink
   34:  CALL:          self.taint_sink(self.name)  # 使用保存的污染接收函数
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
-  AffectedNodeName: o
+  AffectedNodeName: taint_sink
   16:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py
   AffectedNodeName: os.system
@@ -8207,25 +8183,16 @@ Trace:
   AffectedNodeName: derived
   12:  Var Pass:      derived = DerivedClass(taint_src)
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
-  AffectedNodeName: process
-  13:  CALL:      derived.process()
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
-  AffectedNodeName: derived
-  13:  ARG PASS:      derived.process()
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
   AffectedNodeName: get_data
   31:  CALL:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
   AffectedNodeName: self
   31:  ARG PASS:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
-  AffectedNodeName: get_data
-  31:  CALL RETURN:         taint_sink(self.get_data())
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
   AffectedNodeName: taint_sink
   31:  CALL:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   34:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py
   AffectedNodeName: os.system
@@ -8246,25 +8213,16 @@ Trace:
   AffectedNodeName: derived
   31:  Var Pass:      derived = DerivedClass()
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
-  AffectedNodeName: process
-  32:  CALL:      derived.process()
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
-  AffectedNodeName: derived
-  32:  ARG PASS:      derived.process()
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
   AffectedNodeName: get_data
   28:  CALL:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
   AffectedNodeName: self
   28:  ARG PASS:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
-  AffectedNodeName: get_data
-  28:  CALL RETURN:         taint_sink(self.get_data())
- /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
   AffectedNodeName: taint_sink
   28:  CALL:          taint_sink(self.get_data())
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: data
   36:  ARG PASS:  def taint_sink(data):
  /case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py
   AffectedNodeName: os.system
@@ -8556,18 +8514,12 @@ Trace:
   23:  Var Pass:      o = A(data=taint_src)  # 显式传递 taint_src
  /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
   AffectedNodeName: get_data
-  24:  CALL:      taint_sink(o.get_data())
- /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
-  AffectedNodeName: o
-  24:  ARG PASS:      taint_sink(o.get_data())
- /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
-  AffectedNodeName: get_data
   24:  CALL RETURN:     taint_sink(o.get_data())
  /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
   AffectedNodeName: taint_sink
   24:  CALL:      taint_sink(o.get_data())
  /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
-  AffectedNodeName: taint_sink
+  AffectedNodeName: o
   27:  ARG PASS:  def taint_sink(o):
  /case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py
   AffectedNodeName: os.system

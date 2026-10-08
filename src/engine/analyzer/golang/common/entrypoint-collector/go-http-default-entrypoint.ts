@@ -1,6 +1,7 @@
 export {}
 
 // net/http 形态默认 source 清单：覆盖 *http.Request / *url.URL / url.Values 三类典型 Web 入口
+// 复盘根因：tasks/review/amazonsftp-change-sql/REVIEW_REPORT.md §5.2 修复 A
 // 与 gin-default-entrypoint 互不重叠（calleeType 不同，不会双注入）
 
 const HttpRequestType = '*http.Request'
