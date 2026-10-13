@@ -1,0 +1,22 @@
+[project]
+name = "yasa-mcp"
+version = "0.1.0"
+description = "YASA-Engine [OSS26] MCP 统一运行底座脚手架（bootstrap_mcp_framework）"
+readme = "yasa_mcp/README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=3.0.0,<4.0.0",
+    "click>=8.1.0",
+    "pydantic>=2.5.0",
+    "uvicorn>=0.27.0",
+    "starlette>=0.37.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+yasa-mcp = "yasa_mcp.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
