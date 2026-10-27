@@ -67,6 +67,10 @@ async function processParseTask(task: ParseTask): Promise<{ filepath: string; as
     if (task.language === 'php') {
       await ensurePhpParserReady()
     }
+    if (task.language === 'python') {
+      const PythonParser = require('./python/python-ast-builder')
+      await PythonParser.ensureInitialized()
+    }
     const result = parseFileCore(task.filepath, task.content, task.language, task.options, task.config)
     deleteParent(result.ast)
     return result
