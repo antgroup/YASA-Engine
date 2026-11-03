@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "com.sast.astbenchmark.other_preference::MustTaintKind_001_T::testcase",
+      "signature": "void testcase(@RequestParam String name)",
+      "filepath": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_001_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_001_T.java",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 0
+      },
+      "content": "@GetMapping(\"MustTaintKind_001_T\")\n    public void testcase(@RequestParam String name) {\n        String sql = \"select * from user where username = \" + name;\n        JDBCUtil.execSql(sql);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "com.sast.astbenchmark.other_preference::MayTaintKind_003_F::testcase",
+      "signature": "void testcase(@RequestParam String name, @RequestParam Integer condition)",
+      "filepath": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_003_F.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_003_F.java",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 0
+      },
+      "content": "@GetMapping(\"MayTaintKind_003_F\")\n    public void testcase(@RequestParam String name, @RequestParam Integer condition) {\n        String sql;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        if (condition > 0) {\n            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql2);\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.expression.basic_expression_operation::Expression_Arithmetic_001_T::expression_arithmetic_001_t",
+      "signature": "Map<String, Object> expression_arithmetic_001_t(@PathVariable int cmd)",
+      "filepath": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_Arithmetic_001_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/expression/basic_expression_operation/Expression_Arithmetic_001_T.java",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 37,
+        "end_column": 0
+      },
+      "content": "@GetMapping(\"Expression_Arithmetic_001_T/{cmd}\")\n  public Map<String, Object> expression_arithmetic_001_t(@PathVariable int cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：加法运算保持污点传播\n      int result = cmd + 100;\n      Runtime.getRuntime().exec(String.valueOf(result));\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

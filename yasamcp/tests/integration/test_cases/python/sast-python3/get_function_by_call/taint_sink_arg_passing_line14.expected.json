@@ -1,0 +1,56 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.argument_passing_value_001_T.process",
+        "function_signature": "",
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "line": 12
+      },
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "line": 13,
+        "content": "        taint_sink(arg)\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "start_line": 17,
+        "start_column": 1,
+        "end_line": 18,
+        "end_column": 17
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "callType": "local",
+      "extinfo": {}
+    },
+    {
+      "caller": {
+        "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.argument_passing_value_001_T",
+        "function_signature": "",
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "line": 11
+      },
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "line": 15,
+        "content": "    process(taint_src)\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.argument_passing_value_001_T.process",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "start_line": 12,
+        "start_column": 5,
+        "end_line": 13,
+        "end_column": 24
+      },
+      "content": "def process(arg):\n        taint_sink(arg)",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

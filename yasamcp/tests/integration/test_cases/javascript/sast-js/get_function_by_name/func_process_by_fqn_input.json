@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": "process",
+    "function_fqn": "MyClass::process",
+    "max_results": 10
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "BaseClass::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_001_T.php",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "SafeBase::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_002_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_002_F.php",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AutoClass::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_001_F/AutoClass.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_001_F/AutoClass.php",
+        "start_line": 10,
+        "start_column": 4,
+        "end_line": 12,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AutoClass::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_001_T/AutoClass.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_001_T/AutoClass.php",
+        "start_line": 10,
+        "start_column": 4,
+        "end_line": 12,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "HelperTrait::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_002_F/HelperTrait.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_002_F/HelperTrait.php",
+        "start_line": 10,
+        "start_column": 4,
+        "end_line": 12,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "HelperTrait::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_002_T/HelperTrait.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_002_T/HelperTrait.php",
+        "start_line": 10,
+        "start_column": 4,
+        "end_line": 12,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataHolder::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/expression/nullsafe_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/expression/nullsafe_001_F.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataHolder::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/expression/nullsafe_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/expression/nullsafe_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function getData() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "SafeBuilder::build",
+      "function_signature": "build()",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+        "start_line": 23,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 5
+      },
+      "content": "public function build() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Builder::build",
+      "function_signature": "build()",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_T.php",
+        "start_line": 18,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 5
+      },
+      "content": "public function build() {\n        return $this->data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

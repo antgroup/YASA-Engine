@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "class_fqn": "A001",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 38,
+        "end_column": 1
+      },
+      "content": "class A001 {\n    public $b;\n\n    public function __construct($v) {\n        $this->b = new B001($v);\n    }\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "B001",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 24,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "class B001 {\n    public $c;\n\n    public function __construct($v) {\n        $this->c = new C001($v);\n    }\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "C001",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "class C001 {\n    public $data;\n    public $safe;\n\n    public function __construct($v) {\n        $this->data = $v;\n        $this->safe = \"safe\";\n    }\n}",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

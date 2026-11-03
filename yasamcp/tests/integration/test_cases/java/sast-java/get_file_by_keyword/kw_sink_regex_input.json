@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": ".*Sink.*",
+    "use_regex": true,
+    "max_results": 10
+  }
+}

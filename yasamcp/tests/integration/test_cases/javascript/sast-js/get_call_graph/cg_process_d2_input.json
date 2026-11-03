@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "process",
+    "depth": 2,
+    "max_callees_per_node": 3
+  }
+}

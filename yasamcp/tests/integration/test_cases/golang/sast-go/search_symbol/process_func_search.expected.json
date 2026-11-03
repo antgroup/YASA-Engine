@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "A::process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_001_T/chained_call_001_T.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "A::process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_002_F/chained_call_002_F.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "Process",
+      "qualified_name": "B::Process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T/chained_call_003_T.go",
+        "start_line": 39,
+        "start_column": 0,
+        "end_line": 41,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "Process",
+      "qualified_name": "B::Process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_004_F/chained_call_004_F.go",
+        "start_line": 40,
+        "start_column": 0,
+        "end_line": 42,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_003_F/argument_passing_reference_003_F.go",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 24,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_001_F/argument_passing_value_return_001_F.go",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_return_002_T/argument_passing_value_return_002_T.go",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_001_F/argument_passing_value_001_F.go",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/argument_passing/argument_passing_value_002_T/argument_passing_value_002_T.go",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/multi_invoke/multi_invoke_001_F/multi_invoke_001_F.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

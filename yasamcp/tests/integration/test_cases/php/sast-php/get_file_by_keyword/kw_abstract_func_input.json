@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": "abstract public function",
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

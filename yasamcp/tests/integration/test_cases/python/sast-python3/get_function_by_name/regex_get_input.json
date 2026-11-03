@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": "get_.*",
+    "function_fqn": "",
+    "use_regex": true,
+    "max_results": 20
+  }
+}

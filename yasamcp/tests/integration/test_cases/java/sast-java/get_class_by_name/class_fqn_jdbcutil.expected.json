@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "class_fqn": "com.sast.astbenchmark.common.utils::JDBCUtil",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/JDBCUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/JDBCUtil.java",
+        "start_line": 8,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "public class JDBCUtil {\n    static final String JDBC_URL = \"jdbc:mysql://localhost:3306/mydatabase\";\n    static final String USERNAME = \"root\";\n    static final String PASSWORD = \"123456\";\n\n    public static void execSql(String sql) {\n        try {\n            Class.forName(\"com.mysql.cj.jdbc.Driver\"); // 1. 加载驱动程序\n            Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD); // 2. 建立数据库连接\n            Statement statement = connection.createStatement();  // 3. 创建Statement对象\n            statement.executeQuery(sql);\n        } catch (SQLException | ClassNotFoundException e) {\n            throw new RuntimeException(e);\n        }\n    }\n}",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

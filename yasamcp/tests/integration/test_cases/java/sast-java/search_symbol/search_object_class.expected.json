@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "ObjectDiffAttribute_001_T",
+      "qualified_name": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.object_sensitive::ObjectDiffAttribute_001_T",
+      "language": "java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_001_T.java",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 36,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "ObjectDiffAttribute_002_F",
+      "qualified_name": "com.sast.astbenchmark.case_language_maturity.accuracy.object_field_sensitive.object_sensitive::ObjectDiffAttribute_002_F",
+      "language": "java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/object_field_sensitive/object_sensitive/ObjectDiffAttribute_002_F.java",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 36,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

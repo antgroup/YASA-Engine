@@ -1,0 +1,11 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "__taint_sink"
+    ],
+    "kind": "function",
+    "detail_level": "full",
+    "max_results": 10
+  }
+}

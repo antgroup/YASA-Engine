@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_003_T::Sub1::call",
+      "signature": "call()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "call() {\n      return __taint_src;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_004_F::Sub1::call",
+      "signature": "call()",
+      "filepath": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "call() {\n      return __taint_src;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_override_001_T::Sub1::call",
+      "signature": "call()",
+      "filepath": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "call() {\n      return __taint_src;\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "polymorphism_override_002_F::Sub1::call",
+      "signature": "call()",
+      "filepath": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "call() {\n      return __taint_src;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

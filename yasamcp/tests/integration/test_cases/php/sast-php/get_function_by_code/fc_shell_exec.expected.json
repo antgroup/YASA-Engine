@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "MyClass::process",
+      "signature": "process(arg)",
+      "filepath": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 14,
+        "end_column": 0
+      },
+      "content": "static process(arg) {\n    __taint_sink(arg);\n  }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "MyClass::process",
+      "signature": "process(arg)",
+      "filepath": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "static process(arg) {\n    arg = \"_\";\n    __taint_sink(arg);\n  }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

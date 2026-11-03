@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ConstEncoder::encode",
+      "signature": "encode()",
+      "filepath": "case/completeness/single_app_tracing/class/interface_impl_002_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_F.php",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 0
+      },
+      "content": "public function encode($data) {\n        return \"encoded_constant\";\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

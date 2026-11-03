@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.polymorphism.Expression_Polymorphism_001_T.testcase",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java",
+        "line": 22
+      },
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java",
+        "line": 28,
+        "content": "            Runtime.getRuntime().exec(ps.getCmd());\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.model.custom.PS.getCmd",
+      "function_signature": "",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/custom/PS.java",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "public String getCmd() {\n        return super.getCmd() + this.cmd2;\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

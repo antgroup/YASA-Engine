@@ -1,0 +1,7 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "getCmdWithContextSensitive",
+    "max_results": 10
+  }
+}

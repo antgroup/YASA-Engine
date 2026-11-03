@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doGet",
+      "function_signature": "String doGet(String url, Map<String, String> param)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 22,
+        "start_column": 4,
+        "end_line": 62,
+        "end_column": 5
+      },
+      "content": "public static String doGet(String url, Map<String, String> param) throws Exception {\n\n        // 创建Httpclient对象\n        CloseableHttpClient httpclient = HttpClients.createDefault();\n\n        String resultString = \"\";\n        CloseableHttpResponse response = null;\n        try {\n            // 创建uri\n            URIBuilder builder = new URIBuilder(url);\n            if (param != null) {\n                for (String key : param.keySet()) {\n                    builder.addParameter(key, param.get(key));\n                }\n            }\n            URI uri = builder.build();\n\n            // 创建http GET请求\n            HttpGet httpGet = new HttpGet(uri);\n            RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000).setConnectionRequestTimeout(10000).setSocketTimeout(10000).build();\n            httpGet.setConfig(requestConfig);\n            // 执行请求\n            response = httpclient.execute(httpGet);\n            // 判断返回状态是否为200\n            if (response.getStatusLine().getStatusCode() == 200) {\n                resultString = EntityUtils.toString(response.getEntity(), \"UTF-8\");\n            }\n        } catch (Exception e) {\n            throw e;\n        } finally {\n            try {\n                if (response != null) {\n                    response.close();\n                }\n                httpclient.close();\n            } catch (Exception e) {\n                throw e;\n            }\n        }\n        return resultString;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::HttpUtil::doPost",
+      "function_signature": "String doPost(String url, Map<String, String> param)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 68,
+        "start_column": 4,
+        "end_line": 102,
+        "end_column": 5
+      },
+      "content": "public static String doPost(String url, Map<String, String> param) throws Exception {\n        // 创建Httpclient对象\n        CloseableHttpClient httpClient = HttpClients.createDefault();\n        CloseableHttpResponse response = null;\n        String resultString = \"\";\n        try {\n            // 创建Http Post请求\n            HttpPost httpPost = new HttpPost(url);\n            RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(10000).setConnectionRequestTimeout(10000).setSocketTimeout(10000).build();\n            httpPost.setConfig(requestConfig);\n            // 创建参数列表\n            if (param != null) {\n                List<NameValuePair> paramList = new ArrayList<>();\n                for (String key : param.keySet()) {\n                    paramList.add(new BasicNameValuePair(key, param.get(key)));\n                }\n                // 模拟表单\n                UrlEncodedFormEntity entity = new UrlEncodedFormEntity(paramList, \"utf-8\");\n                httpPost.setEntity(entity);\n            }\n            // 执行http请求\n            response = httpClient.execute(httpPost);\n            resultString = EntityUtils.toString(response.getEntity(), \"utf-8\");\n        } catch (Exception e) {\n            throw e;\n        } finally {\n            try {\n                response.close();\n            } catch (Exception e) {\n                throw e;\n            }\n        }\n\n        return resultString;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

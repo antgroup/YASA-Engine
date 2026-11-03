@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "process",
+    "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_passing_value_001_T.argument_passing_value_001_T.process",
+    "max_results": 10
+  }
+}

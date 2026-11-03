@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "new A001($__taint_src)",
+    "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+    "line": 41,
+    "max_results": 10
+  }
+}

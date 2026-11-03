@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "file_path": "README.md",
+      "matches": [
+        {
+          "line": null,
+          "content": "### 背景\n    目前工业界和学术界均无安全能力的测试评价标准，都是通过在若干样本集上的测试结果对应用安全工具进行评价的。样本集的设计没有标准，差异很大，无法全面客观的反映全貌，且评价结果只能得出一个总体的检出率、遗漏率和误报率数据，无法直观反映安全能力的优势和不足。\n    为了能全面而客观的对安全能力进行评价，蚂蚁安全团队从2021年开始探索建立安全能力的评价体系。通过应用安全评价体系项目，希望可以衡量出应用安全产品的技术优劣，指引应用安全产品的发展方向，并可辅助用于商业化安全产品采购的技术选型，详见wiki。\n    项目主要包括两部分，一部分是分语言的评价体系，另一部分是基于评价体系的Benchmark。本bundle下发布的是Java SAST引擎能力评价体系V1.0和Benchmark。如果您有任何好的想法，欢迎与我们团队联系。\n### 项目结构\n```\n└── src\n    ├── main\n    │   ├── java\n    │   │   └── com\n    │   │       └── sast\n    │   │           └── astbenchmark\n    │   │               ├── cases   \n      \n```\n### 快速开始\n#### 测试流程简介\nSAST引擎能力测评包括三步：</br>\n（1）准备前置条件</br>\n（2）测试目标产品/引擎扫描SAST靶场</br>\n（3）自主分析靶场测试结果 或 自动化获取评价体系测试结果 </br>\n#### 准备前置条件\n（1）确认被测的SAST产品配置了以下sink点规则\n```\nRuntime.getRuntime().exec() -- 参数位置0\norg.apache.http.impl.client.CloseableHttpClient#execute -- 参数位置0\ncn.hutool.http.HttpRequest#post -- 参数位置0\njava.net.URL#openConnection -- URL对象为污点被调用\njava.sql.Statement#executeQuery -- 参数位置0\nSinkUtil#sink (本评价体系靶场自定义) -- 参数位置0\n```\n#### 自主分析靶场测试结果\n自主分析测试产品/引擎的输出，结合case路由对应相应的评价项，分析该款产品当前可以检出的场景、不可检出的场景以及存在误报的场景有哪些。从而分析出测试产品/引擎的能力。\n\n#### 自动化获取评价体系测试结果\n我们配套建设了一款基于测试产品的结果自动化生成测试结果的工具，可以自动将SAST产品的输出结果和评价项进行对应并输出测评报告，免去自主分析的繁琐工作。具体可见tools目录的readme\n\n### License\nThis project is licensed under the Apache License 2.0\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = true\n// evaluation item =  准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->变量赋值表达式直接引入而不是import\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_001_T\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class CallExpression_Package_001_T {\n  @GetMapping(\"CallExpression_Package_001_T/{url}\")\n  public Map<String, Object> aTaintCase0157(@PathVariable String url) {\n\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_002_F.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = false\n// evaluation item =  准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->变量赋值表达式直接引入而不是import\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/CallExpression_Package_002_F\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class CallExpression_Package_002_F {\n  @GetMapping(\"CallExpression_Package_002_F/{url}\")\n  public Map<String, Object> aTaintCase0157(@PathVariable String url) {\n\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      url = \"safe\";\n      String result = com.sast.astbenchmark.common.utils.HttpUtil.doGet(url);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Chained_Call_001_T.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 链式调用\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/Chained_Call_001_T\n// date = 2025-12-10 15:15:00\n// evaluation information end\n\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class Chained_Call_001_T {\n  @GetMapping(\"Chained_Call_001_T/{cmd}\")\n  public Map<String, Object> chained_call_001_t(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：链式调用中的返回值传递，污点通过链式调用传递\n      String result = new CommandProcessor().setCommand(cmd).process();\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n\n  static class CommandProcessor {\n    private String command;\n\n    public CommandProcessor setCommand(String command) {\n      this.command = command;\n      return this;\n    }\n\n    public String process() {\n      return command;\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Chained_Call_002_F.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 链式调用\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/Chained_Call_002_F\n// date = 2025-12-10 15:15:00\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class Chained_Call_002_F {\n  @GetMapping(\"Chained_Call_002_F/{cmd}\")\n  public Map<String, Object> chained_call_002_f(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：链式调用中的返回值传递，非污点通过链式调用传递\n      String result = new CommandProcessor().setCommand(cmd).process();\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n\n  static class CommandProcessor {\n    private String command;\n\n    public CommandProcessor setCommand(String command) {\n      this.command = command;\n      return this;\n    }\n\n    public String process() {\n      return \"safe_value\";\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Constructor_Param_001_T.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 构造器参数\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/Constructor_Param_001_T\n// date = 2025-12-10 15:15:00\n// evaluation information end\n\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class Constructor_Param_001_T {\n  @GetMapping(\"Constructor_Param_001_T/{cmd}\")\n  public Map<String, Object> constructor_param_001_t(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：构造器参数传递，污点参数通过构造器传递给对象\n      CommandExecutor executor = new CommandExecutor(cmd);\n      Runtime.getRuntime().exec(executor.command);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n\n  static class CommandExecutor {\n    private String command;\n\n    public CommandExecutor(String command) {\n      this.command = command;\n    }\n\n    public String getCommand() {\n      return command;\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Constructor_Param_002_F.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = false\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 构造器参数\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/Constructor_Param_002_F\n// date = 2025-12-10 15:15:00\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class Constructor_Param_002_F {\n  @GetMapping(\"Constructor_Param_002_F/{cmd}\")\n  public Map<String, Object> constructor_param_002_f(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：构造器参数传递，非污点参数通过构造器传递给对象\n      CommandExecutor executor = new CommandExecutor(\"safe_value\");\n      Runtime.getRuntime().exec(executor.command);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n\n  static class CommandExecutor {\n    private String command;\n\n    public CommandExecutor(String command) {\n      this.command = command;\n    }\n\n    public String getCommand() {\n      return command;\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_001_T.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = true\n// evaluation item =  准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->VarargArrayAccess\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_001_T\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class DifferentParamsPassing_001_T {\n    @PostMapping(\"DifferentParamsPassing_001_T\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            String a = Invoke.chooseOne(3, \"a\", \"b\", \"c\", cmd, \"e\");\n            Runtime.getRuntime().exec(a);\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }\n\n    private static class Invoke {\n        private static String chooseOne(int i, String... params) {\n            return params[i];\n        }\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = false\n// evaluation item =  准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 参数值传递->VarargArrayAccess\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/DifferentParamsPassing_002_F\n// evaluation information end\n\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class DifferentParamsPassing_002_F {\n    @PostMapping(\"DifferentParamsPassing_002_F\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            String a = Invoke.chooseOne(2, \"a\", \"b\", \"c\", cmd, \"e\");\n            Runtime.getRuntime().exec(a);\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }\n\n    private static class Invoke {\n        private static String chooseOne(int i, String... params) {\n            return params[i];\n        }\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Method_Overloading_001_T.java",
+      "matches": [
+        {
+          "line": null,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.HashMap;\nimport java.util.Map;\n\n// evaluation information start\n// real case = true\n// evaluation item = 准确度->上下文敏感分析->参数/返回值传递\n// scene introduction = 方法重载\n// level = 2\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/Method_Overloading_001_T\n// date = 2025-12-10 15:15:00\n// evaluation information end\n@RestController()\n@RequestMapping(\"accuracy/context_sensitive/argument_return_value_passing\")\npublic class Method_Overloading_001_T {\n  @GetMapping(\"Method_Overloading_001_T/{cmd}\")\n  public Map<String, Object> method_overloading_001_t(@PathVariable String cmd) {\n    Map<String, Object> modelMap = new HashMap<>();\n    try {\n      // 场景特点：方法重载时参数类型匹配，污点参数传递给重载方法\n      String result = process(cmd);\n      Runtime.getRuntime().exec(result);\n      modelMap.put(\"status\", \"success\");\n    } catch (Exception e) {\n      modelMap.put(\"status\", \"error\");\n    }\n    return modelMap;\n  }\n\n  private static String process(String param) {\n    return param;\n  }\n\n  @SuppressWarnings(\"unused\")\n  private static String process(int param) {\n    return \"safe_value\";\n  }\n}"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

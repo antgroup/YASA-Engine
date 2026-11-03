@@ -1,0 +1,14 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "Processor",
+      "Validator",
+      "Box",
+      "Calculator"
+    ],
+    "kind": "class",
+    "detail_level": "summary",
+    "max_results": 20
+  }
+}

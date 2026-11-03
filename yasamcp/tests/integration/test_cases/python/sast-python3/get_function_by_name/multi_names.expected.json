@@ -1,0 +1,314 @@
+{
+  "results": [
+    {
+      "function_fqn": "A::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call/chained_call_001_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call/chained_call_001_F.py",
+        "start_line": 34,
+        "start_column": 4,
+        "end_line": 35,
+        "end_column": 49
+      },
+      "content": "def process(self):\n        self.taint_sink(self.name)  # 使用保存的污染接收函数",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "A::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call/chained_call_002_T.py",
+        "start_line": 33,
+        "start_column": 4,
+        "end_line": 34,
+        "end_column": 49
+      },
+      "content": "def process(self):\n        self.taint_sink(self.name)  # 使用保存的污染接收函数",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::get_data",
+      "function_signature": "get_data(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": "def get_data(self):\n        return self.data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 22,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 12
+      },
+      "content": "def process(self):\n        pass",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 12
+      },
+      "content": "def process(self):\n        pass",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseProcessor::process",
+      "function_signature": "process(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 18,
+        "end_column": 12
+      },
+      "content": "def process(self, data):\n        pass",
+      "function_annotations": [
+        "@abstractmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseProcessor::process",
+      "function_signature": "process(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 16,
+        "end_column": 12
+      },
+      "content": "def process(self, data):\n        pass",
+      "function_annotations": [
+        "@abstractmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteProcessor::process",
+      "function_signature": "process(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+        "start_line": 22,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 19
+      },
+      "content": "def process(self, data):\n        return data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteProcessor::process",
+      "function_signature": "process(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 19
+      },
+      "content": "def process(self, data):\n        return data",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 30,
+        "start_column": 4,
+        "end_line": 31,
+        "end_column": 35
+      },
+      "content": "def process(self):\n        taint_sink(self.get_data())",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 27,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 34
+      },
+      "content": "def process(self):\n        taint_sink(self.getData())",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Processor::process",
+      "function_signature": "process(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": "def process(data):\n        return data",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Processor::process",
+      "function_signature": "process(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 14,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": "def process(data):\n        return data",
+      "function_annotations": [
+        "@staticmethod"
+      ],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_keyword_taint_001_T::process",
+      "function_signature": "process(**kwargs)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_keyword_taint_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_keyword_taint_001_T.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 47
+      },
+      "content": "def process(**kwargs):\n        taint_sink(kwargs['data'])  # 关键字参数捕获污点",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_keyword_taint_002_F::process",
+      "function_signature": "process(**kwargs)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_keyword_taint_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_keyword_taint_002_F.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 47
+      },
+      "content": "def process(**kwargs):\n        taint_sink(kwargs['data'])  # 关键字参数捕获污点",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_normal_value_003_T::process",
+      "function_signature": "process(arg1: str,arg2: str)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_003_T.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 24
+      },
+      "content": "def process(arg1: str,arg2: str):\n        taint_sink(arg1)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_normal_value_004_F::process",
+      "function_signature": "process(arg1: str,arg2: str)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_normal_value_004_F.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 24
+      },
+      "content": "def process(arg1: str,arg2: str):\n        taint_sink(arg2)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_reference_004_T::process",
+      "function_signature": "process(input_arr)",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_004_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_004_T.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 32
+      },
+      "content": "def process(input_arr):\n        input_arr[0] = taint_src",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_value_001_T::process",
+      "function_signature": "process(arg)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "start_line": 12,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 23
+      },
+      "content": "def process(arg):\n        taint_sink(arg)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "argument_passing_value_003_T::process",
+      "function_signature": "process(arg1, arg2)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py",
+        "start_line": 12,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 24
+      },
+      "content": "def process(arg1, arg2):\n        taint_sink(arg1)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 20
+}

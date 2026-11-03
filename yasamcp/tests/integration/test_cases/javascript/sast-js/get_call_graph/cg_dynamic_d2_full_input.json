@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "dynamic_call_reflect_001_F",
+    "depth": 2,
+    "detail_level": "full",
+    "max_callees_per_node": 3
+  }
+}

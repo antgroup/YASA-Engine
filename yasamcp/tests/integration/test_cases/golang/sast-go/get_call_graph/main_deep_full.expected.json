@@ -1,0 +1,75 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "cross_directory_001_T.%dir_cross_directory_001_T_a.main",
+        "function_signature": "",
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_a/cross_directory_001_T_a.go",
+        "line": 26
+      },
+      "callees": [
+        {
+          "call_site": {
+            "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_a/cross_directory_001_T_a.go",
+            "line": 28,
+            "content": "    cross_directory_001_T_a(__taint_src)\n"
+          },
+          "function_fqn": "cross_directory_001_T.%dir_cross_directory_001_T_a.cross_directory_001_T_a",
+          "function_signature": "",
+          "location": {
+            "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_a/cross_directory_001_T_a.go",
+            "start_line": 22,
+            "start_column": 1,
+            "end_line": 24,
+            "end_column": 2
+          },
+          "content": "func cross_directory_001_T_a(__taint_src string) {\n\tcross_directory_001_T_b.Cross_directory_001_T_b(__taint_src)\n}",
+          "has_cycle": false,
+          "callees": [
+            {
+              "call_site": {
+                "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_a/cross_directory_001_T_a.go",
+                "line": 23,
+                "content": "\tcross_directory_001_T_b.Cross_directory_001_T_b(__taint_src)\n"
+              },
+              "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.Cross_directory_001_T_b",
+              "function_signature": "",
+              "location": {
+                "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+                "start_line": 13,
+                "start_column": 1,
+                "end_line": 15,
+                "end_column": 2
+              },
+              "content": "func Cross_directory_001_T_b(o interface{}) {\n\t__taint_sink(o)\n}",
+              "has_cycle": false,
+              "callees": [
+                {
+                  "call_site": {
+                    "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+                    "line": 14,
+                    "content": "\t__taint_sink(o)\n"
+                  },
+                  "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.__taint_sink",
+                  "function_signature": "",
+                  "location": {
+                    "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+                    "start_line": 17,
+                    "start_column": 1,
+                    "end_line": 19,
+                    "end_column": 3
+                  },
+                  "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n\t}",
+                  "has_cycle": false,
+                  "callees": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

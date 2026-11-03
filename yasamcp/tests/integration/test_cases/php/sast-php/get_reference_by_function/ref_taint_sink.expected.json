@@ -1,0 +1,166 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "line": 15,
+        "content": "    __taint_sink($arg);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_001_T.process",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 16,
+        "end_column": 2
+      },
+      "content": "function process($arg) {\n    __taint_sink($arg);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+        "line": 15,
+        "content": "    __taint_sink($arg);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_002_F.process",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 16,
+        "end_column": 2
+      },
+      "content": "function process($arg) {\n    __taint_sink($arg);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+        "line": 20,
+        "content": "    __taint_sink($result);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_003_T.argument_return_value_passing_003_T",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 21,
+        "end_column": 2
+      },
+      "content": "function argument_return_value_passing_003_T($__taint_src) {\n    $result = getData($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+        "line": 20,
+        "content": "    __taint_sink($result);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_004_F.argument_return_value_passing_004_F",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 21,
+        "end_column": 2
+      },
+      "content": "function argument_return_value_passing_004_F($__taint_src) {\n    $result = getData($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+        "line": 19,
+        "content": "    __taint_sink($arg);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_005_T.layer2",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 2
+      },
+      "content": "function layer2($arg) {\n    __taint_sink($arg);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+        "line": 19,
+        "content": "    __taint_sink($arg);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_006_F.layer2",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 2
+      },
+      "content": "function layer2($arg) {\n    __taint_sink($arg);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+        "line": 24,
+        "content": "    __taint_sink($result);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_007_T.argument_return_value_passing_007_T",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+        "start_line": 22,
+        "start_column": 1,
+        "end_line": 25,
+        "end_column": 2
+      },
+      "content": "function argument_return_value_passing_007_T($__taint_src) {\n    $result = outer($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+        "line": 24,
+        "content": "    __taint_sink($result);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.argument_return_value_passing.argument_return_value_passing_008_F.argument_return_value_passing_008_F",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+        "start_line": 22,
+        "start_column": 1,
+        "end_line": 25,
+        "end_column": 2
+      },
+      "content": "function argument_return_value_passing_008_F($__taint_src) {\n    $result = outer($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "line": 21,
+        "content": "    __taint_sink($a);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.multi_invoke.multi_invoke_001_T.multi_invoke_001_T",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 22,
+        "end_column": 2
+      },
+      "content": "function multi_invoke_001_T($__taint_src) {\n    $a = process($__taint_src);\n    $b = process(\"safe\");\n    __taint_sink($a);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+        "line": 21,
+        "content": "    __taint_sink($b);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.multi_invoke.multi_invoke_002_F.multi_invoke_002_F",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.php",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 22,
+        "end_column": 2
+      },
+      "content": "function multi_invoke_002_F($__taint_src) {\n    $a = process($__taint_src);\n    $b = process(\"safe\");\n    __taint_sink($b);\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

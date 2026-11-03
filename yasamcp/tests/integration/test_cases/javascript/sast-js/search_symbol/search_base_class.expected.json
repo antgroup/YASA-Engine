@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "Base",
+      "qualified_name": "polymorphism_003_T::Base",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Base",
+      "qualified_name": "polymorphism_004_F::Base",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Base",
+      "qualified_name": "polymorphism_override_001_T::Base",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Base",
+      "qualified_name": "polymorphism_override_002_F::Base",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_001_T::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_002_F::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_003_T::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass",
+      "qualified_name": "constructor_extends_004_F::BaseClass",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass1",
+      "qualified_name": "polymorphism_001_T::BaseClass1",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 19,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "BaseClass2",
+      "qualified_name": "polymorphism_001_T::BaseClass2",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 21,
+        "start_column": 2,
+        "end_line": 29,
+        "end_column": 3
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

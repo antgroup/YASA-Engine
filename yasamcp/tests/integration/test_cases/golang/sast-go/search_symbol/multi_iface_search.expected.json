@@ -1,0 +1,258 @@
+{
+  "results": [
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_001_F/interface_class_001_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_007_F/interface_class_007_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_008_T/interface_class_008_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_009_F/interface_class_009_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_010_T/interface_class_010_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_011_F/interface_class_011_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService",
+      "qualified_name": "ITestService",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_012_T/interface_class_012_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_007_F/interface_class_007_F.go",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "ITestService2",
+      "qualified_name": "ITestService2",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_008_T/interface_class_008_T.go",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 18
+}

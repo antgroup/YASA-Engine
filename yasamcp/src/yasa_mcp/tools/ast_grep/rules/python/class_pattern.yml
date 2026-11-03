@@ -1,0 +1,8 @@
+name: class_pattern
+rule:
+  all:
+    - kind: class_definition
+    - has:
+        kind: identifier
+        regex: "^{class_name}$"
+        field: name

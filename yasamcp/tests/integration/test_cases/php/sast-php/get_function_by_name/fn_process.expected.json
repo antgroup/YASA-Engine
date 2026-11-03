@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "AbstractProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_F/AbstractProcessor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_F/AbstractProcessor.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 4,
+        "end_column": 45
+      },
+      "content": "    abstract public function process($input);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/AbstractProcessor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/AbstractProcessor.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 4,
+        "end_column": 45
+      },
+      "content": "    abstract public function process($input);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public static function process($input) {\n        return static::getData($input);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseProvider::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public static function process($input) {\n        return static::getData($input);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ChildProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_002_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_002_T.php",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public function process($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_F/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_F/main.php",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 5
+      },
+      "content": "public function process($input) {\n        return \"safe_value\";\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/main.php",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 5
+      },
+      "content": "public function process($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 35
+      },
+      "content": "    public function process($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 35
+      },
+      "content": "    public function process($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 11,
+        "end_column": 35
+      },
+      "content": "    public function process($data);\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

@@ -1,0 +1,56 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.class.simple_object.simple_object_005_T.simple_object_005_T",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "line": 23
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "line": 26,
+        "content": "    taint_sink(int_box.get_content())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.simple_object.simple_object_005_T.taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 29,
+        "start_column": 1,
+        "end_line": 30,
+        "end_column": 17
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "callType": "local",
+      "extinfo": {}
+    },
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.class.simple_object.simple_object_005_T.simple_object_005_T",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "line": 23
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "line": 26,
+        "content": "    taint_sink(int_box.get_content())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.simple_object.simple_object_005_T.Box.get_content",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 28
+      },
+      "content": "def get_content(self) -> T:\n        return self.content",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

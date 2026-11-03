@@ -1,0 +1,306 @@
+{
+  "results": [
+    {
+      "function_fqn": "AbstractShape::GetName",
+      "function_signature": "GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 17
+      },
+      "content": "\tGetName() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::GetName",
+      "function_signature": "GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 17
+      },
+      "content": "\tGetName() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::GetName",
+      "function_signature": "GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 17
+      },
+      "content": "\tGetName() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::GetName",
+      "function_signature": "GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 17
+      },
+      "content": "\tGetName() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 21
+      },
+      "content": "\tSetName(name string)\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 21
+      },
+      "content": "\tSetName(name string)\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 21
+      },
+      "content": "\tSetName(name string)\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 21
+      },
+      "content": "\tSetName(name string)\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "B::SetName",
+      "function_signature": "B SetName(name string) *B",
+      "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T/chained_call_003_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_003_T/chained_call_003_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 1
+      },
+      "content": "func (b *B) SetName(name string) *B {\n\tb.name = name\n\treturn b\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "B::SetName",
+      "function_signature": "B SetName(name string) *B",
+      "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_004_F/chained_call_004_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_004_F/chained_call_004_F.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 28,
+        "end_column": 1
+      },
+      "content": "func (b *B) SetName(name string) *B {\n\tb.name = name\n\treturn b\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::GetName",
+      "function_signature": "string GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) GetName() string {\n\treturn c.name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::GetName",
+      "function_signature": "string GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) GetName() string {\n\treturn c.name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::GetName",
+      "function_signature": "string GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) GetName() string {\n\treturn c.Name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::GetName",
+      "function_signature": "string GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) GetName() string {\n\treturn c.Name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) SetName(name string) {\n\tc.name = name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) SetName(name string) {\n\tc.name = name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) SetName(name string) {\n\tc.Name = name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "func (c *Circle) SetName(name string) {\n\tc.Name = name\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Person::Swimming",
+      "function_signature": "string Swimming(taint_src string) string",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_025_T/cross/cross_01/cross_directory_025_T_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_025_T/cross/cross_01/cross_directory_025_T_a.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "func (p Person) Swimming(taint_src string) string {  \n\tstatus = taint_src\n\treturn status \n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Person::Swimming",
+      "function_signature": "string Swimming(taint_src string) string",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_026_F/cross/cross_01/cross_directory_026_F_a.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_026_F/cross/cross_01/cross_directory_026_F_a.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "func (p Person) Swimming(taint_src string) string {  \n\tstatus = taint_src\n\treturn status \n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 20
+}

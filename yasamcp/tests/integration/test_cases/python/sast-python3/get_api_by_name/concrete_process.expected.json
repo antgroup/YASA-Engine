@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ConcreteProcessor::process",
+      "signature": "process(self, data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_001_T.py",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 0
+      },
+      "content": "def process(self, data):\n        return data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "ConcreteProcessor::process",
+      "signature": "process(self, data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/abstractmethod_decorator_002_F.py",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 0
+      },
+      "content": "def process(self, data):\n        return data"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

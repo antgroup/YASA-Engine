@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "getCmd",
+    "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/polymorphism/Expression_Polymorphism_001_T.java",
+    "line": 28,
+    "max_results": 10
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_001_T.java",
+        "line": 27,
+        "content": "            CmdUtil.run(cmd + \"|grep a\");\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_001_T.aTaintCase013",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 33,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_001_T/{cmd}\")\n    public Map<String, Object> aTaintCase013(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            CmdUtil.run(cmd + \"|grep a\");\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_002_F.java",
+        "line": 28,
+        "content": "            CmdUtil.run(cmd + \"|grep a\");\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_002_F.aTaintCase013",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_002_F.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 34,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_002_F/{cmd}\")\n    public Map<String, Object> aTaintCase013(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        cmd = \"safe\";\n        try {\n            CmdUtil.run(cmd + \"|grep a\");\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_001_T.java",
+        "line": 29,
+        "content": "            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_InfixExpression_001_T.aTaintCase014",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_001_T.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 35,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_InfixExpression_001_T/{cmd}\")\n    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_002_F.java",
+        "line": 29,
+        "content": "            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing.Expression_MethodInvocation_InfixExpression_002_F.aTaintCase014",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_002_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 35,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Expression_MethodInvocation_InfixExpression_002_F/{cmd}\")\n    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        cmd = \"safe\";\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_001_T.java",
+        "line": 29,
+        "content": "                CmdUtil.run(cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_001_T.aTaintCase015",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_001_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 36,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_001_T/{cmd}\")\n    public Map<String, Object> aTaintCase015(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            if (false) {\n            } else {\n                CmdUtil.run(cmd);\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_002_F.java",
+        "line": 31,
+        "content": "                CmdUtil.run(cmdString);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_002_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_002_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 38,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_002_F/{cmd}\")\n    public Map<String, Object> testcase(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            if (false) {\n            } else {\n                String cmdString = HttpUtil.doGet(\"www.test.com\");\n                CmdUtil.run(cmdString);\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_003_T.java",
+        "line": 28,
+        "content": "                CmdUtil.run(cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_003_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_003_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_003_T/{cmd}\")\n    public Map<String, Object> testcase(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            if (true) {\n                CmdUtil.run(cmd);\n            } else {\n\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_004_F.java",
+        "line": 30,
+        "content": "                CmdUtil.run(cmdString);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_004_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_004_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 38,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_004_F/{cmd}\")\n    public Map<String, Object> testcase(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            if (true == true) {\n                String cmdString = HttpUtil.doGet(\"www.test.com\");\n                CmdUtil.run(cmdString);\n            } else {\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_005_T.java",
+        "line": 31,
+        "content": "                CmdUtil.run(cmd);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_005_T.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_005_T.java",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 40,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_005_T/{cmd}\")\n    public Map<String, Object> testcase(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            int a = 5;\n            if (a < 5) {\n\n            } else if (a == 5) {\n                CmdUtil.run(cmd);\n            } else {\n                cmd = \"ls\";\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    },
+    {
+      "call_site": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_006_F.java",
+        "line": 33,
+        "content": "                CmdUtil.run(cmdString);\n"
+      },
+      "function_fqn": "com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt.Statement_IfStatement_006_F.testcase",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_006_F.java",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 42,
+        "end_column": 5
+      },
+      "content": "@GetMapping(\"Statement_IfStatement_006_F/{cmd}\")\n    public Map<String, Object> testcase(@PathVariable String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            int a = 5;\n            if (a < 5) {\n\n            } else if (a == 5) {\n                String cmdString = HttpUtil.doGet(\"www.test.com\");\n                CmdUtil.run(cmdString);\n            } else {\n\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

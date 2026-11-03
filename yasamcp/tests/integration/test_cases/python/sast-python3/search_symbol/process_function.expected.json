@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/asynchronous_await_002_F.py",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 14
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "Processor::process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "Processor::process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 14,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.py",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/constructor_field_005_T.py",
+        "start_line": 26,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 39
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/accuracy/field_sensitive/class/constructor_field_006_F.py",
+        "start_line": 26,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 39
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing/argument_passing_reference_001_F.py",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 21
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_001_T.py",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 22
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.py",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 22
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/return_value_passing/return_normal_value_passing_002_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 14
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

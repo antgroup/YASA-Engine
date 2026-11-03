@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.library_function.math_001_T.math_001_T",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+        "line": 13
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+        "line": 19,
+        "content": "    process(taint_src)  \n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.library_function.math_001_T.math_001_T.process",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+        "start_line": 15,
+        "start_column": 5,
+        "end_line": 17,
+        "end_column": 27
+      },
+      "content": "def process(num):\n        result = math.sqrt(num)  # 使用math模块的sqrt函数计算num的平方根\n        taint_sink(result)",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

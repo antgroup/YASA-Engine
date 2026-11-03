@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "A::process",
+      "function_signature": "process()",
+      "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_001_T/chained_call_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_001_T/chained_call_001_T.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 1
+      },
+      "content": "func (a *A) process() {\n\t__taint_sink(a.name)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "A::process",
+      "function_signature": "process()",
+      "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_002_F/chained_call_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/chained_call/chained_call_002_F/chained_call_002_F.go",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 1
+      },
+      "content": "func (a *A) process() {\n\t__taint_sink(a.name)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService2::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService2::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService2::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_005_F/interface_class_005_F.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService2::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_006_T/interface_class_006_T.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_001_F/interface_class_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_001_F/interface_class_001_F.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_003_F/interface_class_003_F.go",
+        "start_line": 18,
+        "start_column": 1,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_004_T/interface_class_004_T.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 28
+      },
+      "content": "\tprocess(data string) string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

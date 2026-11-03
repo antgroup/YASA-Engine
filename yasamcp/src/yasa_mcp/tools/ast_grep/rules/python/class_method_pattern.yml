@@ -1,0 +1,15 @@
+name: class_method_pattern
+rule:
+  all:
+    - any:
+        - kind: function_definition
+        - kind: decorated_definition
+          has:
+            kind: function_definition
+    - inside:
+        all:
+          - kind: class_definition
+          - has:
+              kind: identifier
+              regex: "^{class_name}$"
+        stopBy: end

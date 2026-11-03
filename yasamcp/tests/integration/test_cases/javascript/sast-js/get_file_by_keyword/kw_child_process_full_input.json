@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": [
+      "child_process"
+    ],
+    "detail_level": "full",
+    "max_results": 10
+  }
+}

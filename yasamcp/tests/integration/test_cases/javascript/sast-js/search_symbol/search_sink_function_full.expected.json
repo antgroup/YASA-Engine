@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_001_T.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/return_value_passing_002_F.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_001_T.js",
+        "start_line": 24,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/chain_invoke_002_F.js",
+        "start_line": 24,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    },
+    {
+      "kind": "function",
+      "name": "__taint_sink",
+      "qualified_name": "__taint_sink",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_002_F.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

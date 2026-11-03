@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "CmdObject",
+      "qualified_name": "com.sast.astbenchmark.model::CmdObject",
+      "language": "java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/CmdObject.java",
+        "start_line": 3,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

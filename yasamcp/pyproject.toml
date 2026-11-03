@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yasa-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.11.3",
+    "orjson>=3.11.3",
+    "pydantic>=2.11.7",
+    "duckdb>=1.5.0",
+    "pyarrow>=14.0.0",
+    "anyio>=4.0.0",
+    "ast-grep-py>=0.36.3",
+    "requests>=2.32.0",
+]
+
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "anyio[trio]>=4.0",
+    "pytest-anyio>=0.0.0",
+]
+packaging = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+yasa-mcp = "yasa_mcp.bin.yasa_client:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "test"]
+pythonpath = ["src"]
+anyio_backends = ["asyncio"]
+markers = [
+    "integration: 依赖本机路径或外部环境的集成/基准测试",
+    "cross_app: 依赖跨应用检索能力的 get_function_by_call 回归用例",
+]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+log_cli_date_format = "%H:%M:%S"

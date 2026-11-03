@@ -1,0 +1,84 @@
+{
+  "results": [
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_001_T/call_implement_method_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_001_T/call_implement_method_001_T.go",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_002_F/call_implement_method_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_002_F/call_implement_method_002_F.go",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tName string // 导出字段\n}",
+      "methods": []
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tName string // 导出字段\n}",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

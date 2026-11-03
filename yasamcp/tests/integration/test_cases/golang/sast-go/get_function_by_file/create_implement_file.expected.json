@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "function_fqn": "AbstractShape::GetName",
+      "function_signature": "GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 19,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 17
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "AbstractShape::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::GetName",
+      "function_signature": "string GetName() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 28,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Circle::SetName",
+      "function_signature": "SetName(name string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "create_implement_object_001_T",
+      "function_signature": "create_implement_object_001_T(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 43,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o interface{})",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 45,
+        "start_column": 0,
+        "end_line": 47,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "main",
+      "function_signature": "main()",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 49,
+        "start_column": 0,
+        "end_line": 52,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 7
+}

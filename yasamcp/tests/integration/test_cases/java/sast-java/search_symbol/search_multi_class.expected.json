@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "HttpUtil",
+      "qualified_name": "com.sast.astbenchmark.common.utils::HttpUtil",
+      "language": "java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 109,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "CmdObject",
+      "qualified_name": "com.sast.astbenchmark.model::CmdObject",
+      "language": "java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/model/CmdObject.java",
+        "start_line": 3,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

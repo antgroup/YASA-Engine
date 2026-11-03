@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.accuracy.object_field_sensitive.field_len.field_len_001_T.field_len_001_T",
+        "function_signature": "",
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "line": 40
+      },
+      "call_site": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "line": 41,
+        "content": "    $a = new A001($__taint_src);\n"
+      },
+      "function_fqn": "case.accuracy.object_field_sensitive.field_len.field_len_001_T.A001._CTOR_",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 35,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 6
+      },
+      "content": "public function __construct($v) {\n        $this->b = new B001($v);\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": [
+      "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+      "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js"
+    ],
+    "detail_level": "full",
+    "max_results": 0
+  }
+}

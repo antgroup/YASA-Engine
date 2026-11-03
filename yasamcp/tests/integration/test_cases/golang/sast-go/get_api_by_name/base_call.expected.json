@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Base::call",
+      "signature": "call(src interface{}) interface{}",
+      "filepath": "cases/accuracy/context_sensitive/polymorphism/polymorphism_001_T/polymorphism_001_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_001_T/polymorphism_001_T.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "\tcall(src interface{}) interface{}\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Base::call",
+      "signature": "call(src interface{}) interface{}",
+      "filepath": "cases/accuracy/context_sensitive/polymorphism/polymorphism_002_F/polymorphism_002_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_002_F/polymorphism_002_F.go",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "\tcall(src interface{}) interface{}\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Base::call",
+      "signature": "call(src interface{}) interface{}",
+      "filepath": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T/polymorphism_override_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T/polymorphism_override_001_T.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 0
+      },
+      "content": "\tcall(src interface{}) interface{}\n"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Base::call",
+      "signature": "call(src interface{}) interface{}",
+      "filepath": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F/polymorphism_override_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F/polymorphism_override_002_F.go",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 0
+      },
+      "content": "\tcall(src interface{}) interface{}\n"
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

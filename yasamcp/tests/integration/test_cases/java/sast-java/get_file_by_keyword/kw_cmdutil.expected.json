@@ -1,0 +1,144 @@
+{
+  "results": [
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 27,
+          "content": "    @GetMapping(\"Expression_MethodInvocation_001_T/{cmd}\")\n    public Map<String, Object> aTaintCase013(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        try {\n            CmdUtil.run(cmd + \"|grep a\");\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 28,
+          "content": "    public Map<String, Object> aTaintCase013(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        cmd = \"safe\";\n        try {\n            CmdUtil.run(cmd + \"|grep a\");\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport com.sast.astbenchmark.common.utils.HttpUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;"
+        },
+        {
+          "line": 29,
+          "content": "    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/argument_return_value_passing/Expression_MethodInvocation_InfixExpression_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.argument_return_value_passing;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport com.sast.astbenchmark.common.utils.HttpUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;"
+        },
+        {
+          "line": 29,
+          "content": "    public Map<String, Object> aTaintCase014(@PathVariable String cmd) {\n\n        Map<String, Object> modelMap = new HashMap<>();\n        cmd = \"safe\";\n        try {\n            CmdUtil.run(cmd + HttpUtil.doGet(\"www.test.com\"));\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }\n        return modelMap;"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 28,
+          "content": "    @PostMapping(value = \"DifferentParamsForFunction_need_solve_001_T\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = -1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = 1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");"
+        },
+        {
+          "line": 30,
+          "content": "        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = -1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = 1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/accuracy/context_sensitive/multi_invoke/DifferentParamsForFunction_need_solve_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.accuracy.context_sensitive.multi_invoke;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 29,
+          "content": "    @PostMapping(value = \"DifferentParamsForFunction_need_solve_002_F\")\n    public Map<String, Object> testcase(@RequestParam String cmd) {\n        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = 1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = -1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");"
+        },
+        {
+          "line": 31,
+          "content": "        Map<String, Object> modelMap = new HashMap<>();\n        String exec1, exec2;\n        int i = 1;\n        exec1 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        i = -1;\n        exec2 = CmdUtil.getCmdWithContextSensitive(i, cmd);\n        try {\n            Runtime.getRuntime().exec(exec2);\n            modelMap.put(\"status\", \"success\");\n        } catch (IOException e) {\n            modelMap.put(\"status\", \"error\");"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/dynamic_tracing/dynamic_call/Expression_Reflection_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.completeness.dynamic_tracing.dynamic_call;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 31,
+          "content": "        if (cmd == null) {\n            modelMap.put(\"status\", \"error\");\n            return modelMap;\n        }\n        try {\n            Class<CmdUtil> clazz = CmdUtil.class;\n            Method method = clazz.getMethod(\"run\", String.class);\n            method.setAccessible(true);\n            //静态方法不需要创建对象实例\n            method.invoke(null, cmd);\n            modelMap.put(\"status\", \"success\");"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/dynamic_tracing/dynamic_call/Expression_Reflection_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.completeness.dynamic_tracing.dynamic_call;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 32,
+          "content": "            modelMap.put(\"status\", \"error\");\n            return modelMap;\n        }\n        try {\n            String param = \"run\";\n            Class<CmdUtil> clazz = CmdUtil.class;\n            Method method = clazz.getMethod(\"run\", String.class);\n            method.setAccessible(true);\n            //静态方法不需要创建对象实例\n            method.invoke(null, param);\n            modelMap.put(\"status\", \"success\");"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 29,
+          "content": "        Map<String, Object> modelMap = new HashMap<>();\n\n        try {\n            if (false) {\n            } else {\n                CmdUtil.run(cmd);\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/case_language_maturity/completeness/single_app_tracing/control_flow/conditional_stmt/Statement_IfStatement_002_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.case_language_maturity.completeness.single_app_tracing.control_flow.conditional_stmt;\n\nimport com.sast.astbenchmark.common.utils.CmdUtil;\nimport com.sast.astbenchmark.common.utils.HttpUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;"
+        },
+        {
+          "line": 31,
+          "content": "\n        try {\n            if (false) {\n            } else {\n                String cmdString = HttpUtil.doGet(\"www.test.com\");\n                CmdUtil.run(cmdString);\n            }\n            modelMap.put(\"status\", \"success\");\n        } catch (Exception e) {\n            modelMap.put(\"status\", \"error\");\n        }"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

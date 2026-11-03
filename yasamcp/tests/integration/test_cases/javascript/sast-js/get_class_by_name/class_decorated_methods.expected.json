@@ -1,0 +1,54 @@
+{
+  "results": [
+    {
+      "class_fqn": "DecoratedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_003_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_003_F.js",
+        "start_line": 27,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "@classDecorator\nclass DecoratedClass {\n  method(input) {}\n}",
+      "methods": [
+        {
+          "name": "method",
+          "function_signature": "method(input)",
+          "line": 29
+        },
+        {
+          "name": "method",
+          "function_signature": "method(input)",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "class_fqn": "DecoratedClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_004_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/class_decorator_004_T.js",
+        "start_line": 27,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 1
+      },
+      "content": "@classDecorator\nclass DecoratedClass {\n  method(input) {}\n}",
+      "methods": [
+        {
+          "name": "method",
+          "function_signature": "method(input)",
+          "line": 29
+        },
+        {
+          "name": "method",
+          "function_signature": "method(input)",
+          "line": 29
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

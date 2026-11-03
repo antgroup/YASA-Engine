@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "NewIctestAPI",
+      "function_signature": "IctestAPI NewIctestAPI(testSvc IIctest) *IctestAPI",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 40,
+        "start_column": 0,
+        "end_line": 44,
+        "end_column": 1
+      },
+      "content": "func NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "NewIctestAPI",
+      "function_signature": "IctestAPI NewIctestAPI(testSvc IIctest) *IctestAPI",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_002_F/struct_injection_interface_002_F.go",
+        "start_line": 40,
+        "start_column": 0,
+        "end_line": 44,
+        "end_column": 1
+      },
+      "content": "func NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

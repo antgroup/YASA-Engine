@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "BaseClass::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 24
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "cross_class_001_T::A::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "cross_class_002_F::A::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_002_F.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "inheritance_class_001_T::Base::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_001_T.py",
+        "start_line": 17,
+        "start_column": 8,
+        "end_line": 18,
+        "end_column": 28
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "inheritance_class_002_F::Base::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "start_line": 16,
+        "start_column": 8,
+        "end_line": 17,
+        "end_column": 28
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "chained_override_001_T::A::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "chained_override_001_T::B::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "chained_override_001_T::C::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 22,
+        "start_column": 5,
+        "end_line": 23,
+        "end_column": 60
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "chained_override_002_F::A::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 18
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "get_data",
+      "qualified_name": "chained_override_002_F::B::get_data",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 40
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

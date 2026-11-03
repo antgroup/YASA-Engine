@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "DataProcessor",
+    "class_fqn": "",
+    "use_regex": false,
+    "include_methods": true,
+    "max_results": 10
+  }
+}

@@ -1,0 +1,7 @@
+name: function_definition
+rule:
+  any:
+    - kind: function_declaration
+    - kind: method_definition
+    - kind: function_expression
+    - kind: arrow_function

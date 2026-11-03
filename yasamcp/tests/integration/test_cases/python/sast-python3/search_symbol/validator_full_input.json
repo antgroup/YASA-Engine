@@ -1,0 +1,9 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": "Validator",
+    "kind": "class",
+    "detail_level": "full",
+    "max_results": 10
+  }
+}

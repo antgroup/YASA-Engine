@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file.cross_file_009_T.cross_file_009_T_b.cross_file_009_T_b",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file/cross_file_009_T/cross_file_009_T_b.py",
+        "line": 13
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file/cross_file_009_T/cross_file_009_T_b.py",
+        "line": 14,
+        "content": "    result = source(taint_src)\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file.cross_file_009_T.cross_file_009_T_a.source",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file/cross_file_009_T/cross_file_009_T_a.py",
+        "start_line": 10,
+        "start_column": 1,
+        "end_line": 11,
+        "end_column": 34
+      },
+      "content": "def source(taint_src):\n    return f\"{taint_src}_default\"",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

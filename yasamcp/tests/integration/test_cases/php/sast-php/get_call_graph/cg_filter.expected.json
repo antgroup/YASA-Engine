@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.class.abstract_class_001_F.AbstractFilter.filter",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_F.php",
+        "line": 11
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

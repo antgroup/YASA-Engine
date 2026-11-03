@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "__taint_sink",
+    "function_fqn": "",
+    "file_path": "",
+    "line": 0,
+    "use_regex": false,
+    "max_results": 10
+  }
+}

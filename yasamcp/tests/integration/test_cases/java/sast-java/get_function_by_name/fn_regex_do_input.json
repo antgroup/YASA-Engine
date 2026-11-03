@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": "do.*",
+    "use_regex": true,
+    "max_results": 10
+  }
+}

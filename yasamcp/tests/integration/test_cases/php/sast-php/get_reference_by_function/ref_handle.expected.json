@@ -1,0 +1,150 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+        "line": 32,
+        "content": "    $result = $handler->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.polymorphism.polymorphism_001_T.polymorphism_001_T",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+        "start_line": 30,
+        "start_column": 1,
+        "end_line": 34,
+        "end_column": 2
+      },
+      "content": "function polymorphism_001_T($__taint_src) {\n    $handler = new TaintHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+        "line": 32,
+        "content": "    $result = $handler->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.polymorphism.polymorphism_002_F.polymorphism_002_F",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+        "start_line": 30,
+        "start_column": 1,
+        "end_line": 34,
+        "end_column": 2
+      },
+      "content": "function polymorphism_002_F($__taint_src) {\n    $handler = new SafeHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "line": 22,
+        "content": "    $result = $handler->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.abstract_class_001_T.abstract_class_001_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 24,
+        "end_column": 2
+      },
+      "content": "function abstract_class_001_T($__taint_src) {\n    $handler = new ConcreteHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+        "line": 24,
+        "content": "    $result = $obj->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.subclass_001_F.subclass_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+        "start_line": 22,
+        "start_column": 1,
+        "end_line": 26,
+        "end_column": 2
+      },
+      "content": "function subclass_001_F($__taint_src) {\n    $obj = new SafeHandler();\n    $result = $obj->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_F/main.php",
+        "line": 16,
+        "content": "    $result = $processor->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.autoload_002_F.main.autoload_002_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_F/main.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 18,
+        "end_column": 2
+      },
+      "content": "function autoload_002_F($__taint_src) {\n    $processor = new Processor();\n    $result = $processor->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/main.php",
+        "line": 16,
+        "content": "    $result = $processor->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.autoload_002_T.main.autoload_002_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/main.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 18,
+        "end_column": 2
+      },
+      "content": "function autoload_002_T($__taint_src) {\n    $processor = new Processor();\n    $result = $processor->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_F/main.php",
+        "line": 17,
+        "content": "    $result = $handler->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file_inheritance_001_F.main.cross_file_inheritance_001_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_F/main.php",
+        "start_line": 15,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 2
+      },
+      "content": "function cross_file_inheritance_001_F($__taint_src) {\n    $handler = new ChildHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/main.php",
+        "line": 17,
+        "content": "    $result = $handler->handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.cross_file_inheritance_001_T.main.cross_file_inheritance_001_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/main.php",
+        "start_line": 15,
+        "start_column": 1,
+        "end_line": 19,
+        "end_column": 2
+      },
+      "content": "function cross_file_inheritance_001_T($__taint_src) {\n    $handler = new ChildHandler();\n    $result = $handler->handle($__taint_src);\n    __taint_sink($result);\n}"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_T/main.php",
+        "line": 15,
+        "content": "    $result = Proc::handle($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.cross_file_package_namespace.namespace_use_002_T.main.namespace_use_002_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_T/main.php",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 17,
+        "end_column": 2
+      },
+      "content": "function namespace_use_002_T($__taint_src) {\n    $result = Proc::handle($__taint_src);\n    __taint_sink($result);\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 9
+}

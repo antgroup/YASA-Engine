@@ -1,0 +1,13 @@
+name: method_call_object
+rule:
+  any:
+    - kind: identifier
+      inside:
+        kind: method_invocation
+        field: object
+    - kind: super
+    - kind: this
+    - kind: field_access
+      inside:
+        kind: method_invocation
+        field: object

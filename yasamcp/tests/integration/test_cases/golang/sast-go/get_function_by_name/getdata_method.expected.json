@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "MyData::GetData",
+      "function_signature": "string GetData() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/interface_field_access_001_T/interface_field_access_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/interface_field_access_001_T/interface_field_access_001_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "func (m MyData) GetData() string {\n\treturn m.data\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "MyData::GetData",
+      "function_signature": "string GetData() string",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/interface_field_access_002_F/interface_field_access_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/complex_object/interface_field_access_002_F/interface_field_access_002_F.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "func (m MyData) GetData() string {\n\treturn m.data\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

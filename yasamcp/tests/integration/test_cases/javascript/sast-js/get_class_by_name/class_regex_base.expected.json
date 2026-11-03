@@ -1,0 +1,162 @@
+{
+  "results": [
+    {
+      "class_fqn": "constructor_extends_001_T::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class BaseClass {\n    data = \"_\";\n\n    constructor(data) {\n      this.data = data;\n    }\n\n    getData() {\n      return this.data;\n    }\n\n    process() { }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_002_F::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class BaseClass {\n    data = \"_\";\n\n    constructor(data) {\n      this.data = data;\n    }\n\n    getData() {\n      return this.data;\n    }\n\n    process() {}\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_003_T::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": "class BaseClass {\n    constructor() {\n      this.data = __taint_src;\n    }\n\n    getData() {\n      return this.data;\n    }\n\n    process() {}\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "constructor_extends_004_F::BaseClass",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": "class BaseClass {\n    constructor() {\n      this.data = \"_\";\n    }\n\n    getData() {\n      return this.data;\n    }\n\n    process() {}\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_001_T::BaseClass1",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 19,
+        "end_column": 3
+      },
+      "content": "class BaseClass1 {\n    constructor() {\n      this.data = __taint_src;\n    }\n\n    getData() {\n      return this.data;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_001_T::BaseClass2",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.js",
+        "start_line": 21,
+        "start_column": 2,
+        "end_line": 29,
+        "end_column": 3
+      },
+      "content": "class BaseClass2 {\n    constructor() {\n      this.data = \"_\";\n    }\n\n    getData() {\n      return this.data;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_002_F::BaseClass1",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 19,
+        "end_column": 3
+      },
+      "content": "class BaseClass1 {\n    constructor() {\n      this.data = __taint_src;\n    }\n\n    getData() {\n      return this.data;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_002_F::BaseClass2",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.js",
+        "start_line": 21,
+        "start_column": 2,
+        "end_line": 29,
+        "end_column": 3
+      },
+      "content": "class BaseClass2 {\n    constructor() {\n      this.data = \"safe_value\";\n    }\n\n    getData() {\n      return this.data;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_003_T::Base",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": "  class Base {}\n",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_004_F::Base",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": "  class Base {}\n",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_001_T::Base",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": "  class Base {}\n",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_002_F::Base",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+        "start_line": 11,
+        "start_column": 2,
+        "end_line": 11,
+        "end_column": 15
+      },
+      "content": "  class Base {}\n",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 12
+}

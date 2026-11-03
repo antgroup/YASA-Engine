@@ -1,0 +1,14 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "process",
+    "function_fqn": "ParentProcessor::process",
+    "file_path": "",
+    "line": 0,
+    "depth": 1,
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_callees_per_node": 3,
+    "exclude_undefined_function_call": true
+  }
+}

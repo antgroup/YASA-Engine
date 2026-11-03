@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": [
+      "src/main/java/com/sast/astbenchmark/common/utils/HttpUtil.java",
+      "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java"
+    ],
+    "max_results": 0
+  }
+}
