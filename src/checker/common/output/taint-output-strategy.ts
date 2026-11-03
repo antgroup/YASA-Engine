@@ -1,6 +1,7 @@
 import type { IResultManager } from '../../../engine/analyzer/common/result-manager'
 import type { IConfig } from '../../../config'
 import type { TaintFinding } from '../../../engine/analyzer/common/common-types'
+import type { SarifLocation } from '../../../engine/analyzer/common/sarif'
 
 const _ = require('lodash')
 const path = require('path')
@@ -16,8 +17,7 @@ const logger = require('../../../util/logger')(__filename)
 const {
   registerDedupFunction,
 } = require('../../../engine/analyzer/common/entrypoint/merge-coordinator') as typeof import('../../../engine/analyzer/common/entrypoint/merge-coordinator')
-
-type SarifLocation = { physicalLocation?: Record<string, unknown>; [key: string]: unknown }
+const { getJavaFindingSignature } = require('../../taint/java/java-finding-candidate') as typeof import('../../taint/java/java-finding-candidate')
 
 const {
   prepareLocation,
@@ -265,7 +265,7 @@ function extractSinkKey(finding: TracePreserveFinding): string | null {
 }
 
 type JavaTraceGroup = { call: string; argPass: string }
-type JavaFindingProjection = { source: string; sink: string; groups: JavaTraceGroup[] }
+type JavaFindingProjection = { source: string; sink: string; sinkAttribute: string; groups: JavaTraceGroup[] }
 
 function traceItemIdentity(item: TaintTraceItem): string | null {
   const file = getTraceFileKey(item)
@@ -282,6 +282,9 @@ function getJavaFindingProjection(finding: TracePreserveFinding): JavaFindingPro
   const source = extractSourceKey(finding)
   const sink = extractSinkKey(finding)
   if (!source || source.includes(':-1:-1') || !sink || sink.includes(':-1:-1')) return null
+  // sinkAttribute 纳入投影键，避免不同 attribute 的同类 finding 被误去重
+  const attrArr = (finding as any).sinkAttribute as string[] | undefined
+  const sinkAttribute = Array.isArray(attrArr) ? attrArr.slice().sort().join(',') : ''
   const groups: JavaTraceGroup[] = []
   for (let i = 0; i < finding.trace.length; i++) {
     const item = finding.trace[i]
@@ -293,12 +296,12 @@ function getJavaFindingProjection(finding: TracePreserveFinding): JavaFindingPro
     if (call && argPass) groups.push({ call, argPass })
     i++
   }
-  return { source, sink, groups }
+  return { source, sink, sinkAttribute, groups }
 }
 
 function getJavaProjectionKey(projection: JavaFindingProjection): string {
   const groups = projection.groups.map((group) => `${group.call}${group.argPass}`).join('')
-  return `${projection.source}${projection.sink}${groups}`
+  return `${projection.source}${projection.sink}${projection.sinkAttribute}${groups}`
 }
 
 const javaProjectionIndexes = new WeakMap<TaintFinding[], Map<string, TaintFinding>>()
@@ -316,15 +319,21 @@ function getJavaProjectionIndex(category: TaintFinding[]): Map<string, TaintFind
 }
 
 function isDuplicateJavaFinding(category: TaintFinding[], finding: TaintFinding): boolean {
-  const projection = getJavaFindingProjection(finding as TracePreserveFinding)
-  if (!projection) return false
-  return getJavaProjectionIndex(category).has(getJavaProjectionKey(projection))
+  const signature = getJavaFindingSignature(finding)
+  if (!signature) return false
+  for (const issue of category) {
+    if (getJavaFindingSignature(issue) === signature) return true
+  }
+  return false
 }
 
 function rememberJavaFinding(category: TaintFinding[], finding: TaintFinding): void {
+  const signature = getJavaFindingSignature(finding)
+  if (!signature) return
+  // 保持统一 finding 签名索引的建立副作用，实际查重使用同一 helper。
   const projection = getJavaFindingProjection(finding as TracePreserveFinding)
-  if (!projection) return
-  getJavaProjectionIndex(category).set(getJavaProjectionKey(projection), finding)
+  if (projection) getJavaProjectionIndex(category).set(getJavaProjectionKey(projection), finding)
+  void signature
 }
 
 function invalidateJavaProjectionIndex(category: TaintFinding[]): void {
@@ -383,7 +392,7 @@ class TaintOutputStrategy extends OutputStrategy {
    * @param config
    * @param printf
    */
-  outputFindings(resultManager: IResultManager, outputFilePath: string, config: IConfig, printf: any): void {
+  outputFindings(resultManager: IResultManager, outputFilePath: string, config: IConfig, printf: any): any {
     const outputStartedAt = Date.now()
     let reportFilePath
     if (resultManager) {
@@ -425,8 +434,10 @@ class TaintOutputStrategy extends OutputStrategy {
         logger.info(`[outputFindings] strategy=taintflow phase=write elapsed=${Date.now() - writeStartedAt}ms total=${Date.now() - outputStartedAt}ms`)
         // for taint flow checker, output result to console at the same time
         logger.info(`report is write to ${reportFilePath}`)
+        return results
       }
     }
+    return undefined
   }
 
   /**
@@ -439,7 +450,17 @@ class TaintOutputStrategy extends OutputStrategy {
     if (!finding) return false
     let category: TaintFinding[] | undefined
     try {
-      category = resultManager?.findings[TaintOutputStrategy.outputStrategyId] as TaintFinding[] | undefined
+      // 跨入口 dedup：dedupIndex（已 snapshot 的历史 finding）+ findings（当前批次 live finding）
+      const dedupCategory = resultManager?.dedupIndex?.[TaintOutputStrategy.outputStrategyId] as TaintFinding[] | undefined
+      const currentCategory = resultManager?.findings?.[TaintOutputStrategy.outputStrategyId] as TaintFinding[] | undefined
+      if (!dedupCategory && !currentCategory) return true
+      if (!dedupCategory) {
+        category = currentCategory
+      } else if (!currentCategory) {
+        category = dedupCategory
+      } else {
+        category = [...dedupCategory, ...currentCategory]
+      }
       if (!category) return true
       if (isDuplicateJavaFinding(category as TaintFinding[], finding)) return false
       // 依赖 trace 形态的折叠判据只比较原始链路节点，避免输出辅助节点改变去重结果。
@@ -447,6 +468,9 @@ class TaintOutputStrategy extends OutputStrategy {
       const findingTraceNoSynthetic = filterOutSyntheticSteps(getDedupTrace(finding))
       for (let i = 0; i < category.length; i++) {
         const issue = category[i]
+        const issueProjection = getJavaFindingProjection(issue as TracePreserveFinding)
+        const findingProjection = getJavaFindingProjection(finding as TracePreserveFinding)
+        if (issueProjection && findingProjection && getJavaProjectionKey(issueProjection) !== getJavaProjectionKey(findingProjection)) continue
         if (
           issue.line === finding.line &&
           isNodeEqual(issue.node, finding.node) &&
@@ -556,7 +580,7 @@ class TaintOutputStrategy extends OutputStrategy {
               uri,
               snippetText,
               nodeHash,
-              affectedNodeName,
+              affectedNodeName
             ),
             key
           )
@@ -573,7 +597,7 @@ class TaintOutputStrategy extends OutputStrategy {
               'egg controller',
               item.str,
               nodeHash,
-              affectedNodeName,
+              affectedNodeName
             ),
             key
           )
@@ -605,7 +629,7 @@ class TaintOutputStrategy extends OutputStrategy {
           trace,
           location,
           finding.matchedSanitizerTags,
-          callstackElements,
+          callstackElements
         )
       )
     })

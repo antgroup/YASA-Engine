@@ -69,8 +69,11 @@ const GO_INTERFACE_PASSTHROUGH_MAX_IMPLEMENTERS = 8
  * 注意：本函数只在 Go 路径（由调用方传入 analyzer + declType 才会触发）启用，
  * Java 共用的 checkInvocationMatchSink 不受影响。
  *
- * Go 分析流程把层级信息写入 analyzer.classHierarchyMap，而子类型查询由
- * analyzer.typeResolver.findSubTypes 提供，因此 helper 同时读取这两个对象。
+ * Bug 1 修复（W4 实测）：Go 路径下 classHierarchyMap 由 checker triggerAtStartOfAnalyze 调
+ * `analyzer.typeResolver.findClassHierarchy` 后写入到 `analyzer.classHierarchyMap`（独立对象，
+ * size 实测 42），而 `analyzer.typeResolver.classHierarchyMap` 始终是默认空 Map（size 0）。
+ * helper 入参改为接受 analyzer，从 analyzer 读 classHierarchyMap，从 analyzer.typeResolver
+ * 读 findSubTypes 方法。
  */
 function tryMatchSinkGoInterfacePassthrough(
   declType: string,
@@ -321,8 +324,8 @@ function matchSinkAtFuncCallWithCalleeType(
 }
 
 /**
- * 当 fclos.rtype 缺失但 fclos.qid 编码 receiver 类型时（如 Go 全局变量 method call），
- * 按 qid 后缀匹配 calleeType 与 fsig，并忽略 qid 中的 `<instance_*>` 标记。
+ * W14f: 当 fclos.rtype 缺失但 fclos.qid 编码 receiver 类型时（如 Go 全局变量 method call），
+ * 按 qid 后缀匹配 calleeType 与 fsig。先 strip qid 中的 `<instance_*>` 标记。
  * @param qid fclos.qid
  * @param calleeType sink rule calleeType（可能带 `*` 前缀）
  * @param calleeTypeBase calleeType 去 `*` 后的形式
@@ -379,10 +382,12 @@ function matchEmptyCalleeTypeInstanceMethod(
   if (propertyName !== methodName) return false
 
   const cleanQid = typeof fclos.qid === 'string' ? fclos.qid.replace(/<instance_[^>]*>/g, '') : ''
+  // Go qid 用 `/` 分隔包路径，rule.fsig 用 `.`，统一归一化后再做 endsWith
+  const normalizedQid = cleanQid.replace(/\//g, '.')
   return (
     matchReceiverTypeName(AstUtilSinkUtil.prettyPrint(fclos.object?.rtype?.definiteType), typeName) ||
     matchReceiverTypeName(AstUtilSinkUtil.prettyPrint(fclos.rtype?.definiteType), typeName) ||
-    cleanQid.endsWith(`.${rule.fsig}`)
+    normalizedQid.endsWith(`.${rule.fsig}`)
   )
 }
 

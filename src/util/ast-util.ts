@@ -432,7 +432,13 @@ function satisfy(
   const parentMap = new WeakMap()
   // 使用索引替代 shift() 操作，提高性能
   let worklistIndex = 0
+  // BFS worklist 上限防御：异常图深度遍历可达 2^32-1 触发 Array.push RangeError。
+  // 上限 5M（约 80MB 引用空间）足够覆盖正常 sanitizer BFS，超限安全中断（return res）。
+  const WORKLIST_MAX = 5_000_000
   while (worklistIndex < worklist.length) {
+    if (worklist.length > WORKLIST_MAX) {
+      return res.length === 0 ? null : multiMatch ? res : null
+    }
     node = worklist[worklistIndex]
     const from = fromlist[worklistIndex]
     const depth = depthlist[worklistIndex]
@@ -442,14 +448,17 @@ function satisfy(
     }
     visited.add(node)
     if (Array.isArray(node)) {
-      node.forEach((child: any) => {
+      // 超大数组（> WORKLIST_MAX）直接跳过 BFS 深入,避免 forEach 单轮 push 触达 2^32 抛 RangeError
+      if (node.length > WORKLIST_MAX) continue
+      for (const child of node) {
+        if (worklist.length > WORKLIST_MAX) break
         worklist.push(child)
         fromlist.push(node)
         depthlist.push(depth || 1)
         if (child && typeof child === 'object') {
           parentMap.set(child, node)
         }
-      })
+      }
     }
 
     if (f(node)) {
@@ -470,6 +479,7 @@ function satisfy(
       if (depth > maxdepth) continue
     }
     for (const prop in node) {
+      if (worklist.length > WORKLIST_MAX) break
       if (!Object.prototype.hasOwnProperty.call(node, prop)) continue
       // 过滤的时候 不仅要过滤_this还要过滤__this
       if (

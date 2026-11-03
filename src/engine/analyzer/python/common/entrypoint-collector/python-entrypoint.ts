@@ -9,6 +9,7 @@ const { findHttpServerEntryPointAndSource } = require('../../httpserver/entrypoi
 const { findTornadoEntryPointAndSource } = require('../../tornado/entrypoint-collector/tornado-entrypoint')
 const { findGradioEntryPointAndSource } = require('../../gradio/entrypoint-collector/gradio-default-entrypoint')
 const { findAgentUniverseEntryPointAndSource } = require('../../agentuniverse/entrypoint-collector/agentuniverse-entrypoint')
+const { findFunctionToolEntryPointAndSource } = require('./function-tool-entrypoint')
 const BasicRuleHandler = require('../../../../../checker/common/rules-basic-handler')
 const { loadPythonDefaultRule } = require('../../../../../checker/taint/python/python-taint-abstract-checker')
 const AstUtil = require('../../../../../util/ast-util')
@@ -123,6 +124,15 @@ const { tornadoEntryPointArray, tornadoEntryPointSourceArray } = findTornadoEntr
   }
   if (agentUniverseEntryPointSourceArray) {
     pyFcEntryPointSourceArray.push(...agentUniverseEntryPointSourceArray)
+  }
+
+  // 通用装饰器入口点 collector：识别 @function_tool / @tool / @mcp.tool / @app.tool
+  const { functionToolEntryPointArray, functionToolEntryPointSourceArray } = findFunctionToolEntryPointAndSource(filenameAstObj, dir)
+  if (functionToolEntryPointArray) {
+    pyFcEntryPointArray.push(...functionToolEntryPointArray)
+  }
+  if (functionToolEntryPointSourceArray) {
+    pyFcEntryPointSourceArray.push(...functionToolEntryPointSourceArray)
   }
 
   return { pyFcEntryPointArray, pyFcEntryPointSourceArray, lifespanGlobalAssignments }

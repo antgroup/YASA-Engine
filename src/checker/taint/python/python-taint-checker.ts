@@ -7,6 +7,7 @@ const {
   buildFclosIndex,
   lookupFclos,
 } = require('../../../engine/analyzer/python/common/entrypoint-collector/python-entrypoint')
+const { findFunctionToolEntryPointAndSource } = require('../../../engine/analyzer/python/common/entrypoint-collector/function-tool-entrypoint')
 const Constant = require('../../../util/constant')
 const EntryPoint = require('../../../engine/analyzer/common/entrypoint/entrypoint')
 const Config = require('../../../config')
@@ -57,6 +58,30 @@ class PythonTaintChecker extends PythonTaintAbstractChecker {
     const funCallEntryPoints: any[] = []
     const fileEntryPoints: any[] = []
     const { entrypoints: ruleConfigEntryPoints } = this.checkerRuleConfigContent
+
+    // 通用装饰器 collector 在 ONLY_CUSTOM 模式下独立填充 source（解决根因 B）
+    // BOTH 模式下已在 findPythonFcEntryPointAndSource 内填充，SELF_COLLECT 模式下不填充
+    if (Config.entryPointMode === 'ONLY_CUSTOM') {
+      // 从 fileManager 提取 filenameAstObj（与 findPythonFcEntryPointAndSource 一致）
+      const filenameAstObj: Record<string, any> = {}
+      for (const filename in fileManager) {
+        const fileEntry = fileManager[filename]
+        if (fileEntry?.astNode?._meta?.nodehash !== undefined) {
+          filenameAstObj[filename] = fileEntry.astNode
+        }
+      }
+      const { functionToolEntryPointSourceArray } = findFunctionToolEntryPointAndSource(filenameAstObj, dir)
+      if (functionToolEntryPointSourceArray && functionToolEntryPointSourceArray.length > 0) {
+        this.checkerRuleConfigContent.sources = this.checkerRuleConfigContent.sources || {}
+        this.checkerRuleConfigContent.sources.TaintSource = this.checkerRuleConfigContent.sources.TaintSource || []
+        this.checkerRuleConfigContent.sources.TaintSource = Array.isArray(
+          this.checkerRuleConfigContent.sources.TaintSource
+        )
+          ? this.checkerRuleConfigContent.sources.TaintSource
+          : [this.checkerRuleConfigContent.sources.TaintSource]
+        this.checkerRuleConfigContent.sources.TaintSource.push(...functionToolEntryPointSourceArray)
+      }
+    }
 
     if (Config.entryPointMode !== 'ONLY_CUSTOM') {
       const pythonDefaultRule = loadPythonDefaultRule()

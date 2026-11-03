@@ -10,7 +10,8 @@ const TaintCheckerSourceLine = require('../../engine/analyzer/common/source-line
 const entryPointConfig = require('../../engine/analyzer/common/entrypoint/current-entrypoint')
 const TaintCheckerRules = require('../common/rules-basic-handler')
 const taintCheckerCommonUtil = require('../../util/common-util')
-const QidUnifyUtil = require('../../util/qid-unify-util')
+const { buildJavaCandidateFinding } = require('./java/java-finding-candidate') as typeof import('./java/java-finding-candidate')
+const { getCalleeEntry } = require('./java/callee-entry') as typeof import('./java/callee-entry')
 
 interface SourceLocation {
   sourcefile?: string
@@ -23,6 +24,8 @@ interface AstNodeWithLocation {
   loc?: SourceLocation
   _meta?: { nodehash?: string }
   parent?: AstNodeWithLocation
+  id?: { name?: string; loc?: SourceLocation }
+  body?: { loc?: SourceLocation }
 }
 
 interface CallstackFrame {
@@ -30,6 +33,12 @@ interface CallstackFrame {
   ast?: { node?: AstNodeWithLocation }
   fname?: string
   qid?: string
+}
+
+interface CallsiteFrame {
+  code?: string
+  nodeHash?: string
+  loc?: SourceLocation
 }
 
 /**
@@ -112,15 +121,28 @@ class TaintChecker extends Checker {
       const traceStrategy = Config.taintTraceOutputStrategy
       const isCallstackOnly = traceStrategy === 'callstack-only' || traceStrategy === 'folded' || !traceStrategy
       if (isCallstackOnly) {
-        const isJavaFinding = this.isJavaFindingTrace(finding)
-        finding.trace = this.filterTraceToCallstackOrder(finding, finding.trace, isJavaFinding) as TraceItem[]
+        finding.trace = this.filterTraceToCallstackOrder(finding, finding.trace) as TraceItem[]
         finding.trace = this.synthesizeBridgeSteps(finding, finding.trace) as TraceItem[]
         if (!this.validateArgPassSegmentWithinFrame(finding)) {
           return null
         }
-        if (isJavaFinding) this.dedupCallArgPassEdgesByCallee(finding)
+        this.dedupCallArgPassEdgesByCallee(finding)
         if (!this.validateTraceBoundary(finding, trace)) return null
         if (!this.verifyCallstackEdgeInvariant(finding)) return null
+        // 动态 ARG PASS 作用域栈后补：剔除 taint 整段复制串进来的孤儿步（跨函数但非合法入/出帧）。
+        // 仅 Java finding；User 2026-09-20 授权的落点 D 后补例外（绕过「源头修」铁律）。
+        this.pruneOrphanByArgPassScopeStack(finding)
+        // 结果层裁剪 propagation 乱序步（细节见 truncateAfterSinkFrameEnter）：sink 帧入帧后浅帧续行、
+        // 入帧边前的幻影 body、紧接入帧边的早返 CALL RETURN。不丢 SOURCE/SINK/ARG PASS，validPairs 不变。
+        this.truncateAfterSinkFrameEnter(finding)
+        // buildJavaCandidateFinding 是 Java 专精资产，依赖 Java callstack+callsites 结构重建最小链路；
+        // 非 Java finding 走它会因结构不符 return null 整条丢。仅对 Java taint type finding 触发 mock 重建路径。
+        if ((finding.type === 'taint_flow_java_input' || finding.type === 'taint_flow_java_input_inner') && !this.verifyArgPassOrderConsistency(finding)) {
+          const candidate = buildJavaCandidateFinding(finding)
+          if (!candidate) return null
+          // 原 finding 继续拒绝；该标记仅供 Java 入口 collector 接收精简候补。
+          return candidate
+        }
       }
     }
     if (finding?.trace) {
@@ -188,24 +210,6 @@ class TaintChecker extends Checker {
       if (typeof hash === 'string' && hash) hashes.add(hash)
     }
     return hashes
-  }
-
-  private isJavaFindingTrace(finding: TaintFinding): boolean {
-    const trace = finding?.trace
-    if (Array.isArray(trace)) {
-      for (const step of trace) {
-        const sourcefile = step?.node?.loc?.sourcefile || step?.file
-        if (typeof sourcefile === 'string' && sourcefile.endsWith('.java')) return true
-      }
-    }
-    const callstack = finding?.callstack
-    if (Array.isArray(callstack)) {
-      for (const fclos of callstack as CallstackFrame[]) {
-        const sourcefile = fclos?.ast?.node?.loc?.sourcefile
-        if (typeof sourcefile === 'string' && sourcefile.endsWith('.java')) return true
-      }
-    }
-    return false
   }
 
   /**
@@ -396,7 +400,7 @@ class TaintChecker extends Checker {
    * synthesizeBridgeSteps 合成补齐）。
    * @param finding
    */
-  filterTraceToCallstackOrder(finding: TaintFinding, traceSource?: TraceItem[], javaStrictCalleeOnly = false): TraceItem[] | void {
+  filterTraceToCallstackOrder(finding: TaintFinding, traceSource?: TraceItem[]): TraceItem[] | void {
     const callstack = finding?.callstack
     const trace = traceSource ?? finding?.trace
     if (!Array.isArray(callstack) || !Array.isArray(trace)) return
@@ -437,6 +441,22 @@ class TaintChecker extends Checker {
       if (s?.tag !== 'ARG PASS: ') continue
       const inner = this.getStepInnermostIdx(s, callstack)
       if (inner < 0) continue
+      // 顶边识别：真 callee-side enter edge 的 ARG PASS 落点必须在被进入帧的签名行附近；
+      // 回调体内部的 instance-method receiver 伪边（如 result.setXxx(...)）落点在帧 body 内，与签名行相差很远。
+      // 伪边 drop 清掉噪音，但这条 ARG PASS 原本替 propagation 漏记的真 enter 边占了进入 inner 帧的位置，
+      // 故仍将 expected 推进到 inner+1，让后续真边能匹配，避免真链整条丢。
+      if (inner >= 1 && inner < callstack.length) {
+        const frameLoc = callstack[inner]?.ast?.node?.loc
+        const frameStart = frameLoc?.start?.line
+        const sLineRaw = s?.node?.loc?.start?.line ?? s?.line
+        const sLine = Array.isArray(sLineRaw) ? sLineRaw[0] : sLineRaw
+        if (typeof frameStart === 'number' && typeof sLine === 'number' && sLine > frameStart + 3) {
+          drop.add(i)
+          if (i > 0 && inCallstack[i - 1]?.tag === 'CALL: ') drop.add(i - 1)
+          expected = inner + 1
+          continue
+        }
+      }
       // 闭包/lambda：ARG PASS 进入不在 callstack 上的闭包函数体，丢弃该 ARG PASS 但保留前驱 CALL
       const stepFnHash = this.getStepFunctionNodeHash(s)
       if (stepFnHash && !callstackHashes.has(stepFnHash)) {
@@ -448,19 +468,21 @@ class TaintChecker extends Checker {
         continue
       }
       const isNextCalleeArg = inner === expected
-      const isLegacyCallerArg = !javaStrictCalleeOnly && inner === expected - 1
-      // Java callstack-only 链路需要严格 callee-side ARG PASS；其他语言保留旧 caller/callee 双接受口径。
+      // callstack-only 统一口径：ARG PASS 进 callee 帧须严格匹配 expected（callee-side），
+      // 或匹配 expected-1（caller-side，callstack 跨帧缺 callee 帧时的兜底；inner>=1 排除 FILE_BEGIN
+      // 入口对自身形参的噪声 ARG PASS——callstack[0] 已是入口函数自身 nil：se问c特，
+      // inner===0 时不应作 caller-side 接受否则会吃掉 expected 槽并使真 callee 边被丢）。
+      // 按 callee idx 去重保证每个方法跳转只保留一条可见点边，普适所有语言。
+      const isLegacyCallerArg = inner === expected - 1 && inner >= 1
       if (expected < callstack.length && (isNextCalleeArg || isLegacyCallerArg)) {
-        if (javaStrictCalleeOnly) {
-          const prevCallIdx = i > 0 && inCallstack[i - 1]?.tag === 'CALL: ' ? i - 1 : -1
-          const edgeKey = `callee:${inner}`
-          if (seenCallArgEdges.has(edgeKey)) {
-            drop.add(i)
-            if (prevCallIdx >= 0) drop.add(prevCallIdx)
-            continue
-          }
-          seenCallArgEdges.add(edgeKey)
+        const prevCallIdx = i > 0 && inCallstack[i - 1]?.tag === 'CALL: ' ? i - 1 : -1
+        const edgeKey = `callee:${inner}`
+        if (seenCallArgEdges.has(edgeKey)) {
+          drop.add(i)
+          if (prevCallIdx >= 0) drop.add(prevCallIdx)
+          continue
         }
+        seenCallArgEdges.add(edgeKey)
         expected++
       } else {
         drop.add(i)
@@ -500,6 +522,106 @@ class TaintChecker extends Checker {
   }
 
   /**
+   * callstack-only 结果层裁剪：清掉 taint propagation 因「先记返回值 / 先探被调方 body」造成的乱序步。
+   *
+   * trace 按"数据流探索顺序"记录、不是运行时执行顺序——propagation 会把被调方的 body 和 return 提前记在
+   * 真正入帧边(ARG PASS)之前，使 trace 看起来进进出出、前后错乱。这里按"应处于的位置"删三类噪声步；
+   * 都不丢 SOURCE / SINK / ARG PASS 自身，所以 verifyCallstackEdgeInvariant 的点边计数不变。
+   *
+   * 一、sink 帧入帧之后的浅帧续行：sink 帧(最深)入帧 ARG PASS 之后到 SINK 之间、比 sink 帧更浅的任意步，
+   *   是越过 sink 之后的 caller/sibling 探索，全丢；并丢与 SINK 同行的冗余 Return Value。入帧前的 forward
+   *   path 已含全部唯一入边，入帧后无唯一入边，丢浅帧步不丢唯一覆盖。
+   *
+   * 二、入帧边之前的幻影 body：某 callstack 帧 F 的 body 步出现在 F 自己的首条真实入帧 ARG PASS 之前——
+   *   propagation 先探了 F 的 body 才补入帧边，这段 body 是幻影，丢。不丢"紧接 ARG PASS 的 CALL"(入帧边
+   *   caller 侧)，以免拆掉 getJavaFindingSignature 的 CALL+ARG PASS 对。入口 head 帧无入帧边，不处理。
+   *
+   * 三、入帧即返的早返：紧接 ARG PASS 入帧边之后的 CALL RETURN——"刚进帧就返回"，是 return 提前记在 body
+   *   之前，丢。往前跳过已被「二」丢的幻影 body，找上一个未丢步看是不是 ARG PASS。
+   * @param finding
+   */
+  private truncateAfterSinkFrameEnter(finding: TaintFinding): void {
+    const callstack = finding?.callstack
+    const trace = finding?.trace as TraceItem[] | undefined
+    if (!Array.isArray(callstack) || !Array.isArray(trace) || trace.length < 2) return
+    const sinkStep = trace[trace.length - 1]
+    if (sinkStep?.tag !== 'SINK: ') return
+    const sinkFrameIdx = this.getStepInnermostIdx(sinkStep, callstack as CallstackFrame[])
+    if (sinkFrameIdx < 1) return
+
+    // sink 内层帧入帧 ARG PASS 下标（dedup 后每 callee idx 仅一条；取最后一个 inner==sinkFrameIdx 的 ARG PASS）
+    let enterIdx = -1
+    for (let i = 0; i < trace.length - 1; i++) {
+      if (trace[i]?.tag === 'ARG PASS: ' && this.getStepInnermostIdx(trace[i], callstack as CallstackFrame[]) === sinkFrameIdx) {
+        enterIdx = i
+      }
+    }
+    if (enterIdx < 0) return
+
+    const sinkFile = sinkStep?.node?.loc?.sourcefile || sinkStep?.file
+    const sinkLineRaw = sinkStep?.node?.loc?.start?.line ?? sinkStep?.line
+    const sinkLine = Array.isArray(sinkLineRaw) ? sinkLineRaw[0] : sinkLineRaw
+
+    const drop = new Set<number>()
+    for (let i = enterIdx + 1; i < trace.length - 1; i++) {
+      const s = trace[i]
+      if (!s) continue
+      const inner = this.getStepInnermostIdx(s, callstack as CallstackFrame[])
+      // 浅帧续行：比 sink 帧更浅的 callstack 帧内的任意步，全丢（sink 帧最深，入帧后无唯一入边，不破不变量）。
+      if (inner >= 0 && inner < sinkFrameIdx) {
+        drop.add(i)
+        continue
+      }
+      // 与 SINK 同文件同行（且同 sink 帧）的 Return Value = sink 表达式自身的 return，冗余
+      const tagNorm = typeof s?.tag === 'string' ? s.tag.trim() : ''
+      if (tagNorm === 'Return Value:' && inner === sinkFrameIdx && typeof sinkLine === 'number' && sinkFile) {
+        const sFile = s?.node?.loc?.sourcefile || s?.file
+        const sLineRaw = s?.node?.loc?.start?.line ?? s?.line
+        const sLine = Array.isArray(sLineRaw) ? sLineRaw[0] : sLineRaw
+        if (sFile === sinkFile && sLine === sinkLine) drop.add(i)
+      }
+    }
+
+    // 处理 docstring 之二、之三（幻影 body、入帧即返）。归帧用 getStepInnermostIdx：Java 走函数 nodeHash、其它语言走行号范围。
+    {
+      // 记每个 callstack 帧的首条"真实"入帧 ARG PASS 下标（跳过 _synthetic 合成边）。
+      const firstEnterByFrame = new Map<number, number>()
+      for (let i = 0; i < trace.length; i++) {
+        if (trace[i]?.tag !== 'ARG PASS: ' || trace[i]?._synthetic) continue
+        const inner = this.getStepInnermostIdx(trace[i], callstack as CallstackFrame[])
+        if (inner < 1 || firstEnterByFrame.has(inner)) continue
+        firstEnterByFrame.set(inner, i)
+      }
+      // body 步若在所属帧的入帧边之前 = 幻影 body，丢。不丢 ARG PASS 自身；不丢"紧接 ARG PASS 的 CALL"(入帧边
+      //   caller 侧)，保护 CALL+ARG PASS 对不拆。
+      for (let i = 1; i < trace.length - 1; i++) {
+        if (drop.has(i)) continue
+        const s = trace[i]
+        if (!s || s?.tag === 'ARG PASS: ' || s?.tag === 'SOURCE: ' || s?.tag === 'SINK: ') continue
+        if (s?.tag === 'CALL: ' && trace[i + 1]?.tag === 'ARG PASS: ') continue
+        const inner = this.getStepInnermostIdx(s, callstack as CallstackFrame[])
+        if (inner < 1) continue
+        const firstPos = firstEnterByFrame.get(inner)
+        if (typeof firstPos === 'number' && i < firstPos) drop.add(i)
+      }
+      // 紧接入帧边 ARG PASS 之后的 CALL RETURN = "入帧即返"，丢。往前跳过已被丢的幻影 body，找上一个未丢步
+      //   看是不是 ARG PASS；正常 return-value 链前驱是 CALL/body，不会误中。
+      for (let i = 1; i < enterIdx; i++) {
+        if (drop.has(i)) continue
+        const s = trace[i]
+        if (!s || s?.tag !== 'CALL RETURN:') continue
+        let prev = i - 1
+        while (prev >= 0 && drop.has(prev)) prev--
+        if (trace[prev]?.tag !== 'ARG PASS: ') continue
+        drop.add(i)
+      }
+    }
+
+    if (drop.size === 0) return
+    finding.trace = trace.filter((_: TraceItem, i: number) => !drop.has(i))
+  }
+
+  /**
    * 校验 CO 模式下 callstack 与 trace 的点-边不变量：callstack.length+1（点数：fclos+sink 条目）必须
    * 等于 "有效 CALL+ARG PASS 对数 + SINK 数"（边数）+ 1。
    *
@@ -519,7 +641,7 @@ class TaintChecker extends Checker {
     const outputtableFclosIdx = new Set<number>()
     for (let i = 0; i < callstack.length; i++) {
       const fclos = callstack[i]
-      if (!fclos || fclos.vtype !== 'fclos') continue
+      if (!fclos || (fclos.vtype !== 'fclos' && fclos.vtype !== 'scope')) continue
       const loc = fclos.ast?.node?.loc
       if (!loc?.sourcefile || typeof loc.start?.line !== 'number' || typeof loc.end?.line !== 'number') continue
       outputtableFclosIdx.add(i)
@@ -558,6 +680,114 @@ class TaintChecker extends Checker {
   }
 
   /**
+   * 按「动态 ARG PASS 作用域栈」剔除 taint 整段复制串进来的孤儿步（落点 D，User 2026-09-20 授权后补）。
+   *
+   * 遍历 trace 维护「当前栈顶函数」栈：元素是 callstack frame idx，初始含入口帧 frame[0]：
+   * - CALL: + 紧接 ARG PASS: 成对 → 若 ARG PASS 进入更深的 callstack 帧则压栈，CALL/ARG PASS 均保留
+   * - CALL RETURN: → 与栈顶同帧: in-place return 不退栈；退到栈顶下一帧: 退栈一层；除此以外的为孤儿剔除
+   * - 其他步（Var Pass / Field / Return Value / 未配对的 CALL / ARG PASS）必须落在当前栈顶函数内
+   *   （inner === 当前栈顶 frame idx），不在栈顶函数者 = taint 整段复制串进来的孤儿，剔除
+   * - SOURCE: / SINK: 边界步始终保留
+   *
+   * 待剔除步形成的反例：异步体 sink record 携带同步入口的历史足迹步（如 caller-side find() 的
+   * CALL/CALL RETURN/Var Pass），被平铺进 trace 与异步体步混排，形成跨函数无入帧边的跳跃。本方法
+   * 严格按动态栈语义校验，与「补 ARG PASS 入帧边亦被 filter 丢」的难点无关——剔除而非追加。
+   *
+   * 仅对 callstack-only 输出路径的 Java taint-flow finding 启用，在 verifyCallstackEdgeInvariant
+   * 通过后、truncateAfterSinkFrameEnter 之前介入。
+   * @param finding 仅 Java finding；finding.trace 被原地裁剪。
+   */
+  private pruneOrphanByArgPassScopeStack(finding: TaintFinding): void {
+    const callstack = finding?.callstack
+    const trace = finding?.trace as TraceItem[] | undefined
+    if (!Array.isArray(callstack) || !Array.isArray(trace) || trace.length === 0) return
+    if (finding.type !== 'taint_flow_java_input' && finding.type !== 'taint_flow_java_input_inner') return
+    const frames = callstack as CallstackFrame[]
+    if (frames.length === 0) return
+
+    // 当前作用域栈：元素是 callstack frame idx；初始含入口帧 frame[0]
+    const scope: number[] = [0]
+    const top = (): number => scope[scope.length - 1]
+    const drop = new Set<number>()
+
+    for (let i = 0; i < trace.length; i++) {
+      const step = trace[i]
+      const tag = typeof step?.tag === 'string' ? step.tag : ''
+      if (tag === 'SOURCE: ' || tag === 'SINK: ') {
+        continue
+      }
+
+      // CALL + 紧接 ARG PASS 成对：transit进 callee 帧
+      if (tag === 'CALL: ' && i + 1 < trace.length && trace[i + 1]?.tag === 'ARG PASS: ') {
+        const argPassInner = this.getStepInnermostIdx(trace[i + 1], frames)
+        if (argPassInner > top()) {
+          // 进入更深的 callstack 帧：压栈
+          scope.push(argPassInner)
+        }
+        // 保留 CALL 与 ARG PASS 两步；跳过 ARG PASS 避免重复处理
+        i++
+        continue
+      }
+
+      // CALL RETURN：同帧 in-place return 不退栈；退到栈顶下一帧退栈一层；其余孤儿剔除
+      if (tag === 'CALL RETURN:') {
+        const retInner = this.getStepInnermostIdx(step, frames)
+        if (retInner === top()) {
+          continue
+        }
+        if (scope.length > 1 && retInner === scope[scope.length - 2]) {
+          scope.pop()
+          continue
+        }
+        drop.add(i)
+        continue
+      }
+
+      // 其他步：必须落在当前栈顶函数内；不在栈顶即孤儿
+      const stepInner = this.getStepInnermostIdx(step, frames)
+      if (stepInner !== top()) {
+        drop.add(i)
+      }
+    }
+
+    if (drop.size === 0) return
+    finding.trace = trace.filter((_: TraceItem, idx: number) => !drop.has(idx))
+  }
+
+  /**
+   * 校验 ARG PASS step 的 callstack-idx 沿 SOURCE→SINK 方向单调不减（外层帧先于内层帧被进入）。
+   *
+   * 来源：taint record 在子调用返回后，其调用点/body step 仍可能残留在向下游传播的值上，导致一条
+   * finding 的 trace 里内层帧的 ARG PASS 出现在外层帧之前（如 update 流被 get 的 send body 污染：
+   * seq=[2,1]）。这种 trace 与 callstack 嵌套顺序矛盾，是传播层污染在输出端的可见形态——跳边
+   * （内层 callsite 出现在外层 region）、CALL+ARG PASS 对顺序倒置，并使 order-sensitive 去重 key
+   * 与同结构的干净 finding 错开，制造重复 finding。校验失败即丢弃该 finding。
+   *
+   * 仅对 callstack-only 的 Java finding 启用：idx 取 getStepInnermostIdx 的最深覆盖 fclos；
+   * 映射不到 callstack（idx<0，如 helper/闭包）的 ARG PASS 不参与比较，避免误判。
+   * @param finding
+   * @returns true 表示 ARG PASS 顺序与 callstack 嵌套一致；false 表示污染倒序，应丢弃
+   */
+  private verifyArgPassOrderConsistency(finding: TaintFinding): boolean {
+    const callstack = finding?.callstack
+    const trace = finding?.trace
+    if (!Array.isArray(callstack) || !Array.isArray(trace)) return true
+    const frames = callstack as CallstackFrame[]
+    let prevIdx = -1
+    for (const s of trace as TraceItem[]) {
+      if (s?.tag !== 'ARG PASS: ') continue
+      const idx = this.getStepInnermostIdx(s, frames)
+      if (idx < 0) continue
+      if (idx < prevIdx) {
+        finding.traceRejectReason = 'ARG_PASS_ORDER_OUT_OF_CALLSTACK'
+        return false
+      }
+      prevIdx = idx
+    }
+    return true
+  }
+
+  /**
    * 对 finding.callstack 中"body 内零 trace step"的 fclos 插入一对 synthetic CALL + ARG PASS step。
    *
    * 核心算法（按 callstack 深度穿插插入，而非一律追加末尾）：
@@ -591,26 +821,25 @@ class TaintChecker extends Checker {
       endLine: number
       node: NonNullable<TraceItem['node']>
       fname: string
+      entry: ReturnType<typeof getCalleeEntry>
     }
     const fcloses: FclosInfo[] = []
     callstack.forEach((fclos: TaintFinding, idx: number) => {
-      if (!fclos || fclos.vtype !== 'fclos') return
+      if (!fclos || (fclos.vtype !== 'fclos' && fclos.vtype !== 'scope')) return
       const loc = fclos.ast?.node?.loc
       const sourcefile: string | undefined = loc?.sourcefile
       const startLine = loc?.start?.line
       const endLine = loc?.end?.line
-      if (!sourcefile || typeof startLine !== 'number' || typeof endLine !== 'number') return
-      // fname 用 QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix 统一清洗：去掉 `<block>` / `<global>.packageManager` /
-      // `<instance>` / `<copied*>` / `<cloned*>` / `<syslib*>` 等流敏感标签与 yasa 内部前缀，保证 affectedNodeName 可读
-      const rawName = fclos.ast?.node?.id?.name || fclos.fname || fclos.qid || '<bridge>'
-      const cleanedName = QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(rawName) || rawName
+      const entry = getCalleeEntry(fclos)
+      if (!sourcefile || typeof startLine !== 'number' || typeof endLine !== 'number' || !entry) return
       fcloses.push({
         idx,
         file: sourcefile,
         startLine,
         endLine,
         node: fclos.ast.node,
-        fname: cleanedName,
+        fname: entry.name,
+        entry,
       })
     })
     if (fcloses.length === 0) return traceSource ? trace : undefined
@@ -634,18 +863,41 @@ class TaintChecker extends Checker {
       return innermost
     })
 
-    // fclos 覆盖判据：body 内需要至少一条 ARG PASS step（自然或合成均可）。
-     // 闭包捕获场景下深层 fclos 只会出现 SOURCE 而无形参 ARG PASS，必须由 synthesize 补桥接，否则
-     // verifyCallstackEdgeInvariant 数不到这一对会丢整条 finding；故此处 SOURCE 不再计为已覆盖。
+    // fclos 覆盖判据：入帧 ARG PASS 落在 fclos 签名行 ±1 内才算覆盖该 fclos。
+    // 严格化（落点 E）：filter 在某些异步路径把 caller-side 的 base-object ARG PASS（如
+    // executor.submit 的 receiver）按行号误接受为 callee 帧 enter ARG PASS —— 该 ARG PASS 落在
+    // callee body 远区（sLine > frame.startLine+1）而非签名行，原先 coveredByArgPass 只判
+    // "depths[i]>=0 && tag==='ARG PASS: '"，把 body 远区 ARG PASS 也算覆盖，使该 frame 误判为已覆盖，
+    // 跳过 synthesize 现有 SYN 桥补机制，导致 SARIF 跨帧跳跃（如 idx#4 step15 CALL offer@1013 →
+    // step16 CALL submit@788 之间缺 SYN 1014 CALL invoke + SYN 786 ARG PASS 入帧边）。
+    // 闭包捕获场景下深层 fclos 只会出现 SOURCE 而无形参 ARG PASS，必须由 synthesize 补桥接，否则
+    // verifyCallstackEdgeInvariant 数不到这一对会丢整条 finding；故此处 SOURCE 不再计为已覆盖。
     const coveredByArgPass: Set<number> = new Set()
     trace.forEach((s: TraceItem, i: number) => {
       if (depths[i] >= 0 && s?.tag === 'ARG PASS: ') {
-        coveredByArgPass.add(depths[i])
+        const frameIdx = depths[i]
+        const frame = fcloses.find((f) => f.idx === frameIdx)
+        // 无匹配 frame（理论上不发生）：保留旧行为，不阻断已 active 的覆盖判定。
+        if (!frame) {
+          coveredByArgPass.add(frameIdx)
+          return
+        }
+        const sLineRaw = s?.node?.loc?.start?.line ?? s?.line
+        const sLine = Array.isArray(sLineRaw) ? sLineRaw[0] : sLineRaw
+        // ARG PASS 该值是 callee 签名行 ±1 内才视为入帧边；不能解析 sLine 时保留旧行为（不丢已 active 覆盖）。
+        if (typeof sLine !== 'number' || sLine === frame.startLine || sLine === frame.startLine + 1) {
+          coveredByArgPass.add(frameIdx)
+        }
       }
     })
     // 入口 fclos（idx 0）不需要合成；非 callstack 节点不参与覆盖判定。
     const uncovered = fcloses.filter((f) => f.idx > 0 && !coveredByArgPass.has(f.idx))
-    if (uncovered.length === 0) return traceSource ? trace : undefined
+    if (uncovered.length === 0) {
+      // uncovered=0 不代表无孤儿 ARG PASS：内层 CALL RETURN 后直接接外层 ARG PASS 时，
+      // 外层 CALL tag 未随子值传播到位，send 穿越对缺 CALL 半边。必须补齐再返回。
+      this.completeOrphanArgPassCalls(trace, callstack, callsites)
+      return traceSource ? trace : undefined
+    }
 
     // 为每个 uncovered fclos 找插入位置：只能在 SOURCE 与 SINK 之间补桥，避免 synthetic CALL/ARG PASS 堆到 trace 顶部。
     type Insertion = { beforeIdx: number; fclos: FclosInfo }
@@ -673,19 +925,10 @@ class TaintChecker extends Checker {
     })
 
     for (const ins of insertions) {
-      // 选 signature 行：优先 fdef.id（方法名所在行），其次 body 起始行，最后回落到 fdef.loc.start.line。
-      // fdef.loc.start 可能落在注解（@Override）或匿名类 new 表达式所在行，导致 SARIF snippet 取到错误源码。
-      const idLine = ins.fclos.node?.id?.loc?.start?.line
-      const bodyLine = ins.fclos.node?.body?.loc?.start?.line
-      const signatureLine: number =
-        typeof idLine === 'number' ? idLine : typeof bodyLine === 'number' ? bodyLine : ins.fclos.startLine
-      // ARG PASS wrapper：loc 落 callee 签名行，_meta.nodehash 经原型继承自 fdef.ast.node（保 callstack nodeHash 等式）
-      const argPassNode = Object.create(ins.fclos.node)
-      argPassNode.loc = {
-        sourcefile: ins.fclos.file,
-        start: { line: signatureLine, column: 0 },
-        end: { line: signatureLine, column: 0 },
-      }
+      const calleeEntry = ins.fclos.entry
+      if (!calleeEntry) continue
+      const signatureLine = calleeEntry.line
+      const argPassNode = calleeEntry.node
       const callsite = Array.isArray(callsites) ? callsites[ins.fclos.idx] : undefined
       const siteLoc = callsite?.loc
       const siteLineRaw = siteLoc?.start?.line
@@ -724,6 +967,28 @@ class TaintChecker extends Checker {
     // 合成一个 CALL 插到它前面，保证 CALL/ARG PASS 成对出现。反向遍历避免 splice 导致索引失效。
     // 仅当 callsite line 与 ARG PASS step line 不同才合成：JS entrypoint 的 callsites[0] 常指向 fclos 自身
     // body 起始行，不是真正的 caller-side callsite，用这种 loc 造 CALL 会重复 ARG PASS 的位置信息。
+    // 注意：该补齐步骤独立于 uncovered fclos 的桥接插入——即使所有 fclos 都已有 ARG PASS（uncovered=0），
+    // 仍可能出现"内层 CALL RETURN 后直接接外层 ARG PASS"的孤儿（外层 CALL tag 未随子值传播到位），
+    // 故必须无条件执行，不可被上方 uncovered=0 的提前返回跳过。
+    this.completeOrphanArgPassCalls(trace, callstack, callsites)
+    return traceSource ? trace : undefined
+  }
+
+  /**
+   * 补齐孤立 ARG PASS：若紧邻前驱不是 CALL（analyzer 在某些 AST 模式下——例如 Python
+   * fullfileManagerMade 入口或嵌套 def 跨层调用——只写了 ARG PASS 没写 CALL）则按 callsites[innermost_idx]
+   * 合成一个 CALL 插到它前面，保证 CALL/ARG PASS 成对出现。反向遍历避免 splice 导致索引失效。
+   * 仅当 callsite line 与 ARG PASS step line 不同才合成：JS entrypoint 的 callsites[0] 常指向 fclos 自身
+   * body 起始行，不是真正的 caller-side callsite，用这种 loc 造 CALL 会重复 ARG PASS 的位置信息。
+   *
+   * 从 synthesizeBridgeSteps 抽出为独立方法，使其在 uncovered=0 的提前返回路径也能调用——
+   * 见 synthesizeBridgeSteps 末尾与上方 uncovered 提前返回处两处调用点。
+   * @param trace 原地修改
+   * @param callstack
+   * @param callsites
+   */
+  private completeOrphanArgPassCalls(trace: TraceItem[], callstack: CallstackFrame[], callsites: CallsiteFrame[] | undefined): void {
+    if (!Array.isArray(trace) || !Array.isArray(callstack)) return
     for (let i = trace.length - 1; i >= 0; i--) {
       const step = trace[i]
       if (step?.tag !== 'ARG PASS: ') continue
@@ -740,8 +1005,9 @@ class TaintChecker extends Checker {
       const argPassFile = step?.node?.loc?.sourcefile || step?.file
       if (siteLine === argPassLine && siteLoc.sourcefile === argPassFile) continue
       const fclos = callstack[innermostIdx]
-      const rawName = fclos?.ast?.node?.id?.name || fclos?.fname || fclos?.qid || '<bridge>'
-      const fname = QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(rawName) || rawName
+      const calleeEntry = getCalleeEntry(fclos)
+      if (!calleeEntry) continue
+      const fname = calleeEntry.name
       const callNode = Object.create(fclos?.ast?.node || {}) as NonNullable<TraceItem['node']>
       callNode.loc = siteLoc
       if (typeof callsite?.nodeHash !== 'undefined') {
@@ -757,7 +1023,6 @@ class TaintChecker extends Checker {
       }
       trace.splice(i, 0, callStep)
     }
-    return traceSource ? trace : undefined
   }
 
   /**
@@ -895,11 +1160,8 @@ class TaintChecker extends Checker {
     taintFlowFinding.callstack = callstack
     // callsites 与 callstack 长度一致，每项结构 { code, nodeHash, loc }，由 analyzer 在 CallExpression 进入被调函数时入栈
     taintFlowFinding.callsites = callsites
-
     return taintFlowFinding
   }
-
-
 
   /**
    *

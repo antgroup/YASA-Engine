@@ -1,11 +1,14 @@
 const { formatSanitizerTags } = require('../../../checker/sanitizer/sanitizer-checker')
 
-interface SarifLocation {
+type SarifProperties = Record<string, unknown>
+
+export interface SarifLocation {
   physicalLocation?: {
     artifactLocation?: { uri: string }
     region?: any
     nodeHash: string
   }
+  properties?: SarifProperties
   [key: string]: any
 }
 
@@ -24,6 +27,7 @@ interface SarifResult {
   locations: SarifLocation[]
   matchedSanitizerTags: any
   callstack: CallstackElement[]
+  properties?: SarifProperties
 }
 
 /**
@@ -47,9 +51,10 @@ function prepareResult(
   trace: any,
   location: SarifLocation,
   matchedSanitizerTags: any,
-  callstackElments: CallstackElement[]
+  callstackElments: CallstackElement[],
+  properties?: SarifProperties
 ): SarifResult {
-  return {
+  const result: SarifResult = {
     message: {
       text: title,
     },
@@ -62,6 +67,10 @@ function prepareResult(
     matchedSanitizerTags: formatSanitizerTags(matchedSanitizerTags),
     callstack: callstackElments,
   }
+  if (properties && Object.keys(properties).length > 0) {
+    result.properties = properties
+  }
+  return result
 }
 
 /**
@@ -83,7 +92,8 @@ function prepareLocation(
   uri: string,
   snippetText: string,
   nodeHash: string,
-  affectedNodeName?: string
+  affectedNodeName?: string,
+  properties?: SarifProperties
 ): SarifLocation {
   const res: SarifLocation = {
     physicalLocation: {
@@ -104,6 +114,9 @@ function prepareLocation(
   if (affectedNodeName && typeof affectedNodeName === 'string') {
     res.physicalLocation!.region.snippet.affectedNodeName = affectedNodeName
   }
+  if (properties && Object.keys(properties).length > 0) {
+    res.properties = properties
+  }
   return res
 }
 
@@ -114,14 +127,14 @@ function prepareLocation(
 function prepareTrace(locations: SarifLocation[]): any[] {
   const newLocations: any[] = []
   for (let i = 0; i < locations.length; i++) {
-    newLocations.push({
-      location: {
-        message: {
-          text: `Step ${i.toString()}`,
-        },
-        physicalLocation: locations[i].physicalLocation,
+    const location = {
+      message: {
+        text: `Step ${i.toString()}`,
       },
-    })
+      physicalLocation: locations[i].physicalLocation,
+      ...(locations[i].properties ? { properties: locations[i].properties } : {}),
+    }
+    newLocations.push({ location })
   }
   return [
     {
@@ -134,89 +147,6 @@ function prepareTrace(locations: SarifLocation[]): any[] {
   ]
 }
 
-/**
- * 按 (sink_uri, sink_line, entrypoint) 聚合同 sink 同 ep 的多条 result，
- * 把各自的 codeFlows 合并到一条 result 的 codeFlows 数组中。
- * 用途：D24 triage 发现 43% 的 SARIF result 是同 sink 不同 codeFlow 的枚举重复，
- * 下游人工 triage 成本巨大；SARIF 规范允许一个 result 携带多个 codeFlows。
- *
- * 聚合 key：`uri|startLine|ep.filePath::ep.functionName::ep.funcReceiverType::ep.attribute`。
- * 以下情况不聚合（按原顺序独立保留）：
- *   - locations 为空或缺失 physicalLocation / startLine
- *   - entrypoint 缺失 functionName（无法判定同 ep）
- * 合并时保留第一条 result 的非 codeFlows 字段（level / rank / message / sinkInfo /
- * callstack / matchedSanitizerTags），codeFlows 依原始顺序拼接且自动去重完全相同的枝。
- * @param results
- */
-function dedupResultsBySinkAndEntrypoint(results: SarifResult[]): SarifResult[] {
-  if (!Array.isArray(results) || results.length <= 1) {
-    return results
-  }
-  const keyToIdx = new Map<string, number>()
-  const seenFlowsPerKey = new Map<string, Set<string>>()
-  const final: SarifResult[] = []
-
-  for (const r of results) {
-    const key = buildDedupKey(r)
-    if (key === null) {
-      final.push(r)
-      continue
-    }
-    const existingIdx = keyToIdx.get(key)
-    if (existingIdx === undefined) {
-      keyToIdx.set(key, final.length)
-      final.push(r)
-      const seen = new Set<string>()
-      for (const flow of toFlowArray(r.codeFlows)) {
-        seen.add(serializeFlow(flow))
-      }
-      seenFlowsPerKey.set(key, seen)
-      continue
-    }
-    const existing = final[existingIdx]
-    if (!Array.isArray(existing.codeFlows)) {
-      existing.codeFlows = []
-    }
-    const seen = seenFlowsPerKey.get(key)!
-    for (const flow of toFlowArray(r.codeFlows)) {
-      const sig = serializeFlow(flow)
-      if (seen.has(sig)) continue
-      seen.add(sig)
-      existing.codeFlows.push(flow)
-    }
-  }
-  return final
-}
-
-function buildDedupKey(r: SarifResult): string | null {
-  const loc = r?.locations?.[0]
-  const uri = loc?.physicalLocation?.artifactLocation?.uri
-  const startLine = loc?.physicalLocation?.region?.startLine
-  const ep = r?.entrypoint
-  const epFuncName = ep?.functionName
-  if (!uri || typeof startLine !== 'number' || !epFuncName) {
-    return null
-  }
-  const epFilePath = ep?.filePath ?? ''
-  const epAttr = ep?.attribute ?? ''
-  const epReceiver = ep?.funcReceiverType ?? ''
-  return `${uri}|${startLine}|${epFilePath}::${epFuncName}::${epReceiver}::${epAttr}`
-}
-
-function toFlowArray(codeFlows: any): any[] {
-  if (!codeFlows) return []
-  if (Array.isArray(codeFlows)) return codeFlows
-  return [codeFlows]
-}
-
-function serializeFlow(flow: any): string {
-  try {
-    return JSON.stringify(flow)
-  } catch (_err) {
-    // 极端场景下 flow 含循环引用，退化为唯一随机签名（不聚合）
-    return `__ref__${Math.random()}`
-  }
-}
 
 /**
  *
@@ -224,7 +154,6 @@ function serializeFlow(flow: any): string {
  * @param graphs
  */
 function prepareSarifFormat(results: SarifResult[], graphs: any): Record<string, any> {
-  const deduped = results
   return {
     runs: [
       {
@@ -235,7 +164,7 @@ function prepareSarifFormat(results: SarifResult[], graphs: any): Record<string,
           },
         },
         graphs,
-        results: deduped,
+        results,
       },
     ],
     version: '2.1.0',
@@ -256,7 +185,7 @@ function prepareCallstackElements(callstack: any[], sinkNode?: any): CallstackEl
 
   if (callstack) {
     for (const element of callstack) {
-      if (element.vtype === 'fclos') {
+      if (element.vtype === 'fclos' || element.vtype === 'scope') {
         const nodeHash = element.ast?.node?._meta?.nodehash
         if (typeof nodeHash !== 'string') continue
         const callstackElement: CallstackElement = {
@@ -284,5 +213,4 @@ module.exports = {
   prepareTrace,
   prepareSarifFormat,
   prepareCallstackElements,
-  dedupResultsBySinkAndEntrypoint,
 }

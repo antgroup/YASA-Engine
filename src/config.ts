@@ -65,8 +65,14 @@ export interface IConfig {
   scanTimeoutMs?: number
   // 单入口内存护栏：超阈值提前 stop 当前入口，flush 已分析入口 finding，跳下一入口
   entrypointMemoryGuard?: boolean
-  // 单入口堆使用上限（MB），超过即触发护栏 abort 当前入口
+  // @deprecated 单入口堆使用上限（MB），绝对模式阈值。delta 模式下沉后全语言不再使用，字段保留兼容
   entrypointMemoryLimitMB?: number
+  // 单入口 heap growth delta 上限（MB），delta 模式阈值，超过即触发护栏 abort 当前入口。
+  // delta 模式只看本入口增长，不受前序入口累积影响，比绝对模式更公平。默认 2048（2GB）。
+  // 高 baseline 项目（如多 controller builder pattern 项目）需调小至 1024MB，避免 baseline 累积后 delta 允许堆涨到 V8 上限才触发。
+  entrypointMemoryLimitDeltaMB?: number
+  // Go delta 模式 alias：优先读 Go 专用环境变量，fallback 到 entrypointMemoryLimitDeltaMB
+  goEntrypointMemoryLimitDeltaMB?: number
   single?: boolean
   maindir?: string
   configFilePath?: string
@@ -225,7 +231,15 @@ const configObject: IConfig = {
 
   // Memory guard: 单入口堆超阈提前 stop，flush 已分析入口 finding，跳下一入口（零污染，不改 clone）
   entrypointMemoryGuard: true,
+  // @deprecated 绝对模式阈值，delta 模式下沉后全语言不再使用；字段保留兼容旧 override
   entrypointMemoryLimitMB: Number(process.env.YASA_EP_MEM_LIMIT_MB) || 10240,
+  // delta 模式阈值：per-entrypoint heap growth delta 上限（MB），YASA_EP_MEM_LIMIT_DELTA_MB 环境变量可配置
+  entrypointMemoryLimitDeltaMB: Number(process.env.YASA_EP_MEM_LIMIT_DELTA_MB) || 2048,
+  // Go delta 模式 alias：优先读 Go 专用环境变量，fallback 到通用 delta 阈值
+  goEntrypointMemoryLimitDeltaMB:
+    Number(process.env.YASA_GO_EP_MEM_LIMIT_DELTA_MB) ||
+    Number(process.env.YASA_EP_MEM_LIMIT_DELTA_MB) ||
+    2048,
 
   // Prune parameters for aggressive prune mode
   maxCallstackDepth: 12, // max callstack depth in aggressive prune mode

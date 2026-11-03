@@ -1,6 +1,7 @@
 import type { CallInfo } from '../../../engine/analyzer/common/call-args'
 import type { AstSourceLocation, EntryPointRuleConfig } from '../../../engine/analyzer/common/entrypoint/entrypoint'
 import type { Invocation } from '../../../resolver/common/value/invocation'
+import type { TaintFinding } from '../../../engine/analyzer/common/common-types'
 
 const QidUnifyUtil = require('../../../util/qid-unify-util')
 const TaintCheckerJava = require('../taint-checker')
@@ -19,6 +20,11 @@ const { satisfy, defaultFilter } = require('../../../util/ast-util')
 const Config = require('../../../config')
 const logger = require('../../../util/logger')(__filename)
 const { lodashCloneWithTag } = require('../../../util/clone-util')
+const { FunctionValue } = require('../../../engine/analyzer/common/value/function') as typeof import('../../../engine/analyzer/common/value/function')
+const { ClassValue } = require('../../../engine/analyzer/common/value/class') as typeof import('../../../engine/analyzer/common/value/class')
+const { getEntryPointOwnerKey } = require('../../../engine/analyzer/common/entrypoint/current-entrypoint') as { getEntryPointOwnerKey: () => string | undefined }
+const { getJavaFindingSignature, isJavaCandidateFinding } = require('./java-finding-candidate') as typeof import('./java-finding-candidate')
+const { getJavaEntrypointFindingCollector } = require('./java-entrypoint-finding-collector') as typeof import('./java-entrypoint-finding-collector')
 
 const TAINT_TAG_NAME_JAVA = 'JAVA_INPUT'
 
@@ -26,6 +32,7 @@ type JavaEntrypointConfig = EntryPointRuleConfig & {
   packageName?: string
   paramTypes?: string[]
   signature?: string
+  funcLoc?: { start?: number; end?: number }
 }
 
 type JavaTypeParamNode = {
@@ -46,10 +53,35 @@ type CallableAstLike = JavaEntrypointFunctionNode & {
   node?: JavaEntrypointFunctionNode
 }
 
+type JavaOwnerLike = {
+  vtype?: string
+  logicalQid?: string
+  qid?: string
+  sid?: string
+  ast?: CallableAstLike & { node?: { loc?: AstSourceLocation & { sourcefile?: string } } }
+  parent?: JavaOwnerLike
+  _this?: JavaOwnerLike
+  members?: Map<string, unknown>
+  value?: Record<string, unknown>
+}
 type FunctionClosureLike = {
   vtype?: string
   ast?: CallableAstLike
   overloaded?: JavaEntrypointFunctionNode[]
+  parent?: JavaOwnerLike
+}
+
+type JavaSymbolTableLike = {
+  get: (key: unknown) => unknown
+}
+
+type JavaClassMapLike = {
+  values: () => Iterable<unknown>
+}
+
+type JavaAnalyzerLike = {
+  classMap?: JavaClassMapLike
+  symbolTable?: JavaSymbolTableLike
 }
 
 type JavaTypeResolverLike = {
@@ -143,13 +175,21 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
    * @param entrypoint
    */
   matchEntrypointFunction(node: JavaEntrypointFunctionNode, entrypoint: JavaEntrypointConfig): boolean {
-    if (entrypoint.funcLocStart != null || entrypoint.funcLocEnd != null) {
+    const funcLocStart = entrypoint.funcLocStart ?? entrypoint.funcLoc?.start
+    const funcLocEnd = entrypoint.funcLocEnd ?? entrypoint.funcLoc?.end
+    if (funcLocStart != null || funcLocEnd != null) {
       const loc = getSourceLineLoc(node)
-      const startMatches = entrypoint.funcLocStart == null || loc.start === entrypoint.funcLocStart
-      const endMatches = entrypoint.funcLocEnd == null || loc.end === entrypoint.funcLocEnd
-      if (startMatches && endMatches) return true
+      const startMatches = funcLocStart == null || loc.start === funcLocStart
+      const endMatches = funcLocEnd == null || loc.end === funcLocEnd
+      return startMatches && endMatches
     }
-    return matchParamTypes(node, entrypoint.paramTypes) || matchSignature(node, entrypoint.signature)
+    if (Array.isArray(entrypoint.paramTypes) && entrypoint.paramTypes.length > 0) {
+      return matchParamTypes(node, entrypoint.paramTypes)
+    }
+    if (typeof entrypoint.signature === 'string') {
+      return matchSignature(node, entrypoint.signature)
+    }
+    return true
   }
 
   /**
@@ -161,6 +201,8 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     const hasDisambiguator =
       entrypoint.funcLocStart != null ||
       entrypoint.funcLocEnd != null ||
+      entrypoint.funcLoc?.start != null ||
+      entrypoint.funcLoc?.end != null ||
       (Array.isArray(entrypoint.paramTypes) && entrypoint.paramTypes.length > 0) ||
       typeof entrypoint.signature === 'string'
     if (!hasDisambiguator || !isFunctionClosureLike(entryPointSymVal)) {
@@ -172,7 +214,7 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     )
     const matchedNode = candidates.find((node) => this.matchEntrypointFunction(node, entrypoint))
     if (!matchedNode) {
-      return entryPointSymVal
+      return undefined
     }
 
     const cloned = lodashCloneWithTag(entryPointSymVal) as FunctionClosureLike
@@ -181,6 +223,136 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     cloned.ast.node = matchedNode
     cloned.overloaded = [matchedNode]
     return cloned
+  }
+
+  /**
+   * 从方法 AST 中收集匿名内部类或局部类里的同名方法。
+   * @param root - 外层方法 AST
+   * @param functionName - 方法名
+   * @param ownerClosure - 外层方法闭包
+   * @returns 匿名或嵌套方法闭包
+   */
+  collectNestedEntryPointClosures(
+    root: JavaEntrypointFunctionNode,
+    functionName: string,
+    ownerClosure: FunctionClosureLike
+  ): FunctionClosureLike[] {
+    const result: FunctionClosureLike[] = []
+    const visited = new Set<object>()
+    const visit = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return
+      const record = value as Record<string, unknown>
+      if (visited.has(record)) return
+      visited.add(record)
+      if (record !== root && record.type === 'FunctionDefinition') {
+        const node = record as JavaEntrypointFunctionNode
+        const nodeName = node.id?.name ?? node.name
+        if (nodeName === functionName) {
+          const owner = this.createNestedEntryPointOwner(ownerClosure, node)
+          result.push(this.createNestedEntryPointClosure(ownerClosure, owner, node))
+        }
+      }
+      for (const [key, child] of Object.entries(record)) {
+        if (key === 'parent' || key === 'loc' || key === '_meta') continue
+        if (Array.isArray(child)) child.forEach(visit)
+        else visit(child)
+      }
+    }
+    visit(root)
+    return result
+  }
+
+  /**
+   * 创建嵌套方法的独立 owner，保持其 parent、this 和限定名与外层方法隔离。
+   * @param ownerClosure - 外层方法闭包
+   * @param node - 嵌套方法 AST
+   * @returns 嵌套方法 owner
+   */
+  createNestedEntryPointOwner(ownerClosure: FunctionClosureLike, node: JavaEntrypointFunctionNode): JavaOwnerLike {
+    const parent = ownerClosure.parent
+    const parentQid = parent?.logicalQid ?? parent?.qid ?? ''
+    const loc = getSourceLineLoc(node)
+    const suffix = `<anonymousFunc_${loc.start ?? 0}_${loc.end ?? 0}>`
+    const owner = new ClassValue(parentQid, suffix, parent as never)
+    owner.ast = node
+    const nestedOwner = owner as unknown as JavaOwnerLike & { ast: { hasDecl: (key: string) => boolean } }
+    if (typeof nestedOwner.ast.hasDecl !== 'function') {
+      throw new TypeError('Nested entry point owner AST must be AstBinding')
+    }
+    return owner as unknown as JavaOwnerLike
+  }
+
+  /**
+   * 创建嵌套方法闭包，绑定到独立 owner。
+   * @param ownerClosure - 外层方法闭包
+   * @param owner - 嵌套方法 owner
+   * @param node - 嵌套方法 AST
+   * @returns 嵌套方法闭包
+   */
+  createNestedEntryPointClosure(
+    ownerClosure: FunctionClosureLike,
+    owner: JavaOwnerLike,
+    node: JavaEntrypointFunctionNode
+  ): FunctionClosureLike {
+    const parent = ownerClosure.parent
+    const qid = owner.logicalQid ?? owner.qid ?? owner.sid ?? '<anonymous>'
+    const closure = new FunctionValue(parent?.logicalQid ?? parent?.qid ?? '', {
+      sid: node.id?.name ?? node.name ?? owner.sid ?? '<anonymous>',
+      qid: `${qid}.${node.id?.name ?? node.name ?? 'function'}`,
+      parent: owner as never,
+      ast: node,
+      overloaded: [node],
+      _this: owner as never,
+    }) as FunctionClosureLike
+    closure.ast = node
+    closure.ast.fdef = node
+    closure.ast.node = node
+    closure.parent = owner
+    return closure
+  }
+
+  /**
+   * 收集指定文件和包下的所有 owner 方法，包含外层类及匿名内部类。
+   * @param entrypoint - 自定义入口配置
+   * @param analyzer - Java analyzer
+   * @param functionName - 方法名
+   * @returns 所有匹配的方法闭包
+   */
+  resolveAllMatchingEntryPoints(
+    entrypoint: JavaEntrypointConfig,
+    analyzer: JavaAnalyzerLike,
+    functionName: string
+  ): FunctionClosureLike[] {
+    const configuredFilePath = entrypoint.filePath
+    const configuredPackageName = entrypoint.packageName
+    const configuredOwnerName = configuredPackageName?.startsWith('.')
+      ? configuredPackageName.slice(1)
+      : configuredPackageName
+    if (!configuredFilePath || !configuredOwnerName || !analyzer.classMap || !analyzer.symbolTable) return []
+
+    const matched: FunctionClosureLike[] = []
+    const seen = new Set<FunctionClosureLike>()
+    for (const classRef of analyzer.classMap.values()) {
+      const classValue = analyzer.symbolTable.get(classRef)
+      if (!classValue || typeof classValue !== 'object') continue
+      const owner = classValue as JavaOwnerLike
+      const classNode = owner.ast?.node
+      const sourceFile = classNode?.loc?.sourcefile
+      const normalizedFile = this.normalizeAstSourceFilePath(sourceFile)
+      const isTargetFile = normalizedFile === configuredFilePath || sourceFile === configuredFilePath ||
+        (typeof sourceFile === 'string' && sourceFile.endsWith(configuredFilePath))
+      const ownerQid = owner.logicalQid ?? owner.qid ?? ''
+      const isTargetOwner = isTargetFile &&
+        (ownerQid === configuredOwnerName || ownerQid.startsWith(`${configuredOwnerName}.`) || ownerQid.startsWith(`${configuredOwnerName}$`) || ownerQid.startsWith(`${configuredOwnerName}<`))
+      if (!isTargetOwner) continue
+      const method = owner.members?.get(functionName) ?? owner.value?.[functionName]
+      if (isFunctionClosureLike(method) && !seen.has(method)) {
+        seen.add(method)
+        matched.push(method)
+        matched.push(...this.collectNestedEntryPointClosures(method.ast?.node ?? {}, functionName, method))
+      }
+    }
+    return matched
   }
 
   /**
@@ -378,10 +550,19 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
     EntryPoint: any,
     Constant: any
   ): void {
-    const exactEntryPointSymVal = this.resolveOverloadedEntryPoint(entryPointSymVal, entrypoint)
-    const resolvedSymVals = this.resolveInterfaceEntryPoint(exactEntryPointSymVal, func, analyzer)
-    if (resolvedSymVals.length > 0 && resolvedSymVals[0] !== exactEntryPointSymVal) {
-      this.augmentSourcesForInterfaceResolution(exactEntryPointSymVal, resolvedSymVals, func)
+    const matchedEntryPoints = this.resolveAllMatchingEntryPoints(entrypoint, analyzer, func)
+    const hasExplicitFilePath = typeof entrypoint.filePath === 'string' && entrypoint.filePath.length > 0
+    if (matchedEntryPoints.length === 0 && hasExplicitFilePath) return
+    const candidates = matchedEntryPoints.length > 0 ? matchedEntryPoints : [entryPointSymVal]
+    const resolvedSymVals: unknown[] = []
+    for (const candidate of candidates) {
+      const exactCandidate = this.resolveOverloadedEntryPoint(candidate, entrypoint)
+      if (!exactCandidate) continue
+      const resolvedCandidates = this.resolveInterfaceEntryPoint(exactCandidate, func, analyzer)
+      if (resolvedCandidates.length > 0 && resolvedCandidates[0] !== exactCandidate) {
+        this.augmentSourcesForInterfaceResolution(exactCandidate, resolvedCandidates, func)
+      }
+      resolvedSymVals.push(...resolvedCandidates)
     }
     for (const resolvedSymVal of resolvedSymVals) {
       const scopeVal = new Scoped('', {
@@ -597,7 +778,7 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
           // JAVA_INPUT 的 buffer 项，导致 args 自身 SanitizerTag 被漏
           const argsArrForTags = Array.isArray(args) ? args : [args]
           for (const a of argsArrForTags) {
-            // SanitizerTag 独立存放在 sanitizerTags 中，需通过专用接口读取。
+            // R37 W11：SanitizerTag 对象走旁路 sanitizerTags，必须用 getSanitizerTags()
             const sanitizerTags = a?.taint?.getSanitizerTags?.()
             if (sanitizerTags && sanitizerTags.length > 0) {
               allTaintTags.push(...sanitizerTags)
@@ -663,6 +844,16 @@ class JavaTaintAbstractChecker extends TaintCheckerJava {
             state.callstack,
             state.callsites
           )
+          if (!taintFlowFinding) continue
+          const javaFinding = taintFlowFinding as TaintFinding
+          const signature = getJavaFindingSignature(javaFinding)
+          const logicalEntrypointKey = getEntryPointOwnerKey()
+          const collector = logicalEntrypointKey ? getJavaEntrypointFindingCollector(logicalEntrypointKey) : undefined
+          if (isJavaCandidateFinding(javaFinding)) {
+            if (collector && signature) collector.registerCandidate(signature, javaFinding)
+            continue
+          }
+          if (collector && signature) collector.registerNormal(signature)
           if (!TaintOutputStrategyJava.isNewFinding(this.resultManager, taintFlowFinding)) continue
           this.resultManager.newFinding(taintFlowFinding, TaintOutputStrategyJava.outputStrategyId)
         }

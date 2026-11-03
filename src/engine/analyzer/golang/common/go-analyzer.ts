@@ -24,6 +24,7 @@ import type {
   Node,
   UnaryExpression,
   ReturnStatement,
+  ConditionalExpression,
 } from '../../../../types/uast'
 import type { BoundCall, CallArgs, CallInfo } from '../../common/call-args'
 import { processGoFrameworkCall } from '../framework-call-model'
@@ -32,7 +33,15 @@ import { goCallSummaryPolicy } from '../../common/call-summary/language/golang'
 import type { CallSummaryLanguagePolicy } from '../../common/call-summary/language/types'
 import { INTERNAL_CALL } from '../../common/call-args'
 import type { ClassHierarchy } from '../../../../resolver/common/value/class-hierarchy'
-import { EntryPointMetricsCollector, type EntryPointMetric, type EntryPointMetricType } from '../../../../util/entrypoint-metrics'
+import { EntryPointMetricsCollector, type EntryPointMetric, type EntryPointMetricType, describeEntryPointForLog } from '../../../../util/entrypoint-metrics'
+import {
+  type MemoryGuardState,
+  createMemoryGuardState,
+  probeMemoryAndUpdate,
+  getEntryPointHeapDeltaMb,
+  resetForEntryPoint,
+  flushFindingsToReport,
+} from '../../common/memory-guard/entrypoint-memory-guard'
 
 const path = require('path')
 const _ = require('lodash')
@@ -235,6 +244,41 @@ class GoAnalyzer extends Analyzer {
   goCobraContextFallback?: SymbolValueType
 
   /**
+   * 同一 callsite 单入口内解释次数限流：避免 Go method chaining（builder pattern）
+   * receiver 反复 executeCall 同一调用点导致 V8 堸线性增长。对齐 Java 的 per-callsite 限流设计。
+   * key = node._meta?.nodehash || ${loc.start.line}:${loc.start.column}，value = 累计解释次数。
+   * 生命周期：per-entrypoint，入口开始时通过 resetMemoryGuardForEntryPoint override 清空。
+   */
+  protected callsiteInterpretCount: Map<string, number> = new Map()
+
+  /**
+   * per-callsite 解释次数上限。超过则 fallback 到 processLibArgToRet（ARG→RET 保守传播），
+   * 保留 sink 匹配（checkAtFunctionCallBefore 已在 processCallExpression 前段无条件调用）+
+   * checkAtFunctionCallAfter 在 fallback 后仍触发。
+   * 阈值内（≤200）保留完整语义（CHA fallback 正常跑，接口方法 taint 传播保留）。
+   */
+  private static readonly CALLSITE_INTERPRET_LIMIT = 200
+
+  /**
+   * Go 单入口内存护栏 delta 模式状态（独立新设计，不是"对齐 Python"绝对模式）。
+   * GoAnalyzer 自存 deltaLimitMb，不改共享 MemoryGuardState 接口。
+   */
+  protected override memoryGuardState: MemoryGuardState | undefined = createMemoryGuardState()
+
+  /**
+   * Go per-entrypoint heap growth delta 上限（MB），超过即 abort 当前入口。
+   * 默认 2048（2GB），通过 YASA_GO_EP_MEM_LIMIT_DELTA_MB 环境变量配置。
+   * delta 模式只看本入口增长，不受前序入口累积影响，比绝对模式更公平。
+   */
+  private deltaLimitMb: number = Config.goEntrypointMemoryLimitDeltaMB || 2048
+
+  /** 内存护栏 abort 计数（跨入口累加），用于 diagnostics 日志。 */
+  private memoryGuardAbortCount: number = 0
+
+  /** 内存护栏 flush 计数（跨入口累加），用于 diagnostics 日志。 */
+  private memoryGuardFlushCount: number = 0
+
+  /**
    *
    * @param options
    */
@@ -309,7 +353,6 @@ class GoAnalyzer extends Analyzer {
       }
       let { goModPath } = this.topScope.context.modules
       if (!goModPath) goModPath = ''
-      // 模块名包含多级路径时，解析结果不能被截断
       const modulePackageManager = defaultScope || this.topScope.context.packages.getSubPackage(moduleName, true)
 
       // 计算项目模块根路径(go.mod所在目录)
@@ -606,9 +649,29 @@ class GoAnalyzer extends Analyzer {
         })
       }
       if (!ret) {
-        ret = this.executeWithSummary(scope, fclos, callInfo, state, () =>
-          super.processCallExpression(scope, node, state)
-        )
+        // per-callsite 限流检查：在 super.processCallExpression（executeCall 入口）之前，
+        // 此时 fclos + argvalues 已就绪，checkAtFunctionCallBefore 已在前段无条件调用。
+        // 超限 fallback 到 processLibArgToRet（ARG→RET 保守传播），不补调 checkAtFunctionCallBefore
+        //（processCallExpression 前段已无条件调用，避免重复触发 sink 匹配）。
+        // 阈值内走 super.processCallExpression 正常 dispatch，保留完整语义（含 CHA fallback）。
+        const callsiteOverLimit = this.incrementAndCheckCallsiteLimit(node)
+        if (callsiteOverLimit) {
+          // 超限 fallback：fclos 是已解析的有效值，Go override processLibArgToRet 能保留 ret.rtype。
+          // 限流 fallback 后 ret 是 SymbolValue（vtype='symbol'），CHA fallback 触发条件
+          // `(!ret || ret.vtype === 'symbol')` 仍满足，CHA fallback 块仍会执行。
+          // 对接口方法 method chaining：CHA fallback 内 executeCall 递归进入 processCallExpression
+          // 时仍经过上方限流点，累计计数仍生效（限流通过 CHA fallback 内部递归生效，而非跳过 CHA fallback）。
+          // 对非接口方法：CHA fallback 触发条件 `fclos?.vtype !== 'fclos' || checkFclosInInterface(fclos)` 不满足，
+          // CHA fallback 不执行，限流 fallback 的 ARG→RET 保守传播有效。
+          // checkAtFunctionCallAfter 在 fallback 后仍触发（ret 非 undefined）。
+          ret = this.processLibArgToRet(node, fclos, argvalues, scope, state, {
+            callArgs: this.buildCallArgs(node, argvalues, fclos),
+          })
+        } else {
+          ret = this.executeWithSummary(scope, fclos, callInfo, state, () =>
+            super.processCallExpression(scope, node, state)
+          )
+        }
       }
       this.applyGoExternalReturnTypeModel(scope, node, fclos, ret)
       const shouldForceGoShortVarCallback = node._meta?.goShortVarRhs && this.hasGoCallbackArgument(node, argvalues)
@@ -722,7 +785,7 @@ class GoAnalyzer extends Analyzer {
 
             // 绑定 this 并执行。caller 的 _this 指向接口 receiver（rtype=interface），
             // 直接共享会让 impl 函数体内的 receiver.field MemberAccess 继承错误 interface 类型。
-            // Go method body 内的 receiver 变量从当前 receiver 对象继承 rtype。
+            // Go method body 内 `p` 实际查找 receiver 对象（见 W5 根因 §3.2），其 rtype 即来自 receiver。
             // 修复：进入 impl 前把 receiver 对象的 rtype 原地改为 impl struct 类型节点，
             // 执行完毕立刻恢复，避免污染全局 provider 的 rtype 跨 impl 迭代泄漏。
             const oldThis = implFclos._this
@@ -2047,6 +2110,43 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
+   * 三元表达式 override：加互斥分支预算快照（对齐 Java 的互斥分支预算快照设计）。
+   * 分支前 snapshotMethodBudgets → consequent 执行后快照 → restoreMethodBudgets 恢复到分支前 →
+   * alternative 执行后快照 → mergeMethodBudgets 取每 key max 合并。
+   * 避免互斥分支内同一 callsite 被双计次导致限流阈值被拉低。
+   * processIfStatement 暂不 override（对齐 Java），测试若发现 if/else 双计次影响再补。
+   */
+  override processConditionalExpression(scope: Scope, node: ConditionalExpression, state: State): SymbolValueType {
+    const test = this.processInstruction(scope, node.test, state)
+    const rscope = MemState.cloneScope(scope, state)
+    const substates = MemState.forkStates(state)
+    const lstate = substates[0]
+    const rstate = substates[1]
+    this.processLRScopeInternal(lstate, rstate, state, test)
+
+    const res = new UnionValue(
+      undefined,
+      undefined,
+      `${scope.qid}.<union@cond:${node.loc?.start?.line}:${node.loc?.start?.column}>`,
+      node
+    )
+
+    const budgetSnapshot = this.snapshotMethodBudgets()
+    const consequentVal = this.processInstruction(scope, node.consequent, lstate)
+    const consequentFinal = this.snapshotMethodBudgets()
+
+    this.restoreMethodBudgets(budgetSnapshot)
+    const alternativeVal = this.processInstruction(rscope, node.alternative, rstate)
+    const alternativeFinal = this.snapshotMethodBudgets()
+
+    this.mergeMethodBudgets(consequentFinal, alternativeFinal)
+
+    res.appendValue(consequentVal)
+    res.appendValue(alternativeVal)
+    return res
+  }
+
+  /**
    *
    * @param fscope
    * @param params
@@ -2082,6 +2182,135 @@ class GoAnalyzer extends Analyzer {
       callArgs.receiver = fclos?._this || fclos?.object || fclos?.getThisObj?.()
     }
     return callArgs
+  }
+
+  /**
+   * per-callsite 解释次数限流检查：超限返回 true，调用方应 fallback 到保守传播。
+   * key = node._meta?.nodehash || ${loc.start.line}:${loc.start.column}，对齐 Java 的 per-callsite 限流设计。
+   * 不加 callstack/scope fingerprint：method chain O(N²) 组合爆炸本身就是同 callsite 被反复解释，
+   * 限流不分上下文更激进有效。
+   */
+  private incrementAndCheckCallsiteLimit(node: CallExpression): boolean {
+    const loc = node.loc?.start
+    const meta = (node as { _meta?: { nodehash?: string } })._meta
+    const key = meta?.nodehash || (loc ? `${loc.line}:${loc.column}` : '')
+    if (!key) return false
+    const count = (this.callsiteInterpretCount.get(key) || 0) + 1
+    this.callsiteInterpretCount.set(key, count)
+    return count > GoAnalyzer.CALLSITE_INTERPRET_LIMIT
+  }
+
+  /**
+   * 快照 callsite 解释预算（互斥分支预算快照，对齐 Java 的互斥分支预算快照设计）。
+   * 用于 processConditionalExpression 三元表达式互斥分支避免双计次。
+   */
+  private snapshotMethodBudgets(): { callsiteCount: Map<string, number> } {
+    return { callsiteCount: new Map(this.callsiteInterpretCount) }
+  }
+
+  /**
+   * 恢复 callsite 解释预算到指定快照（对齐 Java 的互斥分支预算恢复设计）。
+   */
+  private restoreMethodBudgets(snapshot: { callsiteCount: Map<string, number> }): void {
+    this.callsiteInterpretCount = new Map(snapshot.callsiteCount)
+  }
+
+  /**
+   * 合并互斥分支的 callsite 解释预算：取每 key 两分支的 max（对齐 Java 的互斥分支预算合并设计）。
+   * 互斥分支内同一 callsite 被双计次时，合并取 max 而非 sum，限流阈值不被双计次拉低。
+   */
+  private mergeMethodBudgets(
+    consequentFinal: { callsiteCount: Map<string, number> },
+    alternativeFinal: { callsiteCount: Map<string, number> }
+  ): void {
+    const keys = new Set([...consequentFinal.callsiteCount.keys(), ...alternativeFinal.callsiteCount.keys()])
+    for (const key of keys) {
+      this.callsiteInterpretCount.set(
+        key,
+        Math.max(consequentFinal.callsiteCount.get(key) || 0, alternativeFinal.callsiteCount.get(key) || 0)
+      )
+    }
+  }
+
+  /**
+   * Go 单入口内存护栏 delta 模式 hook：在 processInstruction/executeCall 边界检查
+   * per-entrypoint heap growth delta，超 deltaLimitMb 设 state.exceeded=true 并 return true。
+   * 复用共享 probeMemoryAndUpdate（更新 peak，忽略返回值的绝对模式判定）+
+   * getEntryPointHeapDeltaMb（取 delta），自行 delta 判定 + 自己设 state.exceeded。
+   *
+   * 仅在 symbolInterpret 入口循环内生效：resetMemoryGuardForEntryPoint 调用后 baselineHeapBytes > 0。
+   * processModule 阶段 baselineHeapBytes=0（未 reset），guard 直接 return false，
+   * 避免 baseline=0 导致 delta=peak 误判超限、abort processModule 导致 entrypoint 收集失败。
+   */
+  protected override shouldAbortExecutionForMemory(_state: State): boolean {
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) return false
+    // processModule 阶段未 reset baseline，guard 不生效（避免误杀 processModule）
+    if (state.baselineHeapBytes === 0) return false
+    // 复用 probeMemoryAndUpdate 更新 peak，忽略返回值（绝对模式判定不适用 Go delta）
+    probeMemoryAndUpdate(state)
+    // 复用 getEntryPointHeapDeltaMb 取 delta，自行 delta 判定
+    const { deltaMb } = getEntryPointHeapDeltaMb(state)
+    if (deltaMb >= this.deltaLimitMb) {
+      state.exceeded = true
+      return true
+    }
+    return false
+  }
+
+  /**
+   * 入口开始前重置护栏状态：调共享 resetForEntryPoint（reset baseline + label）+
+   * 清 callsiteInterpretCount（per-entrypoint reset，对齐 Java 的入口级 reset 设计）。
+   * 必须在 symbolTable.clear() 之后调用，确保 baseline 探测时 tmpSymbolTable 已清理（delta 精度不失真）。
+   */
+  protected override resetMemoryGuardForEntryPoint(entryPointLabel: string): void {
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) return
+    resetForEntryPoint(state, entryPointLabel)
+    this.callsiteInterpretCount.clear()
+  }
+
+  /**
+   * 入口结束处理护栏：若 exceeded=true 则 flush 当前 resultManager finding 到 report.sarif，
+   * 强制 gc（--expose-gc 未启时 noop），记录 diagnostics（label/peak/delta/limit/flushedFindings）。
+   * Go tmpSymbolTable 在下一入口 symbolTable.clear() 时清理，无需额外 clear（与 Python 入口结束 finalize 清理不同）。
+   */
+  protected override onEntryPointMemoryGuardFinalize(
+    _entryPoint: unknown,
+    findingsBefore: number
+  ): { aborted: boolean; peakHeapMb: number; deltaHeapMb: number } {
+    const state = this.memoryGuardState
+    if (!state || !state.enabled) {
+      return { aborted: false, peakHeapMb: 0, deltaHeapMb: 0 }
+    }
+    const deltaInfo = getEntryPointHeapDeltaMb(state)
+    // Go 自行 delta 判定：共享 probe 在 delta >= 共享 deltaLimitMb 时会设 state.exceeded=true，
+    // 但 Go 阈值（this.deltaLimitMb）可能高于共享默认，此时不应判 aborted，避免误 flush/gc/log。
+    const aborted = deltaInfo.deltaMb >= this.deltaLimitMb
+    if (!aborted) {
+      return { aborted: false, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
+    }
+    this.memoryGuardAbortCount++
+    const resultManager = this.checkerManager?.getResultManager?.()
+    const findingsAtFlush = flushFindingsToReport(resultManager ?? null, Config)
+    state.cumulativeFlushedFindings = findingsAtFlush
+    this.memoryGuardFlushCount++
+    // Go tmpSymbolTable 在下一入口 symbolTable.clear() 时清理，无需额外 clear
+    const gcFn = (globalThis as { gc?: () => void }).gc
+    if (typeof gcFn === 'function') {
+      try {
+        gcFn()
+      } catch (_e) {
+        /* --expose-gc 未启时无 gc，忽略 */
+      }
+    }
+    logger.warn(
+      `[memory-guard] entrypoint aborted: ${state.entryPointLabel} peak=${deltaInfo.peakMb.toFixed(1)}MB ` +
+        `delta=${deltaInfo.deltaMb.toFixed(1)}MB limit=${this.deltaLimitMb}MB ` +
+        `flushedFindings=${findingsAtFlush} cumulativeAborts=${this.memoryGuardAbortCount} ` +
+        `cumulativeFlushes=${this.memoryGuardFlushCount} findingsBefore=${findingsBefore}`
+    )
+    return { aborted: true, peakHeapMb: deltaInfo.peakMb, deltaHeapMb: deltaInfo.deltaMb }
   }
 
   /**
@@ -2320,6 +2549,11 @@ class GoAnalyzer extends Analyzer {
       const findingsBefore = this.countFindings()
       let skipped = false
       let skipReason: string | undefined
+      // 单入口内存护栏 reset：每入口开始前记录基线 heap + 清 exceeded + 清 callsiteInterpretCount。
+      // 调用顺序约束：必须在 symbolTable.clear()（清上一入口 tmpSymbolTable）之后调用，
+      // 否则 baseline 探测会包含上一入口 tmpSymbolTable 残留，delta 偏小，delta 模式探测精度下降。
+      const epLabel = describeEntryPointForLog(entryPoint).replace(/^\[|\]$/g, '')
+      let memoryAborted = false
       try {
         if (entryPoint.isPreProcess && this.isTmpSymbolTableOpen) {
           this.restoreSymbolTable()
@@ -2330,6 +2564,9 @@ class GoAnalyzer extends Analyzer {
         if (!entryPoint.isPreProcess && !this.isTmpSymbolTableOpen) {
           this.switchToTemporarySymbolTable()
         }
+
+        // resetMemoryGuardForEntryPoint 必须在 symbolTable.clear() 之后调用（baseline 干净）
+        this.resetMemoryGuardForEntryPoint(epLabel)
 
         if (entryPoint.type === constValue.ENGIN_START_FILE_BEGIN) {
           skipped = true
@@ -2404,7 +2641,21 @@ class GoAnalyzer extends Analyzer {
           this.checkerManager?.resultManagerProxy,
         )
       } finally {
+        // 单入口内存护栏 finalize：若本入口 exceeded，flush 已分析 finding + gc + 记 diagnostics
+        const guardResult = this.onEntryPointMemoryGuardFinalize(entryPoint, findingsBefore)
+        if (guardResult.aborted) {
+          memoryAborted = true
+          if (!skipped) {
+            skipped = true
+            skipReason = `memory-guard-heap-exceeded:peak=${guardResult.peakHeapMb.toFixed(1)}MB,delta=${guardResult.deltaHeapMb.toFixed(1)}MB`
+          }
+        }
         this.recordEntryPointLoopMetric(entryPoint, metricStartTime, findingsBefore, skipped, skipReason, 1)
+        if (memoryAborted) {
+          logger.warn(
+            `[memory-guard] entrypoint ${index}/${entryPoints.length} skipped due to memory guard: ${epLabel}`
+          )
+        }
       }
     }
     return true

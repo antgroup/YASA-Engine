@@ -429,7 +429,6 @@ function generateScanSummary(
     callSummaryEffectiveness: buildCallSummaryEffectiveness(analyzer),
   }
 
-
   // 返回紧凑的 JSON 字符串（无空格）
   return JSON.stringify(scanSummary)
 }

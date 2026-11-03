@@ -1,4 +1,5 @@
 import { FindingsCheckpointWriter, combineFindingsFinalizationErrors } from '../../common/findings-checkpoint'
+import { describeEntryPointForLog } from '../../../../util/entrypoint-metrics'
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars, @typescript-eslint/no-use-before-define */
 import JavaTypeRelatedInfoResolver from '../../../../resolver/java/java-type-related-info-resolver'
 import type { Invocation } from '../../../../resolver/common/value/invocation'
@@ -34,6 +35,8 @@ import type { CallInfo } from '../../common/call-args'
 import { javaCallSummaryPolicy } from '../../common/call-summary/language/java'
 import type { CallSummaryLanguagePolicy } from '../../common/call-summary/language/types'
 import type Unit from '../../common/value/unit'
+import { CallExprValue } from '../../common/value/call-expr'
+import { GrpcStreamObserverModel } from './builtins/grpc-stream-observer-builtins'
 
 const _ = require('lodash')
 const UastSpec = require('@ant-yasa/uast-spec')
@@ -54,6 +57,7 @@ const { executeViaEntryPointExecutor } =
 const Constant = require('../../../../util/constant')
 const Config = require('../../../../config')
 const { handleException } = require('../../common/exception-handler')
+const TaintOutputStrategyJava = require('../../../../checker/common/output/taint-output-strategy')
 const MemState = require('../../common/memState')
 const {
   ValueUtil: { UndefinedValue, UnionValue },
@@ -68,6 +72,10 @@ const { addElementToBuffer, getAllElementFromBuffer, collectDeepTaintDonors } = 
 const { yasaLog } = require('../../../../util/format-util')
 const { createDeadlinePlan, createTimeoutLatch, formatBudgetMs } =
   require('../../common/entrypoint/deadline-scheduler') as typeof import('../../common/entrypoint/deadline-scheduler')
+const {
+  javaEntrypointFindingCollectors,
+  getJavaLogicalEntrypointKey,
+} = require('../../../../checker/taint/java/java-entrypoint-finding-collector') as typeof import('../../../../checker/taint/java/java-entrypoint-finding-collector')
 
 /** 接口虚分派未解析具体 receiver 时的 exhaustive fan-out 上限：超过阈值保留 lib fallback 防执行爆炸 */
 const INTERFACE_EXHAUSTIVE_FAN_OUT_LIMIT = 64
@@ -91,6 +99,18 @@ type JavaRuntimeValue = Unit & {
   rtype?: JavaRuntimeType
   runtime?: { execute?: unknown }
   getThisObj?: () => unknown
+}
+
+type LifecycleCallDepthPruneLocation = {
+  sourcefile?: string
+  start?: { line?: number; column?: number }
+  end?: { line?: number; column?: number }
+}
+
+type LifecycleCallDepthPruneRecord = {
+  callee: string
+  location: LifecycleCallDepthPruneLocation
+  depth: number
 }
 
 type MiscBufferCarrier = Value & {
@@ -1043,6 +1063,53 @@ class JavaAnalyzer extends Analyzer {
 
   protected currentFanoutOverloadIdentity = ''
 
+  // 生命周期回调内的普通调用深度剪枝默认关闭，避免影响普通入口点。
+  protected lifecycleCallDepthPruneEnabled = false
+
+  public lifecycleCallDepthPrunes: LifecycleCallDepthPruneRecord[] = []
+
+  /**
+   * 在生命周期动态作用域内执行回调，并保证嵌套调用和异常都恢复原状态。
+   * @param callback 生命周期回调
+   */
+  public withLifecycleCallDepthPrune<T>(callback: () => T): T {
+    const previous = this.lifecycleCallDepthPruneEnabled
+    this.lifecycleCallDepthPruneEnabled = true
+    try {
+      return callback()
+    } finally {
+      this.lifecycleCallDepthPruneEnabled = previous
+    }
+  }
+
+  /**
+   * 返回生命周期调用深度剪枝记录。
+   */
+  getLifecycleCallDepthPrunes(): ReadonlyArray<LifecycleCallDepthPruneRecord> {
+    return this.lifecycleCallDepthPrunes
+  }
+
+  /**
+   * 记录生命周期普通调用的深度剪枝。
+   * @param fclos 被剪枝的函数闭包
+   * @param node 调用位置
+   * @param depth 当前调用栈深度
+   */
+  protected recordLifecycleCallDepthPrune(fclos: unknown, node: unknown, depth: number): void {
+    const closure = fclos as { qid?: unknown; sid?: unknown } | null
+    const callNode = node as { loc?: LifecycleCallDepthPruneLocation } | null
+    const callee = typeof closure?.qid === 'string'
+      ? closure.qid
+      : typeof closure?.sid === 'string'
+        ? closure.sid
+        : '<anonymous>'
+    this.lifecycleCallDepthPrunes.push({
+      callee,
+      location: callNode?.loc ?? {},
+      depth,
+    })
+  }
+
   /**
    * 构造函数
    * @param options - 分析器选项
@@ -1850,42 +1917,7 @@ class JavaAnalyzer extends Analyzer {
   override processBinaryExpression(scope: Scope, node: BinaryExpression, state: State): BinaryExprValue {
     let res = super.processBinaryExpression(scope, node, state)
 
-    if (
-      res?.left?.vtype === 'primitive' &&
-      res?.right?.vtype === 'primitive' &&
-      res?.operator &&
-      ['>', '<', '==', '!=', '>=', '<='].includes(res.operator)
-    ) {
-      const leftPrim = res.left as PrimitiveValueType
-      const rightPrim = res.right as PrimitiveValueType
-      let leftPrimitive = leftPrim.value
-      if (leftPrim.literalType === 'string' && leftPrimitive != null && typeof leftPrimitive === 'string') {
-        leftPrimitive = `'${leftPrimitive.replaceAll("'", "\\'")}'`
-      }
-      let rightPrimitive = rightPrim.value
-      if (rightPrim.literalType === 'string' && rightPrimitive != null && typeof rightPrimitive === 'string') {
-        rightPrimitive = `'${rightPrimitive.replaceAll("'", "\\'")}'`
-      }
-      if (leftPrimitive != null && rightPrimitive != null) {
-        const expr = leftPrimitive + res.operator + rightPrimitive
-        try {
-          // eslint-disable-next-line no-eval
-          const result = eval(expr)
-          if (result != null) {
-            res = new PrimitiveValue(
-              scope.qid,
-              `<operatorExp_${node.operator}_${node.loc.start?.line}_${node.loc.start?.column}_${node.loc.end?.line}_${node.loc.end?.column}>`,
-              result,
-              null,
-              'Literal',
-              node.loc
-            )
-          }
-        } catch (e) {
-          // 忽略 eval 错误
-        }
-      }
-    } else if (res?.operator === 'instanceof') {
+    if (res?.operator === 'instanceof') {
       if (res?.left?.vtype === 'primitive' && (res.left as PrimitiveValueType).literalType === 'null') {
         res = new PrimitiveValue(scope.qid, '<bool_false>', false, null, 'Literal', node.loc)
       } else if (res?.right?.vtype === 'class') {
@@ -2775,6 +2807,11 @@ class JavaAnalyzer extends Analyzer {
       if (callbackRes && !res) res = callbackRes
     }
 
+    // AbstractOptUtil.execute callback->Processor 分派：jar 源码不可见时按 optRequest 类型匹配 Processor
+    if (this.dispatchOptUtilExecuteToProcessors(fclos, node, argvalues, state, scope)) {
+      fclosExecuted = true
+    }
+
     const bridgedCallbackRes = this.dispatchReceiverCallbackMethod(
       node,
       fclos,
@@ -3638,6 +3675,16 @@ class JavaAnalyzer extends Analyzer {
   /**
    *
    */
+  /** 为 Java 入口候补绑定生产环境全局去重与入库适配器。 */
+  protected configureJavaCandidatePromoter(): void {
+    const resultManager = this.checkerManager?.resultManagerProxy
+    if (!resultManager) return
+    javaEntrypointFindingCollectors.configurePromoter({
+      isNewFinding: (finding) => TaintOutputStrategyJava.isNewFinding(resultManager, finding),
+      emit: (finding) => resultManager.newFinding(finding, TaintOutputStrategyJava.outputStrategyId),
+    })
+  }
+
   override startAnalyze() {
     super.startAnalyze()
     FullCallGraphFileEntryPoint.makeFullCallGraphByType(this, this.typeResolver)
@@ -3649,6 +3696,8 @@ class JavaAnalyzer extends Analyzer {
    */
   // eslint-disable-next-line complexity
   async symbolInterpret(): Promise<boolean> {
+    this.configureJavaCandidatePromoter()
+    javaEntrypointFindingCollectors.beginRun()
     const entryPoints = (this as { entryPoints?: JavaEntryPointShape[] }).entryPoints ?? []
     const state = this.initState(this.topScope) as State & { entryPointStartTimestamp?: number | null }
     if (_.isEmpty(entryPoints)) {
@@ -3721,24 +3770,36 @@ class JavaAnalyzer extends Analyzer {
         let skipped = false
         let skipReason: string | undefined
         let overloadCount = 0
+        // 单入口内存护栏 reset：每入口开始前记录基线 heap，清 exceeded
+        const epLabel = describeEntryPointForLog(entryPoint).replace(/^\[|\]$/g, '')
+        let memoryAborted = false
+        const logicalEntrypointKey = getJavaLogicalEntrypointKey(entryPoint)
+        const findingCollector = javaEntrypointFindingCollectors.get(logicalEntrypointKey)
+        const timeoutQueueBefore = this.timeoutEntryPoints.length
+        let entrypointCompleted = false
+        let entryFailed = false
         try {
           if (!activeDeadlinePlan.canStartAnalysis()) {
             skipped = true
             skipReason = 'analysis-deadline'
+            javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
             continue
           }
           this.symbolTable.clear()
+          this.resetMemoryGuardForEntryPoint(epLabel)
           entryPoint.entryPointSymVal = this.tmpSymbolTable.tmpTableCopyUnit(entryPoint.entryPointSymVal)
           entryPoint.scopeVal = this.tmpSymbolTable.tmpTableCopyUnit(entryPoint.scopeVal)
           const symVal = entryPoint.entryPointSymVal
           if (entryPoint.type !== Constant.ENGIN_START_FUNCALL) {
             skipped = true
             skipReason = 'unsupported'
+            javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
             continue
           }
           if (!symVal?.ast?.node) {
             skipped = true
             skipReason = 'unsupported'
+            javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
             continue
           }
           const entryPointMark = this.markEntryPointForAnalysis(entryPoint, hasAnalysised)
@@ -3771,6 +3832,7 @@ class JavaAnalyzer extends Analyzer {
           if (!overloadedList?.length) {
             skipped = true
             skipReason = 'no-overloads'
+            javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
             continue
           }
 
@@ -3783,6 +3845,7 @@ class JavaAnalyzer extends Analyzer {
             if (!attemptBudget) {
               skipped = true
               skipReason = 'analysis-deadline'
+              javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
               break
             }
             executeViaEntryPointExecutor(
@@ -3801,6 +3864,8 @@ class JavaAnalyzer extends Analyzer {
                 classify: () => 'function',
                 execute: () => {
                   let beforeCalled = false
+                  let attemptTimedOut = false
+                  let completedArgValues: Value[] = []
                   state.entryPointStartTimestamp = Date.now()
                   state.entryPointDeadline = attemptBudget.deadline
                   state.entryPointClock = activeDeadlinePlan.now
@@ -3813,6 +3878,7 @@ class JavaAnalyzer extends Analyzer {
                     this.methodCumulativeTime.clear()
                     overloadCount++
                     const argValues: Value[] = []
+                    completedArgValues = argValues
                     try {
                       for (const param of overloadFuncDef.parameters ?? []) {
                         if (!param?.id) continue
@@ -3837,6 +3903,7 @@ class JavaAnalyzer extends Analyzer {
                         argValues.push(argValue)
                       }
                     } catch (e) {
+                      entryFailed = true
                       handleException(
                         e,
                         'Error occurred in JavaAnalyzer.symbolInterpret: process argValue err',
@@ -3850,6 +3917,7 @@ class JavaAnalyzer extends Analyzer {
                         callArgs: this.buildCallArgs(overloadFuncDef, argValues, symVal),
                       })
                     } catch (e) {
+                      entryFailed = true
                       handleException(
                         e,
                         `[${overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
@@ -3882,22 +3950,42 @@ class JavaAnalyzer extends Analyzer {
                         entryPoint.functionName ||
                           `<anonymousFunc_${overloadFuncDef.loc.start.line}_$${overloadFuncDef.loc.end.line}>`
                       )
-                      // 首遍超时的入口点入队重跑（无论 finding 是否增长，超时本身就意味着可能有未遍历路径）
-                      this.timeoutEntryPoints.push({ entryPoint, overloadFuncDef, argValues })
+                      // 首遍超时在入口 after hook 完成后入队，保持 execute→after→enqueue 顺序。
+                      attemptTimedOut = true
                     }
                   } finally {
                     this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
                   }
+                  if (attemptTimedOut) this.timeoutEntryPoints.push({ entryPoint, overloadFuncDef, argValues: completedArgValues })
                 },
               },
               this.checkerManager?.resultManagerProxy
             )
           }
+          if (entryFailed) {
+            javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'exception')
+          } else if (!skipped) {
+            if (this.timeoutEntryPoints.length > timeoutQueueBefore) findingCollector.deferForRerun()
+            else {
+              findingCollector.complete()
+              entrypointCompleted = true
+            }
+          }
         } finally {
+          if (skipped && !entrypointCompleted) javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
           state.entryPointDeadline = undefined
           state.entryPointClock = undefined
           state.entryPointTimeoutLatch = undefined
           this.globalState.entryPointTimeout = false
+          // 单入口内存护栏 finalize：若本入口 exceeded，flush 已分析 finding 并记 diagnostics
+          const guardResult = this.onEntryPointMemoryGuardFinalize(entryPoint, findingsBefore)
+          if (guardResult.aborted) {
+            memoryAborted = true
+            if (!skipped) {
+              skipped = true
+              skipReason = `memory-guard-heap-exceeded:peak=${guardResult.peakHeapMb.toFixed(1)}MB,delta=${guardResult.deltaHeapMb.toFixed(1)}MB`
+            }
+          }
           this.recordEntryPointLoopMetric(
             entryPoint,
             metricStartTime,
@@ -3906,6 +3994,11 @@ class JavaAnalyzer extends Analyzer {
             skipReason,
             overloadCount
           )
+          if (memoryAborted) {
+            logger.warn(
+              `[memory-guard] entrypoint ${epIdx}/${entryPoints.length} skipped due to memory guard: ${epLabel}`
+            )
+          }
         }
       }
       // 基于全局时间预算的超时入口点重跑
@@ -3932,6 +4025,8 @@ class JavaAnalyzer extends Analyzer {
           this.pruneInfoMap.aggressiveMode = true
           try {
             let rerunIdx = 0
+            const rerunSuccessByKey = new Set<string>()
+            const rerunFailureByKey = new Set<string>()
             for (const timeoutEntryPoint of this.timeoutEntryPoints) {
               rerunIdx++
               const metricStartTime = Date.now()
@@ -3939,6 +4034,13 @@ class JavaAnalyzer extends Analyzer {
               let skipped = false
               let skipReason: string | undefined
               let overloadCount = 0
+              // 单入口内存护栏 reset：重跑入口同样记录基线 heap，清 exceeded
+              const epLabel = describeEntryPointForLog(timeoutEntryPoint.entryPoint).replace(/^\[|\]$/g, '')
+              let memoryAborted = false
+              const logicalEntrypointKey = getJavaLogicalEntrypointKey(timeoutEntryPoint.entryPoint)
+              let attemptFailed = false
+              const findingCollector = javaEntrypointFindingCollectors.get(logicalEntrypointKey)
+              let rerunCompleted = false
               try {
                 const remainingAttempts = this.timeoutEntryPoints.length - rerunIdx + 1
                 const attemptBudget = activeDeadlinePlan.allocateAttempt(remainingAttempts, {
@@ -3947,6 +4049,13 @@ class JavaAnalyzer extends Analyzer {
                 if (!attemptBudget) {
                   skipped = true
                   skipReason = 'analysis-deadline'
+                  rerunFailureByKey.add(logicalEntrypointKey)
+                  const hasMoreRerunsForKey = this.timeoutEntryPoints.slice(rerunIdx).some((queued: { entryPoint: JavaEntryPointShape }) => getJavaLogicalEntrypointKey(queued.entryPoint) === logicalEntrypointKey)
+                  if (!hasMoreRerunsForKey) {
+                    if (rerunSuccessByKey.has(logicalEntrypointKey)) findingCollector.complete()
+                    else javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
+                    rerunCompleted = true
+                  } else rerunCompleted = true
                   continue
                 }
                 logger.info(
@@ -3957,6 +4066,7 @@ class JavaAnalyzer extends Analyzer {
                   attemptBudget.remainingAttempts
                 )
                 this.symbolTable.clear()
+                this.resetMemoryGuardForEntryPoint(epLabel)
                 overloadCount = 1
 
                 executeViaEntryPointExecutor(
@@ -4004,6 +4114,7 @@ class JavaAnalyzer extends Analyzer {
                             }
                           )
                         } catch (e) {
+                          attemptFailed = true
                           handleException(
                             e,
                             `[${timeoutEntryPoint.overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
@@ -4042,11 +4153,39 @@ class JavaAnalyzer extends Analyzer {
                   },
                   this.checkerManager?.resultManagerProxy
                 )
+                const hasMoreRerunsForKey = this.timeoutEntryPoints.slice(rerunIdx).some((queued: { entryPoint: JavaEntryPointShape }) =>
+                  getJavaLogicalEntrypointKey(queued.entryPoint) === logicalEntrypointKey
+                )
+                if (skipped || attemptFailed) rerunFailureByKey.add(logicalEntrypointKey)
+                else rerunSuccessByKey.add(logicalEntrypointKey)
+                if (!hasMoreRerunsForKey) {
+                  if (rerunSuccessByKey.has(logicalEntrypointKey)) {
+                    findingCollector.complete()
+                  } else {
+                    javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, skipped ? 'timeout' : 'exception')
+                  }
+                  rerunCompleted = true
+                } else {
+                  rerunCompleted = true
+                }
               } finally {
+                if (!rerunCompleted && !skipped && !attemptFailed) javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'exception')
                 state.entryPointDeadline = undefined
                 state.entryPointClock = undefined
                 state.entryPointTimeoutLatch = undefined
                 this.globalState.entryPointTimeout = false
+                // 单入口内存护栏 finalize：若本入口 exceeded，flush 已分析 finding 并记 diagnostics
+                const guardResult = this.onEntryPointMemoryGuardFinalize(
+                  timeoutEntryPoint.entryPoint,
+                  findingsBefore
+                )
+                if (guardResult.aborted) {
+                  memoryAborted = true
+                  if (!skipped) {
+                    skipped = true
+                    skipReason = `memory-guard-heap-exceeded:peak=${guardResult.peakHeapMb.toFixed(1)}MB,delta=${guardResult.deltaHeapMb.toFixed(1)}MB`
+                  }
+                }
                 this.recordEntryPointLoopMetric(
                   timeoutEntryPoint.entryPoint,
                   metricStartTime,
@@ -4055,6 +4194,11 @@ class JavaAnalyzer extends Analyzer {
                   skipReason,
                   overloadCount
                 )
+                if (memoryAborted) {
+                  logger.warn(
+                    `[memory-guard] rerun entrypoint ${rerunIdx}/${this.timeoutEntryPoints.length} skipped due to memory guard: ${epLabel}`
+                  )
+                }
               }
             }
           } finally {
@@ -4072,6 +4216,7 @@ class JavaAnalyzer extends Analyzer {
         // 清空，避免重复重跑
         this.timeoutEntryPoints = []
       }
+      javaEntrypointFindingCollectors.clear()
       await persistMandatoryCheckpoint()
       this.clearFanoutContinuationState()
 
@@ -4127,16 +4272,47 @@ class JavaAnalyzer extends Analyzer {
    * @param fname
    * @param state
    */
-  override postProcessFunctionBody(fscope: any, fdecl: any, fname: any, state: any): void {
+  override postProcessFunctionBody(fscope: Scope, fdecl: FunctionDefinition, fname: string, state: State): void {
+    this.executeGrpcStreamObserverCallback(fscope, fdecl, state)
     if (this.lastReturnValue) return
     if (fdecl?.body?.type !== 'ScopedStatement') return
     if (!fname?.includes('<anonymous')) return
     const stmts = fdecl.body.body
     if (!stmts || stmts.length === 0) return
     const lastStmt = stmts[stmts.length - 1]
-    const hasReturn = stmts.some((s: any) => s.type === 'ReturnStatement')
+    const hasReturn = stmts.some((statement): boolean => statement.type === 'ReturnStatement')
     if (!hasReturn && lastStmt.type !== 'ReturnStatement') {
       this.lastReturnValue = this.processInstruction(fscope, lastStmt, state)
+    }
+  }
+
+  /** gRPC 请求回调由框架在入口返回后触发，沿用当前入口的预算、检查器与闭包。 */
+  private executeGrpcStreamObserverCallback(scope: Scope, definition: FunctionDefinition, state: State): void {
+    const entryPoint = CurrentEntryPoint.getCurrentEntryPoint() as { entryPointSymVal?: Unit }
+    const activeMethod = state.callstack?.[state.callstack.length - 1] as Unit | undefined
+    if (!entryPoint.entryPointSymVal || activeMethod !== entryPoint.entryPointSymVal) return
+    if (definition.parameters?.length !== 1 || !this.lastReturnValue) return
+    const parameter = definition.parameters[0]
+    const source = this.getMemberValueNoCreate(scope, parameter.id, state) as Unit | undefined
+    const imports = this.findDeclaringFileAstBody(scope) ?? this.findFileScopeAstBody(scope) ?? []
+    const returned = this.lastReturnValue as Unit
+    const callbacks = GrpcStreamObserverModel.buildCallbacks(definition, imports, source, returned)
+    try {
+      for (const callback of callbacks) {
+        const method = callback.method as SymbolValueType
+        const previousThis = method._this
+        method._this = callback.receiver
+        try {
+          this.executeCall(callback.definition, method, state, scope, {
+            callArgs: this.buildCallArgs(callback.definition, [callback.request], method),
+            callsiteNode: callback.definition,
+          })
+        } finally {
+          method._this = previousThis
+        }
+      }
+    } finally {
+      this.lastReturnValue = returned
     }
   }
 
@@ -4444,10 +4620,9 @@ class JavaAnalyzer extends Analyzer {
       argvalues.some((a: any) => a?.taint?.isTaintedRec === true && a.taint.tagTraces?.has(TAINT_TAG))
     if (!hasTaintedArg) {
       this._coarsePropEligibleNoTaint = (this._coarsePropEligibleNoTaint || 0) + 1
-      // 无 taint 输入时不跳过方法体：虽然不会产出 finding，
-      // 但方法返回值会被调用方使用（field access / 下游运算），
-      // 返回 nil 会破坏调用方的值语义；必须正常执行以生成正确的返回值
-      return undefined
+      const targetDepth = (state.callstack?.length ?? 0) + 1
+      if (targetDepth <= 3) return undefined
+      return this.createCleanCoarseReturn(scope, node, fclos, argvalues)
     }
 
     // 粗传播命中计数
@@ -4489,6 +4664,16 @@ class JavaAnalyzer extends Analyzer {
       })
     }
     return res
+  }
+
+  /**
+   * 为深层无污点粗粒度调用保留返回值的静态类型，不执行方法体或写入污点。
+   */
+  private createCleanCoarseReturn(scope: Scope, node: CallExpression, fclos: JavaRuntimeValue, argvalues: Value[]): Value {
+    const upperQid = typeof scope?.qid === 'string' ? scope.qid : ''
+    const result = new CallExprValue(upperQid, fclos, argvalues, node, node?.loc, fclos) as Value & { rtype?: JavaRuntimeType }
+    result.rtype = fclos?.rtype
+    return result
   }
 
   /**
@@ -4673,7 +4858,8 @@ class JavaAnalyzer extends Analyzer {
    * @param fromCallGraph
    */
   checkFclosCanPruneDuringInterpret(fclos: any, node: any, argvalues: any, state: any, fromCallGraph: boolean) {
-    if (this.pruneInfoMap.aggressiveMode && state?.callstack?.length >= Config.maxCallstackDepth) {
+    const callDepth = state?.callstack?.length
+    if (this.pruneInfoMap.aggressiveMode && callDepth >= Config.maxCallstackDepth) {
       return true
     }
 
@@ -4690,6 +4876,15 @@ class JavaAnalyzer extends Analyzer {
           return false
         }
       }
+    }
+
+    if (
+      this.lifecycleCallDepthPruneEnabled &&
+      typeof callDepth === 'number' &&
+      callDepth >= Config.maxCallstackDepth
+    ) {
+      this.recordLifecycleCallDepthPrune(fclos, node, callDepth)
+      return true
     }
 
     if (
@@ -6388,6 +6583,105 @@ class JavaAnalyzer extends Analyzer {
   }
 
   /**
+   * AbstractOptUtil.execute callback->Processor 分派：
+   * 当 xxxOptUtil.execute(optRequest, ..., callback) 的 callee 是继承 AbstractOptUtil 的方法、
+   * 且 jar 源码不可见导致 fclos 无可执行 body 时，按 optRequest 的 definiteType 匹配
+   * implements Processable<XxxOptRequest, ...> 的 Processor 类，将 optRequest 的 taint
+   * 传播到 Processor.process(request) 的第一个参数。
+   *
+   * 匹配策略：
+   * 1. 调用方法名为 execute，receiver 类型链中包含 AbstractOptUtil
+   * 2. 取第一个参数 optRequest 的 rtype.definiteType
+   * 3. 遍历 classMap 查找含 process 方法的类，比对 process 第一个参数 varType 与 optRequest 类型
+   * 4. 匹配则 executeCall 流入 Processor.process，将 optRequest 作为实参传播 taint
+   * @param fclos
+   * @param node
+   * @param argvalues
+   * @param state
+   * @param scope
+   */
+  private dispatchOptUtilExecuteToProcessors(
+    fclos: Value,
+    node: CallExpression,
+    argvalues: unknown[],
+    state: State,
+    scope: Scope
+  ): boolean {
+    if (!fclos || typeof fclos !== 'object') return false
+    if (node.callee?.type !== 'MemberAccess') return false
+
+    const methodName = node.callee.property?.name
+    if (methodName !== 'execute') return false
+
+    /* receiver 类型链中必须包含 AbstractOptUtil（eduplatform 框架基类） */
+    const receiverType = this.getDefiniteTypeText(fclos)
+    const isOptUtil =
+      !receiverType || !this.isSameOrSubtype(receiverType, 'com.alipay.eduplatform.service.opt.AbstractOptUtil')
+    if (isOptUtil) return false
+
+    /* 第一个参数是 optRequest，需要 definiteType 来匹配 Processor */
+    if (!Array.isArray(argvalues) || argvalues.length < 1) return false
+    const optRequestArg = argvalues[0]
+    const optRequestType = this.getDefiniteTypeText(optRequestArg)
+    if (!optRequestType) return false
+
+    const erasedRequestType = this.eraseGenericType(optRequestType)
+    if (!erasedRequestType) return false
+
+    /* 按类型匹配所有 Processor：遍历 classMap 找 process 方法参数类型匹配的类 */
+    const processedQids = new Set<string>()
+    let dispatched = false
+
+    for (const [classFqn, classUuid] of this.classMap.entries()) {
+      if (processedQids.has(classFqn)) continue
+      const classScope = this.symbolTable.get(classUuid)
+      if (!classScope || typeof classScope !== 'object') continue
+
+      const processorMethod = (classScope as { members?: Map<string, SymbolValueType> }).members?.get('process')
+      if (!processorMethod || !this.isExecutableConcreteMethod(processorMethod)) continue
+
+      /* 检查 process 方法第一个参数的 varType 是否匹配 optRequest 类型 */
+      const fdef = processorMethod.ast?.fdef as unknown as
+        { parameters?: Array<{ varType?: { id?: unknown } }> } | undefined
+      const firstParam =
+        Array.isArray(fdef?.parameters) && fdef!.parameters.length > 0 ? fdef!.parameters[0] : undefined
+      if (!firstParam?.varType?.id) continue
+
+      const paramTypeName = AstUtil.prettyPrint(firstParam.varType.id)
+      const normalizedParamType = this.eraseGenericType(this.normalizeQid(paramTypeName))
+      if (!normalizedParamType) continue
+      /* 短类名或 FQN 匹配：参数声明可能只有短类名，需与 FQN 的尾段对比 */
+      const matched =
+        normalizedParamType === erasedRequestType ||
+        (!this.hasPackageQualifier(normalizedParamType) &&
+          this.getShortTypeName(erasedRequestType!) === normalizedParamType) ||
+        (!this.hasPackageQualifier(erasedRequestType!) &&
+          this.getShortTypeName(normalizedParamType) === erasedRequestType)
+      if (!matched) continue
+
+      /* 匹配成功：流入 Processor.process，将 optRequest 传播到 process(request) 的形参 */
+      processedQids.add(classFqn)
+      const oldThis = processorMethod._this
+      processorMethod._this = classScope
+      try {
+        const processorArgs = [optRequestArg]
+        const callRes = this.executeCall(node, processorMethod, state, scope, {
+          callArgs: this.buildCallArgs(node, processorArgs, processorMethod),
+          callsiteNode: node,
+        })
+        if (callRes) dispatched = true
+      } finally {
+        processorMethod._this = oldThis
+      }
+    }
+
+    if (dispatched) {
+      logger.debug(`[OptUtil] execute->Processor dispatch matched for ${erasedRequestType}`)
+    }
+    return dispatched
+  }
+
+  /**
    *
    * @param className
    * @param baseClassName
@@ -6830,6 +7124,7 @@ const javaAnalyzerTestHooks = {
   findJavaInputArgumentDonor,
   javaReturnExpressionReferencesParameter,
   javaReturnExpressionReferencesExternalQueryResult,
+
 }
 ;(
   JavaAnalyzer as typeof JavaAnalyzer & { __javaAnalyzerTestHooks: typeof javaAnalyzerTestHooks }

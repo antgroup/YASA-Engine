@@ -11,6 +11,8 @@ interface TraceItem {
     _meta?: { nodehash?: unknown }
     id?: { name?: string; loc?: { start?: { line?: number } } }
     body?: { loc?: { start?: { line?: number } } }
+    /** snapshot 后预算的 prettyPrint，供输出层 normalizeTerminalStringValueOfTrace 判断末端节点剥除 */
+    _prettyPrint?: string
   }
   affectedNodeName?: string
   _synthetic?: boolean

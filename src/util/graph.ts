@@ -27,6 +27,8 @@ interface EdgeCallSiteOpts {
   callSite?: { loc?: CallSiteLoc }
   /** 调用点 AST 节点 nodehash（来自 callgraph-checker） */
   callSiteNodehash?: string
+  /** AI call 边的候选 id（无真实调用点时用于区分） */
+  candidateId?: string
 }
 
 /**
@@ -101,7 +103,7 @@ class GraphClass {
 
   /**
    * 从 opts 推导调用点定位 key，用于区分同一 caller→callee 的不同调用行
-   * 优先级：callSite.loc 三元组（人类可读）> callSiteNodehash（AST 节点唯一）> 空
+   * 优先级：callSite.loc 三元组（人类可读）> callSiteNodehash（AST 节点唯一）> candidateId > 空
    * 同一调用点多次 addEdge 会得到相同 key，仍能按 Map.set 合并去重
    */
   private buildCallSiteKey(opts: EdgeCallSiteOpts | undefined): string {
@@ -112,6 +114,7 @@ class GraphClass {
       return `loc:${file}:${loc.start.line}:${loc.start.column ?? 0}`
     }
     if (opts.callSiteNodehash) return `nh:${opts.callSiteNodehash}`
+    if (opts.candidateId) return `cand:${opts.candidateId}`
     return ''
   }
 

@@ -48,6 +48,7 @@ const { getLegacyArgValues } = require('../../common/call-args')
 const { yasaLog } = require('../../../../util/format-util')
 const { createDeadlinePlan, createTimeoutLatch, formatBudgetMs } = require('../../common/entrypoint/deadline-scheduler') as typeof import('../../common/entrypoint/deadline-scheduler')
 const { runAllocatedAttempt } = require('../../common/entrypoint/attempt-runner') as typeof import('../../common/entrypoint/attempt-runner')
+const { javaEntrypointFindingCollectors, getJavaLogicalEntrypointKey } = require('../../../../checker/taint/java/java-entrypoint-finding-collector') as typeof import('../../../../checker/taint/java/java-entrypoint-finding-collector')
 const { buildSpringConcreteWorklist, runSpringConcreteWorklist } =
   require('./spring-entrypoint-scheduler') as typeof import('./spring-entrypoint-scheduler')
 
@@ -357,6 +358,8 @@ class SpringAnalyzer extends JavaAnalyzer {
    *
    */
   override async symbolInterpret(): Promise<boolean> {
+    this.configureJavaCandidatePromoter()
+    javaEntrypointFindingCollectors.beginRun()
     const entryPoints = (this as { entryPoints?: SpringEntryPointLike[] }).entryPoints ?? []
     const state = this.initState(this.topScope) as State & {
       entryPointStartTimestamp?: number | null
@@ -474,6 +477,14 @@ class SpringAnalyzer extends JavaAnalyzer {
     })
     let overloadCount = 0
     const attemptArgs = new Map<object, Value[]>()
+    type InitialAttemptLifecycle = { total: number; completed: number; timedOut: number; failed: boolean }
+    const initialAttemptLifecycle = new Map<string, InitialAttemptLifecycle>()
+    for (const item of concreteWorklist) {
+      const key = getJavaLogicalEntrypointKey(item.entryPoint)
+      const lifecycle = initialAttemptLifecycle.get(key) ?? { total: 0, completed: 0, timedOut: 0, failed: false }
+      lifecycle.total++
+      initialAttemptLifecycle.set(key, lifecycle)
+    }
     runSpringConcreteWorklist({
       plan: deadlinePlan,
       worklist: concreteWorklist,
@@ -509,10 +520,15 @@ class SpringAnalyzer extends JavaAnalyzer {
       },
       execute: (item, argValues, progress) => {
         const entryPoint = item.entryPoint
+        const logicalEntrypointKey = getJavaLogicalEntrypointKey(entryPoint)
+        const findingCollector = javaEntrypointFindingCollectors.get(logicalEntrypointKey)
+        const lifecycle = initialAttemptLifecycle.get(logicalEntrypointKey)
+        if (!lifecycle) return
         const symVal = entryPoint.entryPointSymVal
         const metricStartTime = Date.now()
         const findingsBefore = this.countFindings()
         let beforeCalled = false
+        let attemptFailed = false
         executeViaEntryPointExecutor({ analyzer: this, entryPoint, metricStartTime, findingsBefore, executionState: state, overloadCount, epIndex: progress.epIndex, epTotal: concreteWorklist.length }, {
           language: 'spring', classify: () => 'function', execute: () => {
             this.checkerManager.checkAtSymbolInterpretOfEntryPointBefore(this, null, null, null, null)
@@ -526,6 +542,7 @@ class SpringAnalyzer extends JavaAnalyzer {
               try {
                 this.executeCall(item.overload, symVal, state, entryPoint.scopeVal, { callArgs: this.buildCallArgs(item.overload, argValues, symVal) })
               } catch (e) {
+                attemptFailed = true
                 const fdefIdName = item.overload.id?.name
                 handleException(e, `[${fdefIdName} symbolInterpret failed. Exception message saved in error log file`, `[${fdefIdName} symbolInterpret failed. Exception message saved in error log file`)
                 if (this.globalState.meetOtherEntryPoint) delete this.globalState.meetOtherEntryPoint
@@ -536,6 +553,9 @@ class SpringAnalyzer extends JavaAnalyzer {
               if (beforeCalled) this.checkerManager.checkAtSymbolInterpretOfEntryPointAfter(this, null, null, null, null)
             }
           }, }, this.checkerManager?.resultManagerProxy)
+        lifecycle.completed++
+        if (attemptFailed) lifecycle.failed = true
+        else if (lifecycle.timedOut === 0) findingCollector.deferForRerun()
       },
       enqueueTimeout: (item, argValues) => {
         logger.info(
@@ -547,8 +567,16 @@ class SpringAnalyzer extends JavaAnalyzer {
             `<anonymousFunc_${item.overload.loc.start.line}_$${item.overload.loc.end.line}>`
         )
         this.timeoutEntryPoints.push({ entryPoint: item.entryPoint, overloadFuncDef: item.overload, argValues })
+        const lifecycle = initialAttemptLifecycle.get(getJavaLogicalEntrypointKey(item.entryPoint))
+        if (lifecycle) lifecycle.timedOut++
       },
     })
+    // 首轮 timeout 仅延迟到 rerun 组末 terminal，保留 collector 候补状态。
+    for (const [logicalEntrypointKey, lifecycle] of initialAttemptLifecycle) {
+      if (lifecycle.failed) javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'exception')
+      else if (lifecycle.timedOut > 0) javaEntrypointFindingCollectors.get(logicalEntrypointKey).deferForRerun()
+      else if (lifecycle.completed === lifecycle.total) javaEntrypointFindingCollectors.complete(logicalEntrypointKey)
+    }
     // 基于全局时间预算的超时入口点重跑
     if (this.timeoutEntryPoints.length > 0) {
       if (deadlinePlan.canStartAnalysis()) {
@@ -566,6 +594,8 @@ class SpringAnalyzer extends JavaAnalyzer {
         this.pruneInfoMap.aggressiveMode = true
         try {
           let rerunIdx = 0
+          const rerunSuccessByKey = new Set<string>()
+          const rerunFailureByKey = new Set<string>()
           for (const timeoutEntryPoint of this.timeoutEntryPoints) {
             rerunIdx++
             const metricStartTime = Date.now()
@@ -573,6 +603,10 @@ class SpringAnalyzer extends JavaAnalyzer {
             let skipped = false
             let skipReason: string | undefined
             let overloadCount = 0
+            const logicalEntrypointKey = getJavaLogicalEntrypointKey(timeoutEntryPoint.entryPoint)
+            let attemptFailed = false
+            const findingCollector = javaEntrypointFindingCollectors.get(logicalEntrypointKey)
+            let rerunCompleted = false
             attemptSnapshot = {
               entryPointDeadline: state.entryPointDeadline,
               entryPointClock: state.entryPointClock,
@@ -586,6 +620,15 @@ class SpringAnalyzer extends JavaAnalyzer {
               if (!attemptBudget) {
                 skipped = true
                 skipReason = 'analysis-deadline'
+                rerunFailureByKey.add(logicalEntrypointKey)
+                const hasMoreRerunsForKey = this.timeoutEntryPoints.slice(rerunIdx).some((queued: { entryPoint: SpringEntryPointLike }) =>
+                  getJavaLogicalEntrypointKey(queued.entryPoint) === logicalEntrypointKey
+                )
+                if (!hasMoreRerunsForKey) {
+                  if (rerunSuccessByKey.has(logicalEntrypointKey)) findingCollector.complete()
+                  else javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'skip')
+                  rerunCompleted = true
+                } else rerunCompleted = true
                 logger.info('Skip remaining timeout entrypoints: scan analysis deadline reached')
                 continue
               }
@@ -639,6 +682,7 @@ class SpringAnalyzer extends JavaAnalyzer {
                         }
                       )
                     } catch (e) {
+                      attemptFailed = true
                       handleException(
                         e,
                         `[${timeoutEntryPoint.overloadFuncDef?.id?.name} symbolInterpret failed. Exception message saved in error log file`,
@@ -675,7 +719,21 @@ class SpringAnalyzer extends JavaAnalyzer {
                 },
                 this.checkerManager?.resultManagerProxy
               )
+              const hasMoreRerunsForKey = this.timeoutEntryPoints.slice(rerunIdx).some((queued: { entryPoint: SpringEntryPointLike }) =>
+                getJavaLogicalEntrypointKey(queued.entryPoint) === logicalEntrypointKey
+              )
+              if (skipped || attemptFailed) rerunFailureByKey.add(logicalEntrypointKey)
+              else rerunSuccessByKey.add(logicalEntrypointKey)
+              if (!hasMoreRerunsForKey) {
+                if (rerunSuccessByKey.has(logicalEntrypointKey) && !rerunFailureByKey.has(logicalEntrypointKey)) {
+                  findingCollector.complete()
+                } else {
+                  javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, skipped ? 'timeout' : 'exception')
+                }
+                rerunCompleted = true
+              } else rerunCompleted = true
             } finally {
+              if (!rerunCompleted && !skipped && !attemptFailed) javaEntrypointFindingCollectors.finalize(logicalEntrypointKey, 'exception')
               clearAttemptState()
               this.recordEntryPointLoopMetric(
                 timeoutEntryPoint.entryPoint,
@@ -702,9 +760,11 @@ class SpringAnalyzer extends JavaAnalyzer {
       // 清空，避免重复重跑
       this.timeoutEntryPoints = []
     }
+    javaEntrypointFindingCollectors.clear()
     this.clearFanoutContinuationState()
     return true
   } catch (schedulingError) {
+    javaEntrypointFindingCollectors.clear()
     let persistenceError: unknown
     await persistMandatoryCheckpoint()
     const combined = combineFindingsFinalizationErrors(
@@ -715,6 +775,7 @@ class SpringAnalyzer extends JavaAnalyzer {
     Object.assign(finalizationError, { schedulingError, persistenceError, combined })
     throw finalizationError
   } finally {
+    javaEntrypointFindingCollectors.clear()
     clearAttemptState()
     this.pruneInfoMap.aggressiveMode = oldAggressiveMode
     Config.entryPointTimeoutMs = oldEntryPointTimeoutMs
@@ -888,9 +949,19 @@ class SpringAnalyzer extends JavaAnalyzer {
     if (isBeanService && beanName && beanName !== '') {
       let returnType = ''
       if (node.returnType?.id?.type === 'Identifier') {
-        const returnClass = node.returnType?.id
-        const returnTypeIdentifier = this.processIdentifier(scope, returnClass, state)
-        returnType = returnTypeIdentifier.qid
+        /* @Bean 方法返回类型解析：当方法名与返回类型同名时，
+         * processIdentifier 会在方法所在类的 scope 中找到同名方法符号而非 import 的类，
+         * 导致 beanMap 注册了错误的 className。
+         * 此处优先从文件级 import 表查找返回类型的全限定名，回退到 processIdentifier。 */
+        const returnTypeName = node.returnType.id.name
+        const resolvedFqn = this.resolveBeanReturnTypeByImport(scope, returnTypeName)
+        if (resolvedFqn) {
+          returnType = resolvedFqn
+        } else {
+          const returnClass = node.returnType?.id
+          const returnTypeIdentifier = this.processIdentifier(scope, returnClass, state)
+          returnType = returnTypeIdentifier?.qid ?? ''
+        }
       }
       this.topScope.spring.beanMap.set(beanName, {
         initFClos: res,
@@ -899,6 +970,60 @@ class SpringAnalyzer extends JavaAnalyzer {
       })
     }
     return res
+  }
+
+  /**
+   * 从文件级 import 表解析 @Bean 方法返回类型的全限定名。
+   * 当方法名与返回类型同名时，processIdentifier 会被同名方法符号遮蔽，
+   * 此方法绕过 scope 链，直接查 import 语句获得正确的 fqdn。
+   * 不依赖 classMap 校验——processFunctionDefinition 在 scanPackages 阶段运行，
+   * 此时 classMap 尚未组装完成。
+   * @param scope - 当前作用域
+   * @param shortName - 返回类型短名
+   * @returns 全限定名，未找到返回 undefined
+   */
+  private resolveBeanReturnTypeByImport(scope: Scope, shortName: string): string | undefined {
+    if (!shortName) return undefined
+    /* 沿 scope 链找到包含 import 语句的 fileScope AST body，
+     * 使用 fileScope?.ast?.node?.body 而非 cur?.ast?.node?.body 避免取到 class body */
+    let cur: any = scope
+    let guard = 32
+    while (cur && guard-- > 0) {
+      const astBody = cur.fileScope?.ast?.node?.body ?? cur.scope?.fileScope?.ast?.node?.body
+      if (Array.isArray(astBody)) {
+        for (const statement of astBody) {
+          const importedFqn = this.extractImportedClassFqn(statement, shortName)
+          if (importedFqn) {
+            return importedFqn
+          }
+        }
+      }
+      cur = cur.parent
+    }
+    return undefined
+  }
+
+  /**
+   * 从单条 import 语句中提取与 name 匹配的类全限定名。
+   * 复刻 JavaAnalyzer.getImportedClassName 逻辑，避免访问 private 方法。
+   * @param statement - AST 语句节点
+   * @param name - 类型短名
+   * @returns 全限定名，不匹配返回 undefined
+   */
+  private extractImportedClassFqn(statement: unknown, name: string): string | undefined {
+    const node = statement as {
+      type?: string
+      id?: { name?: string }
+      varType?: { id?: { name?: string } }
+      init?: { type?: string; from?: { value?: unknown }; imported?: { name?: string } }
+    }
+    if (node.type !== 'VariableDeclaration' || node.init?.type !== 'ImportExpression') return undefined
+    if (node.id?.name !== name && node.init.imported?.name !== name) return undefined
+    const importType = node.varType?.id?.name
+    const importFrom = typeof node.init.from?.value === 'string' ? node.init.from.value : undefined
+    const candidate =
+      importType && importType.includes('.') ? importType : importFrom ? `${importFrom}.${name}` : undefined
+    return candidate ? QidUnifyUtil.qidUnifyByRemoveAngleAndPrefix(candidate) : undefined
   }
 
   /**
@@ -1398,13 +1523,15 @@ class SpringAnalyzer extends JavaAnalyzer {
               ;(this as any)._lifecycleDepth = lifecycleDepth + 1
               try {
                 const lifecycleState = this.initState(objVal)
-                this.executeCall(
-                  val.ast?.node,
-                  val as unknown as SymbolValueType,
-                  lifecycleState,
-                  objVal,
-                  INTERNAL_CALL
-                )
+                this.withLifecycleCallDepthPrune(() => {
+                  this.executeCall(
+                    val.ast?.node,
+                    val as unknown as SymbolValueType,
+                    lifecycleState,
+                    objVal,
+                    INTERNAL_CALL
+                  )
+                })
               } finally {
                 ;(this as any)._lifecycleDepth = lifecycleDepth
               }

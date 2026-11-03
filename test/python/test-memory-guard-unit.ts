@@ -69,15 +69,15 @@ describe('memory-guard unit', function () {
     console.error('[unit] empty-flush OK: total=0, no sarif')
   })
 
-  it('probeMemoryAndUpdate respects 200ms throttle and sets exceeded over limit', function () {
-    // 用极小 limit 模拟超阈
+  it('probeMemoryAndUpdate respects 200ms throttle and sets exceeded over delta limit', function () {
+    // delta 模式：用极小 deltaLimitMb 模拟超阈
     const state = createMemoryGuardState()
     state.enabled = true
-    state.limitMb = 0 // 1 byte limit — 任何 heapUsed 都超阈
+    state.deltaLimitMb = 0 // 0 byte delta limit — 任何 delta 都超阈
     resetForEntryPoint(state, 'test-ep', 0)
     // 第一次探测：超阈 → exceeded=true
     const first = probeMemoryAndUpdate(state, 0)
-    assert.strictEqual(first, true, 'first probe should exceed limit')
+    assert.strictEqual(first, true, 'first probe should exceed delta limit')
     assert.strictEqual(state.exceeded, true)
     // 后续节流窗口内调用：cached exceeded=true
     const next = probeMemoryAndUpdate(state, 100)
@@ -88,11 +88,37 @@ describe('memory-guard unit', function () {
   it('disabled guard never aborts', function () {
     const state = createMemoryGuardState()
     state.enabled = false
-    state.limitMb = 0
+    state.deltaLimitMb = 0
     resetForEntryPoint(state, 'test-ep', 0)
     const r = probeMemoryAndUpdate(state, 0)
     assert.strictEqual(r, false, 'disabled guard should never abort')
     assert.strictEqual(state.exceeded, false)
     console.error('[unit] disabled-guard OK')
+  })
+
+  it('probeMemoryAndUpdate returns false when baselineHeapBytes is 0 (processModule guard)', function () {
+    // processModule 阶段未 reset baseline，guard 不生效，避免误杀 entrypoint 收集
+    const state = createMemoryGuardState()
+    state.enabled = true
+    state.deltaLimitMb = 0
+    // 不调 resetForEntryPoint，baselineHeapBytes 保持 0
+    assert.strictEqual(state.baselineHeapBytes, 0)
+    const r = probeMemoryAndUpdate(state, 0)
+    assert.strictEqual(r, false, 'guard should not abort when baseline is 0')
+    assert.strictEqual(state.exceeded, false)
+    console.error('[unit] baseline-zero-guard OK')
+  })
+
+  it('createMemoryGuardState reads deltaLimitMb from Config', function () {
+    const Config = require('../../src/config')
+    const original = Config.entrypointMemoryLimitDeltaMB
+    try {
+      Config.entrypointMemoryLimitDeltaMB = 999
+      const state = createMemoryGuardState()
+      assert.strictEqual(state.deltaLimitMb, 999, 'deltaLimitMb should read from Config.entrypointMemoryLimitDeltaMB')
+      console.error('[unit] createMemoryGuardState config-read OK')
+    } finally {
+      Config.entrypointMemoryLimitDeltaMB = original
+    }
   })
 })
