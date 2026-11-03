@@ -1,93 +1,95 @@
 # yasamcp
 
-**yasamcp** 是基于静态分析引擎 [yasa](https://github.com/antgroup/YASA-Engine) 的仓库结构化查询工具：先用 CLI `init` 把代码工程预处理为结构化缓存，再用 CLI 查询、或启动 MCP 进程供 Claude Code / Codex 调用，对类、函数、调用图、关键字等做毫秒级查询。
+[English](README.md) / [简体中文](README_ZH.md)
 
-支持 Java / Python / Go / JavaScript / PHP。
+**yasamcp** is a structured code repository query tool built on the [yasa](https://github.com/antgroup/YASA-Engine) static analysis engine. First, use the CLI `init` command to preprocess a project into a structured cache. Then query it through the CLI, or start an MCP process for Claude Code / Codex to query classes, functions, call graphs, keywords, and more in milliseconds.
 
-> ⚠️ **`init` 只能通过 CLI 执行，MCP 不提供 `init`**：预处理耗时长（数十秒到数分钟），经 MCP 调用极易因超时断链。务必先在终端 `yasamcp init <项目>` 生成缓存，再让 MCP 进程消费。
+Supports Java / Python / Go / JavaScript / PHP.
 
-## 目录
+> ⚠️ **`init` is available only through the CLI, not through MCP**: preprocessing can take tens of seconds to several minutes, making MCP calls prone to timeouts and disconnections. Always run `yasamcp init <project>` in a terminal first to generate the cache, then let the MCP process consume it.
 
-- [安装](#安装)
-- [提供的工具](#提供的工具)
-- [快速使用](#快速使用)
-- [CLI 工具](#cli-工具)
-- [MCP 工具](#mcp-工具)
-- [CC / Codex 集成](#cc--codex-集成)
-- [参与贡献](#参与贡献)
-- [许可证](#许可证)
+## Contents
 
-## 安装
+- [Installation](#installation)
+- [Available Tools](#available-tools)
+- [Quick Start](#quick-start)
+- [CLI Tools](#cli-tools)
+- [MCP Tools](#mcp-tools)
+- [CC / Codex Integration](#cc--codex-integration)
+- [Contributing](#contributing)
+- [License](#license)
 
-yasamcp 由一个 **CLI 二进制** + **4 个 native 引擎**（`yasa` / `codegraph` / `ripgrep` / `scc`，按 OS+架构分平台）组成。仅支持 `mac-arm64` / `mac-x64` / `linux-x64`，其余平台会报错退出。统一安装到 `~/.yasamcp/`：
+## Installation
 
-```
+yasamcp consists of a **CLI binary** and **four native engines** (`yasa` / `codegraph` / `ripgrep` / `scc`, packaged by OS and architecture). Only `mac-arm64` / `mac-x64` / `linux-x64` are supported; installation exits with an error on other platforms. All components are installed under `~/.yasamcp/`:
+
+```text
 ~/.yasamcp/
-  ├─ tools/<平台>/{yasa,codegraph,ripgrep,scc}   # native 引擎(OSS 下载)
-  ├─ yasamcp-cli/yasamcp                          # CLI 二进制(GitHub 下载)
-  └─ config.json                                  # {"binary_path":"~/.yasamcp/tools"}
+  ├─ tools/<platform>/{yasa,codegraph,ripgrep,scc}  # Native engines (downloaded from OSS)
+  ├─ yasamcp-cli/yasamcp                          # CLI binary (downloaded from GitHub)
+  └─ config.json                                 # {"binary_path":"~/.yasamcp/tools"}
 ```
 
-### 一键安装（无需 clone）
+### One-command installation (no clone required)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/out2github-linwei-yasamcp-20260924/yasamcp/script/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/main/yasamcp/script/install.sh | sh
 ```
 
-也支持传参数（`--home`、`--skip-path`、`--tools`、`--yasamcp` 等同样可用）：
+You can also pass options, including `--home`, `--skip-path`, `--tools`, and `--yasamcp`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/out2github-linwei-yasamcp-20260924/yasamcp/script/install.sh | sh -s -- --home /opt/yasamcp
+curl -fsSL https://raw.githubusercontent.com/antgroup/YASA-Engine/main/yasamcp/script/install.sh | sh -s -- --home /opt/yasamcp
 ```
 
-### 已 clone 本仓库
+### Installing from a cloned repository
 
 ```bash
 bash script/install.sh
 ```
 
-脚本依次做：检测 OS+架构 → 从 OSS 下载 4 个 native 引擎到 `~/.yasamcp/tools/<平台>/` → 从 [GitHub Releases](https://github.com/antgroup/YASA-Engine/releases) 解析最新 release tag 并下载 `yasamcp-<plat>.tar.gz` 到 `~/.yasamcp/yasamcp-cli/` → 写 `config.json` → 把 `~/.yasamcp/yasamcp-cli` 加入 `PATH`、导出 `YASA_MCP_BIN_DIR=~/.yasamcp/tools` → 末尾自检 `yasamcp --version`。
+The script detects the OS and architecture, downloads the four native engines from OSS into `~/.yasamcp/tools/<platform>/`, resolves the latest release tag from [GitHub Releases](https://github.com/antgroup/YASA-Engine/releases), and downloads `yasamcp-<plat>.tar.gz` into `~/.yasamcp/yasamcp-cli/`. It then writes `config.json`, adds `~/.yasamcp/yasamcp-cli` to `PATH`, exports `YASA_MCP_BIN_DIR=~/.yasamcp/tools`, and finishes by checking `yasamcp --version`.
 
-**自动跳过已安装部件**：若 `tools/<平台>` 下 4 个引擎目录齐全，跳过引擎下载；若 `yasamcp-cli/yasamcp` 已存在且可执行，跳过 CLI 下载。重复运行只会补装缺失部分，不会覆盖已装好的。
+**Already installed components are skipped automatically**: if all four engine directories exist under `tools/<platform>`, the engine download is skipped. If `yasamcp-cli/yasamcp` already exists and is executable, the CLI download is skipped. Running the installer again only installs missing components; it does not overwrite existing installations.
 
-### 可配置安装
+### Installation options
 
-| 选项 / 环境变量 | 作用 |
-|----------------|------|
-| `--home <目录>` ／ `YASAMCP_HOME` | 自定义安装目录（默认 `~/.yasamcp`） |
-| `--skip-path` | 不改 shell rc（不写 `PATH`/`YASA_MCP_BIN_DIR`） |
-| `--tools <文件>` | 用本地 OSS 引擎压缩包，跳过联网下载引擎 |
-| `--yasamcp <文件>` | 用本地 yasamcp 压缩包，跳过联网下载 CLI |
-| `YASAMCP_VERSION` | 要安装的 release tag，默认 `latest`（解析最新版）；可设 `yasamcp-v1.0.3` 固定版本 |
-| `YASAMCP_REPO` | 发布仓库，默认 `antgroup/YASA-Engine` |
-| `YASAMCP_ASSET` | 资源文件名，默认 `yasamcp-<平台>.tar.gz` |
-
-```bash
-bash script/install.sh --home /opt/yasamcp             # 安装到自定义目录
-bash script/install.sh --skip-path                      # 不改 shell rc
-```
-
-**GitHub 下载慢时挂代理**：`curl` 会自动识别 `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` 环境变量。若直连 GitHub 很慢（国内常见），把代理传给脚本即可秒下：
+| Option / Environment variable | Purpose |
+|-------------------------------|---------|
+| `--home <directory>` / `YASAMCP_HOME` | Custom installation directory (default: `~/.yasamcp`) |
+| `--skip-path` | Leave shell rc files unchanged; do not configure `PATH` or `YASA_MCP_BIN_DIR` |
+| `--tools <file>` | Use a local OSS engine archive instead of downloading the engines |
+| `--yasamcp <file>` | Use a local yasamcp archive instead of downloading the CLI |
+| `YASAMCP_VERSION` | Release tag to install; defaults to `latest` (resolves the latest release). Set a tag such as `yasamcp-v1.0.3` to pin a version |
+| `YASAMCP_REPO` | Release repository (default: `antgroup/YASA-Engine`) |
+| `YASAMCP_ASSET` | Asset filename (default: `yasamcp-<platform>.tar.gz`) |
 
 ```bash
-HTTPS_PROXY=http://127.0.0.1:7890 bash script/install.sh   # 换成你本地代理地址
+bash script/install.sh --home /opt/yasamcp             # Install to a custom directory
+bash script/install.sh --skip-path                    # Leave shell rc files unchanged
 ```
 
-> `curl | sh` 方式同样支持代理：`HTTPS_PROXY=http://127.0.0.1:7890 curl -fsSL <url> | sh`。
+**Use a proxy if GitHub downloads are slow**: `curl` automatically recognizes the `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` environment variables. If direct access to GitHub is slow, as is common in mainland China, pass your proxy to the script to speed up downloads:
 
-### 脚本下载失败？手动下载再装（兜底）
+```bash
+HTTPS_PROXY=http://127.0.0.1:7890 bash script/install.sh   # Replace with your local proxy address
+```
 
-如果脚本联网下载卡住或失败（比如 GitHub 访问受限），自己用浏览器/代理把两个产物下到本地，再让脚本跳过联网、直接用本地包安装即可。
+> The `curl | sh` method also supports a proxy: `HTTPS_PROXY=http://127.0.0.1:7890 curl -fsSL <url> | sh`.
 
-**要下载的两个产物**（按你的平台替换 `<plat>`：mac-ARM 用 `darwin-aarch64`，mac-Intel 用 `darwin-x86-64`，Linux-x64 用 `linux-x86-64`）：
+### If downloads fail: install from manually downloaded archives
 
-1. **native 引擎压缩包**（OSS，国内快）：
+If the script's downloads stall or fail, for example because access to GitHub is restricted, download the two archives using a browser or proxy. Then pass the local files to the installer so it can skip downloading them.
+
+**Download these two archives**. Replace `<plat>` with your platform: `darwin-aarch64` for Mac ARM, `darwin-x86-64` for Mac Intel, or `linux-x86-64` for Linux x64.
+
+1. **Native engine archive** (OSS, with fast access in mainland China):
    `https://yasa.oss-cn-beijing.aliyuncs.com/<plat>.zip`
-2. **yasamcp CLI 压缩包**（GitHub Releases）：
+2. **yasamcp CLI archive** (GitHub Releases):
    `https://github.com/antgroup/YASA-Engine/releases/download/<version>/yasamcp-<plat>.tar.gz`
-   （`<version>` 取最新 tag，见 [Releases](https://github.com/antgroup/YASA-Engine/releases)，例如 `yasamcp-v1.0.3`）
+   Use the latest tag for `<version>`; see [Releases](https://github.com/antgroup/YASA-Engine/releases), for example `yasamcp-v1.0.3`.
 
-下载好之后，把两个文件路径传给脚本——脚本检测到本地包就跳过联网下载，只做解压、写 `config.json`、配置 `PATH`：
+Pass both file paths to the script. When local archives are supplied, it skips downloading them and only extracts them, writes `config.json`, and configures `PATH`:
 
 ```bash
 bash script/install.sh \
@@ -95,179 +97,179 @@ bash script/install.sh \
   --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
 ```
 
-> 也可以只传其中一个：脚本会联网下载缺失的另一部分。比如只本地备了 yasamcp CLI，引擎仍联网拉：
+> You can also supply just one archive; the script downloads the other component. For example, to use a local CLI archive while downloading the engines:
 
 ```bash
 bash script/install.sh --yasamcp ~/Downloads/yasamcp-darwin-aarch64.tar.gz
 ```
 
-> 浏览器下载通常比脚本直连快很多是因为浏览器走了代理/VPN；把同样的代理用 `HTTPS_PROXY=...` 传给脚本，脚本下载就和浏览器一样快。
+> Browser downloads are often faster because the browser uses a proxy or VPN. Pass the same proxy to the script with `HTTPS_PROXY=...` to use the same network route.
 
-### 验证
+### Verification
 
 ```bash
-yasamcp --version        # 确认 CLI 可运行
-yasamcp -h               # 查看命令列表
+yasamcp --version        # Check that the CLI runs
+yasamcp -h               # List commands
 ```
 
-若 `yasamcp` 命令找不到：`source ~/.zshrc`（macOS）或 `source ~/.bashrc`（Linux）让 `PATH` 生效。
+If the `yasamcp` command is not found, run `source ~/.zshrc` on macOS or `source ~/.bashrc` on Linux to apply the `PATH` change.
 
-### 日志
+### Logs
 
-CLI 与 MCP 进程的运行日志按天写入 `~/.yasamcp/logs/YYYY-MM-DD.log`（每行带时间戳与阶段耗时），排障时直接查看当天日志文件即可。
+The CLI and MCP processes write daily logs to `~/.yasamcp/logs/YYYY-MM-DD.log`. Each line includes a timestamp and timing information for the processing stage. Check the current day's log when troubleshooting.
 
-## 提供的工具
+## Available Tools
 
-| CLI 子命令 | MCP 工具 | 作用 |
-|------------|----------|------|
-| `init` | —— | 初始化项目分析缓存（仅 CLI） |
-| `status` | —— | 查询缓存状态（仅 CLI） |
-| `search` | `search_symbol` | 统一符号搜索 |
-| `class` | `get_class_by_name` | 按类名查类定义 |
-| `func` | `get_function` | 按名 / 文件 / 代码片段查函数定义 |
-| `keywords` | `get_file_by_keyword` | 按关键字搜文件内容 |
-| `api` | `get_api_by_name` | 按接口名反查实现函数 |
-| `callers` | `get_reference_by_function` | 查函数被调用的位置 |
-| `callees` | `get_function_by_call` | 根据调用点反查被调用函数 |
-| `callgraph` | `get_call_graph` | 获取函数调用图 |
-| —— | `get_import_by_file` | 查询指定文件的 import 语句（仅 MCP） |
-| `server` | —— | 启动 MCP 常驻进程（供 CC/Codex spawn） |
+| CLI subcommand | MCP tool | Purpose |
+|----------------|----------|---------|
+| `init` | — | Initialize the project's analysis cache (CLI only) |
+| `status` | — | Check cache status (CLI only) |
+| `search` | `search_symbol` | Unified symbol search |
+| `class` | `get_class_by_name` | Look up class definitions by name |
+| `func` | `get_function` | Look up function definitions by name, file, or code snippet |
+| `keywords` | `get_file_by_keyword` | Search file contents by keyword |
+| `api` | `get_api_by_name` | Find implementing functions by API name |
+| `callers` | `get_reference_by_function` | Find locations where a function is called |
+| `callees` | `get_function_by_call` | Resolve the function invoked at a call site |
+| `callgraph` | `get_call_graph` | Retrieve a function call graph |
+| — | `get_import_by_file` | Retrieve import statements from a file (MCP only) |
+| `server` | — | Start a persistent MCP process for CC/Codex to spawn |
 
-MCP 共 **9 个只读查询工具**，完整参数与输入输出示范见下方 [CLI 工具](#cli-工具) 与 [MCP 工具](#mcp-工具) 章节。
+MCP provides **nine read-only query tools**. See [CLI Tools](#cli-tools) and [MCP Tools](#mcp-tools) below for parameter details and input/output examples.
 
-
-## 快速使用
+## Quick Start
 
 ```bash
-# 1. 预处理生成缓存（init 只能用 CLI；耗时较长）
+# 1. Preprocess the project to generate its cache (init is CLI-only and may take some time)
 yasamcp init /path/to/project
-# 缓存落在 <project>/.yasa/yasamcp/，含 project_config.json / yasa.db / .codegraph/codegraph.db
+# Cache location: <project>/.yasa/yasamcp/, containing project_config.json / yasa.db / .codegraph/codegraph.db
 
-# 2. 检查缓存状态
+# 2. Check cache status
 yasamcp status -p /path/to/project
-# 合法：分析已完成；非法：分析数据不完整 / 分析已过期 / 无分析结果（提示执行 init）
+# Valid: analysis is complete. Invalid: incomplete, outdated, or missing analysis data (prompts you to run init).
 
-# 3. 查询（非 init 工具必填 -p/--project，加 -j 以 JSON 输出）
+# 3. Query the project (commands other than init require -p/--project; add -j for JSON output)
 yasamcp search HttpUtil -p /path/to/project
 yasamcp class HttpUtil -p /path/to/project -j
 ```
 
-## CLI 工具
+## CLI Tools
 
-通用约定：非 `init` 工具需 `-p/--project <项目>`（或环境变量 `YASA_MCP_PROJECT`），`-j/--json` JSON 输出，`-h` 查看帮助。标注「多值」的参数支持一次传多个。
+Common conventions: tools other than `init` require `-p/--project <project>` or the `YASA_MCP_PROJECT` environment variable. Use `-j/--json` for JSON output and `-h` for help. Parameters marked as accepting multiple values can take several values in one call.
 
-### `init` —— 初始化缓存
+### `init` — Initialize the cache
 
-> 默认安装后引擎路径已写入 `~/.yasamcp/config.json`，无需 `-b`；若未用安装脚本或想覆盖引擎目录，可加 `-b <引擎目录>`。
+> The default installer writes the engine path to `~/.yasamcp/config.json`, so `-b` is unnecessary. If you did not use the installer or want to override the engine directory, add `-b <engine-directory>`.
 
 ```bash
 yasamcp init /path/to/project
-yasamcp init /path/to/project --no-progress      # CI 场景关进度条
+yasamcp init /path/to/project --no-progress      # Disable the progress bar in CI
 ```
 
-### `status` —— 查缓存状态
+### `status` — Check cache status
 
 ```bash
 yasamcp status -p /path/to/project
 ```
 
-### `search` —— 统一符号搜索
+### `search` — Unified symbol search
 
 ```bash
 yasamcp search HttpUtil -p /path/to/project --max-results 10
 yasamcp search HttpUtil OrderService -p /path/to/project -k class -j
 ```
 
-### `class` —— 查询类定义
+### `class` — Query class definitions
 
 ```bash
 yasamcp class HttpUtil -p /path/to/project
 yasamcp class HttpUtil Order -p /path/to/project --include-methods -j
 ```
 
-### `func` —— 查询函数定义
+### `func` — Query function definitions
 
-按入参互斥路由：`--name/--fqn` 按名查；`--file-path` 按文件查；`--code` 按代码片段定位。优先级 `name/fqn > file_path > code`。
+The arguments select one lookup mode: `--name/--fqn` searches by name, `--file-path` searches by file, and `--code` locates a function by a code snippet. Precedence is `name/fqn > file_path > code`.
 
 ```bash
 yasamcp func --name handleRequest -p /path/to/project
 yasamcp func --file-path src/main/Foo.java -p /path/to/project --detail full
 ```
 
-### `keywords` —— 按关键字搜文件内容
+### `keywords` — Search file contents by keyword
 
 ```bash
 yasamcp keywords Logger Timer -p /path/to/project
 yasamcp keywords "TODO|FIXME" -p /path/to/project --use-regex
 ```
 
-### `api` —— 按接口名反查实现
+### `api` — Find implementations by API name
 
 ```bash
 yasamcp api /api/order/query -p /path/to/project
 yasamcp api UserService.query -p /path/to/project -j
 ```
 
-### `callers` —— 查函数被调用位置
+### `callers` — Find function call sites
 
 ```bash
 yasamcp callers handleRequest -p /path/to/project
 yasamcp callers handleRequest --file-path src/web/Foo.java --line 42 -p /path/to/project
 ```
 
-### `callees` —— 根据调用点反查被调用函数
+### `callees` — Resolve functions from call sites
 
 ```bash
 yasamcp callees "service.query(" -p /path/to/project
 yasamcp callees "mapper.insert(" --file-path src/svc/X.java --line 88 -p /path/to/project
 ```
 
-### `callgraph` —— 获取调用图
+### `callgraph` — Retrieve a call graph
 
 ```bash
 yasamcp callgraph Controller.query -p /path/to/project --depth 3
 yasamcp callgraph handle -p /path/to/project --maxcallees 5 -j
 ```
 
-### `server` —— 启动 MCP 进程
+### `server` — Start the MCP process
 
-> 默认安装后无需 `-b`（引擎经 `~/.yasamcp/config.json` 自动定位）；完整客户端集成配置见 [CC / Codex 集成](#cc--codex-集成)。
+> With the default installation, `-b` is unnecessary: engines are located automatically through `~/.yasamcp/config.json`. See [CC / Codex Integration](#cc--codex-integration) for complete client configuration examples.
 
 ```bash
 yasamcp server
 yasamcp server -t streamable-http --port 8000
 ```
 
-完整参数表见 `yasamcp <子命令> -h`。
+Run `yasamcp <subcommand> -h` for the full list of parameters.
 
-## MCP 工具
+## MCP Tools
 
-yasamcp 以 MCP 常驻进程（默认 stdio）对外提供 **9 个只读查询工具**：`search_symbol` / `get_class_by_name` / `get_function` / `get_file_by_keyword` / `get_api_by_name` / `get_function_by_call` / `get_reference_by_function` / `get_call_graph` / `get_import_by_file`。
+yasamcp exposes **nine read-only query tools** through a persistent MCP process using stdio by default: `search_symbol` / `get_class_by_name` / `get_function` / `get_file_by_keyword` / `get_api_by_name` / `get_function_by_call` / `get_reference_by_function` / `get_call_graph` / `get_import_by_file`.
 
-通用约定：
-- 每个工具都需 `project_path`（**必填**，`string`）：已通过 CLI `init` 分析好、缓存就绪的项目路径。
-- 标注「多值」的参数接受单值或字符串数组，传多个时一次性查询多个结果。
-- 部分 MCP 客户端（如 Codex）会把数组形参序列化成 JSON 字符串（如 `["A","B"]` 传成 `"[\"A\",\"B\"]"`），yasamcp 入口已自动还原为列表，按多值查询，客户端无需特殊处理。
+Common conventions:
 
-| MCP 工具 | 作用 | 多值参数 |
-|----------|------|----------|
-| `search_symbol` | 统一符号搜索（函数/类/接口/文件） | `search` |
-| `get_class_by_name` | 按类名查类定义，可返回方法列表 | `name`、`class_fqn` |
-| `get_function` | 按名/文件/代码片段查询函数定义 | `name`、`function_fqn`、`file_path` |
-| `get_file_by_keyword` | 按关键字搜文件内容 | `keyword` |
-| `get_api_by_name` | 按接口名反查实现函数 | `api_name` |
-| `get_function_by_call` | 根据调用点反查被调用函数 | —— |
-| `get_reference_by_function` | 查函数被调用的位置 | —— |
-| `get_call_graph` | 获取函数调用图 | —— |
-| `get_import_by_file` | 查询指定文件 import 语句 | —— |
+- Every tool requires `project_path` (**required**, `string`): the path to a project already analyzed with CLI `init`, with its cache ready.
+- Parameters that accept multiple values take either a single value or an array of strings. Passing multiple values queries multiple results in one call.
+- Some MCP clients, such as Codex, serialize array arguments as JSON strings, for example sending `["A","B"]` as `"[\"A\",\"B\"]"`. yasamcp automatically converts these back to lists and performs the query with multiple values; no special client-side handling is needed.
 
-> ⚠️ **`init` 不在 MCP 工具中**。MCP 进程只用于只读查询，不写缓存、不跑增量；初始化必须先用 CLI `yasamcp init`。
+| MCP tool | Purpose | Parameters accepting multiple values |
+|----------|---------|--------------------------------------|
+| `search_symbol` | Unified symbol search (functions/classes/interfaces/files) | `search` |
+| `get_class_by_name` | Look up class definitions by name, optionally including methods | `name`, `class_fqn` |
+| `get_function` | Look up function definitions by name, file, or code snippet | `name`, `function_fqn`, `file_path` |
+| `get_file_by_keyword` | Search file contents by keyword | `keyword` |
+| `get_api_by_name` | Find implementing functions by API name | `api_name` |
+| `get_function_by_call` | Resolve the function invoked at a call site | — |
+| `get_reference_by_function` | Find locations where a function is called | — |
+| `get_call_graph` | Retrieve a function call graph | — |
+| `get_import_by_file` | Retrieve import statements from a file | — |
 
-### 输入输出示范
+> ⚠️ **`init` is not an MCP tool**. The MCP process only performs read-only queries; it does not write caches or run incremental analysis. Initialize the project first with CLI `yasamcp init`.
 
-以 xast sast-java 仓库查询 `HttpUtil` 类为例。
+### Input/output example
 
-**输入**（MCP 工具 `get_class_by_name` 的 `arguments`）：
+This example queries the `HttpUtil` class in the xast sast-java repository.
+
+**Input** (`arguments` for the MCP tool `get_class_by_name`):
 
 ```json
 {
@@ -277,7 +279,7 @@ yasamcp 以 MCP 常驻进程（默认 stdio）对外提供 **9 个只读查询�
 }
 ```
 
-**输出**（`class_fqn` / `file_path` / `location` / `content` / `methods`）：
+**Output** (`class_fqn` / `file_path` / `location` / `content` / `methods`):
 
 ```json
 {
@@ -299,26 +301,26 @@ yasamcp 以 MCP 常驻进程（默认 stdio）对外提供 **9 个只读查询�
 }
 ```
 
-> `content` 为类完整源码（此处为节省篇幅做了省略）；`location` 含起止行列；`methods` 在未传 `include_methods` 时为空。
+> `content` contains the complete class source code, abbreviated here for brevity. `location` includes the starting and ending line and column numbers. `methods` is empty when `include_methods` is not supplied.
 
-更多工具的输入输出约定见 `tests/integration/test_cases/`（基于 xast 各语言模块构造，含 `*_input.json` 与 `*.expected.json` 对照）。
+For more tools' input/output conventions, see `tests/integration/test_cases/`. These cases are based on xast language modules and include corresponding `*_input.json` and `*.expected.json` files.
 
-## CC / Codex 集成
+## CC / Codex Integration
 
-> 前置：目标项目已 `yasamcp init <项目>` 生成缓存（仅 CLI 可初始化，MCP 不提供 `init`）。
+> Prerequisite: generate the target project's cache with `yasamcp init <project>`. Initialization is CLI-only; MCP does not provide `init`.
 
-以 macOS arm64（默认安装到 `~/.yasamcp/`）为例。安装脚本已写入 `~/.yasamcp/config.json`（`{"binary_path":"~/.yasamcp/tools"}`），`yasamcp` 启动时会自动读取它定位 native 引擎（mac-arm64 对应 `~/.yasamcp/tools/darwin-aarch64/`），所以 `server` 无需 `-b`。
+The following examples use macOS arm64 with the default installation under `~/.yasamcp/`. The installer writes `~/.yasamcp/config.json` (`{"binary_path":"~/.yasamcp/tools"}`). At startup, `yasamcp` reads this file to locate the native engines; for mac-arm64, they are under `~/.yasamcp/tools/darwin-aarch64/`. Therefore, `server` does not need `-b`.
 
-> ⚠️ CC/Codex 是直接 spawn 进程、不经过 shell，配置里的路径必须是**绝对路径**——`~` 和 `$HOME` 都不会展开。把下面 `yourname` 换成你的 macOS 用户名（`echo $HOME` 查看，例如 `/Users/zhangsan`）。
+> ⚠️ CC/Codex spawns the process directly without a shell, so paths in the configuration must be **absolute**: neither `~` nor `$HOME` is expanded. Replace `yourname` below with your macOS username. Run `echo $HOME` to check your home directory, for example `/Users/zhangsan`.
 
-先确认二进制和配置就绪：
+First, confirm that the binary and configuration are ready:
 
 ```bash
-ls -l ~/.yasamcp/yasamcp-cli/yasamcp          # 默认安装的 CLI 二进制
-cat ~/.yasamcp/config.json                     # {"binary_path":"/Users/yourname/.yasamcp/tools"}
+ls -l ~/.yasamcp/yasamcp-cli/yasamcp          # CLI binary in the default installation
+cat ~/.yasamcp/config.json                  # {"binary_path":"/Users/yourname/.yasamcp/tools"}
 ```
 
-**Claude Code**（`~/.claude.json` 的 `mcpServers`）：
+**Claude Code** (`mcpServers` in `~/.claude.json`):
 
 ```json
 {
@@ -333,7 +335,7 @@ cat ~/.yasamcp/config.json                     # {"binary_path":"/Users/yourname
 }
 ```
 
-**Codex**（`~/.codex-ds/config.toml`）：
+**Codex** (`~/.codex-ds/config.toml`):
 
 ```toml
 [mcp_servers.yasamcp]
@@ -344,47 +346,47 @@ startup_timeout_sec = 60
 [mcp_servers.yasamcp.env]
 ```
 
-> 想让 MCP 进程不依赖 `config.json` 也能定位引擎，可在 `env` 里显式补 `"YASA_MCP_BIN_DIR": "/Users/yourname/.yasamcp/tools"`（Codex TOML 同理加 `YASA_MCP_BIN_DIR = "..."`）；二者配其一即可，默认 `config.json` 已自动覆盖。
+> To let the MCP process locate the engines without relying on `config.json`, explicitly add `"YASA_MCP_BIN_DIR": "/Users/yourname/.yasamcp/tools"` to `env`. In Codex TOML, add `YASA_MCP_BIN_DIR = "..."` to the environment section. Either configuration method is sufficient; the default installer already configures `config.json`.
 
-**验证**：重启会话 → `/mcp` 看到 `yasamcp` 及 9 个工具即成功（`Auth: Unsupported` 对本地 stdio 属正常，不阻断调用）→ 让模型带 `project_path` 调一个工具验证有结果。若返回「未找到已初始化的项目，请先通过 yasamcp init 生成分析结果」，说明该 `project_path` 缓存缺失/过期，回终端执行 `yasamcp init <项目路径>`。
+**Verify the integration**: restart the session, then run `/mcp`. If `yasamcp` and its nine tools appear, the server is connected. `Auth: Unsupported` is normal for local stdio and does not prevent tool calls. Ask the model to call a tool with `project_path` and confirm that it returns results. If the response says that no initialized project was found and asks you to generate analysis results with `yasamcp init`, the cache for that `project_path` is missing or outdated. Run `yasamcp init <project-path>` in a terminal.
 
-## 参与贡献
+## Contributing
 
-### 开发环境
+### Development environment
 
 ```bash
 git clone <repo-url> && cd yasa_mcp
-uv sync --extra test --extra packaging      # 或 pip install -e ".[test,packaging]"
-bash script/build_macos_arm64.sh           # 产出 dist/yasamcp/yasamcp
+uv sync --extra test --extra packaging      # Or: pip install -e ".[test,packaging]"
+bash script/build_macos_arm64.sh            # Produces dist/yasamcp/yasamcp
 ```
 
-### 运行集成测试
+### Running integration tests
 
-集成测试需要 **xast 靶场**：[alipay/ant-application-security-testing-benchmark](https://github.com/alipay/ant-application-security-testing-benchmark)。测试框架会自动准备靶场——首次运行时 `conftest` 调用 `tests/integration/yasamcp_client_integration/prepare_dataset.py`，从 GitHub clone xast 并把 5 个语言模块（sast-java / sast-go / sast-js / sast-php / sast-python3）复制到 `tests/dataset/{lang}/`，再对每个项目 `init` 生成缓存。后续运行会复用已有 dataset 与缓存。
+Integration tests require the **xast benchmark suite**: [alipay/ant-application-security-testing-benchmark](https://github.com/alipay/ant-application-security-testing-benchmark). The test framework prepares it automatically. On the first run, `conftest` calls `tests/integration/yasamcp_client_integration/prepare_dataset.py` to clone xast from GitHub, copy its five language modules (sast-java / sast-go / sast-js / sast-php / sast-python3) into `tests/dataset/{lang}/`, and run `init` on each project to generate caches. Subsequent runs reuse the existing datasets and caches.
 
-**确保能从 GitHub clone xast**：优先 SSH（`git@github.com:alipay/...`），失败自动回退 HTTPS；两者都失败时脚本会提示配置 GitHub 公钥后重试（`ssh -T git@github.com`）。若离线/CI 想跳过拉取，可设 `YASA_AUTO_FETCH=0`（缺失用例按 skip 处理）。
+**Ensure that you can clone xast from GitHub**: the script tries SSH first (`git@github.com:alipay/...`) and automatically falls back to HTTPS. If both fail, it prompts you to configure your GitHub public key and retry (`ssh -T git@github.com`). To skip fetching in an offline or CI environment, set `YASA_AUTO_FETCH=0`; cases with missing data are skipped.
 
-集成测试用例位于 `tests/integration/test_cases/`（按语言分目录，各含 `*_input.json` 与 `*.expected.json`）。
+Integration test cases are in `tests/integration/test_cases/`, organized by language, with `*_input.json` and `*.expected.json` files in each directory.
 
-运行命令（`YASAMCP_BINARY` 指向打包好的 CLI，`YASA_BIN_DIR` 指向 native 引擎根）：
+Run the following commands with `YASAMCP_BINARY` pointing to the packaged CLI and `YASA_BIN_DIR` pointing to the native engine root directory:
 
 ```bash
-# CLI 通道（pytest）
+# CLI channel (pytest)
 YASAMCP_BINARY=dist/yasamcp/yasamcp \
 YASA_BIN_DIR=/path/to/yasa_mcp_bin \
 python -m pytest tests/integration/yasamcp_client_integration/test_cli_tools.py -q -p no:cacheprovider
 
-# MCP 通道（脚本，端到端 spawn yasamcp server）
+# MCP channel (script that spawns yasamcp server for end-to-end testing)
 YASAMCP_BINARY=dist/yasamcp/yasamcp \
 YASA_BIN_DIR=/path/to/yasa_mcp_bin \
 python tests/integration/yasamcp_client_integration/test_mcp_server.py
 
-# 也可单独准备靶场（不跑测试）
+# Prepare the benchmark suite separately without running tests
 python tests/integration/yasamcp_client_integration/prepare_dataset.py
 ```
 
-期望：CLI 全绿、MCP 全绿、无 failed（缓存就绪后热请求通常 <100ms）。
+Expected result: all CLI and MCP tests pass, with no failures. Once caches are ready, warm requests typically take less than 100 ms.
 
-## 许可证
+## License
 
-yasamcp 采用 Apache License 2.0；集成的第三方工具（`codegraph` MIT / `ripgrep` MIT / `scc` MIT·Unlicense / `duckdb` MIT）声明与版权见 [NOTICE.md](NOTICE.md)。
+yasamcp is licensed under the Apache License 2.0. For notices and copyright information for bundled third-party tools (`codegraph` MIT / `ripgrep` MIT / `scc` MIT·Unlicense / `duckdb` MIT), see [NOTICE.md](NOTICE.md).
