@@ -2,10 +2,11 @@ import * as assert from 'assert'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import { describe, it } from 'mocha'
+import { before, describe, it } from 'mocha'
 
-const { parseSingleFile: parseSingleFilePython } = require('../../src/engine/parser/python/python-ast-builder') as {
-  parseSingleFile: (code: string, options: { uastSDKPath: string }) => unknown
+const { ensureInitialized, parseSingleFile: parseSingleFilePython } = require('../../src/engine/parser/python/python-ast-builder') as {
+  ensureInitialized: () => Promise<void>
+  parseSingleFile: (code: string, options: { sourcefile: string }) => unknown
 }
 const { findFastApiEntryPointAndSource } = require('../../src/engine/analyzer/python/fastapi/entrypoint-collector/fastapi-entrypoint') as {
   findFastApiEntryPointAndSource: (files: Record<string, unknown>, root: string) => {
@@ -38,12 +39,16 @@ type SarifResult = {
 }
 
 describe('FastAPI BackgroundTasks scanner integration', function () {
+  before(async function () {
+    await ensureInitialized()
+  })
+
   it('finds exactly the historical callback payload boundary and excludes the decoy', async function () {
     this.timeout(30000)
     const fixtureDir = path.join(__dirname, 'fastapi-backgroundtasks-cases')
     const sourcePath = path.join(fixtureDir, 'scanner_callback.py')
     const discoveredRoutes = findFastApiEntryPointAndSource({
-      [sourcePath]: parseSingleFilePython(fs.readFileSync(sourcePath, 'utf8'), { uastSDKPath: path.join(__dirname, '../../deps') }),
+      [sourcePath]: parseSingleFilePython(fs.readFileSync(sourcePath, 'utf8'), { sourcefile: sourcePath }),
     }, fixtureDir).fastApiEntryPointArray
     assert.strictEqual(discoveredRoutes.length, 1)
     assert.strictEqual(discoveredRoutes[0].functionName, 'endpoint')
@@ -59,7 +64,6 @@ describe('FastAPI BackgroundTasks scanner integration', function () {
       '--report', reportDir,
       '--analyzer', 'PythonAnalyzer',
       '--checkerIds', 'taint_flow_test',
-      '--uastSDKPath', path.join(__dirname, '../../deps'),
     ], recorder.printAndAppend)
 
     const sarif = JSON.parse(fs.readFileSync(path.join(reportDir, 'report.sarif'), 'utf8')) as { runs?: Array<{ results?: SarifResult[] }> }

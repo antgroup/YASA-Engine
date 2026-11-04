@@ -184,14 +184,16 @@ class PythonAnalyzer extends Analyzer {
    * @param source
    * @param fileName
    */
-  preProcess4SingleFile(source: any, fileName: any) {
+  async preProcess4SingleFile(source: any, fileName: any) {
+    const PythonAstBuilder = require('../../../parser/python/python-ast-builder')
+    await PythonAstBuilder.ensureInitialized()
     ;(this as any).thisIterationTime = 0
     ;(this as any).prevIterationTime = new Date().getTime()
     this.fileList = [fileName]
     this._normalizedFileSet = new Set<string>([path.normalize(fileName)])
     const { options } = this
     this.sourceCodeCache.set(fileName, source.split(/\n/))
-    const ast = Parser.parseSingleFile(fileName, options)
+    const ast = Parser.parseSingleFile(fileName, options, this.sourceCodeCache)
     this.pyAstParseManager[fileName] = ast
     this.addASTInfo(ast, source, fileName)
     if (ast) {

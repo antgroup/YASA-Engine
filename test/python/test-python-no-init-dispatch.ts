@@ -67,8 +67,6 @@ async function getRunNoInitDispatchResult(): Promise<NoInitDispatchResult> {
     'PythonAnalyzer',
     '--checkerIds',
     'taint_flow_test',
-    '--uastSDKPath',
-    path.join(__dirname, '../../deps'),
   ]
 
   try {

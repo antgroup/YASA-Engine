@@ -7,6 +7,7 @@
   "dependencies": {
     "@ant-yasa/uast-parser-java-js": "^0.2.16",
     "@ant-yasa/uast-parser-php": "^0.2.16",
+    "@ant-yasa/uast-parser-python": "file:../uast/parser-Python",
     "@ant-yasa/uast-spec": "^0.2.16",
     "@babel/core": "^7.14.6",
     "@babel/parser": "^7.16.4",
@@ -200,7 +201,7 @@
       "dist/**/*",
       "resource/**/*",
       "deps/uast4go/uast4go",
-      "deps/uast4py/uast4py",
+      "node_modules/@ant-yasa/uast-parser-python/vendor/*.wasm",
       "node_modules/tree-sitter-php/*.wasm",
       "node_modules/web-tree-sitter/web-tree-sitter.wasm"
     ],

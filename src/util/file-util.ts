@@ -868,13 +868,13 @@ function extractBinaryFromSnapshot(snapshotBinaryPath: string, binaryName: strin
  * 在 pkg 打包环境中，从 /snapshot 资产中解压到运行目录（execBase/deps-runtime/）
  * @param options - 选项对象
  * @param options.uastSDKPath - 用户指定的 SDK 路径
- * @param options.binaryName - 二进制文件名（'uast4py' 或 'uast4go'）
+ * @param options.binaryName - 二进制文件名（'uast4go'）
  * @param options.devPath - 开发环境路径
  * @returns {string | null} 二进制文件路径，如果不存在返回 null
  */
 function resolveUastBinaryPath(options: {
   uastSDKPath?: string
-  binaryName: 'uast4py' | 'uast4go'
+  binaryName: 'uast4go'
   devPath: string
 }): string | null {
   const { uastSDKPath, binaryName, devPath } = options

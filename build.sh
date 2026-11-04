@@ -34,10 +34,23 @@ if ! rm -rf dist > /dev/null; then
 fi
 success "清理历史结果完成"
 
-# 步骤 1: 安装依赖
-info "步骤 1/8: 安装依赖 (npm install --ignore-scripts --package-lock=false)"
-if ! npm install --ignore-scripts --package-lock=false > /dev/null; then
-    alert "npm install 失败"
+# 步骤 1: 构建本地 Python parser 并安装依赖
+PYTHON_PARSER_DIR="../uast/parser-Python"
+if [ ! -f "$PYTHON_PARSER_DIR/package.json" ]; then
+    alert "未找到 $PYTHON_PARSER_DIR；请将 Python UAST 仓库放在相邻的 uast 目录"
+fi
+info "步骤 1/8: 构建 Python UAST parser"
+if ! npm ci --prefix "$PYTHON_PARSER_DIR" --ignore-scripts > /dev/null; then
+    alert "Python UAST parser 依赖安装失败"
+fi
+if ! npm --prefix "$PYTHON_PARSER_DIR" run build > /dev/null; then
+    alert "Python UAST parser 构建失败"
+fi
+# Refresh file dependencies even when the local parser version has not changed.
+rm -rf node_modules/@ant-yasa/uast-parser-python
+info "步骤 1/8: 安装 Engine 依赖"
+if ! npm ci --ignore-scripts > /dev/null; then
+    alert "npm ci 失败"
 fi
 success "依赖安装完成"
 

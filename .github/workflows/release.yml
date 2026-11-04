@@ -58,7 +58,6 @@ jobs:
           gh release download "$TAG" \
             --repo "$REPO" \
             --pattern "uast4go-*" \
-            --pattern "uast4py-*" \
             --dir uast_binaries/
           if [ $? -ne 0 ]; then
             echo "❌ Failed to download UAST binaries"
@@ -70,11 +69,10 @@ jobs:
       - name: Extract and Deploy Linux Binaries to deps/
         run: |
           # 创建目标目录
-          mkdir -p deps/uast4go deps/uast4py
+          mkdir -p deps/uast4go
 
-          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          # 查找 linux-amd64 或 linux-x86_64 的 Go 二进制
           GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
-          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
 
           if [ ! -f "$GO_BINARY" ]; then
             echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
@@ -82,23 +80,14 @@ jobs:
             exit 1
           fi
 
-          if [ ! -f "$PY_BINARY" ]; then
-            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
-            ls -lh uast_binaries/
-            exit 1
-          fi
-
           # 复制并重命名为无平台后缀的名称
           cp "$GO_BINARY" deps/uast4go/uast4go
-          cp "$PY_BINARY" deps/uast4py/uast4py
 
           # 添加可执行权限
           chmod +x deps/uast4go/uast4go
-          chmod +x deps/uast4py/uast4py
 
           echo "✅ Deployed:"
           echo "   $GO_BINARY  --> deps/uast4go/uast4go"
-          echo "   $PY_BINARY --> deps/uast4py/uast4py"
 
       - name: Verify files in deps/
         run: |
@@ -110,7 +99,7 @@ jobs:
       - name: Check if downloaded
         id: check
         run: |
-          if [ -f "deps/uast4go/uast4go" ] && [ -f "deps/uast4py/uast4py" ]; then
+          if [ -f "deps/uast4go/uast4go" ]; then
             echo "downloaded=true" >> $GITHUB_OUTPUT
           else
             echo "downloaded=false" >> $GITHUB_OUTPUT
@@ -208,11 +197,10 @@ jobs:
       - name: Extract and Deploy Linux Binaries to deps/
         run: |
           # 创建目标目录
-          mkdir -p deps/uast4go deps/uast4py
+          mkdir -p deps/uast4go
 
-          # 查找 linux-amd64 或 linux-x86_64 的 go 和 python 二进制
+          # 查找 linux-amd64 或 linux-x86_64 的 Go 二进制
           GO_BINARY=$(find uast_binaries -name "uast4go-*linux*-amd64" -o -name "uast4go-*linux*-x86_64" | head -n1)
-          PY_BINARY=$(find uast_binaries -name "uast4py-*linux*-amd64" -o -name "uast4py-*linux*-x86_64" | head -n1)
 
           if [ ! -f "$GO_BINARY" ]; then
             echo "❌ Cannot find uast4go Linux binary in uast_binaries/"
@@ -220,23 +208,14 @@ jobs:
             exit 1
           fi
 
-          if [ ! -f "$PY_BINARY" ]; then
-            echo "❌ Cannot find uast4py Linux binary in uast_binaries/"
-            ls -lh uast_binaries/
-            exit 1
-          fi
-
           # 复制并重命名为无平台后缀的名称
           cp "$GO_BINARY" deps/uast4go/uast4go
-          cp "$PY_BINARY" deps/uast4py/uast4py
 
           # 添加可执行权限
           chmod +x deps/uast4go/uast4go
-          chmod +x deps/uast4py/uast4py
 
           echo "✅ Deployed:"
           echo "   $GO_BINARY  --> deps/uast4go/uast4go"
-          echo "   $PY_BINARY --> deps/uast4py/uast4py"
 
       - name: 🧪 Run Go Tests
         id: test_go
@@ -411,19 +390,19 @@ jobs:
           declare -A ARTIFACT_KEYS
           declare -A IS_WINDOWS
 
-          PLATFORMS["linux-x64"]="yasa-engine-linux-x64 uast4go-linux-amd64 uast4py-linux-amd64"
+          PLATFORMS["linux-x64"]="yasa-engine-linux-x64 uast4go-linux-amd64"
           ARTIFACT_KEYS["linux-x64"]="engine-node18-linux-x64"
           IS_WINDOWS["linux-x64"]="false"
 
-          PLATFORMS["macos-x64"]="yasa-engine-macos-x64 uast4go-mac-amd64 uast4py-mac-amd64"
+          PLATFORMS["macos-x64"]="yasa-engine-macos-x64 uast4go-mac-amd64"
           ARTIFACT_KEYS["macos-x64"]="engine-node18-macos-x64"
           IS_WINDOWS["macos-x64"]="false"
 
-          PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64 uast4go-mac-arm64 uast4py-mac-arm64"
+          PLATFORMS["macos-arm64"]="yasa-engine-macos-arm64 uast4go-mac-arm64"
           ARTIFACT_KEYS["macos-arm64"]="engine-node18-macos-arm64"
           IS_WINDOWS["macos-arm64"]="false"
 
-          # PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe uast4py-windows-amd64.exe"
+          # PLATFORMS["windows-x64"]="yasa-engine-windows-x64.exe uast4go-windows-amd64.exe"
           # ARTIFACT_KEYS["windows-x64"]="engine-node18-win-x64"
           # IS_WINDOWS["windows-x64"]="true"
 
@@ -513,22 +492,18 @@ jobs:
             zip: yasa-linux-x64.zip
             engine: yasa-engine-linux-x64
             uast_go: uast4go-linux-amd64
-            uast_py: uast4py-linux-amd64
           - os: macos-latest
             zip: yasa-macos-x64.zip
             engine: yasa-engine-macos-x64
             uast_go: uast4go-mac-amd64
-            uast_py: uast4py-mac-amd64
           - os: macos-latest
             zip: yasa-macos-arm64.zip
             engine: yasa-engine-macos-arm64
             uast_go: uast4go-mac-arm64
-            uast_py: uast4py-mac-arm64
           # - os: windows-latest
           #   zip: yasa-windows-x64.zip
           #   engine: yasa-engine-windows-x64.exe
           #   uast_go: uast4go-windows-amd64.exe
-          #   uast_py: uast4py-windows-amd64.exe
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: 📥 Download Release Artifacts
@@ -543,9 +518,6 @@ jobs:
           chmod +x "bundle/${{ matrix.platform.engine }}"
           if [ -f "bundle/${{ matrix.platform.uast_go }}" ]; then
             chmod +x "bundle/${{ matrix.platform.uast_go }}"
-          fi
-          if [ -f "bundle/${{ matrix.platform.uast_py }}" ]; then
-            chmod +x "bundle/${{ matrix.platform.uast_py }}"
           fi
         shell: bash
         if: ${{ matrix.platform.os != 'windows-latest' }}
