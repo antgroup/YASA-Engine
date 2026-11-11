@@ -1,0 +1,7 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "__taint_sink",
+    "max_results": 20
+  }
+}

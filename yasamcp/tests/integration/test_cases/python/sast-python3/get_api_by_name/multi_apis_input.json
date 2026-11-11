@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_api_by_name",
+  "arguments": {
+    "api_name": [
+      "Processor.process",
+      "Validator.validate",
+      "Box.get_content"
+    ],
+    "use_regex": false,
+    "max_results": 0
+  }
+}

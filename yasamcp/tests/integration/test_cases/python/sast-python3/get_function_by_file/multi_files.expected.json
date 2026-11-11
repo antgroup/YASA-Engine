@@ -1,0 +1,171 @@
+{
+  "results": [
+    {
+      "function_fqn": "BaseClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 14,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Box::__init__",
+      "function_signature": "__init__(self, content: T)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::getData",
+      "function_signature": "getData(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 24
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Box::get_content",
+      "function_signature": "get_content(self) -> T",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 27
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 12
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "simple_object_005_T",
+      "function_signature": "simple_object_005_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 23,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 37
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::__init__",
+      "function_signature": "__init__(self, data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 24,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DerivedClass::process",
+      "function_signature": "process(self)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 27,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 34
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 29,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_002_F",
+      "function_signature": "constructor_extends_002_F(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 31,
+        "start_column": 0,
+        "end_line": 33,
+        "end_column": 21
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.py",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 37,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 11
+}

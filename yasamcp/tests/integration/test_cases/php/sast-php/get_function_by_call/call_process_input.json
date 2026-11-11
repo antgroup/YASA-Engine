@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "process($__taint_src)",
+    "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+    "line": 19,
+    "max_results": 10
+  }
+}

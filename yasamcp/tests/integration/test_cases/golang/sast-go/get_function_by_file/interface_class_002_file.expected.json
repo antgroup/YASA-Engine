@@ -1,0 +1,141 @@
+{
+  "results": [
+    {
+      "function_fqn": "ITestService::process",
+      "function_signature": "process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 14,
+        "start_column": 1,
+        "end_line": 14,
+        "end_column": 28
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ITestService::process2",
+      "function_signature": "process2(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 15,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 29
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TestService::process",
+      "function_signature": "string process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TestService::process2",
+      "function_signature": "string process2(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TestService2::process",
+      "function_signature": "string process(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 32,
+        "start_column": 0,
+        "end_line": 34,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TestService2::process2",
+      "function_signature": "string process2(data string) string",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 36,
+        "start_column": 0,
+        "end_line": 38,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "interface_class_002_T",
+      "function_signature": "interface_class_002_T(__taint_src string)",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 39,
+        "start_column": 0,
+        "end_line": 43,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 45,
+        "start_column": 0,
+        "end_line": 47,
+        "end_column": 2
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "main",
+      "function_signature": "main()",
+      "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+      "location": {
+        "file_path": "cases/accuracy/object_sensitive/interface_class/interface_class_002_T/interface_class_002_T.go",
+        "start_line": 49,
+        "start_column": 0,
+        "end_line": 52,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 9
+}

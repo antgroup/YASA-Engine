@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+        "line": 14,
+        "content": "\t__taint_sink(o)\n"
+      },
+      "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.Cross_directory_001_T_b",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+        "start_line": 13,
+        "start_column": 1,
+        "end_line": 15,
+        "end_column": 2
+      },
+      "content": "func Cross_directory_001_T_b(o interface{}) {\n\t__taint_sink(o)\n}"
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

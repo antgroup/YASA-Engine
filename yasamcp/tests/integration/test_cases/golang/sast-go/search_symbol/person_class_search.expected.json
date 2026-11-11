@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "interface",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "interface",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_007_T/argument_passing_reference_007_T.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/argument_passing_reference_008_F/argument_passing_reference_008_F.go",
+        "start_line": 13,
+        "start_column": 5,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_025_T/cross/cross_01/cross_directory_025_T_a.go",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_026_F/cross/cross_01/cross_directory_026_F_a.go",
+        "start_line": 14,
+        "start_column": 5,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_029_T/cross/cross_01/cross_directory_029_T_a.go",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "struct",
+      "name": "Person",
+      "qualified_name": "Person",
+      "language": "go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_030_F/cross/cross_01/cross_directory_030_F_a.go",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 14,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

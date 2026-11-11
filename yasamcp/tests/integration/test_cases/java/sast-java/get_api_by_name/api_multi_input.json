@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_api_by_name",
+  "arguments": {
+    "api_name": [
+      "MustTaintKind_001_T",
+      "MayTaintKind_003_F",
+      "Expression_Arithmetic_001_T"
+    ],
+    "max_results": 0
+  }
+}

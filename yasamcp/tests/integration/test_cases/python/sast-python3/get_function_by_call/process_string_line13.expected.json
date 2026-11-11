@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.library_function.string_002_F.string_002_F",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.py",
+        "line": 12
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.py",
+        "line": 13,
+        "content": "    process('_')\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.library_function.string_002_F.process",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.py",
+        "start_line": 16,
+        "start_column": 1,
+        "end_line": 18,
+        "end_column": 23
+      },
+      "content": "def process(arg):\n    result = arg.strip()\n    taint_sink(result)",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "BaseClass::get_data",
+      "signature": "get_data(self)",
+      "filepath": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "def get_data(self):\n        return self.data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "constructor_extends_003_T::BaseClass::get_data",
+      "signature": "get_data(self)",
+      "filepath": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "def get_data(self):\n        return self.data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "constructor_extends_004_F::BaseClass::get_data",
+      "signature": "get_data(self)",
+      "filepath": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 0
+      },
+      "content": "def get_data(self):\n        return self.data"
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

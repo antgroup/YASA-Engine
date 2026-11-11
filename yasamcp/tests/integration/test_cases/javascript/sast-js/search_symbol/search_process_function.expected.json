@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.js",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.js",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "MyClass::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_001_T.js",
+        "start_line": 12,
+        "start_column": 2,
+        "end_line": 14,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "method",
+      "name": "process",
+      "qualified_name": "MyClass::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/static_method_002_F.js",
+        "start_line": 12,
+        "start_column": 2,
+        "end_line": 15,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "async_await_001_T::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/async_await_001_T.js",
+        "start_line": 15,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "async_await_002_F::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/asynchronous_tracing/promise_callback_await/async_await_002_F.js",
+        "start_line": 15,
+        "start_column": 2,
+        "end_line": 21,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "json_001_T::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/json_001_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "json_002_F::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/json_002_F.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "string_001_T::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_001_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": ""
+    },
+    {
+      "kind": "function",
+      "name": "process",
+      "qualified_name": "string_002_F::process",
+      "language": "javascript",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/string_002_F.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 16,
+        "end_column": 3
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

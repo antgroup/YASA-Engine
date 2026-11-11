@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Worker::execute",
+      "signature": "execute()",
+      "filepath": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_F/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_F/main.php",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "public function execute($input) {\n        return \"safe_value\";\n    }"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Worker::execute",
+      "signature": "execute()",
+      "filepath": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/main.php",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "public function execute($input) {\n        return $input;\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

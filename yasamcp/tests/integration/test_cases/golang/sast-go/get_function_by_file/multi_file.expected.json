@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "function_fqn": "multiple_return_value_passing_001_F",
+      "function_signature": "multiple_return_value_passing_001_F(__taint_src interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Cross_directory_001_T_b",
+      "function_signature": "Cross_directory_001_T_b(o interface{})",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 2
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "processData",
+      "function_signature": "processData(s interface{}, i interface{}) (interface{}, interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 2
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "main",
+      "function_signature": "main()",
+      "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+        "start_line": 29,
+        "start_column": 0,
+        "end_line": 32,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

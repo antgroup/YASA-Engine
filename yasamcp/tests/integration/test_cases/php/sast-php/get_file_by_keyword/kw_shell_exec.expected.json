@@ -1,0 +1,100 @@
+{
+  "results": [
+    {
+      "file_path": "README.md",
+      "matches": [
+        {
+          "line": 185,
+          "content": "    // 污点传播逻辑\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncase_name_001_T($taint_src);\n```"
+        },
+        {
+          "line": 199,
+          "content": "| real case | `true` = T 用例（存在真实污点链路），`false` = F 用例（不存在） |\n| evaluation item | 中文评价维度路径 |\n| scene introduction | 场景简述 |\n| level | 难度等级：1=基础, 2=中等, 3=高级 |\n| bind_url | 从 accuracy/completeness 开始的相对路径（不含 .php） |\n| sink | 统一 `shell_exec()` 命令注入类 |\n| source | 函数参数 `$__taint_src` 或超全局变量 `$_GET/$_POST` 等 |"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction getData($arg) {\n    return $arg;\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction getData($arg) {\n    return \"safe_value\";\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction layer1($arg) {\n    layer2($arg);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction layer1($arg) {\n    layer2($arg);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction inner($arg) {\n    return $arg;\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction inner($arg) {\n    return \"safe_value\";\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "matches": [
+        {
+          "line": 11,
+          "content": "// level = 3\n// bind_url = accuracy/context_sensitive/multi_invoke/multi_invoke_001_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    return $arg;\n}"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

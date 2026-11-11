@@ -1,0 +1,93 @@
+{
+  "results": [
+    {
+      "class_fqn": "DataProcessor",
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "interface DataProcessor {\n    public function process($data);\n}",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 11
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "class_fqn": "DataProcessor",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "interface DataProcessor {\n    public function process($data);\n}",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 11
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "class_fqn": "DataProcessor",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "interface DataProcessor {\n    public function process($data);\n}",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 11
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        },
+        {
+          "name": "process",
+          "function_signature": "process()",
+          "line": 15
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

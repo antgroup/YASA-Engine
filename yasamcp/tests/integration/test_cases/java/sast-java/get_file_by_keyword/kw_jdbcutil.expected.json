@@ -1,0 +1,119 @@
+{
+  "results": [
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/JDBCUtil.java",
+      "matches": [
+        {
+          "line": 8,
+          "content": "import java.sql.Connection;\nimport java.sql.DriverManager;\nimport java.sql.SQLException;\nimport java.sql.Statement;\n\npublic class JDBCUtil {\n    static final String JDBC_URL = \"jdbc:mysql://localhost:3306/mydatabase\";\n    static final String USERNAME = \"root\";\n    static final String PASSWORD = \"123456\";\n\n    public static void execSql(String sql) {"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 31,
+          "content": "            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_003_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 32,
+          "content": "            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql2);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_001_T.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 25,
+          "content": "@RequestMapping(\"completeness/base/chain/taintKind\")\npublic class MustTaintKind_001_T {\n    @GetMapping(\"MustTaintKind_001_T\")\n    public void testcase(@RequestParam String name) {\n        String sql = \"select * from user where username = \" + name;\n        JDBCUtil.execSql(sql);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MustTaintKind_003_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.RestController;\n"
+        },
+        {
+          "line": 26,
+          "content": "public class MustTaintKind_003_F {\n    @GetMapping(\"MustTaintKind_003_F\")\n    public void testcase(@RequestParam String name) {\n        String sql = \"select * from user where username = \" + name;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_001_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\n\n/**\n * Introduction 污点链路样本中的污点分类，没有source，且source传入sink\n * Level X\n * Date 2024-05-23"
+        },
+        {
+          "line": 18,
+          "content": "// bind_url =\n// evaluation information end\npublic class SafeKind_001_F {\n    public void testcase() {\n        String sql = \"select * from user where username = zhangsan\";\n        JDBCUtil.execSql(sql);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/SafeKind_003_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\n\n/**\n * Introduction 污点链路样本中的污点分类，没有source，且有sink但未传入source\n * Level X\n * Date 2024-05-23"
+        },
+        {
+          "line": 19,
+          "content": "// evaluation information end\npublic class SafeKind_003_F {\n    public void testcase() {\n        String sql = \"select * from user where username = zhangsan\";\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_001_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\n\n/**\n * Introduction 污点链路样本中的污点分类，不确定是否被污染，且source传入sink\n * Level X\n * Date 2024-05-23"
+        },
+        {
+          "line": 18,
+          "content": "// bind_url =\n// evaluation information end\npublic class UnknownTaintKind_001_F {\n    public void testcase(String name) {\n        String sql = \"select * from user where username = \" + name;\n        JDBCUtil.execSql(sql);\n    }\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "src/main/java/com/sast/astbenchmark/other_preference/UnknownTaintKind_003_F.java",
+      "matches": [
+        {
+          "line": 3,
+          "content": "package com.sast.astbenchmark.other_preference;\n\nimport com.sast.astbenchmark.common.utils.JDBCUtil;\n\n/**\n * Introduction 污点链路样本中的污点分类，不确定是否被污染，且有sink但未传入source\n * Level X\n * Date 2024-05-23"
+        },
+        {
+          "line": 19,
+          "content": "// evaluation information end\npublic class UnknownTaintKind_003_F {\n    public void testcase(String name) {\n        String sql = \"select * from user where username = \" + name;\n        String sql2 = \"select * from user where username = \" + \"zhangsan\";\n        JDBCUtil.execSql(sql2);\n    }\n}"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 9
+}

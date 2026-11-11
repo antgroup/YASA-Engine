@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": [
+      "super"
+    ],
+    "max_results": 10
+  }
+}

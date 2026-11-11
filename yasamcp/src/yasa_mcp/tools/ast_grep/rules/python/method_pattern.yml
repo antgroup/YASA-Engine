@@ -1,0 +1,16 @@
+name: method_pattern
+rule:
+  any:
+    - kind: decorated_definition
+      has:
+        kind: function_definition
+        has:
+          kind: identifier
+          regex: "^{method_name}$"
+    - kind: function_definition
+      not:
+        inside:
+          kind: decorated_definition
+      has:
+        kind: identifier
+        regex: "^{method_name}$"

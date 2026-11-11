@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": [
+      "Sub1",
+      "Sub2"
+    ],
+    "max_results": 10
+  }
+}

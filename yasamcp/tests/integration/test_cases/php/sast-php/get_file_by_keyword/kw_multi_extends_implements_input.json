@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": [
+      "extends",
+      "implements"
+    ],
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

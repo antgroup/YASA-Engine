@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+      "matches": [
+        {
+          "line": null,
+          "content": "# -*- coding: utf-8 -*-\n# evaluation information start\n# real case = true\n# evaluation item = 完整度->单应用跟踪完整度->函数和方法调用->库函数调用\n# scene introduction = math库\n# level = 2\n# bind_url = completeness/single_app_tracing/function_call/library_function/math_001_T\n# evaluation information end\n\nimport os\nimport math  # 导入Python标准库中的math模块，提供数学运算功能\n\ndef math_001_T(taint_src):\n    # 定义内部函数process，用于处理传入的数值字符串并计算其平方根\n    def process(num):\n        result = math.sqrt(num)  # 使用math模块的sqrt函数计算num的平方根\n        taint_sink(result) \n\n    process(taint_src)  \n\n\ndef taint_sink(o):\n    os.system(str(o))  \n\n\nif __name__ == \"__main__\":\n    taint_src = 100\n    math_001_T(taint_src)  \n\n"
+        }
+      ]
+    },
+    {
+      "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_002_F.py",
+      "matches": [
+        {
+          "line": null,
+          "content": "# -*- coding: utf-8 -*-\n# evaluation information start\n# real case = false\n# evaluation item = 完整度->单应用跟踪完整度->函数和方法调用->库函数调用\n# scene introduction = math库\n# level = 2\n# bind_url = completeness/single_app_tracing/function_call/library_function/math_002_F\n# evaluation information end\n\nimport os\nimport math  # 导入Python标准库中的math模块，提供数学运算功能\n\ndef math_002_F(taint_src):\n    # 定义内部函数process，用于处理传入的数值字符串并计算其平方根\n    def process(num):\n        result = math.sqrt(10000)  # 使用math模块的sqrt函数计算num的平方根\n        taint_sink(result) \n\n    process(taint_src)  \n\n\ndef taint_sink(o):\n    os.system(str(o))  \n\n\nif __name__ == \"__main__\":\n    taint_src = 100\n    math_002_F(taint_src)  \n\n"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

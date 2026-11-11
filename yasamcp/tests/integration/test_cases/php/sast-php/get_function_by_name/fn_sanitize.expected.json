@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "function_fqn": "App\\Security::Sanitizer::sanitize",
+      "function_signature": "sanitize()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_F/Sanitizer.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/namespace_use_002_F/Sanitizer.php",
+        "start_line": 5,
+        "start_column": 4,
+        "end_line": 7,
+        "end_column": 5
+      },
+      "content": "public static function sanitize($data) {\n        return \"safe_output\";\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "SafeBuilder::sanitize",
+      "function_signature": "sanitize()",
+      "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/chained_call_001_F.php",
+        "start_line": 18,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "public function sanitize() {\n        $this->data = \"safe\";\n        return $this;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "sanitize",
+      "function_signature": "sanitize()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/include_require_001_F/sanitizer.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/include_require_001_F/sanitizer.php",
+        "start_line": 3,
+        "start_column": 0,
+        "end_line": 5,
+        "end_column": 1
+      },
+      "content": "function sanitize($input) {\n    return \"sanitized_value\";\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "sanitize",
+      "function_signature": "sanitize()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/require_once_001_F/helper.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/require_once_001_F/helper.php",
+        "start_line": 3,
+        "start_column": 0,
+        "end_line": 5,
+        "end_column": 1
+      },
+      "content": "function sanitize($input) {\n    return \"sanitized_value\";\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "sanitize",
+      "function_signature": "sanitize()",
+      "file_path": "case/completeness/single_app_tracing/function_call/argument_passing_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/argument_passing_001_F.php",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "function sanitize($data) {\n    return \"sanitized\";\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 5
+}

@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "__taint_sink",
+    "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+    "line": 18,
+    "max_results": 10
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.alias.alias_003_T.alias_003_T",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+        "line": 11
+      },
+      "callees": [
+        {
+          "call_site": {
+            "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+            "line": 15,
+            "content": "  __taint_sink(a.value);\n"
+          },
+          "function_fqn": "case.completeness.single_app_tracing.alias.alias_003_T.__taint_sink",
+          "function_signature": "",
+          "location": {
+            "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+            "start_line": 18,
+            "start_column": 1,
+            "end_line": 20,
+            "end_column": 2
+          },
+          "content": "",
+          "has_cycle": false,
+          "callees": [
+            {
+              "call_site": {
+                "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+                "line": 19,
+                "content": "  execSync(o);\n"
+              },
+              "function_fqn": "child_process.execSync",
+              "function_signature": "",
+              "location": {
+                "file_path": "default",
+                "start_line": 0,
+                "start_column": 0,
+                "end_line": 0,
+                "end_column": 0
+              },
+              "content": "",
+              "has_cycle": false,
+              "callees": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

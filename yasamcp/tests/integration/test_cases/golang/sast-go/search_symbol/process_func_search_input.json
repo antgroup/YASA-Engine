@@ -1,0 +1,8 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": "process",
+    "kind": "function",
+    "max_results": 10
+  }
+}

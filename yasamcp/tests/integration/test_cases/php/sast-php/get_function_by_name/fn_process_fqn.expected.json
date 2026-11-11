@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "function_fqn": "BaseProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public static function process($input) {\n        return static::getData($input);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

@@ -1,0 +1,7 @@
+{
+  "tool_name": "get_function_by_code",
+  "arguments": {
+    "code_snippet": "public static void sink(Object param)",
+    "max_results": 10
+  }
+}

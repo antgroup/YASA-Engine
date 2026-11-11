@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "class_fqn": "Config",
+      "file_path": "case/completeness/single_app_tracing/class/readonly_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/readonly_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 14,
+        "end_column": 1
+      },
+      "content": "class Config {\n    public function __construct(\n        public readonly string $value\n    ) {}\n}",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

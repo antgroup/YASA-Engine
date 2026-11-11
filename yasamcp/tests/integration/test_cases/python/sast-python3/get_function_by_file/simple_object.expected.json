@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "function_fqn": "Box::__init__",
+      "function_signature": "__init__(self, content: T)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 16,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 30
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Box::get_content",
+      "function_signature": "get_content(self) -> T",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 20,
+        "end_column": 27
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "simple_object_005_T",
+      "function_signature": "simple_object_005_T(taint_src)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 23,
+        "start_column": 0,
+        "end_line": 26,
+        "end_column": 37
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 29,
+        "start_column": 0,
+        "end_line": 30,
+        "end_column": 16
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

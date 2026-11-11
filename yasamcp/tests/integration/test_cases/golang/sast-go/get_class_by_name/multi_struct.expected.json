@@ -1,0 +1,966 @@
+{
+  "results": [
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/object_creation_001_T/object_creation_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/object_creation_001_T/object_creation_001_T.go",
+        "start_line": 16,
+        "start_column": 5,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/field_write_001_T/field_write_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/field_write_001_T/field_write_001_T.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/field_write_002_F/field_write_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/field_write_002_F/field_write_002_F.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/method_call_001_T/method_call_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/method_call_001_T/method_call_001_T.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/method_call_002_F/method_call_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/method_call_002_F/method_call_002_F.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/object_creation_002_F/object_creation_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/subclass/object_creation_002_F/object_creation_002_F.go",
+        "start_line": 17,
+        "start_column": 5,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "type Base struct {\n\tid int\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T/polymorphism_override_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T/polymorphism_override_001_T.go",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "type Base interface {\n\tcall(src interface{}) interface{}\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F/polymorphism_override_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F/polymorphism_override_002_F.go",
+        "start_line": 18,
+        "start_column": 5,
+        "end_line": 20,
+        "end_column": 1
+      },
+      "content": "type Base interface {\n\tcall(src interface{}) interface{}\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_001_T/polymorphism_001_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_001_T/polymorphism_001_T.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "type Base interface {\n\tcall(src interface{}) interface{}\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Base",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_002_F/polymorphism_002_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_002_F/polymorphism_002_F.go",
+        "start_line": 19,
+        "start_column": 5,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "type Base interface {\n\tcall(src interface{}) interface{}\n}",
+      "methods": [
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 19
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "call",
+          "function_signature": "call(src interface{}) interface{}",
+          "line": 20
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        },
+        {
+          "name": "GetID",
+          "function_signature": "int GetID() int",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_001_T/call_implement_method_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_001_T/call_implement_method_001_T.go",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_002_F/call_implement_method_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/call_implement_method_002_F/call_implement_method_002_F.go",
+        "start_line": 23,
+        "start_column": 5,
+        "end_line": 25,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_001_T/create_implement_object_001_T.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/create_implement_object_002_F/create_implement_object_002_F.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tname string\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_001_T/write_implement_field_001_T.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tName string // 导出字段\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Circle",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/abstract_class/write_implement_field_002_F/write_implement_field_002_F.go",
+        "start_line": 24,
+        "start_column": 5,
+        "end_line": 26,
+        "end_column": 1
+      },
+      "content": "type Circle struct {\n\tName string // 导出字段\n}",
+      "methods": [
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "ProcessData",
+          "function_signature": "string ProcessData(data string) string",
+          "line": 27
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "GetName",
+          "function_signature": "string GetName() string",
+          "line": 28
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        },
+        {
+          "name": "SetName",
+          "function_signature": "SetName(name string)",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "class_fqn": "Teacher",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+        "start_line": 33,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 1
+      },
+      "content": "type Teacher struct {\n\tName  string\n\tAge   int\n\tmajor string\n}",
+      "methods": [
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "class_fqn": "Teacher",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+        "start_line": 33,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 1
+      },
+      "content": "type Teacher struct {\n\tName  string\n\tAge   int\n\tmajor string\n}",
+      "methods": [
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "class_fqn": "Teacher",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+        "start_line": 33,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 1
+      },
+      "content": "type Teacher struct {\n\tName  string\n\tAge   int\n\tmajor string\n}",
+      "methods": [
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "class_fqn": "Teacher",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+        "start_line": 33,
+        "start_column": 5,
+        "end_line": 37,
+        "end_column": 1
+      },
+      "content": "type Teacher struct {\n\tName  string\n\tAge   int\n\tmajor string\n}",
+      "methods": [
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        },
+        {
+          "name": "Run",
+          "function_signature": "string Run() string",
+          "line": 39
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 20
+}

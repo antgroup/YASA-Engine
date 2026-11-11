@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "com.sast.astbenchmark.other_preference::MayTaintKind_001_T::testcase",
+      "signature": "void testcase(@RequestParam String name, @RequestParam Integer condition)",
+      "filepath": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/other_preference/MayTaintKind_001_T.java",
+        "start_line": 22,
+        "start_column": 0,
+        "end_line": 32,
+        "end_column": 0
+      },
+      "content": "@GetMapping(\"MayTaintKind_001_T\")\n    public void testcase(@RequestParam String name, @RequestParam Integer condition) {\n        String sql;\n        if (condition > 0) {\n            sql = \"select * from user where username = \" + name;\n        }\n        else {\n            sql = \"select * from user where username = \" + \"zhangsan\";\n        }\n        JDBCUtil.execSql(sql);\n    }"
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

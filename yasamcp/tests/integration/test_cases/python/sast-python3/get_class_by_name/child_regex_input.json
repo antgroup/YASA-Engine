@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_class_by_name",
+  "arguments": {
+    "name": "Child",
+    "class_fqn": "",
+    "use_regex": true,
+    "include_methods": false,
+    "max_results": 20
+  }
+}

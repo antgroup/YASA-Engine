@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "com.sast.astbenchmark.common.utils.CmdUtil.run",
+        "function_signature": "",
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+        "line": 5
+      },
+      "callees": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

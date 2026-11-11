@@ -1,0 +1,136 @@
+{
+  "results": [
+    {
+      "file_path": "README.md",
+      "matches": [
+        {
+          "line": 181,
+          "content": "// bind_url = accuracy|completeness/.../case_name\n// evaluation information end\n\nfunction case_name_001_T($__taint_src) {\n    // 污点传播逻辑\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}"
+        },
+        {
+          "line": 184,
+          "content": "function case_name_001_T($__taint_src) {\n    // 污点传播逻辑\n    __taint_sink($result);\n}\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\n$taint_src = \"taint_src_value\";\ncase_name_001_T($taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 参数值传递，污染数据直接作为参数传入函数后到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);"
+        },
+        {
+          "line": 15,
+          "content": "function __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);\n}\n\nfunction argument_return_value_passing_001_T($__taint_src) {\n    process($__taint_src);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 参数值传递，安全数据作为参数传入函数后到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_002_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);"
+        },
+        {
+          "line": 15,
+          "content": "function __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    __taint_sink($arg);\n}\n\nfunction argument_return_value_passing_002_F($__taint_src) {\n    process(\"safe_value\");\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 返回值传递，函数返回污染数据后到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_003_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction getData($arg) {\n    return $arg;"
+        },
+        {
+          "line": 20,
+          "content": "    return $arg;\n}\n\nfunction argument_return_value_passing_003_T($__taint_src) {\n    $result = getData($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\nargument_return_value_passing_003_T($taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 返回值传递，函数返回安全数据后到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_004_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction getData($arg) {\n    return \"safe_value\";"
+        },
+        {
+          "line": 20,
+          "content": "    return \"safe_value\";\n}\n\nfunction argument_return_value_passing_004_F($__taint_src) {\n    $result = getData($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\nargument_return_value_passing_004_F($taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 多层参数传递，污染数据经过多层函数参数传递到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_005_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction layer1($arg) {\n    layer2($arg);"
+        },
+        {
+          "line": 19,
+          "content": "function layer1($arg) {\n    layer2($arg);\n}\n\nfunction layer2($arg) {\n    __taint_sink($arg);\n}\n\nfunction argument_return_value_passing_005_T($__taint_src) {\n    layer1($__taint_src);\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 多层参数传递，安全数据经过多层函数参数传递到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_006_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction layer1($arg) {\n    layer2($arg);"
+        },
+        {
+          "line": 19,
+          "content": "function layer1($arg) {\n    layer2($arg);\n}\n\nfunction layer2($arg) {\n    __taint_sink($arg);\n}\n\nfunction argument_return_value_passing_006_F($__taint_src) {\n    layer1(\"safe_value\");\n}"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 多层返回值传递，污染数据经过多层函数返回值传递到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_007_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction inner($arg) {\n    return $arg;"
+        },
+        {
+          "line": 24,
+          "content": "    return inner($arg);\n}\n\nfunction argument_return_value_passing_007_T($__taint_src) {\n    $result = outer($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\nargument_return_value_passing_007_T($taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 多层返回值传递，函数链最终返回安全数据到达sink\n// level = 3\n// bind_url = accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_008_F\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction inner($arg) {\n    return \"safe_value\";"
+        },
+        {
+          "line": 24,
+          "content": "    return inner($arg);\n}\n\nfunction argument_return_value_passing_008_F($__taint_src) {\n    $result = outer($__taint_src);\n    __taint_sink($result);\n}\n\n$taint_src = \"taint_src_value\";\nargument_return_value_passing_008_F($taint_src);"
+        }
+      ]
+    },
+    {
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "matches": [
+        {
+          "line": 10,
+          "content": "// scene introduction = 同一函数被多次调用，sink接收污染参数的返回值\n// level = 3\n// bind_url = accuracy/context_sensitive/multi_invoke/multi_invoke_001_T\n// evaluation information end\n\nfunction __taint_sink($o) {\n    shell_exec($o);\n}\n\nfunction process($arg) {\n    return $arg;"
+        },
+        {
+          "line": 21,
+          "content": "}\n\nfunction multi_invoke_001_T($__taint_src) {\n    $a = process($__taint_src);\n    $b = process(\"safe\");\n    __taint_sink($a);\n}\n\n$taint_src = \"taint_src_value\";\nmulti_invoke_001_T($taint_src);"
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

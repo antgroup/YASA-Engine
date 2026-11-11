@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "source",
+    "file_path": "",
+    "line": 0,
+    "max_results": 10
+  }
+}

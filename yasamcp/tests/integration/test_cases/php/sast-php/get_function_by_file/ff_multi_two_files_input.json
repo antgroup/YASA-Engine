@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": [
+      "case/accuracy/context_sensitive/argument_return_value_passing/argument_return_value_passing_001_T.php",
+      "case/completeness/single_app_tracing/class/abstract_class_001_T.php"
+    ],
+    "use_regex": false,
+    "detail_level": "full",
+    "max_results": 0
+  }
+}

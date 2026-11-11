@@ -1,0 +1,54 @@
+{
+  "results": [
+    {
+      "class_fqn": "Processor",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": "class Processor:\n    # 没有 self 或 cls 参数\t不会自动传入实例或类，所以不能访问类或实例属性。只接受传递进来的参数。\n    @staticmethod\n    def process(data):\n        return data",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process(data)",
+          "line": 14
+        },
+        {
+          "name": "process",
+          "function_signature": "process(data)",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "class_fqn": "Processor",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": "class Processor:\n    @staticmethod\n    def process(data):\n        return data",
+      "methods": [
+        {
+          "name": "process",
+          "function_signature": "process(data)",
+          "line": 14
+        },
+        {
+          "name": "process",
+          "function_signature": "process(data)",
+          "line": 15
+        }
+      ]
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

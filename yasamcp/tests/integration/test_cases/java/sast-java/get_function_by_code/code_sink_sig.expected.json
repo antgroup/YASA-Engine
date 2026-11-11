@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::SinkUtil::sink",
+      "function_signature": "void sink(Object param)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/SinkUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/SinkUtil.java",
+        "start_line": 5,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public static void sink(Object param) {\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

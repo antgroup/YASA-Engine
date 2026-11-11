@@ -1,0 +1,10 @@
+name: super_name
+rule:
+  kind: type_identifier
+  any:
+    - inside:
+        kind: superclass
+    - inside:
+        kind: super_interfaces
+    - inside:
+        kind: extends_interfaces

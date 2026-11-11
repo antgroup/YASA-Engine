@@ -1,0 +1,118 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "Calculator",
+      "qualified_name": "Calculator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 33
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Calculator",
+      "qualified_name": "Calculator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 27
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Validator",
+      "qualified_name": "Validator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Validator",
+      "qualified_name": "Validator",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 18
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Processor",
+      "qualified_name": "Processor",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Processor",
+      "qualified_name": "Processor",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Box",
+      "qualified_name": "Box",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 27
+      },
+      "content": ""
+    },
+    {
+      "kind": "class",
+      "name": "Box",
+      "qualified_name": "Box",
+      "language": "python",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 27
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

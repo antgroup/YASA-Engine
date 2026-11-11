@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_002_F.py",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_003_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_004_F.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_005_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_005_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_006_F.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_006_F.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_007_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_007_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_008_F.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_008_F.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_009_T.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_009_T.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "taint_sink",
+      "function_signature": "taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_010_F.py",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_010_F.py",
+        "start_line": 17,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 16
+      },
+      "content": "def taint_sink(o):\n    os.system(o)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "dynamic_call_reflect_001_F",
+      "function_signature": "dynamic_call_reflect_001_F(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_001_F(__taint_src) {\n  let obj = {\n    name: \"_\",\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "dynamic_call_reflect_002_T",
+      "function_signature": "dynamic_call_reflect_002_T(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_002_T(__taint_src) {\n  let obj = {\n    name: __taint_src,\n  };\n\n  __taint_sink(Reflect.get(obj, \"name\"));\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "dynamic_call_reflect_003_T",
+      "function_signature": "dynamic_call_reflect_003_T(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_003_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_003_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_003_T(__taint_src) {\n  let obj = {\n    data: \"_\",\n  };\n\n  Reflect.set(obj, \"foo\", __taint_src);\n  __taint_sink(obj.foo);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "dynamic_call_reflect_004_F",
+      "function_signature": "dynamic_call_reflect_004_F(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_004_F(__taint_src) {\n  let obj = {\n    data: __taint_src,\n  };\n\n  Reflect.set(obj, \"foo\", \"_\");\n  __taint_sink(obj.foo);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "dynamic_call_reflect_005_T",
+      "function_signature": "dynamic_call_reflect_005_T(__taint_src)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_005_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_005_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 19,
+        "end_column": 1
+      },
+      "content": "function dynamic_call_reflect_005_T(__taint_src) {\n  let obj = {\n    data: __taint_src,\n    data1: \"aaa\",\n  };\n\n  Reflect.deleteProperty(obj, \"data1\");\n  __taint_sink(obj.data);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_001_F.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_002_T.js",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_003_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_003_T.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_004_F.js",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_005_T.js",
+      "location": {
+        "file_path": "case/completeness/dynamic_tracing/dynamic_call/dynamic_call_reflect_005_T.js",
+        "start_line": 21,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

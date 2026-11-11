@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "TaintHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_001_T.php",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TaintHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_002_F.php",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "PassthroughProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.php",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "public function process($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "PassthroughProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.php",
+        "start_line": 19,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "public function process($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/abstract_class_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "anonymous_class_001_T",
+      "function_signature": "anonymous_class_001_T()",
+      "file_path": "case/completeness/single_app_tracing/class/anonymous_class_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/anonymous_class_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function anonymous_class_001_T($__taint_src) {\n    $obj = new class {\n        public function run($data) {\n            return $data;\n        }\n    };\n    $result = $obj->run($__taint_src);\n    __taint_sink($result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TaintProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_001_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function process($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "InvokableClass::__invoke",
+      "function_signature": "__invoke()",
+      "file_path": "case/completeness/single_app_tracing/class/magic_method_003_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/magic_method_003_T.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "public function __invoke($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_001_F.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "public function handle($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ChildProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/class/subclass_002_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/subclass_002_T.php",
+        "start_line": 17,
+        "start_column": 4,
+        "end_line": 19,
+        "end_column": 5
+      },
+      "content": "public function process($data) {\n        return $data;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

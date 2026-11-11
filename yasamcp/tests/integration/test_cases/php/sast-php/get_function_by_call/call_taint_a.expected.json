@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.accuracy.context_sensitive.multi_invoke.multi_invoke_001_T.multi_invoke_001_T",
+        "function_signature": "",
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "line": 18
+      },
+      "call_site": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "line": 21,
+        "content": "    __taint_sink($a);\n"
+      },
+      "function_fqn": "case.accuracy.context_sensitive.multi_invoke.multi_invoke_001_T.__taint_sink",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 10,
+        "start_column": 1,
+        "end_line": 12,
+        "end_column": 2
+      },
+      "content": "function __taint_sink($o) {\n    shell_exec($o);\n}",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

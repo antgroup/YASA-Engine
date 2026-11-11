@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "class_fqn": "constructor_object_sensitive_003_T::Parent",
+      "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py",
+      "location": {
+        "file_path": "case/accuracy/object_sensitive/class/constructor_object_sensitive_003_T.py",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 28
+      },
+      "content": "class Parent:\n        def __init__(self, data):\n            self.data = data",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

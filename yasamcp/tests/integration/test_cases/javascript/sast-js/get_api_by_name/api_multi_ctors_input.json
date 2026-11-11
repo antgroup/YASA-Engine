@@ -1,0 +1,11 @@
+{
+  "tool_name": "get_api_by_name",
+  "arguments": {
+    "api_name": [
+      "Parent.constructor",
+      "Child.constructor",
+      "BaseClass1.getData"
+    ],
+    "max_results": 0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "tool_name": "search_symbol",
+  "arguments": {
+    "search": [
+      "CmdObject",
+      "HttpUtil"
+    ],
+    "kind": "class",
+    "max_results": 10
+  }
+}

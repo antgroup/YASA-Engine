@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "function_fqn": "alias_001_F",
+      "function_signature": "alias_001_F(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_001_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_001_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function alias_001_F(__taint_src) {\n  let a = { value: __taint_src };\n  let b = a;\n  b.value = \"_\";\n  __taint_sink(a.value);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_002_F",
+      "function_signature": "alias_002_F(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_002_F.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function alias_002_F(__taint_src) {\n  let a = { value: \"_\" };\n  let b = a;\n  b.value = __taint_src;\n  __taint_sink(\"safe\");\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_003_T",
+      "function_signature": "alias_003_T(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_003_T.js",
+        "start_line": 11,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "function alias_003_T(__taint_src) {\n  let a = { value: \"_\" };\n  let b = a;\n  b.value = __taint_src;\n  __taint_sink(a.value);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_004_F",
+      "function_signature": "alias_004_F(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_004_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_004_F.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function alias_004_F(__taint_src) {\n  const arr = [__taint_src, \"save_value\"];\n\n  const [a, b] = arr;\n\n  __taint_sink(b);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_005_T",
+      "function_signature": "alias_005_T(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_005_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_005_T.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function alias_005_T(__taint_src) {\n  const arr = [__taint_src, \"save_value\"];\n\n  const [a, b] = arr;\n\n  __taint_sink(a);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_006_F",
+      "function_signature": "alias_006_F(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_006_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_006_F.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function alias_006_F(__taint_src) {\n  const obj = { a: __taint_src, b: \"save_value\" };\n\n  const { a, b: result } = obj;\n\n  __taint_sink(result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "alias_007_T",
+      "function_signature": "alias_007_T(__taint_src)",
+      "file_path": "case/completeness/single_app_tracing/alias/alias_007_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/alias/alias_007_T.js",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": "function alias_007_T(__taint_src) {\n  const obj = { a: __taint_src, b: \"save_value\" };\n\n  const { a: result, b } = obj;\n\n  __taint_sink(result);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 7
+}

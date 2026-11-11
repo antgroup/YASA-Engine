@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_reference_by_function",
+  "arguments": {
+    "name": "Run",
+    "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+    "line": 18,
+    "max_results": 20
+  }
+}

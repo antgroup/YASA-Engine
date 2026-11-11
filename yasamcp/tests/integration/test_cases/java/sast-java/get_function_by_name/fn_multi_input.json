@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_function_by_name",
+  "arguments": {
+    "name": [
+      "doGet",
+      "execSql"
+    ],
+    "max_results": 10
+  }
+}

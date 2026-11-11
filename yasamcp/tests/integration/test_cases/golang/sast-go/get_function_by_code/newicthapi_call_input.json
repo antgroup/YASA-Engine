@@ -1,0 +1,8 @@
+{
+  "tool_name": "get_function_by_code",
+  "arguments": {
+    "code_snippet": "NewIctestAPI(testSvc)",
+    "use_regex": false,
+    "max_results": 10
+  }
+}

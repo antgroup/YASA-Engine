@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "process",
+      "function_signature": "process()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "multi_invoke_001_T",
+      "function_signature": "multi_invoke_001_T()",
+      "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/multi_invoke/multi_invoke_001_T.php",
+        "start_line": 18,
+        "start_column": 0,
+        "end_line": 22,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 3
+}

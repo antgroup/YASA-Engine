@@ -1,0 +1,6 @@
+name: method
+rule:
+  all:
+    - any:
+        - kind: method_declaration
+        - kind: constructor_declaration

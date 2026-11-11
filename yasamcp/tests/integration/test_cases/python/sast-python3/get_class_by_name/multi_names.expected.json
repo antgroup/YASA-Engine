@@ -1,0 +1,110 @@
+{
+  "results": [
+    {
+      "class_fqn": "Box",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 27
+      },
+      "content": "class Box(Generic[T]):\n    def __init__(self, content: T):\n        self.content = content\n\n    def get_content(self) -> T:\n        return self.content",
+      "methods": []
+    },
+    {
+      "class_fqn": "Box",
+      "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 27
+      },
+      "content": "class Box(Generic[T]):\n    def __init__(self, content: T):\n        self.content = content\n\n    def get_content(self) -> T:\n        return self.content",
+      "methods": []
+    },
+    {
+      "class_fqn": "Calculator",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 33
+      },
+      "content": "class Calculator:\n    @staticmethod\n    def add_taint(a, b):\n        return f\"{a}_{b}\"  # 污点扩展",
+      "methods": []
+    },
+    {
+      "class_fqn": "Calculator",
+      "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method/higher_order_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 27
+      },
+      "content": "class Calculator:\n    @staticmethod\n    def add_taint(a, b):\n        return f\"_\"  # 污点扩展",
+      "methods": []
+    },
+    {
+      "class_fqn": "Processor",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 19
+      },
+      "content": "class Processor:\n    # 没有 self 或 cls 参数\t不会自动传入实例或类，所以不能访问类或实例属性。只接受传递进来的参数。\n    @staticmethod\n    def process(data):\n        return data",
+      "methods": []
+    },
+    {
+      "class_fqn": "Processor",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 19
+      },
+      "content": "class Processor:\n    @staticmethod\n    def process(data):\n        return data",
+      "methods": []
+    },
+    {
+      "class_fqn": "Validator",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 19
+      },
+      "content": "class Validator:\n    # 使用 @classmethod 装饰器，将下面的方法标记为 类方法。 那么类方法就可以访问类属性，也可以通过类名直接调用。\n    # cls为类本身 而不是代表实例self，所以不能访问实例属性，data为传递的参数\n    @classmethod\n    def validate(cls, data):\n        return data",
+      "methods": []
+    },
+    {
+      "class_fqn": "Validator",
+      "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+        "start_line": 12,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 18
+      },
+      "content": "class Validator:\n    @classmethod\n    def validate(cls, data):\n        return \"_\"",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

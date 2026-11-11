@@ -1,0 +1,110 @@
+{
+  "results": [
+    {
+      "class_fqn": "polymorphism_003_T::Sub1",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 17,
+        "end_column": 3
+      },
+      "content": "class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_003_T::Sub2",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_004_F::Sub1",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 17,
+        "end_column": 3
+      },
+      "content": "class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_004_F::Sub2",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_004_F.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_001_T::Sub1",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 17,
+        "end_column": 3
+      },
+      "content": "class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_001_T::Sub2",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_001_T.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class Sub2 extends Base {\n    call() {\n      return \"safe_value\";\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_002_F::Sub1",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+        "start_line": 13,
+        "start_column": 2,
+        "end_line": 17,
+        "end_column": 3
+      },
+      "content": "class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }",
+      "methods": []
+    },
+    {
+      "class_fqn": "polymorphism_override_002_F::Sub2",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/polymorphism_override_002_F.js",
+        "start_line": 19,
+        "start_column": 2,
+        "end_line": 23,
+        "end_column": 3
+      },
+      "content": "class Sub2 extends Base {\n    call() {\n      return \"safe_value\";\n    }\n  }",
+      "methods": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 8
+}

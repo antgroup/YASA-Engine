@@ -1,0 +1,10 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "process",
+    "file_path": "case/accuracy/context_sensitive/argument_return_value_passing/argument_passing_value_001_T.js",
+    "line": 13,
+    "depth": 2,
+    "max_callees_per_node": 3
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "function_fqn": "Person::Run",
+      "function_signature": "Run() string",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 13
+      },
+      "content": "\tRun() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Person::Run",
+      "function_signature": "Run() string",
+      "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+      "location": {
+        "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_004_F/polymorphism_004_F.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 13
+      },
+      "content": "\tRun() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Person::Run",
+      "function_signature": "Run() string",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_003_T/polymorphism_override_003_T.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 13
+      },
+      "content": "\tRun() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Person::Run",
+      "function_signature": "Run() string",
+      "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/function_call/override/polymorphism_override_004_F/polymorphism_override_004_F.go",
+        "start_line": 20,
+        "start_column": 1,
+        "end_line": 20,
+        "end_column": 13
+      },
+      "content": "\tRun() string\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

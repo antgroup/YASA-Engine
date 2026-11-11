@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": [
+      "cases/accuracy/context_sensitive/argument_return_value_passing/multiple_return_value_passing_001_F/multiple_return_value_passing_001_F.go",
+      "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go"
+    ],
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 20
+  }
+}

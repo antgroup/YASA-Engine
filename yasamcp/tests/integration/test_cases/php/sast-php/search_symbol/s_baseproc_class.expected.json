@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "kind": "class",
+      "name": "BaseProcessor",
+      "qualified_name": "BaseProcessor",
+      "language": "php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 18,
+        "end_column": 1
+      },
+      "content": ""
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

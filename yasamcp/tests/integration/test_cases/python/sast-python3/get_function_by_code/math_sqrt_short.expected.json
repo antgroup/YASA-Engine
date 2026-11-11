@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "function_fqn": "math_001_T::process",
+      "function_signature": "process(num)",
+      "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_001_T.py",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 26
+      },
+      "content": "def process(num):\n        result = math.sqrt(num)  # 使用math模块的sqrt函数计算num的平方根\n        taint_sink(result)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "math_002_F::process",
+      "function_signature": "process(num)",
+      "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/library_function/math_002_F.py",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 26
+      },
+      "content": "def process(num):\n        result = math.sqrt(10000)  # 使用math模块的sqrt函数计算num的平方根\n        taint_sink(result)",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 2
+}

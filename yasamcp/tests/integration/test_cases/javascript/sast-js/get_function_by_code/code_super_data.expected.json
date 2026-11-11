@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "function_fqn": "constructor_extends_001_T::DerivedClass::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.js",
+        "start_line": 26,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "constructor_extends_002_F::DerivedClass::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_002_F.js",
+        "start_line": 26,
+        "start_column": 4,
+        "end_line": 28,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_parent_property_001_T::Child::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_001_T.js",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_parent_property_002_F::Child::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_parent_property_002_F.js",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_super_call_001_T::Child::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_001_T.js",
+        "start_line": 23,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "inheritance_super_call_002_F::Child::constructor",
+      "function_signature": "constructor(data)",
+      "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/interface_class/subclass/inheritance_super_call_002_F.js",
+        "start_line": 23,
+        "start_column": 4,
+        "end_line": 25,
+        "end_column": 5
+      },
+      "content": "constructor(data) {\n      super(data);\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}

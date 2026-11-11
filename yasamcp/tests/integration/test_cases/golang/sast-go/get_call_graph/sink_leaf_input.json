@@ -1,0 +1,13 @@
+{
+  "tool_name": "get_call_graph",
+  "arguments": {
+    "name": "__taint_sink",
+    "function_fqn": "cross_directory_001_T.cross_directory_001_T_b.__taint_sink",
+    "file_path": "cases/completeness/single_app_tracing/cross_file_package_namespace/cross_directory/cross_directory_001_T/cross_directory_001_T_b/cross_directory_001_T_b.go",
+    "line": 17,
+    "depth": 1,
+    "detail_level": "summary",
+    "max_callees_per_node": 5,
+    "exclude_undefined_function_call": true
+  }
+}

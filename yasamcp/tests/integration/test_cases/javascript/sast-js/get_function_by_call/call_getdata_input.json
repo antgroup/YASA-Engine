@@ -1,0 +1,7 @@
+{
+  "tool_name": "get_function_by_call",
+  "arguments": {
+    "function_call": "getData",
+    "max_results": 10
+  }
+}

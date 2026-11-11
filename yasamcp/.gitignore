@@ -1,0 +1,51 @@
+.DS_Store
+.codegraph/
+
+# Python 编译缓存（无需版本控制）
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# 测试产物（DuckDB 数据库、缓存、大数据集等）
+# 不带尾部斜杠，使真实目录和 worktree 中指向共享数据的符号链接都被忽略。
+tests/dataset
+tests/dataset-backup
+tests/temp_cache
+tests/temp_cache_sse
+tests/local_test/
+tests/logs/
+tests/evaluation/cache/
+tests/evaluation/tool_result/
+tests/evaluation/report/
+tests/evaluation/python_old_backup/
+tests/integration/logs/
+tests/poc
+tests/reproduction/report/
+tests/reproduction/realdata/
+tests/perfmance-analysis/
+**/report/
+
+# ide配置目录
+.idea/
+.vscode/
+.codegraph/
+
+# yasa的日志目录
+logs
+
+# agent team协作管理目录（.claude 已纳入版本控制；.agents 本地保留）
+.agents/
+.codex/
+
+# 任务协作目录（tasks/ 仅本地协作，不入版本控制）
+tasks/
+
+# 打包产物 / 本地构建
+build/
+dist/
+.yasamcp/
+
+# 集成测试报告产物
+tests/integration/yasamcp_client_integration/reports/

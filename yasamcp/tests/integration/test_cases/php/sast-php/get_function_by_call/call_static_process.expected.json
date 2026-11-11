@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "caller": {
+        "function_fqn": "case.completeness.single_app_tracing.function_call.static_method_001_T.static_method_001_T",
+        "function_signature": "",
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "line": 16
+      },
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "line": 17,
+        "content": "    $result = Processor::process($__taint_src);\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.static_method_001_T.Processor.process",
+      "function_signature": "",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/static_method_001_T.php",
+        "start_line": 11,
+        "start_column": 5,
+        "end_line": 13,
+        "end_column": 6
+      },
+      "content": "public static function process($data) {\n        return $data;\n    }",
+      "callType": "local",
+      "extinfo": {}
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

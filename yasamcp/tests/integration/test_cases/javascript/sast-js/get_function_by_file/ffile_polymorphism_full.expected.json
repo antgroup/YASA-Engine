@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "function_fqn": "polymorphism_003_T",
+      "function_signature": "polymorphism_003_T(__taint_src)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "function polymorphism_003_T(__taint_src) {\n  class Base {}\n\n  class Sub1 extends Base {\n    call() {\n      return __taint_src;\n    }\n  }\n\n  class Sub2 extends Base {\n    call() {\n      return \"save_value\";\n    }\n  }\n\n  const sub = new Sub1();\n  __taint_sink(sub.call());\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_003_T::Sub1::call",
+      "function_signature": "call()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 14,
+        "start_column": 4,
+        "end_line": 16,
+        "end_column": 5
+      },
+      "content": "call() {\n      return __taint_src;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "polymorphism_003_T::Sub2::call",
+      "function_signature": "call()",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 20,
+        "start_column": 4,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "call() {\n      return \"save_value\";\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o)",
+      "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+      "location": {
+        "file_path": "case/accuracy/context_sensitive/polymorphism/polymorphism_003_T.js",
+        "start_line": 29,
+        "start_column": 0,
+        "end_line": 31,
+        "end_column": 1
+      },
+      "content": "function __taint_sink(o) {\n  execSync(o);\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 4
+}

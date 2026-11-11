@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "function_fqn": "com.sast.astbenchmark.common.utils::CmdUtil::getCmdWithContextSensitive",
+      "function_signature": "String getCmdWithContextSensitive(int x, String cmd)",
+      "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+      "location": {
+        "file_path": "src/main/java/com/sast/astbenchmark/common/utils/CmdUtil.java",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 22,
+        "end_column": 5
+      },
+      "content": "public static String getCmdWithContextSensitive(int x, String cmd) {\n        String res;\n        if (x > 0) {\n            res = cmd;\n        }\n        else {\n            res = \"ls\";\n        }\n        return res;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 1
+}

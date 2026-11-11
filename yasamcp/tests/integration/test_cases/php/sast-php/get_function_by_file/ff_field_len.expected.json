@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink()",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 10,
+        "start_column": 0,
+        "end_line": 12,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "C001::__construct",
+      "function_signature": "__construct()",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 18,
+        "start_column": 4,
+        "end_line": 21,
+        "end_column": 5
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "B001::__construct",
+      "function_signature": "__construct()",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 27,
+        "start_column": 4,
+        "end_line": 29,
+        "end_column": 5
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "A001::__construct",
+      "function_signature": "__construct()",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 35,
+        "start_column": 4,
+        "end_line": 37,
+        "end_column": 5
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "field_len_001_T",
+      "function_signature": "field_len_001_T()",
+      "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+      "location": {
+        "file_path": "case/accuracy/object_field_sensitive/field_len/field_len_001_T.php",
+        "start_line": 40,
+        "start_column": 0,
+        "end_line": 43,
+        "end_column": 1
+      },
+      "content": "",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 5
+}

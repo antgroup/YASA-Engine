@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "function_fqn": "struct_injection_interface_001_T",
+      "function_signature": "struct_injection_interface_001_T(__taint_src string)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 13,
+        "start_column": 0,
+        "end_line": 23,
+        "end_column": 1
+      },
+      "content": "func struct_injection_interface_001_T(__taint_src string) {\n\t// 创建 IctestImpl 实例\n\ttestSvc := &IctestImpl{}\n\n\t// 将业务实现注入到 IctestAPI 中\n\ttestAPI := NewIctestAPI(testSvc)\n\n\t// 调用接口方法，返回的数据即为污点源，直接传入 sink\n\tresult, _ := testAPI.GetTest(__taint_src)\n\t__taint_sink(result)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "__taint_sink",
+      "function_signature": "__taint_sink(o interface{})",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 25,
+        "start_column": 0,
+        "end_line": 27,
+        "end_column": 1
+      },
+      "content": "func __taint_sink(o interface{}) {\n\t_ = exec.Command(\"sh\", \"-c\", o.(string)).Run()\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "IIctest::test",
+      "function_signature": "test(taint_src string) (interface{}, error)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 31,
+        "start_column": 1,
+        "end_line": 31,
+        "end_column": 44
+      },
+      "content": "\ttest(taint_src string) (interface{}, error)\n",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "NewIctestAPI",
+      "function_signature": "IctestAPI NewIctestAPI(testSvc IIctest) *IctestAPI",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 40,
+        "start_column": 0,
+        "end_line": 44,
+        "end_column": 1
+      },
+      "content": "func NewIctestAPI(testSvc IIctest) *IctestAPI {\n\treturn &IctestAPI{\n\t\t_test_svc: testSvc,\n\t}\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "IctestAPI::GetTest",
+      "function_signature": "GetTest(taint_src string) (interface{}, error)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 47,
+        "start_column": 0,
+        "end_line": 49,
+        "end_column": 1
+      },
+      "content": "func (e *IctestAPI) GetTest(taint_src string) (interface{}, error) {\n\treturn e._test_svc.test(taint_src)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "IctestImpl::test",
+      "function_signature": "test(taint_src string) (interface{}, error)",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 55,
+        "start_column": 0,
+        "end_line": 58,
+        "end_column": 1
+      },
+      "content": "func (s *IctestImpl) test(taint_src string) (interface{}, error) {\n\t// 污点数据未经处理直接返回\n\treturn taint_src, nil\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "main",
+      "function_signature": "main()",
+      "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+      "location": {
+        "file_path": "cases/completeness/single_app_tracing/interface_class/interface_implementation/struct_injection_interface_001_T/struct_injection_interface_001_T.go",
+        "start_line": 60,
+        "start_column": 0,
+        "end_line": 63,
+        "end_column": 1
+      },
+      "content": "func main() {\n\t__taint_src := \"taint_src_value\"\n\tstruct_injection_interface_001_T(__taint_src)\n}",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 7
+}

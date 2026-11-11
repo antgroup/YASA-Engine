@@ -1,0 +1,9 @@
+{
+  "tool_name": "get_function_by_file",
+  "arguments": {
+    "file_path": "cases/accuracy/context_sensitive/polymorphism/polymorphism_003_T/polymorphism_003_T.go",
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 10
+  }
+}

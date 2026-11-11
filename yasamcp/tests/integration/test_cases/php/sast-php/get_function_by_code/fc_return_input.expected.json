@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "function_fqn": "Status::format",
+      "function_signature": "format()",
+      "file_path": "case/completeness/single_app_tracing/class/enum_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/enum_001_T.php",
+        "start_line": 14,
+        "start_column": 4,
+        "end_line": 16,
+        "end_column": 5
+      },
+      "content": "public function format($input): string {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "IdentityTransformer::transform",
+      "function_signature": "transform()",
+      "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/interface_impl_002_T.php",
+        "start_line": 15,
+        "start_column": 4,
+        "end_line": 17,
+        "end_column": 5
+      },
+      "content": "public function transform($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseProcessor::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_F.php",
+        "start_line": 11,
+        "start_column": 4,
+        "end_line": 13,
+        "end_column": 5
+      },
+      "content": "public static function getData($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "TaintedProvider::getData",
+      "function_signature": "getData()",
+      "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_T.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/late_static_binding_001_T.php",
+        "start_line": 21,
+        "start_column": 4,
+        "end_line": 23,
+        "end_column": 5
+      },
+      "content": "public static function getData($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Processor::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/Processor.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/autoload_002_T/Processor.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "BaseHandler::handle",
+      "function_signature": "handle()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/BaseHandler.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_001_T/BaseHandler.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function handle($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "ConcreteProcessor::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_inheritance_002_T/main.php",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 5
+      },
+      "content": "public function process($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataImpl::transform",
+      "function_signature": "transform()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_T/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_001_T/main.php",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 5
+      },
+      "content": "public function transform($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "Worker::execute",
+      "function_signature": "execute()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/main.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_interface_002_T/main.php",
+        "start_line": 13,
+        "start_column": 4,
+        "end_line": 15,
+        "end_column": 5
+      },
+      "content": "public function execute($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    },
+    {
+      "function_fqn": "DataTrait::process",
+      "function_signature": "process()",
+      "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_001_T/DataTrait.php",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/cross_file_package_namespace/cross_file_trait_001_T/DataTrait.php",
+        "start_line": 4,
+        "start_column": 4,
+        "end_line": 6,
+        "end_column": 5
+      },
+      "content": "public function process($input) {\n        return $input;\n    }",
+      "function_annotations": [],
+      "parameter_annotations": []
+    }
+  ],
+  "truncated": false,
+  "total_count": 10
+}

@@ -1,0 +1,12 @@
+{
+  "tool_name": "get_file_by_keyword",
+  "arguments": {
+    "keyword": [
+      "Person",
+      "interface"
+    ],
+    "use_regex": false,
+    "detail_level": "summary",
+    "max_results": 20
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "results": [
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+        "line": 23,
+        "content": "            self.data = a_instance.get_data()\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.complex_object.cross_class_001_T.cross_class_001_T.B._CTOR_",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_001_T.py",
+        "start_line": 21,
+        "start_column": 9,
+        "end_line": 23,
+        "end_column": 46
+      },
+      "content": "def __init__(self, taint_src):\n            a_instance = A(taint_src)\n            self.data = a_instance.get_data()"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_002_F.py",
+        "line": 23,
+        "content": "            self.data = a_instance.get_data()\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.complex_object.cross_class_002_F.cross_class_002_F.B._CTOR_",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/cross_class_002_F.py",
+        "start_line": 21,
+        "start_column": 9,
+        "end_line": 23,
+        "end_column": 46
+      },
+      "content": "def __init__(self):\n            a_instance = A()\n            self.data = a_instance.get_data()"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "line": 27,
+        "content": "    taint_sink(obj.get_data())  # 通过子类方法访问父类属性\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.class.complex_object.inheritance_class_002_F.inheritance_class_002_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/complex_object/inheritance_class_002_F.py",
+        "start_line": 11,
+        "start_column": 1,
+        "end_line": 27,
+        "end_column": 31
+      },
+      "content": "def inheritance_class_002_F(taint_src):\n    class Base:\n        def __init__(self, data):\n            self.data = \"_\"\n\n        def get_data(self):\n            return self.data\n\n    class Child(Base):\n        def __init__(self, data):\n            super().__init__(data)\n\n        def get_child_data(self):\n            return self.data\n\n    obj = Child(taint_src)\n    taint_sink(obj.get_data())  # 通过子类方法访问父类属性"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "line": 18,
+        "content": "        return super().get_data() + \"_B\"\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_001_T.chained_override_001_T.B.get_data",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 17,
+        "start_column": 6,
+        "end_line": 18,
+        "end_column": 41
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_B\""
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "line": 23,
+        "content": "        return super().get_data() + \"_C\" + taint_src  # 污点扩展\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_001_T.chained_override_001_T.C.get_data",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 22,
+        "start_column": 6,
+        "end_line": 23,
+        "end_column": 53
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_C\" + taint_src  # 污点扩展"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "line": 27,
+        "content": "    taint_sink(obj.get_data())  # 输出 \"A_B_C_#taint_src_value\"\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_001_T.chained_override_001_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_001_T.py",
+        "start_line": 11,
+        "start_column": 1,
+        "end_line": 27,
+        "end_column": 31
+      },
+      "content": "def chained_override_001_T(taint_src):\n    class A:\n     def get_data(self):\n        return \"A\"\n\n    class B(A):\n     def get_data(self):\n        return super().get_data() + \"_B\"\n\n\n    class C(B):\n     def get_data(self):\n        return super().get_data() + \"_C\" + taint_src  # 污点扩展\n\n\n    obj = C()\n    taint_sink(obj.get_data())  # 输出 \"A_B_C_#taint_src_value\""
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "line": 18,
+        "content": "        return super().get_data() + \"_B\"\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_002_F.chained_override_002_F.B.get_data",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 17,
+        "start_column": 6,
+        "end_line": 18,
+        "end_column": 41
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_B\""
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "line": 23,
+        "content": "        return super().get_data() + \"_C\" + \"_D\"  # 污点扩展\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_002_F.chained_override_002_F.C.get_data",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 22,
+        "start_column": 6,
+        "end_line": 23,
+        "end_column": 48
+      },
+      "content": "def get_data(self):\n        return super().get_data() + \"_C\" + \"_D\"  # 污点扩展"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "line": 27,
+        "content": "    taint_sink(obj.get_data())  \n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.chained_override_002_F.chained_override_002_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/chained_override_002_F.py",
+        "start_line": 11,
+        "start_column": 1,
+        "end_line": 27,
+        "end_column": 31
+      },
+      "content": "def chained_override_002_F(taint_src):\n    class A:\n     def get_data(self):\n        return \"A\"\n\n    class B(A):\n     def get_data(self):\n        return super().get_data() + \"_B\"\n\n\n    class C(B):\n     def get_data(self):\n        return super().get_data() + \"_C\" + \"_D\"  # 污点扩展\n\n\n    obj = C()\n    taint_sink(obj.get_data())"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "line": 31,
+        "content": "        taint_sink(self.get_data())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_001_T.DerivedClass.process",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_001_T.py",
+        "start_line": 30,
+        "start_column": 5,
+        "end_line": 31,
+        "end_column": 36
+      },
+      "content": "def process(self):\n        taint_sink(self.get_data())"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "line": 28,
+        "content": "        taint_sink(self.get_data())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_003_T.constructor_extends_003_T.DerivedClass.process",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_003_T.py",
+        "start_line": 27,
+        "start_column": 6,
+        "end_line": 28,
+        "end_column": 36
+      },
+      "content": "def process(self):\n        taint_sink(self.get_data())"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "line": 28,
+        "content": "        taint_sink(self.get_data())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.function_call.override.constructor_extends_004_F.constructor_extends_004_F.DerivedClass.process",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/override/constructor_extends_004_F.py",
+        "start_line": 27,
+        "start_column": 6,
+        "end_line": 28,
+        "end_column": 36
+      },
+      "content": "def process(self):\n        taint_sink(self.get_data())"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py",
+        "line": 24,
+        "content": "    taint_sink(o.get_data())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.variable_scope.private_variable.private_variable_001_T.private_variable_001_T",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_001_T.py",
+        "start_line": 12,
+        "start_column": 1,
+        "end_line": 24,
+        "end_column": 29
+      },
+      "content": "def private_variable_001_T(taint_src):\n    class A:\n        def __init__(self, data):\n            self.__data = data\n\n        def get_data(self):\n            return self.__data\n\n        def set_data(self, data):\n            self.__data = data\n\n    o = A(data=taint_src)  # 显式传递 taint_src\n    taint_sink(o.get_data())"
+    },
+    {
+      "call_site": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_002_F.py",
+        "line": 25,
+        "content": "    taint_sink(o.get_data())\n"
+      },
+      "function_fqn": "case.completeness.single_app_tracing.variable_scope.private_variable.private_variable_002_F.private_variable_002_F",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/variable_scope/private_variable/private_variable_002_F.py",
+        "start_line": 12,
+        "start_column": 1,
+        "end_line": 25,
+        "end_column": 29
+      },
+      "content": "def private_variable_002_F(taint_src):\n    class A:\n        def __init__(self, data):\n            self.__data = data\n\n        def get_data(self):\n            return self.__data\n\n        def set_data(self, data):\n            self.__data = data\n\n    o = A(data=taint_src)  # 显式传递 taint_src\n    o.set_data(\"_\")\n    taint_sink(o.get_data())"
+    }
+  ],
+  "truncated": false,
+  "total_count": 14
+}

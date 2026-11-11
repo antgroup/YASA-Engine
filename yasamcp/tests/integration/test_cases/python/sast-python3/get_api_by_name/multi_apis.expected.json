@@ -1,0 +1,96 @@
+{
+  "results": [
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Processor::process",
+      "signature": "process(data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_001_T.py",
+        "start_line": 15,
+        "start_column": 0,
+        "end_line": 16,
+        "end_column": 0
+      },
+      "content": "def process(data):\n        return data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Processor::process",
+      "signature": "process(data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/staticmethod_decorator_002_F.py",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "def process(data):\n        return data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Validator::validate",
+      "signature": "validate(cls, data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_001_T.py",
+        "start_line": 16,
+        "start_column": 0,
+        "end_line": 17,
+        "end_column": 0
+      },
+      "content": "def validate(cls, data):\n        return data"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Validator::validate",
+      "signature": "validate(cls, data)",
+      "filepath": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/function_call/decorator_function/classmethod_decorator_002_F.py",
+        "start_line": 14,
+        "start_column": 0,
+        "end_line": 15,
+        "end_column": 0
+      },
+      "content": "def validate(cls, data):\n        return \"_\""
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Box::get_content",
+      "signature": "get_content(self) -> T",
+      "filepath": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_005_T.py",
+        "start_line": 19,
+        "start_column": 0,
+        "end_line": 20,
+        "end_column": 0
+      },
+      "content": "def get_content(self) -> T:\n        return self.content"
+    },
+    {
+      "api_name": "",
+      "framework": "",
+      "full_name": "Box::get_content",
+      "signature": "get_content(self) -> T",
+      "filepath": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+      "location": {
+        "file_path": "case/completeness/single_app_tracing/class/simple_object/simple_object_006_F.py",
+        "start_line": 20,
+        "start_column": 0,
+        "end_line": 21,
+        "end_column": 0
+      },
+      "content": "def get_content(self) -> T:\n        return self.content"
+    }
+  ],
+  "truncated": false,
+  "total_count": 6
+}
