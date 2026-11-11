@@ -1,4 +1,5 @@
 import * as path from 'path'
+
 const { execute } = require('../../src/interface/starter')
 const logger = require('../../src/util/logger')(__filename)
 
@@ -23,8 +24,6 @@ async function testGoCallchain(): Promise<void> {
       'BOTH',
       '--checkerPackIds',
       'callchain-go',
-      '--uastSDKPath',
-      path.join(__dirname, '../../deps'),
     ]
 
     const result = await execute(null, args)

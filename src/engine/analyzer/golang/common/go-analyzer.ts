@@ -45,6 +45,7 @@ import {
 
 const path = require('path')
 const _ = require('lodash')
+const { groupGoPackageFiles, primaryGoPackageName, createGoPackageScopes } = require('./go-package-files')
 const QidUnifyUtil = require('../../../../util/qid-unify-util')
 
 const logger = require('../../../../util/logger')(__filename)
@@ -52,6 +53,7 @@ const ScopeClass = require('../../common/scope')
 const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../../common/analyzer')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const Parser = require('../../../parser/parser')
+const GoAstBuilder = require('../../../parser/golang/go-ast-builder')
 const {
   ValueUtil: { FunctionValue, ObjectValue },
 } = require('../../../util/value-util')
@@ -65,7 +67,6 @@ const {
 const { getLegacyArgValues } = require('../../common/call-args')
 const Config = require('../../../../config')
 const SourceLine = require('../../common/source-line')
-const FileUtil = require('../../../../util/file-util')
 const AstUtil = require('../../../../util/ast-util')
 const MemState = require('../../common/memState')
 const CheckerManager = require('../../common/checker-manager')
@@ -74,7 +75,6 @@ const { executeViaEntryPointExecutor } = require('../../common/entrypoint/entryp
 const { unionAllValues } = require('../../common/memStateBVT')
 const constValue = require('../../../../util/constant')
 const { handleException } = require('../../common/exception-handler')
-const { ErrorCode } = require('../../../../util/error-code')
 
 type CapturableValue = Value & {
   qid?: unknown
@@ -302,22 +302,6 @@ class GoAnalyzer extends Analyzer {
   }
 
   /**
-   *
-   * @param dir
-   */
-  scanModules(dir: any) {
-    const modules = FileUtil.loadAllFileTextGlobby(['**/*.(go)'], dir)
-    if (modules.length === 0) {
-      handleException(
-        null,
-        'find no target compileUnit of the project : no go file found in source path',
-        'find no target compileUnit of the project : no go file found in source path'
-      )
-      process.exitCode = ErrorCode.no_valid_source_file
-    }
-  }
-
-  /**
    * 扫描并解析 Go 包
    *
    * @param dir - 项目目录
@@ -329,42 +313,22 @@ class GoAnalyzer extends Analyzer {
     this.performanceTracker.start('preProcess.parseCode')
     let parseCodeEnded = false
     try {
-      this.scanModules(dir)
       this.topScope.context.modules = await Parser.parseProject(dir, this.options, this.sourceCodeCache)
-
-      // 防御性检查：确保 moduleManager 不为 null
-      if (!this.topScope.context.modules) {
-        handleException(
-          null,
-          '[go-analyzer] parseProject returned null, Go AST parsing failed',
-          '[go-analyzer] parseProject returned null, Go AST parsing failed'
-        )
-        return
-      }
-      const { numOfGoMod } = this.topScope.context.modules
-      if (numOfGoMod > 1) {
-        logger.info(`[go-analyzer] found more than one go.mod files. The num of go.mod files is ${numOfGoMod}`)
-      }
       this.makeGoFileManager(this.topScope.context.modules)
-      const { packageInfo, moduleName } = this.topScope.context.modules
-      if (Object.entries(packageInfo.files).length === 0 && Object.entries(packageInfo.subs).length === 0) {
-        // 提前返回：没有文件需要处理，在 finally 中结束 parseCode
-        return
-      }
-      let { goModPath } = this.topScope.context.modules
-      if (!goModPath) goModPath = ''
+      const { packageInfo, moduleName, goModPath } = this.topScope.context.modules
       const modulePackageManager = defaultScope || this.topScope.context.packages.getSubPackage(moduleName, true)
 
       // 计算项目模块根路径(go.mod所在目录)
-      const moduleRootPath = this.getModuleRootPath(goModPath, Config.maindir)
+      const moduleRootPath = this.getModuleRootPath(goModPath || '', Config.maindir)
       const rootDirOffset = moduleRootPath === '' ? [] : moduleRootPath.split('/')
       let rootDir = packageInfo.subs['/']
-      let dirName = Config.maindir.replace(/\/$/, '').split('/').at(-1)
-      for (dirName of rootDirOffset) {
-        if (dirName in rootDir?.subs) {
-          rootDir = rootDir.subs[dirName]
+      for (const segment of rootDirOffset) {
+        if (!Object.prototype.hasOwnProperty.call(rootDir?.subs ?? {}, segment)) {
+          throw new Error(`No Go packages under selected module: ${goModPath}`)
         }
+        rootDir = rootDir.subs[segment]
       }
+      const dirName = rootDirOffset.at(-1) ?? path.basename(Config.maindir)
       this.topScope.context.modules.rootDir = rootDir
       this.topScope.context.modules.rootDirName = dirName
 
@@ -488,6 +452,10 @@ class GoAnalyzer extends Analyzer {
       currentPackageValue = parentPackageValue.getSubPackage(`%dir_${dirName}`, true)
     }
 
+    // 一个目录可以有生产包和外部测试包，目录 import 仍指向生产包。
+    const packageGroups = groupGoPackageFiles(currentDir.files || {})
+    const packageScopes = createGoPackageScopes(packageGroups, currentPackageValue, that.topScope)
+
     // 处理当前目录下的文件
     _handlePackageFiles((scope: any, node: any, state: any) => {
       if (node.type === 'CompileUnit') {
@@ -503,13 +471,13 @@ class GoAnalyzer extends Analyzer {
     })
 
     currentPackageValue.packageProcessed = true
+    packageScopes.forEach((scope: any) => {
+      if (scope !== that.topScope) scope.packageProcessed = true
+    })
 
     // 处理当前目录下的子目录
-    const subDirs = currentDir?.subs || {}
-    for (const dirName in subDirs) {
-      if (subDirs.hasOwnProperty(dirName)) {
-        this._scanPackages(currentPackageValue, dirName, subDirs[dirName], state, false)
-      }
+    for (const [subDirName, subDir] of Object.entries(currentDir.subs || {})) {
+      this._scanPackages(currentPackageValue, subDirName, subDir, state, false)
     }
 
     /**
@@ -517,21 +485,11 @@ class GoAnalyzer extends Analyzer {
      * @param handler
      */
     function _handlePackageFiles(handler: any) {
-      Object.values(currentDir.files).forEach((nodeInfo: any) => {
-        const { node, packageName } = nodeInfo
-        let scope
-        if (packageName === '__global__') {
-          scope = that.topScope
-        } else {
-          scope = currentPackageValue
-        }
-        if (!scope.name && packageName) scope.name = packageName
-        if (scope.packageProcessed) return
-        // if (packageName.indexOf('_test') === -1) {
-        //     thisPackageScope = scope
-        // }
-        handler(scope, node, state)
-      })
+      for (const [name, files] of packageGroups) {
+        const scope = packageScopes.get(name)
+        if (scope.packageProcessed) continue
+        for (const { node } of files) handler(scope, node, state)
+      }
     }
   }
 
@@ -1238,21 +1196,19 @@ class GoAnalyzer extends Analyzer {
     // 根据import结构找到包所在目录
     let currentPackage = rootDir
     for (const dir of dirs) {
-      currentPackage = currentPackage?.subs?.[dir]
-      if (!currentPackage) {
+      if (!Object.prototype.hasOwnProperty.call(currentPackage?.subs ?? {}, dir)) {
         return
       }
+      currentPackage = currentPackage.subs[dir]
     }
 
-    let file
-    for (file of Object.getOwnPropertyNames(currentPackage?.files)) {
-      this.processInstruction(targetScope, currentPackage.files[file].node, state)
-    }
-
-    // 获取实际包名
-    if (file) {
-      const { packageName } = currentPackage.files[file]
+    const groups = groupGoPackageFiles(currentPackage.files || {})
+    const packageName = primaryGoPackageName(groups)
+    if (packageName) {
       targetScope.name = packageName
+      for (const { node } of groups.get(packageName) || []) {
+        this.processInstruction(targetScope, node, state)
+      }
     }
     return targetScope
   }
@@ -2666,7 +2622,9 @@ class GoAnalyzer extends Analyzer {
    * @param source
    * @param fileName
    */
-  preProcess4SingleFile(source: any, fileName: any) {
+  async preProcess4SingleFile(source: any, fileName: any) {
+    // 确保进程内 Go parser（wasm）已初始化（native fallback 时为空操作）
+    await GoAstBuilder.ensureInitialized(this.options)
     // 先填充 sourceCodeCache，parser 会优先使用
     this.sourceCodeCache.set(fileName, source.split(/\n/))
     this.topScope.context.modules = Parser.parseSingleFile(fileName, this.options, this.sourceCodeCache)
