@@ -2,7 +2,6 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { before, describe, it } from 'mocha'
 import * as assert from 'assert'
-
 const config = require('../../src/config')
 const Analyzer = require('../../src/engine/analyzer/golang/common/go-analyzer')
 const { recordFindingStr } = require('../test-utils')
@@ -11,7 +10,7 @@ const { handleException } = require('../../src/engine/analyzer/common/exception-
 const OutputStrategyAutoRegister = require('../../src/engine/analyzer/common/output-strategy-auto-register')
 const logger = require('../../src/util/logger')(__filename)
 
-const TAINT_RULE_PATTERN = /taint_flow_(test|go)/
+const taint_flow_name = ['taint_flow_test', 'taint_flow_go']
 
 function getAllTestCase(filename: string): string[] {
   const ALL_TEST_CASE: string[] = []
@@ -45,61 +44,115 @@ function getAllTestCase(filename: string): string[] {
   return ALL_TEST_CASE
 }
 
-/**
- * 某个 case 的 recorder 文本是否包含 taint 检出（而非 "No findings!"）。
- * @param result - recorder 生成的字符串
- * @returns {boolean} true 表示检出
- */
-function isDetected(result: any): boolean {
-  return typeof result === 'string' && !/No findings!/.test(result) && TAINT_RULE_PATTERN.test(result)
-}
-
-/**
- * 基于 recorder 字符串统计 TP/FN/FP/TN。
- *
- * 旧实现依赖 `analyzeSingleFile` 返回值的内部键（`taint_flow_test`），与
- * `recordCheckerFindings()` 实际返回的键（`taintflow` 等）不匹配，导致打印恒为 0，
- * 具误导性。这里直接以逐 case 的字符串结果为准（与 expect 比对的是同一份数据），
- * 统计口径与基线文档的 expect 反推一致。
- * @param actualRes - caseKey -> recorder 字符串
- * @returns {string} 可读的统计报告
- */
-function statisticImpactArea(actualRes: Record<string, any>): string {
-  const positive: string[] = []
-  const negative: string[] = []
-  const unknown: string[] = []
-  let TP = 0
-  let FN = 0
-  let FP = 0
-  let TN = 0
-  for (const key of Object.keys(actualRes)) {
-    const detected = isDetected(actualRes[key])
-    if (/_T/.test(key)) {
-      positive.push(key)
-      if (detected) TP++
-      else FN++
-    } else if (/_F/.test(key)) {
-      negative.push(key)
-      if (detected) FP++
-      else TN++
-    } else {
-      unknown.push(key)
+function recordFinding(finding: any, filename: string, findingResMap: Map<string, any>): void {
+  const keyname = filename.substring(filename.lastIndexOf('/benchmarks'))
+  for (const ruleName of taint_flow_name) {
+    if (!finding || Object.keys(finding).length === 0) {
+      findingResMap.set(keyname, { [ruleName]: 0 })
+      continue
+    }
+    if (finding[ruleName]) {
+      findingResMap.set(keyname, { [ruleName]: finding[ruleName].length })
     }
   }
-  const loginfo: string[] = []
-
-  loginfo.push('='.repeat(50))
-  loginfo.push(`回归case总数:${Object.keys(actualRes).length}`)
-  loginfo.push(`统计case总数:${TP + FN + FP + TN}`)
-  loginfo.push(`阳性(_T):${positive.length} 检出(TP):${TP} 漏报(FN):${FN}`)
-  loginfo.push(`阴性(_F):${negative.length} 误报(FP):${FP} 正确未检出(TN):${TN}`)
-  loginfo.push(`未知case:${unknown.length}`)
-  loginfo.push('='.repeat(50))
-
-  return loginfo.join('\n')
 }
 
-async function runSingleTest(casePath: string, outputStrategyAutoRegister: any): Promise<any> {
+/**
+ * @param findingResMap
+ * @param logDir
+ * @constructor
+ */
+function statisticImpactArea(findingResMap: Map<string, any>, logDir?: string): string {
+  let { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown } = getTFPN(findingResMap)
+  let loginfo: string[] = []
+
+  loginfo.push('='.repeat(50))
+  loginfo.push(`回归case总数:${findingResMap.size}`)
+  loginfo.push(`统计case总数:${TP.size + TN.size + FP.size + FN.size}`)
+  loginfo.push(`已检出(TP+TN)的链路数量(含误报):${tpChainNum + tnChainNum}`)
+  loginfo.push(`未检出(FP+FN)(含待完善):${FP.size + FN.size}`)
+  loginfo.push('-'.repeat(50))
+  loginfo.push(`待完善的case数量: 未适配(FP):${FP.size}，误报数(TN):${TN.size} 共计(FP+TN):${FP.size + TN.size}`)
+  loginfo.push(`待适配的case(FP):\n${Array.from(FP).join('\n')}`)
+  loginfo.push(`误报case(TN):\n${Array.from(TN).join('\n')}`)
+  loginfo.push(`未知case:${Array.from(unknown).join('\n')}，数量为${unknown.size}`)
+  loginfo.push('-'.repeat(50))
+  loginfo.push('='.repeat(50))
+
+  const showstr = loginfo.join('\n')
+  return showstr
+}
+
+function getTFPN(findingResMap: Map<string, any>): {
+  TP: Set<string>
+  TN: Set<string>
+  FP: Set<string>
+  FN: Set<string>
+  tpChainNum: number
+  tnChainNum: number
+  unknown: Set<string>
+} {
+  let TP = new Set<string>(),
+    TN = new Set<string>(),
+    FP = new Set<string>(),
+    FN = new Set<string>(),
+    unknown = new Set<string>()
+  // 检测出的链路数量，包含真阳和误报
+  let tpChainNum = 0,
+    tnChainNum = 0
+  findingResMap.forEach((value, key) => {
+    if (!/_T|_F/.test(key)) {
+      taint_flow_name.forEach((ruleName) => {
+        if (value[ruleName] && value[ruleName] > 0) {
+          // 已检出
+          TP.add(key)
+          tpChainNum += value[ruleName]
+        }
+      })
+      //遍历完两个规则 都没有检出链路 才算未检出
+      if (!TP.has(key)) {
+        // 未检出
+        FN.add(key)
+      }
+    } else {
+      // jsbenchmark 重点关注
+      if (key.includes('_T')) {
+        // _T代表样本是阳性
+        taint_flow_name.forEach((ruleName) => {
+          if (value[ruleName] && value[ruleName] > 0) {
+            // 已检出
+            TP.add(key)
+            tpChainNum += value[ruleName]
+          }
+        })
+        //遍历完两个规则 都没有检出链路 才算未检出
+        if (!TP.has(key)) {
+          // 未检出 待补充
+          FP.add(key)
+        }
+      } else if (key.includes('_F')) {
+        // _F代表样本是阴性
+        taint_flow_name.forEach((ruleName) => {
+          if (value[ruleName] && value[ruleName] > 0) {
+            // 误报
+            TN.add(key)
+            tnChainNum += value[ruleName]
+          }
+        })
+        //遍历完两个规则 都没有检出链路 才算预期内未检出
+        if (!TN.has(key)) {
+          // 预期未检出
+          FN.add(key)
+        }
+      } else {
+        unknown.add(key)
+      }
+    }
+  })
+  return { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown }
+}
+
+async function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): Promise<any> {
   const configPath = require.resolve('../../src/config')
   logger.info(`[CONFIG] Loaded from: ${configPath}`)
 
@@ -137,18 +190,20 @@ async function runSingleTest(casePath: string, outputStrategyAutoRegister: any):
         strategy.outputFindings(resultManager, strategy.getOutputFilePath(), config, recorder.printAndAppend)
       }
     }
+    recordFinding(findingRes, filename, actualResMap)
     return { [filename]: recorder.getFormatResult() }
   }
-  return {}
+  assert.fail(`Go benchmark case did not produce an analysis result: ${casePath}`)
 }
 
 async function update(dir: string): Promise<void> {
   let allCases = getAllTestCase(dir)
   let actualRes: any = {}
+  let actualResMap = new Map<string, any>()
   const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
   outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = await runSingleTest(casePath, outputStrategyAutoRegister)
+    const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
     for (const [key, value] of Object.entries(singleRes)) {
       actualRes[key] = value
     }
@@ -163,29 +218,30 @@ async function update(dir: string): Promise<void> {
 }
 
 function runGoBenchmark(dir: string): void {
-  const allCases = getAllTestCase(dir)
-  const actualRes: any = {}
+  let allCases = getAllTestCase(dir)
+  let actualRes: any = {}
+  let actualResMap = new Map<string, any>()
   const expectPath = path.join(path.resolve(dir), '..', '..', 'expect', 'gobenchmark-expect.json')
   const expectedData = fs.readFileSync(expectPath).toString()
   const expectedRes = JSON.parse(expectedData)
 
   describe('YASA test GoBenchmark', function () {
-    this.timeout(0)
-
-    // 解析统一放到 before：analyzeSingleFile 为 async，必须 await 后结果才完整。
     before(async function () {
+      this.timeout(0)
+      assert.strictEqual(allCases.length, Object.keys(expectedRes).length, 'Go benchmark corpus does not match the expected cases')
       const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
       outputStrategyAutoRegister.autoRegisterAllStrategies()
       for (const casePath of allCases) {
-        const singleRes = await runSingleTest(casePath, outputStrategyAutoRegister)
+        const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
         for (const [key, value] of Object.entries(singleRes)) {
           actualRes[key] = value
         }
       }
+      assert.strictEqual(Object.keys(actualRes).length, allCases.length, 'not all Go benchmark cases produced results')
     })
 
     it(`check result data directly`, function () {
-      let testReport = statisticImpactArea(actualRes)
+      let testReport = statisticImpactArea(actualResMap)
       logger.info(testReport)
     })
     let i = 1
@@ -208,9 +264,11 @@ function runGoBenchmark(dir: string): void {
 }
 
 describe('YASA test All GoBenchmarks', function () {
-  let goBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-go/')
+  const goBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-go/')
   if (fs.existsSync(goBenchmarkPath)) {
     runGoBenchmark(goBenchmarkPath)
+  } else {
+    it.skip('requires the prepared sast-go benchmark corpus')
   }
 })
 

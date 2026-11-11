@@ -25,6 +25,7 @@ type GoAnalyzerConstructor = new (options: AnalyzerOptions) => GoAnalyzerInstanc
 type MutableConfig = Record<string, unknown> & {
   ruleConfigFile?: string
   checkerIds?: string[]
+  uastSDKPath?: string
   language?: string
   maindirPrefix?: string
 }
@@ -37,6 +38,14 @@ const sinkUtil = require('../../src/checker/taint/common-kit/sink-util') as Sink
 
 const FINDING_KEY = 'taintflow'
 
+function resolveUastSDKPath(): string {
+  const localDeps = path.join(__dirname, '../../deps')
+  if (!fs.existsSync(localDeps)) {
+    throw new Error(`UAST dependencies not found at repository path: ${localDeps}`)
+  }
+  return localDeps
+}
+
 async function analyzeGoCode(
   code: string,
   fileName: string,
@@ -45,6 +54,7 @@ async function analyzeGoCode(
 ): Promise<TaintFindings> {
   config.ruleConfigFile = ruleConfigFile ?? path.join(__dirname, '../../test/go/rule_config.json')
   config.checkerIds = checkerIds
+  config.uastSDKPath = resolveUastSDKPath()
   config.language = 'golang'
   config.maindirPrefix = os.tmpdir()
 

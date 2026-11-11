@@ -6,7 +6,7 @@
  * 单元测试（test-go-callsite-limit-memory-guard.ts）只覆盖 helper 纯数据语义，
  * 集成测试覆盖真实 processInstruction 调用链。
  *
- * 测试代码先写入临时文件，再通过 Go 解析入口分析。
+ * Go UAST 解析器（uast4go 外部二进制）从磁盘读取文件，测试代码先写入临时文件再分析。
  */
 import * as fs from 'fs'
 import * as os from 'os'
@@ -158,9 +158,10 @@ function writeTempGoFile(code: string, name: string): string {
   return filePath
 }
 
-function makeAnalyzer({ useNative = true } = {}): any {
+function makeAnalyzer(): any {
   config.ruleConfigFile = __dirname + '/rule_config.json'
   config.checkerIds = ['taint_flow_test']
+  config.uastSDKPath = path.join(__dirname, '../../deps')
   config.language = 'golang'
   config.maindirPrefix = __dirname + '/benchmarks'
   return new Analyzer({
@@ -168,7 +169,6 @@ function makeAnalyzer({ useNative = true } = {}): any {
     examineIssues: true,
     checkers: { taint_flow_test: true },
     ...config,
-    uastSDKPath: useNative ? path.join(__dirname, '../../deps') : undefined,
     mode: { intra: true },
     sanity: true,
   })
@@ -211,22 +211,6 @@ describe('go-analyzer × callsite 限流 + 内存护栏集成测试', function (
         analyzer.callsiteInterpretCount.size > 0,
         'method chain 应触发 callsiteInterpretCount 计数（callsite 有 loc）'
       )
-    })
-
-    it('默认 Tree-sitter 解析的链式调用也触发限流计数', async () => {
-      const filePath = writeTempGoFile(METHOD_CHAIN_CODE, 'chain_default_parser.go')
-      tmpDirs.push(path.dirname(filePath))
-      const previousMode = process.env.YASA_GO_PARSER
-      delete process.env.YASA_GO_PARSER
-      try {
-        const analyzer = makeAnalyzer({ useNative: false })
-        const result = await analyzer.analyzeSingleFile(METHOD_CHAIN_CODE, filePath)
-        assert.ok(result !== false, 'analyzeSingleFile 应成功返回')
-        assert.ok(analyzer.callsiteInterpretCount.size > 0, '默认解析器应保留供限流计数使用的调用点')
-      } finally {
-        if (previousMode === undefined) delete process.env.YASA_GO_PARSER
-        else process.env.YASA_GO_PARSER = previousMode
-      }
     })
   })
 

@@ -18,7 +18,6 @@ const { ErrorCode, Errors, setExitCode } = require('../util/error-code')
 const FrameworkUtil = require('../util/framework-util')
 const { handleException } = require('../engine/analyzer/common/exception-handler')
 const OutputStrategyAutoRegister = require('../engine/analyzer/common/output-strategy-auto-register')
-const GoAstBuilder = require('../engine/parser/golang/go-ast-builder')
 const { yasaWarning } = require('../util/format-util')
 const { logScanSummary, logScanInit } = require('../util/diagnostics-log-util')
 const { performanceTracker } = require('../util/performance-tracker')
@@ -772,11 +771,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
       setExitCode(ErrorCode.normal)
       return null
     } catch (e: any) {
-      const message =
-        Config.language === 'golang' && e instanceof Error
-          ? `Go AST export failed: ${e.message}`
-          : 'Error occurred in dumpAllAST!!!!'
-      handleException(e, message, `${message}\n${e}`)
+      handleException(e, 'Error occurred in dumpAllAST!!!!', `Error occurred in dumpAllAST!!!!${e}`)
       setExitCode(ErrorCode.engine_failure)
       return null
     }
@@ -1047,6 +1042,7 @@ async function dumpAST(apps: any, printf: any) {
   const { deleteParent } = require('../util/ast-util')
   // Go 的单文件导出走同步解析；仅进程内后端需要先初始化。
   if (Config.language === 'golang') {
+    const GoAstBuilder = require('../engine/parser/golang/go-ast-builder')
     await GoAstBuilder.ensureInitialized(Config)
   }
   for (const app of apps) {

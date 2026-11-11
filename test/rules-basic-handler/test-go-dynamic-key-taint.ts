@@ -30,6 +30,7 @@ const FINDING_KEY = 'taintflow'
 async function analyzeGoCode(code: string, fileName: string): Promise<any> {
   config.ruleConfigFile = path.join(__dirname, '../../test/go/rule_config.json')
   config.checkerIds = ['taint_flow_test']
+  config.uastSDKPath = path.join(__dirname, '../../deps')
   config.language = 'golang'
   config.maindirPrefix = os.tmpdir()
 

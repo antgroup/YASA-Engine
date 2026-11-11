@@ -52,7 +52,7 @@ Provides SDK packages supporting multiple programming languages for traditional 
 
 [Installation and Deployment](https://www.yuque.com/u22090306/bebf6g/gm7b32tcn9vosgll)
 
-Go scans use the Tree-sitter parser by default. Set `YASA_GO_PARSER=native` to use the native `uast4go` executable instead. When the variable is unset or empty, `--uastSDKPath` also selects the native parser. The old value `YASA_GO_PARSER=wasm` is rejected; unset it and omit `--uastSDKPath` to use Tree-sitter.
+Go scans use Tree-sitter by default. Set `YASA_GO_PARSER=native` to use the native `uast4go` executable instead. If `YASA_GO_PARSER` is unset or empty, passing `--uastSDKPath` also selects `uast4go`.
 
 ## Join Us
 Welcome to submit issues if you encounter any problems!
