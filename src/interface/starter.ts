@@ -731,6 +731,9 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     }
   }
 
+  // Single-file AST export requires Python's WASM grammar to be ready.
+  await Parser.ensureInitialized(Config.language)
+
   // dump AST
   if (Config.dumpAST) {
     if (!Config.single) {
@@ -855,6 +858,7 @@ async function initAnalyzer(dir: any, args: any[] = [], printf?: any) {
     Config.analyzer = f
     Analyzer = (analyzerEnum as any)[Config.analyzer]
   }
+  await Parser.ensureInitialized(Config.language)
   yasaLog(`Analysis language: ${Config.language}`, 'init')
   yasaLog(`Analysis analyzer: ${Config.analyzer}`, 'init')
   logScanInit(performanceTracker)

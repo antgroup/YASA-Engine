@@ -14,8 +14,6 @@ const PythonAnalyzer = require('../../src/engine/analyzer/python/common/python-a
 const Parser = require('../../src/engine/parser/parser') as typeof import('../../src/engine/parser/parser')
 const Config = require('../../src/config') as typeof import('../../src/config')
 
-const REPO_ROOT = path.resolve(__dirname, '../..')
-const UAST4PY_PATH = process.env.UAST4PY_PATH || path.join(REPO_ROOT, 'deps/uast4py/uast4py')
 
 type ResolvedClass = {
   id?: string
@@ -79,7 +77,7 @@ type AnalyzerHarness = {
     ) => void
   }
   preProcess: (directory: string) => Promise<void>
-  preProcess4SingleFile: (source: string, fileName: string) => void
+  preProcess4SingleFile: (source: string, fileName: string) => Promise<void>
   processImportDirect: (scope: unknown, node: unknown, state: unknown) => ResolvedValue
   processModule: (ast: unknown, fileName: string) => unknown
   resolveClassInheritance: (classValue: ResolvedClass, state: unknown) => void
@@ -92,7 +90,7 @@ type ParsedCallObservation = {
   superNodeModule?: boolean
 }
 
-function analyzeTornadoApplicationCall(source: string): ParsedCallObservation[] {
+async function analyzeTornadoApplicationCall(source: string): Promise<ParsedCallObservation[]> {
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-python-tornado-call-'))
   const sourceFile = path.join(sourceDir, 'entry.py')
   try {
@@ -107,7 +105,6 @@ function analyzeTornadoApplicationCall(source: string): ParsedCallObservation[] 
         checkerPackIds: [],
         printers: [],
         language: 'python',
-        uastSDKPath: UAST4PY_PATH,
       }) as unknown as AnalyzerHarness
       const observed: ParsedCallObservation[] = []
       const checkAtFunctionCallAfter = analyzer.checkerManager.checkAtFunctionCallAfter.bind(analyzer.checkerManager)
@@ -125,7 +122,7 @@ function analyzeTornadoApplicationCall(source: string): ParsedCallObservation[] 
         }
         checkAtFunctionCallAfter(callAnalyzer, scope, node, state, observation)
       }
-      analyzer.preProcess4SingleFile(source, sourceFile)
+      await analyzer.preProcess4SingleFile(source, sourceFile)
       return observed
     } finally {
       Config.maindir = previousMainDir
@@ -158,7 +155,7 @@ function memberValue(root: ResolvedValue | undefined, path: string[]): ResolvedV
   return path.reduce<ResolvedValue | undefined>((value, property) => value?.getMemberValue?.(property) ?? undefined, root)
 }
 
-function observeCachedImportScopes(): ImportObservation[] {
+async function observeCachedImportScopes(): Promise<ImportObservation[]> {
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-python-import-cache-'))
   const sourceFile = path.join(sourceDir, 'entry.py')
   try {
@@ -179,7 +176,6 @@ function observeCachedImportScopes(): ImportObservation[] {
         checkerPackIds: [],
         printers: [],
         language: 'python',
-        uastSDKPath: UAST4PY_PATH,
       }) as unknown as AnalyzerHarness
       const scopes: ImportScope[] = []
       const processImportDirect = analyzer.processImportDirect.bind(analyzer)
@@ -187,7 +183,7 @@ function observeCachedImportScopes(): ImportObservation[] {
         scopes.push(scope as ImportScope)
         return processImportDirect(scope, node, state)
       }
-      analyzer.preProcess4SingleFile(source, sourceFile)
+      await analyzer.preProcess4SingleFile(source, sourceFile)
       return [...new Set(scopes)].map((scope) => {
         const root = scope.getMemberValue?.('tornado') ?? undefined
         const value = memberValue(root, ['web'])
@@ -202,12 +198,12 @@ function observeCachedImportScopes(): ImportObservation[] {
   }
 }
 
-function observeImport(
+async function observeImport(
   source: string,
   lexicalRoot: string,
   memberPath: string[] = [],
   localFiles: Record<string, string> = {},
-): ImportObservation {
+): Promise<ImportObservation> {
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-python-import-'))
   const sourceFile = path.join(sourceDir, 'entry.py')
   try {
@@ -227,8 +223,8 @@ function observeImport(
         checkerPackIds: [],
         printers: [],
         language: 'python',
-        uastSDKPath: UAST4PY_PATH,
       }) as unknown as AnalyzerHarness
+      await Parser.ensureInitialized('python')
       for (const relativeFile of Object.keys(localFiles)) {
         const target = path.join(sourceDir, relativeFile)
         analyzer.fileList.push(target)
@@ -240,7 +236,7 @@ function observeImport(
         lexicalScope = scope as ImportScope
         return processImportDirect(scope, node, state)
       }
-      analyzer.preProcess4SingleFile(source, sourceFile)
+      await analyzer.preProcess4SingleFile(source, sourceFile)
       const root = lexicalScope?.getMemberValue?.(lexicalRoot) ?? undefined
       const value = memberValue(root, memberPath)
       return { qid: value?.qid, sid: value?.sid, nodeModule: value?.node_module, root }
@@ -271,7 +267,6 @@ async function observeLoadedLocalDottedImport(): Promise<ImportObservation> {
         checkerPackIds: [],
         printers: [],
         language: 'python',
-        uastSDKPath: UAST4PY_PATH,
       }) as unknown as AnalyzerHarness
       let lexicalScope: ImportScope | undefined
       const processImportDirect = analyzer.processImportDirect.bind(analyzer)
@@ -292,7 +287,7 @@ async function observeLoadedLocalDottedImport(): Promise<ImportObservation> {
   }
 }
 
-function observeUnloadedLocalDottedImport(): ImportObservation {
+async function observeUnloadedLocalDottedImport(): Promise<ImportObservation> {
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-python-unloaded-import-'))
   const sourceFile = path.join(sourceDir, 'entry.py')
   const localModule = path.join(sourceDir, 'localpkg', 'submodule.py')
@@ -310,10 +305,9 @@ function observeUnloadedLocalDottedImport(): ImportObservation {
         checkerPackIds: [],
         printers: [],
         language: 'python',
-        uastSDKPath: UAST4PY_PATH,
       }) as unknown as AnalyzerHarness
       analyzer.fileList.push(localModule)
-      analyzer.preProcess4SingleFile(fs.readFileSync(sourceFile, 'utf8'), sourceFile)
+      await analyzer.preProcess4SingleFile(fs.readFileSync(sourceFile, 'utf8'), sourceFile)
       const root = analyzer.topScope.value.localpkg
       return { qid: root?.value?.submodule?.qid, nodeModule: root?.value?.submodule?.node_module, root }
     } finally {
@@ -325,22 +319,22 @@ function observeUnloadedLocalDottedImport(): ImportObservation {
   }
 }
 
-function analyzeClass(source: string, className: string): ResolvedClassObservation | undefined {
+async function analyzeClass(source: string, className: string): Promise<ResolvedClassObservation | undefined> {
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yasa-python-inheritance-'))
   const sourceFile = path.join(sourceDir, 'entry.py')
   try {
     fs.writeFileSync(sourceFile, source)
-    return analyzeClassFile(source, sourceFile, className, sourceDir)
+    return await analyzeClassFile(source, sourceFile, className, sourceDir)
   } finally {
     fs.rmSync(sourceDir, { recursive: true, force: true })
   }
 }
 
-function analyzeFixtureClass(sourceFile: string, className: string): ResolvedClassObservation | undefined {
-  return analyzeClassFile(fs.readFileSync(sourceFile, 'utf8'), sourceFile, className, path.dirname(sourceFile))
+async function analyzeFixtureClass(sourceFile: string, className: string): Promise<ResolvedClassObservation | undefined> {
+  return await analyzeClassFile(fs.readFileSync(sourceFile, 'utf8'), sourceFile, className, path.dirname(sourceFile))
 }
 
-function analyzeClassFile(source: string, sourceFile: string, className: string, mainDir: string): ResolvedClassObservation | undefined {
+async function analyzeClassFile(source: string, sourceFile: string, className: string, mainDir: string): Promise<ResolvedClassObservation | undefined> {
   const previousMainDir = Config.maindir
   const previousMainDirPrefix = Config.maindirPrefix
   try {
@@ -351,7 +345,6 @@ function analyzeClassFile(source: string, sourceFile: string, className: string,
       checkerPackIds: [],
       printers: [],
       language: 'python',
-      uastSDKPath: UAST4PY_PATH,
     }) as unknown as AnalyzerHarness
     const resolved: ResolvedClass[] = []
     const resolveClassInheritance = analyzer.resolveClassInheritance.bind(analyzer)
@@ -359,7 +352,7 @@ function analyzeClassFile(source: string, sourceFile: string, className: string,
       resolveClassInheritance(classValue, state)
       resolved.push(classValue)
     }
-    analyzer.preProcess4SingleFile(source, sourceFile)
+    await analyzer.preProcess4SingleFile(source, sourceFile)
     const classValue = resolved.find((candidate) => candidate.ast?.cdef?.id?.name === className) ?? resolved.at(-1)
     if (!classValue) return undefined
     return {
@@ -433,9 +426,9 @@ function localApplicationSubclass(superclass: CallableValue = directTornadoAppli
 }
 
 describe('Python dotted import provenance', () => {
-  it('preserves the canonical external root chain for a dotted import', function () {
+  it('preserves the canonical external root chain for a dotted import', async function () {
     this.timeout(30000)
-    const imported = observeImport('import tornado.web', 'tornado', ['web'])
+    const imported = await observeImport('import tornado.web', 'tornado', ['web'])
 
     assert.strictEqual(imported.nodeModule, true)
     assert.ok(imported.qid?.endsWith('tornado.web'))
@@ -443,9 +436,9 @@ describe('Python dotted import provenance', () => {
     assert.ok(imported.root?.getMemberValue?.('web')?.qid?.endsWith('tornado.web'))
   })
 
-  it('rebinds a cached dotted import into every lexical scope', function () {
+  it('rebinds a cached dotted import into every lexical scope', async function () {
     this.timeout(30000)
-    const imports = observeCachedImportScopes()
+    const imports = await observeCachedImportScopes()
 
     assert.strictEqual(imports.length, 2)
     for (const imported of imports) {
@@ -456,21 +449,21 @@ describe('Python dotted import provenance', () => {
     assert.notStrictEqual(imports[0].root, imports[1].root)
   })
 
-  it('binds a dotted import alias to the terminal module only', function () {
+  it('binds a dotted import alias to the terminal module only', async function () {
     this.timeout(30000)
-    const imported = observeImport('import tornado.web as tw', 'tw')
+    const imported = await observeImport('import tornado.web as tw', 'tw')
 
     assert.strictEqual(imported.nodeModule, true)
     assert.ok(imported.qid?.endsWith('tornado.web'))
     assert.strictEqual(imported.root?.getMemberValue?.('web'), null)
   })
 
-  it('retains terminal aliases without creating a root hierarchy', function () {
+  it('retains terminal aliases without creating a root hierarchy', async function () {
     this.timeout(30000)
     const aliases = ['x', '别名']
 
     for (const alias of aliases) {
-      const imported = observeImport(`import tornado.web as ${alias}`, alias)
+      const imported = await observeImport(`import tornado.web as ${alias}`, alias)
 
       assert.strictEqual(imported.nodeModule, true)
       assert.ok(imported.qid?.endsWith('tornado.web'))
@@ -478,26 +471,26 @@ describe('Python dotted import provenance', () => {
     }
   })
 
-  it('retains escaped-continuation aliases without creating a root hierarchy', function () {
+  it('retains escaped-continuation aliases without creating a root hierarchy', async function () {
     this.timeout(30000)
-    const imported = observeImport('import tornado.web as \\\n  x', 'x')
+    const imported = await observeImport('import tornado.web as \\\n  x', 'x')
 
     assert.strictEqual(imported.nodeModule, true)
     assert.ok(imported.qid?.endsWith('tornado.web'))
     assert.strictEqual(imported.root?.getMemberValue?.('web'), null)
   })
 
-  it('keeps from-import provenance exact', function () {
+  it('keeps from-import provenance exact', async function () {
     this.timeout(30000)
-    const imported = observeImport('from tornado.web import Application', 'Application')
+    const imported = await observeImport('from tornado.web import Application', 'Application')
 
     assert.strictEqual(imported.nodeModule, true)
     assert.ok(imported.qid?.endsWith('tornado.web.Application'))
   })
 
-  it('preserves every external segment in a three-segment dotted import', function () {
+  it('preserves every external segment in a three-segment dotted import', async function () {
     this.timeout(30000)
-    const imported = observeImport('import tornado.httputil.HTTPHeaders', 'tornado', ['httputil', 'HTTPHeaders'])
+    const imported = await observeImport('import tornado.httputil.HTTPHeaders', 'tornado', ['httputil', 'HTTPHeaders'])
 
     assert.strictEqual(imported.nodeModule, true)
     assert.ok(imported.qid?.endsWith('tornado.httputil.HTTPHeaders'))
@@ -513,9 +506,9 @@ describe('Python dotted import provenance', () => {
     assert.notStrictEqual(imported.qid, 'localpkg')
   })
 
-  it('does not inject external metadata for an unloaded local dotted import', function () {
+  it('does not inject external metadata for an unloaded local dotted import', async function () {
     this.timeout(30000)
-    const imported = observeUnloadedLocalDottedImport()
+    const imported = await observeUnloadedLocalDottedImport()
 
     assert.strictEqual(imported.nodeModule, undefined)
     assert.notStrictEqual(imported.root?.qid, 'localpkg')
@@ -523,9 +516,9 @@ describe('Python dotted import provenance', () => {
 })
 
 describe('Parsed Tornado Application call provenance', () => {
-  it('preserves external provenance at a parsed from-import Application call', function () {
+  it('preserves external provenance at a parsed from-import Application call', async function () {
     this.timeout(30000)
-    const observed = analyzeTornadoApplicationCall([
+    const observed = await analyzeTornadoApplicationCall([
       'from tornado.web import Application',
       'app = Application([])',
     ].join('\n'))
@@ -535,9 +528,9 @@ describe('Parsed Tornado Application call provenance', () => {
     assert.ok(observed[0].qid?.endsWith('tornado.web.Application'))
   })
 
-  it('preserves external provenance at a parsed qualified Application call', function () {
+  it('preserves external provenance at a parsed qualified Application call', async function () {
     this.timeout(30000)
-    const observed = analyzeTornadoApplicationCall([
+    const observed = await analyzeTornadoApplicationCall([
       'import tornado.web',
       'app = tornado.web.Application([])',
     ].join('\n'))
@@ -547,9 +540,9 @@ describe('Parsed Tornado Application call provenance', () => {
     assert.ok(observed[0].qid?.endsWith('tornado.web.Application'), JSON.stringify(observed))
   })
 
-  it('preserves the direct external superclass at a parsed local Application call', function () {
+  it('preserves the direct external superclass at a parsed local Application call', async function () {
     this.timeout(30000)
-    const observed = analyzeTornadoApplicationCall([
+    const observed = await analyzeTornadoApplicationCall([
       'import tornado.web',
       '',
       'class Application(tornado.web.Application):',
@@ -614,19 +607,19 @@ describe('Tornado handler Application registration', () => {
 })
 
 describe('Tornado Application subclass provenance', () => {
-  it('resolves qualified external and local direct bases without creating self-cycles', function () {
+  it('resolves qualified external and local direct bases without creating self-cycles', async function () {
     this.timeout(30000)
-    const qualifiedApplication = analyzeClass([
+    const qualifiedApplication = await analyzeClass([
       'import tornado.web',
       '',
       'class Application(tornado.web.Application):',
       '    pass',
     ].join('\n'), 'Application')
-    const selfReferentialApplication = analyzeClass([
+    const selfReferentialApplication = await analyzeClass([
       'class Application(Application):',
       '    pass',
     ].join('\n'), 'Application')
-    const child = analyzeClass([
+    const child = await analyzeClass([
       'class Base:',
       '    pass',
       '',

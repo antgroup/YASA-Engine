@@ -661,7 +661,7 @@ class BaseParser {
       language: 'python',
       unit: 'file',
       supportsIncremental: false,
-      parseAsFiles: false,
+      parseAsFiles: true,
       filePatterns: ['**/*.(py)', '!**/.venv/**', '!**/vendor/**', '!**/node_modules/**', '!**/site-packages/**'],
       parseSingleFile: (code, options) => {
         const PythonParser = require('./python/python-ast-builder')
@@ -1363,6 +1363,14 @@ class BaseParser {
 
 const parser = new BaseParser()
 
+/** Initialize Python's WASM grammar before synchronous single-file parsing. */
+async function ensureInitialized(language?: string): Promise<void> {
+  if (language === 'python') {
+    const PythonParser = require('./python/python-ast-builder')
+    await PythonParser.ensureInitialized()
+  }
+}
+
 /**
  * 解析单个文件（用户操作接口）
  * @param filepath - 文件路径
@@ -1415,6 +1423,7 @@ async function dumpAllAST(
 // ================== 导出接口 ====================
 
 module.exports = {
+  ensureInitialized,
   parseSingleFile,
   parseProject,
   dumpAllAST,
