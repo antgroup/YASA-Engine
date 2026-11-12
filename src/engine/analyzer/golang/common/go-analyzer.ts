@@ -45,6 +45,7 @@ import {
 
 const path = require('path')
 const _ = require('lodash')
+const { groupGoPackageFiles, primaryGoPackageName, createGoPackageScopes } = require('./go-package-files')
 const QidUnifyUtil = require('../../../../util/qid-unify-util')
 
 const logger = require('../../../../util/logger')(__filename)
@@ -52,6 +53,7 @@ const ScopeClass = require('../../common/scope')
 const Analyzer: typeof import('../../common/analyzer').Analyzer = require('../../common/analyzer')
 const BasicRuleHandler = require('../../../../checker/common/rules-basic-handler')
 const Parser = require('../../../parser/parser')
+const GoAstBuilder = require('../../../parser/golang/go-ast-builder')
 const {
   ValueUtil: { FunctionValue, ObjectValue },
 } = require('../../../util/value-util')
@@ -329,7 +331,8 @@ class GoAnalyzer extends Analyzer {
     this.performanceTracker.start('preProcess.parseCode')
     let parseCodeEnded = false
     try {
-      this.scanModules(dir)
+      // 保留原生扫描的预检查；进程内解析器自行收集有效文件和诊断。
+      if (GoAstBuilder.isNativeFallback(this.options)) this.scanModules(dir)
       this.topScope.context.modules = await Parser.parseProject(dir, this.options, this.sourceCodeCache)
 
       // 防御性检查：确保 moduleManager 不为 null
@@ -361,7 +364,7 @@ class GoAnalyzer extends Analyzer {
       let rootDir = packageInfo.subs['/']
       let dirName = Config.maindir.replace(/\/$/, '').split('/').at(-1)
       for (dirName of rootDirOffset) {
-        if (dirName in rootDir?.subs) {
+        if (Object.prototype.hasOwnProperty.call(rootDir?.subs ?? {}, dirName)) {
           rootDir = rootDir.subs[dirName]
         }
       }
@@ -488,6 +491,10 @@ class GoAnalyzer extends Analyzer {
       currentPackageValue = parentPackageValue.getSubPackage(`%dir_${dirName}`, true)
     }
 
+    // 一个目录可以有生产包和外部测试包，目录 import 仍指向生产包。
+    const packageGroups = groupGoPackageFiles(currentDir.files || {})
+    const packageScopes = createGoPackageScopes(packageGroups, currentPackageValue, that.topScope)
+
     // 处理当前目录下的文件
     _handlePackageFiles((scope: any, node: any, state: any) => {
       if (node.type === 'CompileUnit') {
@@ -503,13 +510,13 @@ class GoAnalyzer extends Analyzer {
     })
 
     currentPackageValue.packageProcessed = true
+    packageScopes.forEach((scope: any) => {
+      if (scope !== that.topScope) scope.packageProcessed = true
+    })
 
     // 处理当前目录下的子目录
-    const subDirs = currentDir?.subs || {}
-    for (const dirName in subDirs) {
-      if (subDirs.hasOwnProperty(dirName)) {
-        this._scanPackages(currentPackageValue, dirName, subDirs[dirName], state, false)
-      }
+    for (const [subDirName, subDir] of Object.entries(currentDir.subs || {})) {
+      this._scanPackages(currentPackageValue, subDirName, subDir, state, false)
     }
 
     /**
@@ -517,21 +524,11 @@ class GoAnalyzer extends Analyzer {
      * @param handler
      */
     function _handlePackageFiles(handler: any) {
-      Object.values(currentDir.files).forEach((nodeInfo: any) => {
-        const { node, packageName } = nodeInfo
-        let scope
-        if (packageName === '__global__') {
-          scope = that.topScope
-        } else {
-          scope = currentPackageValue
-        }
-        if (!scope.name && packageName) scope.name = packageName
-        if (scope.packageProcessed) return
-        // if (packageName.indexOf('_test') === -1) {
-        //     thisPackageScope = scope
-        // }
-        handler(scope, node, state)
-      })
+      for (const [name, files] of packageGroups) {
+        const scope = packageScopes.get(name)
+        if (scope.packageProcessed) continue
+        for (const { node } of files) handler(scope, node, state)
+      }
     }
   }
 
@@ -1238,20 +1235,18 @@ class GoAnalyzer extends Analyzer {
     // 根据import结构找到包所在目录
     let currentPackage = rootDir
     for (const dir of dirs) {
-      currentPackage = currentPackage?.subs?.[dir]
-      if (!currentPackage) {
+      if (!Object.prototype.hasOwnProperty.call(currentPackage?.subs ?? {}, dir)) {
         return
       }
+      currentPackage = currentPackage.subs[dir]
     }
 
-    let file
-    for (file of Object.getOwnPropertyNames(currentPackage?.files)) {
-      this.processInstruction(targetScope, currentPackage.files[file].node, state)
-    }
-
-    // 获取实际包名
-    if (file) {
-      const { packageName } = currentPackage.files[file]
+    const groups = groupGoPackageFiles(currentPackage.files || {})
+    const packageName = primaryGoPackageName(groups)
+    if (packageName) {
+      for (const { node } of groups.get(packageName) || []) {
+        this.processInstruction(targetScope, node, state)
+      }
       targetScope.name = packageName
     }
     return targetScope
@@ -2666,7 +2661,9 @@ class GoAnalyzer extends Analyzer {
    * @param source
    * @param fileName
    */
-  preProcess4SingleFile(source: any, fileName: any) {
+  async preProcess4SingleFile(source: any, fileName: any) {
+    // 同步单文件入口只在使用进程内解析器时需要先初始化。
+    await GoAstBuilder.ensureInitialized(this.options)
     // 先填充 sourceCodeCache，parser 会优先使用
     this.sourceCodeCache.set(fileName, source.split(/\n/))
     this.topScope.context.modules = Parser.parseSingleFile(fileName, this.options, this.sourceCodeCache)

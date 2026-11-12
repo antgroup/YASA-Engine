@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { describe, it } from 'mocha'
+import { before, describe, it } from 'mocha'
 import * as assert from 'assert'
 const config = require('../../src/config')
 const Analyzer = require('../../src/engine/analyzer/golang/common/go-analyzer')
@@ -152,13 +152,12 @@ function getTFPN(findingResMap: Map<string, any>): {
   return { TP, TN, FP, FN, tpChainNum, tnChainNum, unknown }
 }
 
-function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): any {
+async function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputStrategyAutoRegister: any): Promise<any> {
   const configPath = require.resolve('../../src/config')
   logger.info(`[CONFIG] Loaded from: ${configPath}`)
 
   config.ruleConfigFile = __dirname + '/rule_config.json'
   config.checkerIds = ['taint_flow_test']
-  config.uastSDKPath = path.join(__dirname, '../../deps')
   config.language = 'golang'
   config.maindirPrefix = __dirname + '/benchmarks'
 
@@ -172,10 +171,11 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
       taint_flow_test: true,
     },
     ...config,
+    uastSDKPath: undefined,
     mode: { intra: true },
     sanity: true,
   })
-  const findingRes = analyzer.analyzeSingleFile(code, casePath)
+  const findingRes = await analyzer.analyzeSingleFile(code, casePath)
   if (findingRes) {
     const { resultManager } = analyzer.getCheckerManager()
     const allFindings = resultManager.getFindings()
@@ -193,16 +193,17 @@ function runSingleTest(casePath: string, actualResMap: Map<string, any>, outputS
     recordFinding(findingRes, filename, actualResMap)
     return { [filename]: recorder.getFormatResult() }
   }
+  assert.fail(`Go benchmark case did not produce an analysis result: ${casePath}`)
 }
 
-function update(dir: string): void {
+async function update(dir: string): Promise<void> {
   let allCases = getAllTestCase(dir)
   let actualRes: any = {}
   let actualResMap = new Map<string, any>()
   const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
   outputStrategyAutoRegister.autoRegisterAllStrategies()
   for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
+    const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
     for (const [key, value] of Object.entries(singleRes)) {
       actualRes[key] = value
     }
@@ -220,19 +221,25 @@ function runGoBenchmark(dir: string): void {
   let allCases = getAllTestCase(dir)
   let actualRes: any = {}
   let actualResMap = new Map<string, any>()
-  const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
-  outputStrategyAutoRegister.autoRegisterAllStrategies()
-  for (const casePath of allCases) {
-    const singleRes = runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
-    for (const [key, value] of Object.entries(singleRes)) {
-      actualRes[key] = value
-    }
-  }
   const expectPath = path.join(path.resolve(dir), '..', '..', 'expect', 'gobenchmark-expect.json')
   const expectedData = fs.readFileSync(expectPath).toString()
   const expectedRes = JSON.parse(expectedData)
 
   describe('YASA test GoBenchmark', function () {
+    before(async function () {
+      this.timeout(0)
+      assert.strictEqual(allCases.length, Object.keys(expectedRes).length, 'Go benchmark corpus does not match the expected cases')
+      const outputStrategyAutoRegister = new OutputStrategyAutoRegister()
+      outputStrategyAutoRegister.autoRegisterAllStrategies()
+      for (const casePath of allCases) {
+        const singleRes = await runSingleTest(casePath, actualResMap, outputStrategyAutoRegister)
+        for (const [key, value] of Object.entries(singleRes)) {
+          actualRes[key] = value
+        }
+      }
+      assert.strictEqual(Object.keys(actualRes).length, allCases.length, 'not all Go benchmark cases produced results')
+    })
+
     it(`check result data directly`, function () {
       let testReport = statisticImpactArea(actualResMap)
       logger.info(testReport)
@@ -257,9 +264,11 @@ function runGoBenchmark(dir: string): void {
 }
 
 describe('YASA test All GoBenchmarks', function () {
-  let goBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-go/')
+  const goBenchmarkPath = path.resolve(__dirname, 'benchmarks/sast-go/')
   if (fs.existsSync(goBenchmarkPath)) {
     runGoBenchmark(goBenchmarkPath)
+  } else {
+    it.skip('requires the prepared sast-go benchmark corpus')
   }
 })
 

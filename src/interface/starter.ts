@@ -1040,6 +1040,11 @@ function cleanReportDir(odir: any) {
  */
 async function dumpAST(apps: any, printf: any) {
   const { deleteParent } = require('../util/ast-util')
+  // Go 的单文件导出走同步解析；仅进程内后端需要先初始化。
+  if (Config.language === 'golang') {
+    const GoAstBuilder = require('../engine/parser/golang/go-ast-builder')
+    await GoAstBuilder.ensureInitialized(Config)
+  }
   for (const app of apps) {
     if (!Config.ASTFileOutput) {
       printf('dump file AST:', app.file)
